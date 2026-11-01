@@ -17,6 +17,8 @@ import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.j
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { BATHS, BED_SPOT, BOARD_SPOT, COLOSSEUM, FOREST, FOREST_BUSHES, FOREST_DEN_ROCKS, FOREST_EDGE_LINES, FOREST_SPOTS, FOREST_TRAILS, FOREST_TREES, FORAGE_SPOTS, GOALS_SPOT, LAKE, LAKE_PAVILION, LETTER_DESK_SPOT, MUSE, PISCINA, PLACES, PLAYER, QUEST_BOARD_SPOT, SECRET, SEEK_LINES, STREETS, forestNorm, groundHeightAt, isGoldenElevation, seasonForDate, solarAngles, streetDistance, terrainHeight, type Season, type WeatherId } from "./town";
 import { pickPooled } from "./linePools";
+import { setRainLevel } from "./audio";
+import { rainIntensity, rainSwell, wrapAround } from "./rainMood";
 import { pickRomanPool, ROMAN_PLACE_LINES, romanDate, romanHour, romanPools } from "./romanDay";
 import {
   circ,
@@ -2076,7 +2078,7 @@ export function createTownScene(
   const WEATHER_PARAMS: Record<WeatherId, WeatherParams> = {
     clear: wp(0x6db9e8, 0xd8f0e2, 95, 235, 1, 1, 0xffffff, 0.92, 0.3, 0, 0, 0.12, 0, 0, 0xffffff, 0, 1),
     breezy: wp(0x74c2ee, 0xdff3e4, 85, 225, 1, 1, 0xffffff, 0.9, 1.7, 0, 0, 1, 0, 0, 0xffffff, 0, 1.15),
-    rain: wp(0x7d9db5, 0xb9c8c4, 53, 163, 0.52, 0.74, 0xb9c2c9, 0.96, 0.8, 1, 0, 0.35, 0, 0, 0x8799a4, 0.5, 0.12),
+    rain: wp(0x9aabb6, 0xddd5c6, 60, 175, 0.62, 0.84, 0xc8cbca, 0.96, 0.6, 1, 0, 0.3, 0, 0, 0x93a29f, 0.42, 0.12),
     snow: wp(0xa9c6dd, 0xe6eef2, 40, 136, 0.62, 0.85, 0xe8eef2, 0.97, 0.5, 0, 1, 0.3, 0, 0, 0xdfe9ee, 0.55, 0.3),
     fog: wp(0xb7c9c4, 0xdfe8dd, 14, 70, 0.45, 0.8, 0xdfe5df, 0.98, 0.25, 0, 0, 0.08, 0, 0, 0xa7b5a8, 0.35, 0.4),
     storm: wp(0x54657e, 0x8d99a8, 43, 143, 0.34, 0.55, 0x6f7c8e, 0.99, 2.3, 1.6, 0, 1.3, 0, 0, 0x6d7f8f, 0.6, 0),
@@ -2086,7 +2088,7 @@ export function createTownScene(
   const WEATHER_DURATION: Record<WeatherId, [number, number]> = {
     clear: [55, 95],
     breezy: [40, 70],
-    rain: [45, 75],
+    rain: [180, 300],
     snow: [45, 75],
     fog: [40, 65],
     storm: [35, 55],
@@ -2121,7 +2123,7 @@ export function createTownScene(
     const table: [WeatherId, number][] = [
       ["clear", afterRain ? 20 : 30],
       ["breezy", 17],
-      ["rain", 14],
+      ["rain", 6],
       ["fog", 10],
       ["sparkles", 7],
       ["snow", currentTreeSeason === "winter" ? 15 : 0],
@@ -2162,24 +2164,37 @@ export function createTownScene(
   // Rain: short falling streaks (line segments) slanted by the wind, with
   // little splash rings where they land and puddles that gather while the
   // ground stays wet.
-  const RAIN_COUNT = 800;
+  // The rain gathers in a box around the viewer rather than thinning
+  // out over the whole town, so fewer, softer streaks read as more.
+  const RAIN_COUNT = 480;
+  const RAIN_HALF = 24;
   const rainPos = new Float32Array(RAIN_COUNT * 2 * 3);
+  // Each streak fades out toward its tail, so none has a hard end.
+  const rainFade = new Float32Array(RAIN_COUNT * 2 * 4);
+  for (let i = 0; i < RAIN_COUNT * 2; i++) {
+    rainFade.set([1, 1, 1, i % 2 === 0 ? 1 : 0], i * 4);
+  }
   const rainDrops: { x: number; y: number; z: number; speed: number }[] = [];
   for (let i = 0; i < RAIN_COUNT; i++) {
     rainDrops.push({
-      x: (Math.random() - 0.5) * 104,
+      x: (Math.random() - 0.5) * RAIN_HALF * 2,
       y: Math.random() * 22,
-      z: (Math.random() - 0.5) * 104,
-      speed: 13 + Math.random() * 7,
+      z: (Math.random() - 0.5) * RAIN_HALF * 2,
+      speed: 8 + Math.random() * 4,
     });
   }
   const rainGeo = new THREE.BufferGeometry();
   rainGeo.setAttribute("position", new THREE.BufferAttribute(rainPos, 3));
+  rainGeo.setAttribute("color", new THREE.BufferAttribute(rainFade, 4));
   const rainMat = new THREE.LineBasicMaterial({
     color: 0xcfe2ee,
     transparent: true,
     opacity: 0,
+    vertexColors: true,
+    depthWrite: false,
   });
+  const rainFacing = new THREE.Vector3();
+  let lastRainLevelAt = -10;
   const rainLines = new THREE.LineSegments(rainGeo, rainMat);
   rainLines.frustumCulled = false;
   world.add(rainLines);
@@ -9698,8 +9713,9 @@ export function createTownScene(
     rim.intensity = 0.55 - nightMix * 0.3;
     scene.environmentIntensity = (0.35 - nightMix * 0.22) * (0.55 + wCur.sunMul * 0.45);
     sun.color.copy(sunWarm).lerp(tmpColorB.setHex(0x8fb4ff), nightMix);
-    // Lamps come on at night — and early under fog or a storm's gloom.
-    const lampLevel = Math.min(1, nightMix + (weatherId === "fog" ? 0.45 : 0) + wCur.rain * 0.18);
+    // Lamps come on at night — and early under fog or rain, where a
+    // warm window against the grey does most of the cosy work.
+    const lampLevel = Math.min(1, nightMix + (weatherId === "fog" ? 0.45 : 0) + wCur.rain * 0.4);
     plazaGlow.intensity = lampLevel * 60;
     starMat.opacity = nightMix * 0.95 * (1 - Math.min(1, wCur.rain + wCur.snow)) * (weatherId === "fog" ? 0.25 : 1);
     // Fireflies belong to warm-season nights, and they keep to the
@@ -10400,47 +10416,69 @@ export function createTownScene(
         wetness += THREE.MathUtils.clamp(Math.min(1, wCur.rain) - wetness, -dt * 0.012, dt * 0.06);
         snowCover += THREE.MathUtils.clamp(wCur.snow - snowCover, -dt * 0.01, dt * 0.045);
 
-        // Rain streaks, slanted by the wind.
-        const rainAmt = Math.min(1, wCur.rain);
-        rainMat.opacity = rainAmt * 0.55;
+        // Rain streaks, slanted by the wind. Gentle rain breathes with
+        // the slow swell, and the sound follows the same number; a
+        // storm keeps its full weight and its hard, fast lines.
+        const stormy = weatherId === "storm";
+        const rainAmt = stormy ? Math.min(1, wCur.rain) : rainIntensity(Math.min(1, wCur.rain), rainSwell(t));
+        rainMat.opacity = rainAmt * (stormy ? 0.55 : 0.34);
         rainLines.visible = rainAmt > 0.02;
+        if (t - lastRainLevelAt > 1) {
+          lastRainLevelAt = t;
+          setRainLevel(rainAmt);
+        }
         if (rainLines.visible) {
-          const slant = 0.35 + wCur.wind * 1.5 + (weatherId === "storm" ? 1.1 : 0);
-          const fallMul = opts.reducedMotion ? 0.6 : 1;
+          const slant = 0.35 + wCur.wind * 1.5 + (stormy ? 1.1 : 0);
+          const fallMul = (opts.reducedMotion ? 0.6 : 1) * (stormy ? 1.6 : 1);
+          const streak = stormy ? 0.8 : 0.5;
+          // A little ahead of the camera, so it's the view that's rained on.
+          camera.getWorldDirection(rainFacing);
+          const fx = camera.position.x + rainFacing.x * 14;
+          const fz = camera.position.z + rainFacing.z * 14;
           for (let i = 0; i < RAIN_COUNT; i++) {
             const d = rainDrops[i]!;
             d.y -= d.speed * dt * fallMul * (0.75 + rainAmt * 0.45);
             d.x += slant * dt * 2.4;
             if (d.y < 0) {
               d.y = 19 + Math.random() * 4;
-              d.x = (Math.random() - 0.5) * 104;
-              d.z = (Math.random() - 0.5) * 104;
+              d.x = fx + (Math.random() - 0.5) * RAIN_HALF * 2;
+              d.z = fz + (Math.random() - 0.5) * RAIN_HALF * 2;
             }
-            if (d.x > 54) d.x = -54;
+            d.x = wrapAround(d.x, fx, RAIN_HALF);
+            d.z = wrapAround(d.z, fz, RAIN_HALF);
             rainPos[i * 6] = d.x;
             rainPos[i * 6 + 1] = d.y;
             rainPos[i * 6 + 2] = d.z;
             rainPos[i * 6 + 3] = d.x + slant * 0.09;
-            rainPos[i * 6 + 4] = d.y + 0.8;
+            rainPos[i * 6 + 4] = d.y + streak;
             rainPos[i * 6 + 5] = d.z;
           }
           const attr = rainGeo.attributes.position;
           if (attr) attr.needsUpdate = true;
+          rainGeo.setDrawRange(0, Math.ceil(RAIN_COUNT * (0.4 + rainAmt * 0.6)) * 2);
         }
-        // Splash rings where the rain lands.
-        for (const s of splashes) {
+        // Rings where the rain lands: a third of them out on the lake,
+        // wider and slower, the rest on the ground around the viewer.
+        for (let i = 0; i < splashes.length; i++) {
+          const s = splashes[i]!;
           const m = s.mesh.material as THREE.MeshBasicMaterial;
+          const onLake = i % 3 === 0;
           if (rainAmt > 0.05) {
-            s.phase += dt * 1.5 * rainAmt;
+            s.phase += dt * (onLake ? 0.8 : 1.2) * rainAmt;
             if (s.phase > 1) {
               s.phase = 0;
-              const nsx = (Math.random() - 0.5) * 42;
-              const nsz = (Math.random() - 0.5) * 42;
-              s.mesh.position.set(nsx, terrainHeight(nsx, nsz) + 0.06, nsz);
+              if (onLake) {
+                const a = Math.random() * Math.PI * 2;
+                const r = Math.sqrt(Math.random()) * 0.92;
+                s.mesh.position.set(LAKE_CX + Math.cos(a) * LAKE.rx * r, LAKE_Y + 0.03, LAKE_CZ + Math.sin(a) * LAKE.rz * r);
+              } else {
+                const nsx = camera.position.x + rainFacing.x * 12 + (Math.random() - 0.5) * 34;
+                const nsz = camera.position.z + rainFacing.z * 12 + (Math.random() - 0.5) * 34;
+                s.mesh.position.set(nsx, terrainHeight(nsx, nsz) + 0.06, nsz);
+              }
             }
-            const sc = 0.6 + s.phase * 2;
-            s.mesh.scale.setScalar(sc);
-            m.opacity = (1 - s.phase) * 0.45 * rainAmt;
+            s.mesh.scale.setScalar(onLake ? 1.2 + s.phase * 5 : 0.6 + s.phase * 2);
+            m.opacity = (1 - s.phase) * (onLake ? 0.5 : 0.32) * rainAmt;
           } else {
             m.opacity = 0;
           }

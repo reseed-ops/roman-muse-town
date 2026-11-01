@@ -1,6 +1,8 @@
 // Tiny synthesized sound jars for the Sound Cottage. Everything is
 // generated with Web Audio on the first user tap — no audio files.
 
+import { dripDelay, dropletDelay } from "./rainMood";
+
 let actx: AudioContext | null = null;
 let activeNodes: OscillatorNode[] = [];
 let activeGains: GainNode[] = [];
@@ -118,12 +120,19 @@ export function playSplash(small = false) {
 export type WeatherSoundKind = "rain" | "storm" | "wind" | "none";
 
 interface WeatherNodes {
+  kind: WeatherSoundKind;
   sources: AudioBufferSourceNode[];
   oscs: OscillatorNode[];
   gain: GainNode;
+  /** Rain only: the bed the slow swell rides on. */
+  swell?: GainNode;
+  /** Rain only: stops the droplet and drip timers. */
+  stopTimers?: () => void;
 }
 
 let weatherNodes: WeatherNodes | null = null;
+/** How hard it is raining, 0..1: the scene's swell, read by the droplets. */
+let rainLevel = 0.6;
 
 function noiseBuffer(ac: AudioContext): AudioBuffer {
   const bufferSize = 2 * ac.sampleRate;
@@ -137,10 +146,13 @@ export function stopWeatherAmbience() {
   if (!weatherNodes) return;
   const nodes = weatherNodes;
   weatherNodes = null;
+  nodes.stopTimers?.();
   const ac = actx;
   if (!ac) return;
+  // Rain leaves slowly, the way it does.
+  const rain = nodes.kind === "rain";
   try {
-    nodes.gain.gain.setTargetAtTime(0.0001, ac.currentTime, 0.25);
+    nodes.gain.gain.setTargetAtTime(0.0001, ac.currentTime, rain ? 1.3 : 0.25);
     window.setTimeout(() => {
       for (const s of nodes.sources) {
         try {
@@ -156,20 +168,72 @@ export function stopWeatherAmbience() {
           /* already stopped */
         }
       }
-    }, 900);
+    }, rain ? 6000 : 900);
   } catch {
     /* context gone */
   }
 }
 
+/** Follow the scene's swell: the bed leans in and out over a few
+ *  seconds, and the droplets thicken and thin with it. */
+export function setRainLevel(level: number) {
+  rainLevel = level;
+  const nodes = weatherNodes;
+  if (!actx || !nodes?.swell) return;
+  nodes.swell.gain.setTargetAtTime(0.55 + level * 0.45, actx.currentTime, 3);
+}
+
+/** One soft tick of a drop landing: a sliver of filtered noise, placed
+ *  somewhere in the stereo field. */
+function playDroplet(ac: AudioContext, buffer: AudioBuffer, master: GainNode) {
+  const start = ac.currentTime;
+  const src = ac.createBufferSource();
+  src.buffer = buffer;
+  const filter = ac.createBiquadFilter();
+  filter.type = "bandpass";
+  filter.frequency.value = 1500 + Math.random() * 2400;
+  filter.Q.value = 3 + Math.random() * 4;
+  const gain = ac.createGain();
+  const peak = 0.03 + Math.random() * 0.05;
+  const decay = 0.03 + Math.random() * 0.05;
+  gain.gain.setValueAtTime(peak, start);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + decay);
+  const pan = ac.createStereoPanner();
+  pan.pan.value = Math.random() * 1.6 - 0.8;
+  src.connect(filter).connect(gain).connect(pan).connect(master);
+  src.start(start, Math.random() * 1.8, decay + 0.02);
+}
+
+/** A slow drip off an eave: one small round note that bends upward. */
+function playDrip(ac: AudioContext, master: GainNode) {
+  const start = ac.currentTime;
+  const osc = ac.createOscillator();
+  osc.type = "sine";
+  const pitch = 700 + Math.random() * 500;
+  osc.frequency.setValueAtTime(pitch, start);
+  osc.frequency.exponentialRampToValueAtTime(pitch * 1.5, start + 0.05);
+  const gain = ac.createGain();
+  gain.gain.setValueAtTime(0.0001, start);
+  gain.gain.exponentialRampToValueAtTime(0.016, start + 0.006);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.11);
+  const pan = ac.createStereoPanner();
+  pan.pan.value = Math.random() * 1.2 - 0.6;
+  osc.connect(gain).connect(pan).connect(master);
+  osc.start(start);
+  osc.stop(start + 0.13);
+}
+
 export function startWeatherAmbience(kind: WeatherSoundKind) {
+  // Already playing: leave it be, so a shower isn't restarted by a
+  // re-render of the same weather.
+  if (weatherNodes?.kind === kind) return;
   stopWeatherAmbience();
   if (kind === "none") return;
   const ac = ctx();
   const master = ac.createGain();
   master.gain.value = 0.0001;
   master.connect(ac.destination);
-  const nodes: WeatherNodes = { sources: [], oscs: [], gain: master };
+  const nodes: WeatherNodes = { kind, sources: [], oscs: [], gain: master };
   const buffer = noiseBuffer(ac);
 
   const addNoise = (
@@ -177,6 +241,7 @@ export function startWeatherAmbience(kind: WeatherSoundKind) {
     frequency: number,
     q: number,
     level: number,
+    into: AudioNode = master,
   ): BiquadFilterNode => {
     const src = ac.createBufferSource();
     src.buffer = buffer;
@@ -187,16 +252,45 @@ export function startWeatherAmbience(kind: WeatherSoundKind) {
     filter.Q.value = q;
     const g = ac.createGain();
     g.gain.value = level;
-    src.connect(filter).connect(g).connect(master);
+    src.connect(filter).connect(g).connect(into);
     src.start();
     nodes.sources.push(src);
     return filter;
   };
 
   if (kind === "rain") {
-    addNoise("lowpass", 950, 0.4, 0.05);
-    addNoise("bandpass", 2600, 0.5, 0.012);
-    master.gain.setTargetAtTime(1, ac.currentTime, 0.6);
+    // A low, soft bed and a faint airy wash, riding the slow swell, with
+    // droplets and the odd drip scattered over it. Steady noise alone
+    // reads as hiss; it's the unevenness on top that reads as rain.
+    const swell = ac.createGain();
+    swell.gain.value = 0.55 + rainLevel * 0.45;
+    swell.connect(master);
+    nodes.swell = swell;
+    addNoise("lowpass", 560, 0.3, 0.075, swell);
+    addNoise("bandpass", 1500, 0.35, 0.011, swell);
+    const timers = new Set<number>();
+    const after = (seconds: number, run: () => void) => {
+      const id = window.setTimeout(() => {
+        timers.delete(id);
+        run();
+      }, seconds * 1000);
+      timers.add(id);
+    };
+    const nextDroplet = () => {
+      playDroplet(ac, buffer, master);
+      after(dropletDelay(rainLevel, Math.random), nextDroplet);
+    };
+    const nextDrip = () => {
+      playDrip(ac, master);
+      after(dripDelay(Math.random), nextDrip);
+    };
+    after(1, nextDroplet);
+    after(dripDelay(Math.random), nextDrip);
+    nodes.stopTimers = () => {
+      for (const id of timers) window.clearTimeout(id);
+      timers.clear();
+    };
+    master.gain.setTargetAtTime(1, ac.currentTime, 1.4);
   } else if (kind === "storm") {
     addNoise("lowpass", 750, 0.4, 0.085);
     const windFilter = addNoise("bandpass", 420, 0.9, 0.05);

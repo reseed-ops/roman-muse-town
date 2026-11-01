@@ -453,7 +453,7 @@ export const WEATHERS: WeatherInfo[] = [
     id: "rain",
     label: "Rain",
     icon: "🌧️",
-    blurb: "Warm stylized rain patters down and puddles gather on the paths.",
+    blurb: "A soft, steady rain settles in, the lamps come on early, and the lake fills with rings.",
   },
   {
     id: "snow",
