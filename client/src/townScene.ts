@@ -1,3 +1,5 @@
+import { repairRomanMaterials } from "./romanMaterials";
+import { TreePlacement } from "./treePlacement";
 import { type VrmRig, collectRig, poseBone, poseWave, poseWaveStill, poseUmbrellaArm, poseThrowArm, poseLinkArm, poseHoldHandPlayer, poseHoldHandMuse, type CharAnimator, createCharAnimator, prepareVrm, collectBlinkMorphs, setBlink } from "./characterAnimation";
 // The Muse Town diorama: a low-poly three.js scene with a plaza around
 // the great town tree, five clickable houses, lamp posts, smaller trees,
@@ -743,7 +745,11 @@ function loadModelScene(url: string, opts?: { tier?: LoadTier }): Promise<THREE.
             // never loads and every palette surface renders flat
             // grey-white. Re-assign the real palette here, once, on
             // the shared source.
-            applyPaletteMaterials(modelScene);
+            await repairRomanMaterials(modelScene, {
+              architecture: ROMAN_ARCHITECTURE.has(url),
+              palette: getPaletteTexture,
+              report: (message) => materialRepairLog.push(assetLabel(url) + ": " + message),
+            });
             // Tag for the load-time material sweep: model meshes
             // are audited after loads settle; procedural meshes
             // (built by the town itself, known-good colours) are
@@ -805,36 +811,26 @@ function loadModelScene(url: string, opts?: { tier?: LoadTier }): Promise<THREE.
 // texture loads flipY = false. One shared texture for the whole
 // town: a single 9 KB PNG, fetched once — a streaming WIN, not a
 // cost.
-const PALETTE_MATERIAL_NAMES = new Set([
-  "M_colorpallete_roman",
-  "M_colorpallete_rome",
-  "M_color",
-  "Material #25",
+const ROMAN_ARCHITECTURE = new Set([
+  colosseumUrl, templeUrl, senateUrl, annexUrl, insulaeUrl,
+  houseSoundsUrl, houseGardenUrl, villaUrl, pavilionUrl,
+  aqueductUrl, aqueductConnectorUrl, triumphalArchUrl, archRoundUrl,
+  columnIonicUrl, columnSimpleUrl, boothAUrl, boothBUrl, boothCUrl,
 ]);
-let sharedPaletteTexture: THREE.Texture | null = null;
-function getPaletteTexture(): THREE.Texture {
+let sharedPaletteTexture: Promise<THREE.Texture> | null = null;
+function getPaletteTexture(): Promise<THREE.Texture> {
   if (!sharedPaletteTexture) {
-    sharedPaletteTexture = new THREE.TextureLoader().load(paletteUrl);
-    sharedPaletteTexture.flipY = false;
-    sharedPaletteTexture.colorSpace = THREE.SRGBColorSpace;
+    sharedPaletteTexture = new Promise((resolve, reject) => {
+      const timeout = window.setTimeout(() => reject(new Error("Roman palette load timed out")), 15000);
+      new THREE.TextureLoader().load(paletteUrl, (texture) => {
+        window.clearTimeout(timeout);
+        texture.flipY = false;
+        texture.colorSpace = THREE.SRGBColorSpace;
+        resolve(texture);
+      }, undefined, (error) => { window.clearTimeout(timeout); reject(error); });
+    });
   }
   return sharedPaletteTexture;
-}
-function applyPaletteMaterials(root: THREE.Object3D) {
-  root.traverse((o) => {
-    if (!(o instanceof THREE.Mesh)) return;
-    const mats = Array.isArray(o.material) ? o.material : [o.material];
-    for (const m of mats) {
-      if (m instanceof THREE.MeshStandardMaterial && PALETTE_MATERIAL_NAMES.has(m.name)) {
-        m.map = getPaletteTexture();
-        // The pack's palette material is untinted (white); the
-        // grey factor in the files is the converter's placeholder
-        // for the missing texture and would mute every swatch.
-        m.color.setRGB(1, 1, 1);
-        m.needsUpdate = true;
-      }
-    }
-  });
 }
 
 // --- Model material repair (the black-animals / black-boxes fix) -----
@@ -1302,12 +1298,24 @@ export function createTownScene(
   const world = new THREE.Group();
   scene.add(world);
 
+  const treePlacement = new TreePlacement(terrainHeight, (x, z, radius) =>
+    streetDistance(x, z) > radius + 1.6 && Math.hypot(x, z) > radius + 6 &&
+    Math.hypot((x - LAKE.position[0]) / (LAKE.rx + radius + 0.5), (z - LAKE.position[1]) / (LAKE.rz + radius + 0.5)) > 1);
+  const treeUrls = new Set([treeAUrl, treeBUrl, treeCUrl, treeDUrl, cypressUrl, coniferUrl, oliveUrl]);
+  const buildingUrls = new Set([templeUrl, colosseumUrl, aqueductUrl, aqueductConnectorUrl, triumphalArchUrl, boothAUrl, boothBUrl, boothCUrl]);
+
   /** placeModel, standing the model on the terrain at (x, z). */
   const placeWorld = (
     url: string,
     opts: { x: number; z: number; y?: number; rotY?: number; height?: number; width?: number },
   ): Promise<THREE.Group | null> =>
-    placeModel(url, world, { ...opts, y: (opts.y ?? 0) + terrainHeight(opts.x, opts.z) });
+    placeModel(url, world, { ...opts, y: (opts.y ?? 0) + terrainHeight(opts.x, opts.z) }).then((group) => {
+      if (group && !disposed) {
+        if (treeUrls.has(url)) treePlacement.addTree(group, opts.x, opts.z);
+        if (buildingUrls.has(url)) treePlacement.addBuilding(group, url);
+      }
+      return group;
+    });
 
   // --- Foundations -----------------------------------------------------
   // Buildings stand at ONE terrain height — their centre's — but the
@@ -2632,10 +2640,9 @@ export function createTownScene(
   // Pack vegetation: the Roman Empire pack's own trees, bushes, and
   // flowers, converted like the buildings, so the greenery matches the
   // district's art style. (The Town Tree stays procedural — it grows
-  // and changes with the seasons.) Placement rule, after a bug where
-  // trees stood partly inside buildings: every plant spot below was
-  // checked against each building's footprint radius plus the plant's
-  // own canopy radius plus a margin — see VEG_SPOTS notes by each set.
+  // and changes with the seasons.) TreePlacement checks loaded tree
+  // canopies against whole buildings, including roofs: the old centre-
+  // radius estimates did not guarantee clearance from overhangs.
   const PACK_BUSHES = [bushAUrl, bushBUrl, bushCUrl, bushDUrl, bushEUrl];
   const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];
   const PACK_FLOWERS = [flowerAUrl, flowerMedUrl, flowerGroupUrl];
@@ -2763,7 +2770,7 @@ export function createTownScene(
         z: -0.3,
         y: 0.3,
         width: buildingWidth,
-      });
+      }).then((group) => { if (group && !disposed) treePlacement.addBuilding(group, place.name); });
     }
     // A low stone step up to the front door.
     house.add(box(2.2, 0.18, 0.9, 0xd8cdb2, 0, 0.42, buildingWidth * 0.52, { rough: 0.95 }));
@@ -2852,6 +2859,8 @@ export function createTownScene(
       o.userData.pick = { kind: "place", id: place.id } satisfies { kind: PickKind; id: string };
     });
     world.add(house);
+    // Platforms and the procedural gatehouse are present before model downloads.
+    treePlacement.addBuilding(house, place.name);
     // Foundation under the platform (see addFoundation): the platform
     // is a flat slab at the centre's terrain height, and on the
     // sloped sites its downhill edge hovered. The skirt hangs from
@@ -4013,6 +4022,7 @@ export function createTownScene(
       g.add(light);
     }
     world.add(g);
+    treePlacement.addBuilding(g, "The Baths");
     // Steam: soft points forever rising over the warm water,
     // thickening while anyone soaks.
     const STEAM_N = 36;
@@ -4612,15 +4622,8 @@ export function createTownScene(
   world.add(museGroup);
   pickRoots.push(museGroup);
 
-  // Trees, conifers, rocks, flowers — all pack models now, and every
-  // spot was re-checked against BOTH the paths and the buildings after
-  // the "trees inside buildings" bug: four of the old procedural spots
-  // were inside a footprint (one in the Colosseum, one in the temple,
-  // two against houses) and have moved out. Clearance rule: distance
-  // from the building's centre must exceed its footprint radius plus
-  // the plant's canopy radius plus a margin. Footprint radii: houses
-  // ≈ (buildingWidth/2 + platform ≈ 0.7), basilica ≈ 6.9, temple ≈ 6,
-  // Colosseum ≈ 8.6, booths ≈ 2, arch ≈ 3.5.
+  // Preferred tree positions. Loaded canopy bounds may require a nearby
+  // move; TreePlacement keeps the matching trunk blockers in sync.
   const treeSpots: [number, number, number][] = [
     [-10.5, -23.5, 1.15],
     [12.8, -18.7, 1],
@@ -5130,7 +5133,7 @@ export function createTownScene(
     const rot = i * 1.37;
     const ox = spec.off[0] * sc;
     const oz = spec.off[1] * sc;
-    return circ(tx + ox * Math.cos(rot) + oz * Math.sin(rot), tz - ox * Math.sin(rot) + oz * Math.cos(rot), 0.32);
+    return treePlacement.bindCollider(circ(tx + ox * Math.cos(rot) + oz * Math.sin(rot), tz - ox * Math.sin(rot) + oz * Math.cos(rot), 0.32), tx, tz);
   });
 
   // Flat furniture gets flat footprints: the old centre circles
@@ -5191,9 +5194,9 @@ export function createTownScene(
     circ(-30, -19.5, 0.7),
     circ(-39.9, -12.4, 0.7),
     circ(-32.6, -10.5, 0.7),
-    circ(23.8, 29.8, 0.42, 0.15), circ(-27.2, 30.6, 0.42, 0.15), circ(34, -10.2, 0.42, 0.15), circ(-39.1, -22.1, 0.42, 0.15), // cypresses (their foliage columns)
-    circ(-23, 34.26, 0.35), // the olive on the south lawn (trunk, offset from its canopy centre as placed) — it had no collider at all
-    circ(-40, 10, 0.3), // the tall conifer on the west lawn — likewise uncollided until now
+    treePlacement.bindCollider(circ(23.8, 29.8, 0.42, 0.15), 23.8, 29.8), treePlacement.bindCollider(circ(-27.2, 30.6, 0.42, 0.15), -27.2, 30.6), treePlacement.bindCollider(circ(34, -10.2, 0.42, 0.15), 34, -10.2), treePlacement.bindCollider(circ(-39.1, -22.1, 0.42, 0.15), -39.1, -22.1), // cypresses (their foliage columns)
+    treePlacement.bindCollider(circ(-23, 34.26, 0.35), -23, 34), // the olive on the south lawn (trunk, offset from its canopy centre as placed) — it had no collider at all
+    treePlacement.bindCollider(circ(-40, 10, 0.3), -40, 10), // the tall conifer on the west lawn — likewise uncollided until now
     circ(-11, -6, 0.38, 0.18), // ionic column with the pointy hat (its base, measured)
     ...ROMAN_COLUMN_SPOTS.map(([x, z]) => circ(x, z, 0.35, 0.18)),
     ...placeFootprints.values(),
@@ -5208,7 +5211,7 @@ export function createTownScene(
     circ(FOREST_SPOTS.hollow[0], FOREST_SPOTS.hollow[1], 0.85),
     circ(FOREST_SPOTS.spring[0], FOREST_SPOTS.spring[1], 1.55),
     ...FOREST_DEN_ROCKS.map(([x, z, r]) => circ(x, z, r)),
-    ...pineSpots.map(([x, z]) => circ(x, z, 0.3)),
+    ...pineSpots.map(([x, z]) => treePlacement.bindCollider(circ(x, z, 0.3), x, z)),
     circ(9.4, -7.7, 0.45), // pack rocks (placed 0.85 wide)
     circ(-10.4, 7.5, 0.45),
     circ(13.5, -26.5, 0.45),
@@ -10941,7 +10944,7 @@ export function createTownScene(
         }
       }
     });
-    const report = { checked, repairs: [...materialRepairLog], findings, at: new Date().toISOString() };
+    const report = { checked, repairs: materialRepairLog, findings, at: new Date().toISOString() };
     (window as unknown as Record<string, unknown>).__museTownMaterialReport = report;
     if (findings.length || materialRepairLog.length) {
       console.warn(

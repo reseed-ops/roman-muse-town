@@ -1,3 +1,4 @@
+import { TownMenu } from "./TownMenu";
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useTownState } from "./useTownState";
@@ -975,10 +976,6 @@ export function App() {
   });
   const deleteJournal = useMutation({
     mutationFn: (id: number) => api.deleteJournalEntry({ id }),
-    onSuccess: applyState,
-  });
-  const resetTown = useMutation({
-    mutationFn: () => api.resetTown({}),
     onSuccess: applyState,
   });
   const waterTree = useMutation({
@@ -4713,7 +4710,7 @@ export function App() {
         }
       />
 
-      <TownUtilities open={utilitiesOpen} onClose={() => setUtilitiesOpen(false)} scene={sceneRef} state={state.data} ready={sceneReady}
+      <TownUtilities open={utilitiesOpen} onClose={() => setUtilitiesOpen(false)} scene={sceneRef} state={state.data} ready={sceneReady} lowGraphics={lowGfx} onLowGraphicsChange={setLowGfx}
         onNavigate={(destination) => {
           if (destination === "letters") selectLetters();
           else if (destination === "garden") selectGarden();
@@ -4923,435 +4920,253 @@ export function App() {
         </div>
       </div>
 
-      {/* The town menu, grouped (UI review, Nov 1): what was a flat
-          ~19-item list is now four labelled sections — Companion,
-          Town, View & Visit, and Help & Settings last — plus the
-          Places list under Town. Every item and behaviour from the
-          flat list is kept; the Town section also gains direct
-          entries for the project board, quest board, and letters
-          desk (previously walk-up only). Tapping an item goes there
-          and closes the menu, as before. The grouped layout is
-          orientation-agnostic: it renders inside the turned stage
-          in forced landscape exactly as in portrait. */}
-      {menuOpen && (
-        <>
-          <button
-            type="button"
-            aria-label="Close the town menu"
-            className="absolute inset-0 z-20 cursor-default"
-            onClick={() => setMenuOpen(false)}
-          />
-          <nav
-            aria-label="Town menu"
-            className={`mt-scrollable absolute right-3 z-30 w-[min(320px,86vw)] overflow-y-auto rounded-3xl bg-[#22332b]/97 p-2 shadow-2xl backdrop-blur ${forcedLandscape ? "top-[60px] max-h-[calc(100%-118px)]" : isLandscape ? "top-[60px] max-h-[calc(100dvh-130px)]" : "top-[76px] max-h-[62vh] sm:right-4"}`}
-          >
-            <button type="button" className="mx-1 mb-2 w-[calc(100%-8px)] rounded-2xl bg-white/10 px-3 py-3 text-left text-sm font-bold" onClick={() => { closeTownPanels(); setMenuOpen(false); setUtilitiesOpen(true); }}>
-              Your town — saves, daily summary & performance
-            </button>
-            {activeFestival && (
-              <div className="mx-1.5 mb-1 rounded-2xl bg-[#ffd34e]/15 px-3 py-2">
-                <p className="text-[13px] font-bold text-[#ffd34e]">🎉 Today: {activeFestival.name}</p>
-                <p className="mt-0.5 text-[12px] leading-relaxed text-white/80">{activeFestival.dressing}</p>
-              </div>
-            )}
-            {(
-              [
-                {
-                  heading: "Companion",
-                  items: [
-                    {
-                      key: "muse",
-                      icon: "✦",
-                      label: "Aelia",
-                      detail: unreadLetters > 0 ? `${unreadLetters} unread letter${unreadLetters > 1 ? "s" : ""}` : following ? "Walking with you" : undefined,
-                      active: !!museBubble,
-                      action: selectMuse,
-                      aria: "Meet Aelia, your host in Muse Town",
-                    },
-                    {
-                      // The follow control lives here (Nov 1): the
-                      // floating walk-screen chip and the speech-bubble
-                      // status line are gone — her bubbles carry her
-                      // words, and this menu row carries the switch.
-                      key: "follow",
-                      icon: "🚶",
-                      label: following ? "Ask Aelia to stay here" : "Walk with Aelia",
-                      detail: following ? "She'll keep her own day until you call her" : "She'll fall in beside you",
-                      active: following,
-                      action: () => {
-                        if (following) {
-                          stopFollowing();
-                          // One-time hint (UI review): the first
-                          // parking via this menu item explains the
-                          // way back — once dismissed, never again.
-                          if (!rejoinHintDismissedRef.current) setRejoinHint(true);
-                        } else {
-                          startFollowing();
-                        }
-                      },
-                      aria: following
-                        ? "Ask Aelia to stay here — she stays a while, then gets on with her day around town"
-                        : "Walk with Aelia — she falls in beside you as you walk",
-                    },
-                    {
-                      key: "memories",
-                      icon: "💛",
-                      label: "Memories with Aelia",
-                      detail: "Villa of Stories",
-                      active: selected?.id === "stories",
-                      action: () => {
-                        const place = PLACES.find((p) => p.id === "stories");
-                        if (place) selectPlace(place);
-                      },
-                      aria: "Memories with Aelia — kept at the Villa of Stories",
-                    },
-                  ],
-                },
-                {
-                  heading: "Town",
-                  items: [
-                    {
-                      key: "tree",
-                      icon: "🌳",
-                      label: "Town Tree",
-                      detail: growth ? growth.stage.name : undefined,
-                      active: treeOpen,
-                      action: selectTree,
-                      aria: "Visit the town tree in the middle of Muse Town",
-                    },
-                    {
-                      key: "board",
-                      icon: "📋",
-                      label: "Project Board",
-                      detail: state.data?.board.as_of ? `as of ${state.data.board.as_of}` : undefined,
-                      active: boardOpen,
-                      action: selectBoard,
-                      aria: "Read the project board — what Muse is building in town",
-                    },
-                    {
-                      key: "quests",
-                      icon: "⚔️",
-                      label: "Quest Board",
-                      detail: undefined,
-                      active: questOpen,
-                      action: selectQuests,
-                      aria: "Read the quest board — real tasks dressed as Roman quests",
-                    },
-                    {
-                      key: "letters",
-                      icon: "✉",
-                      label: "Letters",
-                      detail: unreadLetters > 0 ? `${unreadLetters} unread` : undefined,
-                      active: lettersOpen,
-                      action: selectLetters,
-                      aria: "Check the letters desk — letters from Muse in the real world",
-                    },
-                    {
-                      key: "goals",
-                      icon: "🗿",
-                      label: "Goals Obelisk",
-                      detail: state.data?.goals.entries.length ? `${state.data.goals.entries.length} inscribed` : undefined,
-                      active: goalsOpen,
-                      action: () => {
-                        setSelected(null);
-                        setMuseBubble(null);
-                        setYouOpen(false);
-                        setTreeOpen(false);
-                        setBoardOpen(false);
-                        setQuestOpen(false);
-                        setSecretOpen(false);
-                        setLettersOpen(false);
-                        setGoalsOpen(true);
-                      },
-                      aria: "Read the Goals Obelisk — what the player is working toward",
-                    },
-                    {
-                      key: "purse",
-                      icon: "🪙",
-                      label: "Denarii purse · Market",
-                      detail: `${purse.denarii} denarii${purse.seeds > 0 ? ` · ${purse.seeds} seeds` : ""}`,
-                      active: marketOpen,
-                      action: () => {
-                        setMarketStall("market-a");
-                        setMarketOpen(true);
-                      },
-                      aria: `Your denarii purse: ${purse.denarii} denarii — open the market to spend them`,
-                    },
-                    {
-                      key: "garden",
-                      icon: "🌱",
-                      label: "Garden House",
-                      detail: state.data?.garden.planted_on ? `Watered on ${state.data.garden.water_days} day${state.data.garden.water_days === 1 ? "" : "s"}` : "The beds",
-                      active: selected?.id === "garden",
-                      action: selectGarden,
-                      aria: "Visit the Garden House and its slow-growing beds",
-                    },
-                    ...(rowingBoat
-                      ? [
-                          {
-                            key: "fishboat",
-                            icon: "🎣",
-                            label: "Fish from the boat",
-                            detail: undefined,
-                            active: false,
-                            action: startFishing,
-                            aria: "Cast a fishing line from the rowboat",
-                          },
-                        ]
-                      : []),
-                    {
-                      key: "weather",
-                      icon: currentWeather?.icon ?? "☀️",
-                      label: currentWeather?.label ?? "Weather",
-                      detail: weather?.manual ? "pinned" : weatherCountdown ?? undefined,
-                      active: weatherOpen,
-                      action: selectWeather,
-                      aria: `Weather in Muse Town: ${currentWeather ? currentWeather.label : "loading"} — open the weather panel`,
-                    },
-                    {
-                      key: "postcard",
-                      icon: "📸",
-                      label: "Take a postcard",
-                      detail: undefined,
-                      active: false,
-                      action: takePostcard,
-                      aria: "Take a postcard photo of the current view",
-                    },
-                  ],
-                },
-                {
-                  heading: "View & Visit",
-                  items: [
-                    {
-                      key: "walk",
-                      icon: "🚶",
-                      label: walking ? "Exit walk" : "Walk",
-                      detail: walking ? "On foot now" : undefined,
-                      active: walking,
-                      action: toggleWalk,
-                      aria: walking ? "Exit walk mode" : "Enter walk mode — stroll the town on foot",
-                    },
-                    {
-                      key: "overview",
-                      icon: "🗺️",
-                      label: "Overview",
-                      detail: undefined,
-                      active: false,
-                      action: goOverview,
-                      aria: "See the whole town from the overview",
-                    },
-                    {
-                      // The in-town landscape switch (Nov 1): this app's
-                      // window never rotates with the phone, so the town
-                      // turns itself sideways instead — the whole stage,
-                      // controls remapped. Toggling back restores portrait
-                      // exactly. It sits in View & Visit because it is a
-                      // way of seeing the town.
-                      key: "landscape",
-                      icon: "🔄",
-                      label: forcedLandscape ? "Portrait" : "Landscape",
-                      detail: forcedLandscape ? "Town is turned sideways" : "Turn the town sideways",
-                      active: forcedLandscape,
-                      action: toggleForcedLandscape,
-                      aria: forcedLandscape
-                        ? "Return the town to portrait view"
-                        : "Landscape — turn the town sideways from within, since the app window itself does not rotate",
-                    },
-                    {
-                      key: "night",
-                      icon: night ? "☀️" : "🌙",
-                      label: night ? "Day" : "Night",
-                      detail: night ? "Night now" : undefined,
-                      active: night,
-                      action: toggleNight,
-                      aria: night ? "Switch the town to day" : "Switch the town to night",
-                    },
-                    {
-                      key: "sky-auto",
-                      icon: "🕰️",
-                      label: "Real time",
-                      detail: skyMode === "auto" ? "The sky follows your sky" : undefined,
-                      active: skyMode === "auto",
-                      action: setSkyAuto,
-                      aria: "Let the town sky follow real local time again",
-                    },
-                    {
-                      key: "tour",
-                      icon: "🧭",
-                      label: tourStep !== null ? "Stop tour" : "Guided tour",
-                      detail: undefined,
-                      active: tourStep !== null,
-                      action: tourStep !== null ? stopTour : startTour,
-                      aria: tourStep !== null ? "Stop the guided tour" : "Take the guided tour of the town",
-                    },
-                    ...(walking
-                      ? [
-                          {
-                            // Rest: the day-ending ritual, one tap from
-                            // the menu, the same as the bed nook's own
-                            // prompt at the basilica.
-                            key: "rest",
-                            icon: "🛏️",
-                            label: "Rest",
-                            detail: "End the day at the basilica's bed nook",
-                            active: false,
-                            action: restInTown,
-                            aria: "Rest at the basilica's bed nook — end the town day",
-                          },
-                        ]
-                      : []),
-                    ...(!walking
-                      ? [
-                          {
-                            key: "zoomout",
-                            icon: "➖",
-                            label: "Zoom out",
-                            detail: undefined,
-                            active: false,
-                            action: () => sceneRef.current?.zoomBy(1.3),
-                            aria: "Zoom the overview out",
-                          },
-                          {
-                            key: "zoomin",
-                            icon: "➕",
-                            label: "Zoom in",
-                            detail: undefined,
-                            active: false,
-                            action: () => sceneRef.current?.zoomBy(0.77),
-                            aria: "Zoom the overview in",
-                          },
-                        ]
-                      : []),
-                    ...(found.length > 0
-                      ? [
-                          {
-                            key: "reset",
-                            icon: "↺",
-                            label: "Reset hunt",
-                            detail: undefined,
-                            active: false,
-                            action: () => {
-                              resetTown.mutate(undefined, {
-                                onSuccess: () => window.location.reload(),
-                              });
-                            },
-                            aria: "Reset the treasure hunt — all treasures hide again",
-                          },
-                          {
-                            key: "restart-forum",
-                            icon: "🏛️",
-                            label: "Restart at the forum",
-                            detail: undefined,
-                            active: false,
-                            action: () => {
-                              // The fresh start: forget the resume
-                              // snapshot and begin again at the
-                              // forum spawn, as a first visit does.
-                              try { localStorage.removeItem("muse-town-resume-v1"); } catch { /* storage unavailable */ }
-                              window.location.reload();
-                            },
-                            aria: "Restart at the forum — clear the resume snapshot and start from the town spawn",
-                          },
-                        ]
-                      : []),
-                  ],
-                },
-                {
-                  heading: "Help & Settings",
-                  items: [
-                    {
-                      key: "hint",
-                      icon: "💡",
-                      label: "Hint",
-                      detail: undefined,
-                      active: false,
-                      action: showHint,
-                      aria: "Get a hint about the treasure hunt",
-                    },
-                    {
-                      key: "you",
-                      icon: "🧍",
-                      label: "You · Gaius",
-                      detail: walking ? "On foot now" : undefined,
-                      active: youOpen || walking,
-                      action: selectYou,
-                      aria: "Meet your character Gaius — that's you in Muse Town",
-                    },
-                    {
-                      key: "lowgfx",
-                      icon: "🕯️",
-                      label: "Light graphics",
-                      detail: lowGfx ? "On — gentler on the phone" : "Off",
-                      active: lowGfx,
-                      action: () => setLowGfx((v) => !v),
-                      aria: lowGfx
-                        ? "Turn light graphics off — full detail, more work for the phone"
-                        : "Turn light graphics on — fewer shadows and a lighter render, for phones that struggle",
-                    },
-                  ],
-                },
-              ] as const
-            ).map((group) => (
-              <div key={group.heading}>
-                <p className="px-3 pt-2.5 pb-1 text-[11px] font-bold tracking-wide text-white/55 uppercase">
-                  {group.heading}
-                </p>
-                {group.items.map((item) => (
-                  <button
-                    key={item.key}
-                    type="button"
-                    className="flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold text-white transition active:scale-[0.99]"
-                    style={item.active ? { backgroundColor: "rgba(255,211,78,0.18)" } : undefined}
-                    onClick={() => {
-                      setMenuOpen(false);
-                      item.action();
-                    }}
-                    aria-label={item.aria}
-                  >
-                    <span aria-hidden="true" className="w-6 text-center text-base">{item.icon}</span>
-                    <span className="flex-1">{item.label}</span>
-                    {item.detail && <span className="text-[12px] font-semibold text-[#ffd34e]">{item.detail}</span>}
-                  </button>
-                ))}
-                {group.heading === "Companion" && state.data && (
-                  <p className="px-3 pt-1.5 pb-0.5 text-[12px] leading-relaxed font-semibold text-white/55">
-                    📓 Notes for Muse ({state.data.notes_count}) — wishes you tell Aelia in chat; she
-                    passes them to the real Muse.
-                  </p>
-                )}
-                {group.heading === "Town" && (
-                  <>
-                    <p className="px-3 pt-2 pb-1 text-[11px] font-bold tracking-wide text-white/55 uppercase">
-                      Places in town
-                    </p>
-                    {PLACES.map((place) => (
-                      <button
-                        key={place.id}
-                        type="button"
-                        className="flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold text-white transition active:scale-[0.99]"
-                        style={selected?.id === place.id ? { backgroundColor: "rgba(255,255,255,0.14)" } : undefined}
-                        onClick={() => {
-                          setMenuOpen(false);
-                          selectPlace(place);
-                        }}
-                        aria-label={`Visit ${place.name}`}
-                      >
-                        <span
-                          aria-hidden="true"
-                          className="ml-1.5 inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-                          style={{ backgroundColor: place.color }}
-                        />
-                        <span className="flex-1">{place.chipLabel}</span>
-                        <span className="max-w-[46%] truncate text-[12px] font-medium text-white/55">{place.name}</span>
-                      </button>
-                    ))}
-                  </>
-                )}
-              </div>
-            ))}
-          </nav>
-        </>
-      )}
+      {/* Keep routine actions visible and occasional controls in expandable groups. */}
+      {menuOpen && <TownMenu
+        onClose={() => setMenuOpen(false)}
+        onSettings={() => { closeTownPanels(); setUtilitiesOpen(true); }}
+        festival={activeFestival}
+        className={`mt-scrollable absolute right-3 z-30 w-[min(320px,86vw)] overflow-y-auto rounded-3xl bg-[#22332b]/97 p-2 shadow-2xl backdrop-blur ${forcedLandscape ? "top-[60px] max-h-[calc(100%-118px)]" : isLandscape ? "top-[60px] max-h-[calc(100dvh-130px)]" : "top-[76px] max-h-[62vh] sm:right-4"}`}
+        groups={[{
+          heading: "Aelia", items: [{
+            key: "muse",
+            icon: "✦",
+            label: "Aelia",
+            detail: following ? "Walking with you" : "Talk with your companion",
+            active: !!museBubble,
+            action: selectMuse,
+            aria: "Meet Aelia, your host in Muse Town",
+          }, {
+            // The follow control lives here (Nov 1): the
+            // floating walk-screen chip and the speech-bubble
+            // status line are gone — her bubbles carry her
+            // words, and this menu row carries the switch.
+            key: "follow",
+            icon: "🚶",
+            label: following ? "Ask Aelia to stay here" : "Walk with Aelia",
+            detail: following ? "She'll keep her own day until you call her" : "She'll fall in beside you",
+            active: following,
+            action: () => {
+              if (following) {
+                stopFollowing();
+                // One-time hint (UI review): the first
+                // parking via this menu item explains the
+                // way back — once dismissed, never again.
+                if (!rejoinHintDismissedRef.current) setRejoinHint(true);
+              } else {
+                startFollowing();
+              }
+            },
+            aria: following
+              ? "Ask Aelia to stay here — she stays a while, then gets on with her day around town"
+              : "Walk with Aelia — she falls in beside you as you walk",
+          }]
+        },
+        {
+          heading: "Your day", items: [{
+            key: "letters",
+            icon: "✉",
+            label: "Letters",
+            detail: unreadLetters > 0 ? `${unreadLetters} unread` : undefined,
+            active: lettersOpen,
+            action: selectLetters,
+            aria: "Check the letters desk — letters from Muse in the real world",
+          }, {
+            key: "quests",
+            icon: "⚔️",
+            label: "Quest Board",
+            detail: undefined,
+            active: questOpen,
+            action: selectQuests,
+            aria: "Read the quest board — real tasks dressed as Roman quests",
+          }, {
+            key: "tree",
+            icon: "🌳",
+            label: "Town Tree",
+            detail: growth ? growth.stage.name : undefined,
+            active: treeOpen,
+            action: selectTree,
+            aria: "Visit the town tree in the middle of Muse Town",
+          }, {
+            key: "garden",
+            icon: "🌱",
+            label: "Garden House",
+            detail: state.data?.garden.planted_on ? `Watered on ${state.data.garden.water_days} day${state.data.garden.water_days === 1 ? "" : "s"}` : "The beds",
+            active: selected?.id === "garden",
+            action: selectGarden,
+            aria: "Visit the Garden House and its slow-growing beds",
+          }, ...(walking ? [{
+            // Rest: the day-ending ritual, one tap from
+            // the menu, the same as the bed nook's own
+            // prompt at the basilica.
+            key: "rest",
+            icon: "🛏️",
+            label: "Rest",
+            detail: "End the day at the basilica's bed nook",
+            active: false,
+            action: restInTown,
+            aria: "Rest at the basilica's bed nook — end the town day",
+          }] : []), ...(rowingBoat ? [{
+            key: "fishboat",
+            icon: "🎣",
+            label: "Fish from the boat",
+            detail: undefined,
+            active: false,
+            action: startFishing,
+            aria: "Cast a fishing line from the rowboat",
+          }] : [])]
+        },
+        {
+          heading: "Places & projects", collapsed: true, items: [{
+            key: "purse",
+            icon: "🪙",
+            label: "Market",
+            detail: `${purse.denarii} denarii${purse.seeds > 0 ? ` · ${purse.seeds} seeds` : ""}`,
+            active: marketOpen,
+            action: () => {
+              setMarketStall("market-a");
+              setMarketOpen(true);
+            },
+            aria: `Your denarii purse: ${purse.denarii} denarii — open the market to spend them`,
+          }, {
+            key: "board",
+            icon: "📋",
+            label: "Project Board",
+            detail: state.data?.board.as_of ? `as of ${state.data.board.as_of}` : undefined,
+            active: boardOpen,
+            action: selectBoard,
+            aria: "Read the project board — what Muse is building in town",
+          }, {
+            key: "goals",
+            icon: "🗿",
+            label: "Goals Obelisk",
+            detail: state.data?.goals.entries.length ? `${state.data.goals.entries.length} inscribed` : undefined,
+            active: goalsOpen,
+            action: () => {
+              setSelected(null);
+              setMuseBubble(null);
+              setYouOpen(false);
+              setTreeOpen(false);
+              setBoardOpen(false);
+              setQuestOpen(false);
+              setSecretOpen(false);
+              setLettersOpen(false);
+              setGoalsOpen(true);
+            },
+            aria: "Read the Goals Obelisk — what the player is working toward",
+          }, {
+            key: "memories",
+            icon: "💛",
+            label: "Memories with Aelia",
+            detail: "Villa of Stories",
+            active: selected?.id === "stories",
+            action: () => {
+              const place = PLACES.find((p) => p.id === "stories");
+              if (place) selectPlace(place);
+            },
+            aria: "Memories with Aelia — kept at the Villa of Stories",
+          }, ...PLACES.filter(place => place.id !== "garden" && place.id !== "stories").map(place => ({ key: place.id, icon: "⌂", label: place.name, active: selected?.id === place.id, action: () => selectPlace(place), aria: "Visit " + place.name }))]
+        },
+        {
+          heading: "View & weather", collapsed: true, items: [{
+            key: "walk",
+            icon: "🚶",
+            label: walking ? "See the town from above" : "Walk around town",
+            detail: walking ? "On foot now" : undefined,
+            active: walking,
+            action: walking ? goOverview : toggleWalk,
+            aria: walking ? "Switch to the town overview" : "Enter walk mode — stroll the town on foot",
+          }, {
+            key: "postcard",
+            icon: "📸",
+            label: "Take a postcard",
+            detail: undefined,
+            active: false,
+            action: takePostcard,
+            aria: "Take a postcard photo of the current view",
+          }, {
+            key: "weather",
+            icon: currentWeather?.icon ?? "☀️",
+            label: currentWeather?.label ?? "Weather",
+            detail: weather?.manual ? "pinned" : weatherCountdown ?? undefined,
+            active: weatherOpen,
+            action: selectWeather,
+            aria: `Weather in Muse Town: ${currentWeather ? currentWeather.label : "loading"} — open the weather panel`,
+          }, {
+            // The in-town landscape switch (Nov 1): this app's
+            // window never rotates with the phone, so the town
+            // turns itself sideways instead — the whole stage,
+            // controls remapped. Toggling back restores portrait
+            // exactly. It sits in View & Visit because it is a
+            // way of seeing the town.
+            key: "landscape",
+            icon: "🔄",
+            label: forcedLandscape ? "Portrait" : "Landscape",
+            detail: forcedLandscape ? "Town is turned sideways" : "Turn the town sideways",
+            active: forcedLandscape,
+            action: toggleForcedLandscape,
+            aria: forcedLandscape
+              ? "Return the town to portrait view"
+              : "Landscape — turn the town sideways from within, since the app window itself does not rotate",
+          }, {
+            key: "night",
+            icon: night ? "☀️" : "🌙",
+            label: night ? "Day" : "Night",
+            detail: night ? "Night now" : undefined,
+            active: night,
+            action: toggleNight,
+            aria: night ? "Switch the town to day" : "Switch the town to night",
+          }, ...(skyMode !== "auto" ? [{
+            key: "sky-auto",
+            icon: "🕰️",
+            label: "Real time",
+            detail: "Follow your local time again",
+            active: false,
+            action: setSkyAuto,
+            aria: "Let the town sky follow real local time again",
+          }] : [])]
+        },
+        {
+          heading: "Help & character", collapsed: true, items: [{
+            key: "tour",
+            icon: "🧭",
+            label: tourStep !== null ? "Stop tour" : "Guided tour",
+            detail: undefined,
+            active: tourStep !== null,
+            action: tourStep !== null ? stopTour : startTour,
+            aria: tourStep !== null ? "Stop the guided tour" : "Take the guided tour of the town",
+          }, {
+            key: "hint",
+            icon: "💡",
+            label: "Hint",
+            detail: undefined,
+            active: false,
+            action: showHint,
+            aria: "Get a hint about the treasure hunt",
+          }, {
+            key: "you",
+            icon: "🧍",
+            label: "You · Gaius",
+            detail: walking ? "On foot now" : undefined,
+            active: youOpen || walking,
+            action: selectYou,
+            aria: "Meet your character Gaius — that's you in Muse Town",
+          }, {
+            key: "restart-forum",
+            icon: "🏛️",
+            label: "Restart at the forum",
+            detail: undefined,
+            active: false,
+            action: () => {
+              // The fresh start: forget the resume
+              // snapshot and begin again at the
+              // forum spawn, as a first visit does.
+              try { localStorage.removeItem("muse-town-resume-v1"); } catch { /* storage unavailable */ }
+              window.location.reload();
+            },
+            aria: "Restart at the forum — clear the resume snapshot and start from the town spawn",
+          }]
+        }]}
+      />}
 
       {/* Found celebration */}
       {foundBannerVisible && (

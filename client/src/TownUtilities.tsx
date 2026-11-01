@@ -42,9 +42,10 @@ function PerformanceOverlay({ scene }: { scene: RefObject<TownSceneHandle | null
   </aside>;
 }
 
-export function TownUtilities({ open, onClose, scene, state, ready, onNavigate }: {
+export function TownUtilities({ open, onClose, scene, state, ready, onNavigate, lowGraphics, onLowGraphicsChange }: {
   open: boolean; onClose(): void; scene: RefObject<TownSceneHandle | null>; state: TownState | undefined;
   ready: boolean; onNavigate(destination: ArrivalDestination): void;
+  lowGraphics: boolean; onLowGraphicsChange(on: boolean): void;
 }) {
   const queryClient = useQueryClient();
   const dialog = useRef<HTMLDivElement>(null);
@@ -112,7 +113,7 @@ export function TownUtilities({ open, onClose, scene, state, ready, onNavigate }
         }
       }}>
         <button className="town-close" aria-label="Close town settings" disabled={busy} onClick={onClose}>×</button>
-        <h2 id="town-tools-title">Your town</h2>
+        <h2 id="town-tools-title">Settings & saves</h2>
         <section>
           <h3>Today</h3>
           <label><input type="checkbox" checked={arrivals} onChange={(event) => { setArrivals(event.target.checked); storePreference("muse-town-arrival-enabled", event.target.checked); if (!event.target.checked) setArrival(null); }} /> Show a daily arrival summary</label>
@@ -153,8 +154,9 @@ export function TownUtilities({ open, onClose, scene, state, ready, onNavigate }
         </section>
         <section>
           <h3>Performance</h3>
+          <label><input type="checkbox" checked={lowGraphics} onChange={(event) => onLowGraphicsChange(event.target.checked)} /> Light graphics</label>
           <label><input type="checkbox" checked={automatic} onChange={(event) => { const on = event.target.checked; setAutomatic(on); storePreference("muse-town-auto-graphics", on); scene.current?.setAutomaticGraphics(on); }} /> Adapt graphics to frame rate</label>
-          <p>Adjusts detail gradually. The menu’s Light graphics setting takes priority.</p>
+          <p>Adjusts detail gradually. Light graphics takes priority when enabled.</p>
           <label><input type="checkbox" checked={diagnostics} onChange={(event) => setDiagnostics(event.target.checked)} /> Show developer diagnostics</label>
         </section>
         {busy && <p role="status">Working…</p>}
