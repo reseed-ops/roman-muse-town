@@ -38,6 +38,9 @@ import {
   type Feelings,
 } from "./heart";
 import { aboutPlayer } from "./player";
+import { loadFishState } from "./fishState";
+import { runRetrySafe, type RequestIdentity } from "./retrySafe";
+import { saveActions } from "./saveActions";
 
 const stateResponse = z.object({
   found: z.array(z.string()),
@@ -442,12 +445,12 @@ interface AffectionRow {
   lastContactAt: Date | null;
 }
 
-async function loadAffection(ctx: Ctx): Promise<AffectionRow> {
+function loadAffection(ctx: Ctx): AffectionRow {
   const db = ctx.db<typeof schema>();
-  const rows = await db
+  const rows = db
     .select()
     .from(schema.affectionState)
-    .where(eq(schema.affectionState.id, 1));
+    .where(eq(schema.affectionState.id, 1)).all();
   const existing = rows[0];
   if (existing) {
     return {
@@ -458,7 +461,7 @@ async function loadAffection(ctx: Ctx): Promise<AffectionRow> {
       lastContactAt: existing.lastContactAt ?? null,
     };
   }
-  await db.insert(schema.affectionState).values({ id: 1 }).onConflictDoNothing();
+  db.insert(schema.affectionState).values({ id: 1 }).onConflictDoNothing().run();
   return { points: 0, dayKey: "", caps: "{}", flags: "{}", lastContactAt: null };
 }
 
@@ -609,21 +612,32 @@ interface PurseRow {
   flags: string;
 }
 
-async function loadPurse(ctx: Ctx): Promise<PurseRow> {
+/** Bun SQLite commits synchronous callbacks. Never await inside this scope:
+ * a payment and its inventory/progress change must commit or roll back together. */
+function withEconomyTransaction(ctx: Ctx, work: (ctx: Ctx) => undefined, identity?: RequestIdentity): void {
   const db = ctx.db<typeof schema>();
-  const rows = await db.select().from(schema.purseState).where(eq(schema.purseState.id, 1));
+  runRetrySafe(db, identity, (tx) => {
+    const scoped: Ctx = Object.create(ctx);
+    scoped.db = (() => tx) as Ctx["db"];
+    work(scoped);
+  });
+}
+
+function loadPurse(ctx: Ctx): PurseRow {
+  const db = ctx.db<typeof schema>();
+  const rows = db.select().from(schema.purseState).where(eq(schema.purseState.id, 1)).all();
   const existing = rows[0];
   if (existing) return existing;
-  await db.insert(schema.purseState).values({ id: 1 }).onConflictDoNothing();
+  db.insert(schema.purseState).values({ id: 1 }).onConflictDoNothing().run();
   return { denarii: 0, upgrades: "[]", ingredients: "[]", dishes: "[]", seeds: 0, flags: "{}" };
 }
 
-async function savePurse(ctx: Ctx, row: PurseRow): Promise<void> {
+function savePurse(ctx: Ctx, row: PurseRow): void {
   const db = ctx.db<typeof schema>();
-  await db
+  db
     .insert(schema.purseState)
     .values({ id: 1, ...row })
-    .onConflictDoUpdate({ target: schema.purseState.id, set: { ...row } });
+    .onConflictDoUpdate({ target: schema.purseState.id, set: { ...row } }).run();
 }
 
 function parseList(json: string): string[] {
@@ -716,10 +730,10 @@ type DatingRow = {
   perkClaims: string;
 };
 
-async function loadDating(ctx: Ctx): Promise<DatingRow> {
+function loadDating(ctx: Ctx): DatingRow {
   const db = ctx.db<typeof schema>();
-  await db.insert(schema.datingState).values({ id: 1 }).onConflictDoNothing();
-  const rows = await db.select().from(schema.datingState).where(eq(schema.datingState.id, 1));
+  db.insert(schema.datingState).values({ id: 1 }).onConflictDoNothing().run();
+  const rows = db.select().from(schema.datingState).where(eq(schema.datingState.id, 1)).all();
   const r = rows[0];
   return {
     starbook: r?.starbook ?? "[]",
@@ -737,12 +751,12 @@ async function loadDating(ctx: Ctx): Promise<DatingRow> {
   };
 }
 
-async function saveDating(ctx: Ctx, row: DatingRow): Promise<void> {
+function saveDating(ctx: Ctx, row: DatingRow): void {
   const db = ctx.db<typeof schema>();
-  await db
+  db
     .insert(schema.datingState)
     .values({ id: 1, ...row })
-    .onConflictDoUpdate({ target: schema.datingState.id, set: { ...row } });
+    .onConflictDoUpdate({ target: schema.datingState.id, set: { ...row } }).run();
 }
 
 async function saveTaskCompanion(ctx: Ctx, row: TaskCompanionRow): Promise<void> {
@@ -763,16 +777,16 @@ function parseFlags(json: string): Record<string, boolean> {
 }
 
 /** Award denarii (quests, treasures, sales…). Returns the new balance. */
-async function awardDenarii(ctx: Ctx, amount: number): Promise<number> {
-  const purse = await loadPurse(ctx);
+function awardDenarii(ctx: Ctx, amount: number): number {
+  const purse = loadPurse(ctx);
   purse.denarii += amount;
-  await savePurse(ctx, purse);
+  savePurse(ctx, purse);
   return purse.denarii;
 }
 
-async function saveAffection(ctx: Ctx, row: AffectionRow): Promise<void> {
+function saveAffection(ctx: Ctx, row: AffectionRow): void {
   const db = ctx.db<typeof schema>();
-  await db
+  db
     .insert(schema.affectionState)
     .values({
       id: 1,
@@ -791,7 +805,7 @@ async function saveAffection(ctx: Ctx, row: AffectionRow): Promise<void> {
         flags: row.flags,
         lastContactAt: row.lastContactAt,
       },
-    });
+    }).run();
 }
 
 function sameUtcDay(a: Date, b: Date): boolean {
@@ -866,6 +880,86 @@ async function applyAeliaGaiusRename(ctx: Ctx): Promise<void> {
   }
 }
 
+const economyResponse = stateResponse.pick({
+  purse: true, fish: true, piscina: true, baths: true, garden: true,
+  challenges_done: true, inscriptions_found: true, inscriptions_complete: true,
+  summit: true, phoenix: true,
+});
+
+/** Small gameplay response: no letters, fact memory, journal or blob URL signing. */
+function loadEconomyState(ctx: Ctx): z.infer<typeof economyResponse> {
+  const db = ctx.db<typeof schema>();
+  const purse = loadPurse(ctx);
+  const rank = affectionRank(db.select().from(schema.affectionState).where(eq(schema.affectionState.id, 1)).get()?.points ?? 0);
+  const { catchRows, releasedFish, hasGoldenCarp } = loadFishState(db);
+  const gardenRows = db.select().from(schema.gardenState).where(eq(schema.gardenState.id, 1)).all();
+  const challengeRows = db.select().from(schema.challengesState).all();
+  const inscriptionRows = db.select().from(schema.inscriptionsState).all();
+  const summitRow = db.select().from(schema.summitState).where(eq(schema.summitState.id, 1)).get();
+  const phoenixRow = db.select().from(schema.phoenixState).where(eq(schema.phoenixState.id, 1)).get();
+  const piscinaRow = db.select().from(schema.piscinaState).where(eq(schema.piscinaState.id, 1)).get();
+  const bathsRow = db.select().from(schema.bathsState).where(eq(schema.bathsState.id, 1)).get();
+  const now = new Date();
+  const summitReady =
+    rank >= 10 &&
+    parseList(purse.upgrades).includes("fountain") &&
+    inscriptionRows.length >= INSCRIPTION_TOTAL &&
+    hasGoldenCarp &&
+    challengeRows.length >= CHALLENGE_TOTAL;
+  const phoenixReady =
+    parseList(purse.upgrades).length >= 4 &&
+    inscriptionRows.length >= INSCRIPTION_TOTAL &&
+    challengeRows.length >= PHOENIX_CHALLENGE_TOTAL &&
+    hasGoldenCarp &&
+    (gardenRows[0]?.harvests ?? 0) >= 1 &&
+    rank >= 9;
+  return {
+    purse: {
+      denarii: purse.denarii,
+      upgrades: parseList(purse.upgrades),
+      ingredients: parseList(purse.ingredients),
+      dishes: parseList(purse.dishes),
+      seeds: purse.seeds,
+    },
+    fish: catchRows.map((row) => ({
+      fish_id: row.fishId,
+      sold: row.sold !== 0,
+      released: row.released !== 0,
+    })),
+    piscina: {
+      released_species: releasedFish.map((row) => row.fishId),
+      favourite_name: piscinaRow?.favouriteName ?? "",
+    },
+    baths: {
+      first_shared_at: bathsRow?.firstSharedAt ? bathsRow.firstSharedAt.toISOString() : null,
+    },
+    garden: {
+      planted_on: gardenRows[0]?.plantedOn ?? null,
+      water_days: gardenRows[0]?.waterDays ?? 0,
+      last_watered_day: gardenRows[0]?.lastWateredDay ?? null,
+      harvests: gardenRows[0]?.harvests ?? 0,
+    },
+    challenges_done: challengeRows.map((row) => row.challengeId),
+    inscriptions_found: inscriptionRows.map((row) => row.fragmentId),
+    inscriptions_complete: inscriptionRows.length >= INSCRIPTION_TOTAL,
+    summit: {
+      done: summitRow?.doneAt != null,
+      done_at: summitRow?.doneAt ? summitRow.doneAt.toISOString() : null,
+      private_name: summitRow?.doneAt ? summitRow.privateName : null,
+      constellation_name: summitRow?.doneAt ? summitRow.constellationName : null,
+      ready: summitReady,
+    },
+    phoenix: {
+      ready: phoenixReady,
+      arrived: phoenixRow?.arrivedAt != null,
+      arrived_at: phoenixRow?.arrivedAt ? phoenixRow.arrivedAt.toISOString() : null,
+      feathers: phoenixRow?.feathers ?? 0,
+      feather_available:
+        phoenixRow?.arrivedAt != null && (phoenixRow?.featherWeek ?? "") !== isoWeekKey(now),
+    },
+  };
+}
+
 async function loadState(ctx: Ctx): Promise<z.infer<typeof stateResponse>> {
   const db = ctx.db<typeof schema>();
   await applyAeliaGaiusRename(ctx);
@@ -936,11 +1030,7 @@ async function loadState(ctx: Ctx): Promise<z.infer<typeof stateResponse>> {
     .from(schema.museNotes)
     .where(eq(schema.museNotes.done, 0));
   const affectionRow = await loadAffection(ctx);
-  const purse = await loadPurse(ctx);
-  const catchRows = await db.select().from(schema.catches).orderBy(desc(schema.catches.id)).limit(60);
   const gardenRows = await db.select().from(schema.gardenState).where(eq(schema.gardenState.id, 1));
-  const challengeRows = await db.select().from(schema.challengesState);
-  const inscriptionRows = await db.select().from(schema.inscriptionsState);
   const summitRows = await db
     .select()
     .from(schema.summitState)
@@ -999,16 +1089,6 @@ async function loadState(ctx: Ctx): Promise<z.infer<typeof stateResponse>> {
   const bottleRows = await db.select().from(schema.bottles).orderBy(asc(schema.bottles.id));
   const bouquetRows = await db.select().from(schema.bouquets).orderBy(asc(schema.bouquets.id));
   const forageRows = await db.select().from(schema.forageState).where(eq(schema.forageState.id, 1));
-  const piscinaRows = await db
-    .select()
-    .from(schema.piscinaState)
-    .where(eq(schema.piscinaState.id, 1));
-  const piscinaRow = piscinaRows[0] ?? null;
-  const bathsRows = await db
-    .select()
-    .from(schema.bathsState)
-    .where(eq(schema.bathsState.id, 1));
-  const bathsRow = bathsRows[0] ?? null;
   const phoenixRows = await db
     .select()
     .from(schema.phoenixState)
@@ -1130,19 +1210,6 @@ async function loadState(ctx: Ctx): Promise<z.infer<typeof stateResponse>> {
       frictionParsed = null;
     }
   }
-  const summitReady =
-    rank >= 10 &&
-    parseList(purse.upgrades).includes("fountain") &&
-    inscriptionRows.length >= INSCRIPTION_TOTAL &&
-    catchRows.some((row) => row.fishId === "golden-carp") &&
-    challengeRows.length >= CHALLENGE_TOTAL;
-  const phoenixReady =
-    parseList(purse.upgrades).length >= 4 &&
-    inscriptionRows.length >= INSCRIPTION_TOTAL &&
-    challengeRows.length >= PHOENIX_CHALLENGE_TOTAL &&
-    catchRows.some((row) => row.fishId === "golden-carp") &&
-    (gardenRows[0]?.harvests ?? 0) >= 1 &&
-    rank >= 9;
   return {
     found: foundRows.map((row) => row.collectibleId),
     journal: journalRows.map((row) => ({
@@ -1217,52 +1284,7 @@ async function loadState(ctx: Ctx): Promise<z.infer<typeof stateResponse>> {
       rank,
       band: affectionBand(rank),
     },
-    purse: {
-      denarii: purse.denarii,
-      upgrades: parseList(purse.upgrades),
-      ingredients: parseList(purse.ingredients),
-      dishes: parseList(purse.dishes),
-      seeds: purse.seeds,
-    },
-    fish: catchRows.map((row) => ({
-      fish_id: row.fishId,
-      sold: row.sold !== 0,
-      released: row.released !== 0,
-    })),
-    piscina: {
-      released_species: catchRows
-        .filter((row) => row.released !== 0)
-        .map((row) => row.fishId)
-        .reverse(),
-      favourite_name: piscinaRow?.favouriteName ?? "",
-    },
-    baths: {
-      first_shared_at: bathsRow?.firstSharedAt ? bathsRow.firstSharedAt.toISOString() : null,
-    },
-    garden: {
-      planted_on: gardenRows[0]?.plantedOn ?? null,
-      water_days: gardenRows[0]?.waterDays ?? 0,
-      last_watered_day: gardenRows[0]?.lastWateredDay ?? null,
-      harvests: gardenRows[0]?.harvests ?? 0,
-    },
-    challenges_done: challengeRows.map((row) => row.challengeId),
-    inscriptions_found: inscriptionRows.map((row) => row.fragmentId),
-    inscriptions_complete: inscriptionRows.length >= INSCRIPTION_TOTAL,
-    summit: {
-      done: summitRow?.doneAt != null,
-      done_at: summitRow?.doneAt ? summitRow.doneAt.toISOString() : null,
-      private_name: summitRow?.doneAt ? summitRow.privateName : null,
-      constellation_name: summitRow?.doneAt ? summitRow.constellationName : null,
-      ready: summitReady,
-    },
-    phoenix: {
-      ready: phoenixReady,
-      arrived: phoenixRow?.arrivedAt != null,
-      arrived_at: phoenixRow?.arrivedAt ? phoenixRow.arrivedAt.toISOString() : null,
-      feathers: phoenixRow?.feathers ?? 0,
-      feather_available:
-        phoenixRow?.arrivedAt != null && (phoenixRow?.featherWeek ?? "") !== isoWeekKey(now),
-    },
+    ...loadEconomyState(ctx),
     dream: {
       morning_pending: (dreamRow?.morningPending ?? 0) !== 0,
       echo_pending: (dreamRow?.echoPending ?? 0) !== 0,
@@ -1743,6 +1765,7 @@ async function heartLines(ctx: Ctx, h: HeartRow, rank: number): Promise<string[]
 }
 
 export const Actions = {
+  ...saveActions,
   getState: defineAction({
     description: "Load the visitor's Muse Town state: found collectibles, journal entries, and the town tree's planting and watering state.",
     request: z.object({}),
@@ -1754,20 +1777,22 @@ export const Actions = {
 
   markFound: defineAction({
     description: "Record that the visitor found a collectible in Muse Town.",
-    request: z.object({ collectibleId: z.string().min(1).max(64) }),
+    request: z.object({ collectibleId: z.string().min(1).max(64) }).extend({ request_id: z.string().uuid().optional() }),
     response: stateResponse,
     async handler(ctx, args) {
-      const db = ctx.db<typeof schema>();
-      const before = await db
-        .select()
-        .from(schema.discoveries)
-        .where(eq(schema.discoveries.collectibleId, args.collectibleId));
-      await db
-        .insert(schema.discoveries)
-        .values({ collectibleId: args.collectibleId })
-        .onConflictDoNothing();
-      // A found treasure pays out in denarii — once, when it's new.
-      if (before.length === 0) await awardDenarii(ctx, TREASURE_DENARII);
+      withEconomyTransaction(ctx, (ctx) => {
+        const db = ctx.db<typeof schema>();
+        const before = db
+          .select()
+          .from(schema.discoveries)
+          .where(eq(schema.discoveries.collectibleId, args.collectibleId)).all();
+        db
+          .insert(schema.discoveries)
+          .values({ collectibleId: args.collectibleId })
+          .onConflictDoNothing().run();
+        // A found treasure pays out in denarii — once, when it's new.
+        if (before.length === 0) awardDenarii(ctx, TREASURE_DENARII);
+      }, { requestId: args.request_id, action: "markFound", payload: args });
       ctx.invalidateQueries();
       return loadState(ctx);
     },
@@ -2175,20 +2200,22 @@ export const Actions = {
 
   markQuestDone: defineAction({
     description: "Mark a Muse Town quest as done (the owner's self-report for real-world quests; in-town quests report their own completion). Idempotent.",
-    request: z.object({ questId: z.string().min(1).max(64) }),
+    request: z.object({ questId: z.string().min(1).max(64) }).extend({ request_id: z.string().uuid().optional() }),
     response: stateResponse,
     async handler(ctx, args) {
-      const db = ctx.db<typeof schema>();
-      const before = await db
-        .select()
-        .from(schema.questsState)
-        .where(eq(schema.questsState.questId, args.questId));
-      await db
-        .insert(schema.questsState)
-        .values({ questId: args.questId })
-        .onConflictDoNothing();
-      // A finished quest pays its denarii — once, when it's new.
-      if (before.length === 0) await awardDenarii(ctx, QUEST_DENARII);
+      withEconomyTransaction(ctx, (ctx) => {
+        const db = ctx.db<typeof schema>();
+        const before = db
+          .select()
+          .from(schema.questsState)
+          .where(eq(schema.questsState.questId, args.questId)).all();
+        db
+          .insert(schema.questsState)
+          .values({ questId: args.questId })
+          .onConflictDoNothing().run();
+        // A finished quest pays its denarii — once, when it's new.
+        if (before.length === 0) awardDenarii(ctx, QUEST_DENARII);
+      }, { requestId: args.request_id, action: "markQuestDone", payload: args });
       ctx.invalidateQueries();
       return loadState(ctx);
     },
@@ -2795,52 +2822,54 @@ export const Actions = {
       tier: z.enum(["loved", "liked", "neutral", "disliked", "refused"]),
       label: z.string().min(1).max(120),
       consume: z.enum(["ingredient", "dish", "fish", "none"]),
-    }),
+    }).extend({ request_id: z.string().uuid().optional() }),
     response: stateResponse,
     handler: async (ctx, args) => {
-      const db = ctx.db<typeof schema>();
-      const dating = await loadDating(ctx);
-      const today = utcDayKey(new Date());
-      const tastes = parseStringMap(dating.tastes);
-      tastes[args.item] = args.tier;
-      dating.tastes = JSON.stringify(tastes);
-      if (args.tier !== "refused") {
-        if (dating.giftDay !== today) {
-          dating.giftDay = today;
-          dating.giftCount = 0;
-        }
-        dating.giftCount += 1;
-        if (args.tier === "loved") {
-          const keeps = parseKeepsakes(dating.keepsakes);
-          keeps.push({ label: args.label, day: today });
-          dating.keepsakes = JSON.stringify(keeps.slice(-60));
-        }
-        const firsts = parseStringMap(dating.firsts);
-        if (!firsts.gift) {
-          firsts.gift = today;
-          dating.firsts = JSON.stringify(firsts);
-        }
-        // Consume the given thing.
-        if (args.consume === "ingredient" || args.consume === "dish") {
-          const purse = await loadPurse(ctx);
-          const list = parseList(args.consume === "ingredient" ? purse.ingredients : purse.dishes);
-          const idx = list.indexOf(args.item);
-          if (idx >= 0) {
-            list.splice(idx, 1);
-            if (args.consume === "ingredient") purse.ingredients = JSON.stringify(list);
-            else purse.dishes = JSON.stringify(list);
-            await savePurse(ctx, purse);
+      withEconomyTransaction(ctx, (ctx) => {
+        const db = ctx.db<typeof schema>();
+        const dating = loadDating(ctx);
+        const today = utcDayKey(new Date());
+        const tastes = parseStringMap(dating.tastes);
+        tastes[args.item] = args.tier;
+        dating.tastes = JSON.stringify(tastes);
+        if (args.tier !== "refused") {
+          if (dating.giftDay !== today) {
+            dating.giftDay = today;
+            dating.giftCount = 0;
           }
-        } else if (args.consume === "fish") {
-          const rows = await db
-            .select()
-            .from(schema.catches)
-            .where(and(eq(schema.catches.fishId, args.item), eq(schema.catches.sold, 0), eq(schema.catches.released, 0)));
-          const row = rows[0];
-          if (row) await db.delete(schema.catches).where(eq(schema.catches.id, row.id));
+          dating.giftCount += 1;
+          if (args.tier === "loved") {
+            const keeps = parseKeepsakes(dating.keepsakes);
+            keeps.push({ label: args.label, day: today });
+            dating.keepsakes = JSON.stringify(keeps.slice(-60));
+          }
+          const firsts = parseStringMap(dating.firsts);
+          if (!firsts.gift) {
+            firsts.gift = today;
+            dating.firsts = JSON.stringify(firsts);
+          }
+          // Consume the given thing.
+          if (args.consume === "ingredient" || args.consume === "dish") {
+            const purse = loadPurse(ctx);
+            const list = parseList(args.consume === "ingredient" ? purse.ingredients : purse.dishes);
+            const idx = list.indexOf(args.item);
+            if (idx >= 0) {
+              list.splice(idx, 1);
+              if (args.consume === "ingredient") purse.ingredients = JSON.stringify(list);
+              else purse.dishes = JSON.stringify(list);
+              savePurse(ctx, purse);
+            }
+          } else if (args.consume === "fish") {
+            const rows = db
+              .select()
+              .from(schema.catches)
+              .where(and(eq(schema.catches.fishId, args.item), eq(schema.catches.sold, 0), eq(schema.catches.released, 0))).all();
+            const row = rows[0];
+            if (row) db.delete(schema.catches).where(eq(schema.catches.id, row.id)).run();
+          }
         }
-      }
-      await saveDating(ctx, dating);
+        saveDating(ctx, dating);
+      }, { requestId: args.request_id, action: "recordGift", payload: args });
       ctx.invalidateQueries();
       return loadState(ctx);
     },
@@ -2925,20 +2954,22 @@ export const Actions = {
     request: z.object({
       perk: z.enum(["basil", "morning"]),
       item: z.enum(["market-basket", "fishermans-bundle", "bakers-sack"]),
-    }),
+    }).extend({ request_id: z.string().uuid().optional() }),
     response: stateResponse,
     handler: async (ctx, args) => {
-      const dating = await loadDating(ctx);
-      const today = utcDayKey(new Date());
-      const claims = parseStringMap(dating.perkClaims);
-      if (claims[args.perk] !== today) {
-        claims[args.perk] = today;
-        dating.perkClaims = JSON.stringify(claims);
-        await saveDating(ctx, dating);
-        const purse = await loadPurse(ctx);
-        purse.ingredients = JSON.stringify([...parseList(purse.ingredients), args.item].slice(-40));
-        await savePurse(ctx, purse);
-      }
+      withEconomyTransaction(ctx, (ctx) => {
+        const dating = loadDating(ctx);
+        const today = utcDayKey(new Date());
+        const claims = parseStringMap(dating.perkClaims);
+        if (claims[args.perk] !== today) {
+          claims[args.perk] = today;
+          dating.perkClaims = JSON.stringify(claims);
+          saveDating(ctx, dating);
+          const purse = loadPurse(ctx);
+          purse.ingredients = JSON.stringify([...parseList(purse.ingredients), args.item].slice(-40));
+          savePurse(ctx, purse);
+        }
+      }, { requestId: args.request_id, action: "claimPerk", payload: args });
       ctx.invalidateQueries();
       return loadState(ctx);
     },
@@ -2961,110 +2992,115 @@ export const Actions = {
 
   foragePick: defineAction({
     description: "Gather at a forest forage spot: one picking per spot per real day (the spot regrows overnight); the yield joins the purse's ingredients, cookable at the Culina and giftable like any honest ingredient. Returns the full town state.",
-    request: z.object({ spot_id: z.string().min(1).max(40) }),
+    request: z.object({ spot_id: z.string().min(1).max(40) }).extend({ request_id: z.string().uuid().optional() }),
     response: stateResponse,
     handler: async (ctx, args) => {
-      const item = FORAGE_ITEMS[args.spot_id];
-      if (item) {
-        const db = ctx.db<typeof schema>();
-        const today = utcDayKey(new Date());
-        const rows = await db.select().from(schema.forageState).where(eq(schema.forageState.id, 1));
-        const taken = parseDayMap(rows[0]?.taken ?? "{}");
-        if (taken[args.spot_id] !== today) {
-          taken[args.spot_id] = today;
-          if (rows[0]) {
-            await db
-              .update(schema.forageState)
-              .set({ taken: JSON.stringify(taken) })
-              .where(eq(schema.forageState.id, 1));
-          } else {
-            await db.insert(schema.forageState).values({ id: 1, taken: JSON.stringify(taken) });
+      withEconomyTransaction(ctx, (ctx) => {
+        const item = FORAGE_ITEMS[args.spot_id];
+        if (item) {
+          const db = ctx.db<typeof schema>();
+          const today = utcDayKey(new Date());
+          const rows = db.select().from(schema.forageState).where(eq(schema.forageState.id, 1)).all();
+          const taken = parseDayMap(rows[0]?.taken ?? "{}");
+          if (taken[args.spot_id] !== today) {
+            taken[args.spot_id] = today;
+            if (rows[0]) {
+              db
+                .update(schema.forageState)
+                .set({ taken: JSON.stringify(taken) })
+                .where(eq(schema.forageState.id, 1)).run();
+            } else {
+              db.insert(schema.forageState).values({ id: 1, taken: JSON.stringify(taken) }).run();
+            }
+            const purse = loadPurse(ctx);
+            const owned = parseList(purse.ingredients);
+            owned.push(item);
+            purse.ingredients = JSON.stringify(owned);
+            savePurse(ctx, purse);
           }
-          const purse = await loadPurse(ctx);
-          const owned = parseList(purse.ingredients);
-          owned.push(item);
-          purse.ingredients = JSON.stringify(owned);
-          await savePurse(ctx, purse);
-          ctx.invalidateQueries();
         }
-      }
+      }, { requestId: args.request_id, action: "foragePick", payload: args });
+      ctx.invalidateQueries();
       return loadState(ctx);
     },
   }),
 
   earnAffection: defineAction({
     description: "Record an affection-earning moment with town Muse (walking together, watering, a quest, an attentive reply…). Points and silent daily caps are server-kept; ranks are permanent, and a rank-up leaves a letter at the desk. Returns the full town state plus the rank reached if one was just earned.",
-    request: z.object({ reason: z.string().min(1).max(64) }),
+    request: z.object({ reason: z.string().min(1).max(64) }).extend({ request_id: z.string().uuid().optional() }),
     response: earnResponse,
     async handler(ctx, args): Promise<z.infer<typeof earnResponse>> {
-      const db = ctx.db<typeof schema>();
-      const now = new Date();
-      const row = await loadAffection(ctx);
-      row.points = cooledPoints(row, now);
-      const oldRank = affectionRank(row.points);
-      // Roll the day's caps over at midnight (UTC).
-      const today = utcDayKey(now);
-      let caps: Record<string, number> = {};
-      if (row.dayKey === today) {
-        try {
-          caps = JSON.parse(row.caps) as Record<string, number>;
-        } catch {
-          caps = {};
-        }
-      }
-      let flags: { discovered?: string[] } = {};
-      try {
-        flags = JSON.parse(row.flags) as { discovered?: string[] };
-      } catch {
-        flags = {};
-      }
-      let granted = 0;
-      if (args.reason.startsWith("landmark:")) {
-        const id = args.reason.slice("landmark:".length).slice(0, 40);
-        const discovered = flags.discovered ?? [];
-        if (id && !discovered.includes(id)) {
-          discovered.push(id);
-          flags.discovered = discovered;
-          granted = EARN_RULES.landmark!.points;
-        }
-      } else {
-        const rule = EARN_RULES[args.reason];
-        if (rule) {
-          const used = caps[args.reason] ?? 0;
-          granted = Math.max(0, Math.min(rule.points, rule.cap - used));
-          if (granted > 0) caps[args.reason] = used + granted;
-        }
-      }
-      if (granted > 0) {
-        row.points += granted;
-        row.lastContactAt = now;
-      }
-      row.dayKey = today;
-      row.caps = JSON.stringify(caps);
-      row.flags = JSON.stringify(flags);
-      await saveAffection(ctx, row);
-      const newRank = affectionRank(row.points);
       let rankedUp: number | null = null;
-      if (newRank > oldRank) {
-        rankedUp = newRank;
-        const dateLabel = now.toLocaleDateString("en-US", {
-          month: "long",
-          day: "numeric",
-          year: "numeric",
-          timeZone: "UTC",
-        });
-        for (let r = oldRank + 1; r <= newRank; r++) {
-          const letter = RANK_LETTERS[r];
-          if (letter) {
-            await db.insert(schema.letters).values({
-              dateLabel,
-              title: letter.title,
-              body: letter.body,
-            });
+      withEconomyTransaction(ctx, (ctx) => {
+        const db = ctx.db<typeof schema>();
+        const now = new Date();
+        const row = loadAffection(ctx);
+        row.points = cooledPoints(row, now);
+        const oldRank = affectionRank(row.points);
+        // Roll the day's caps over at midnight (UTC).
+        const today = utcDayKey(now);
+        let caps: Record<string, number> = {};
+        if (row.dayKey === today) {
+          try {
+            caps = JSON.parse(row.caps) as Record<string, number>;
+          } catch {
+            caps = {};
           }
         }
-      }
-      if (granted > 0 || rankedUp !== null) ctx.invalidateQueries();
+        let flags: { discovered?: string[] } = {};
+        try {
+          flags = JSON.parse(row.flags) as { discovered?: string[] };
+        } catch {
+          flags = {};
+        }
+        let granted = 0;
+        if (args.reason.startsWith("landmark:")) {
+          const id = args.reason.slice("landmark:".length).slice(0, 40);
+          const discovered = flags.discovered ?? [];
+          if (id && !discovered.includes(id)) {
+            discovered.push(id);
+            flags.discovered = discovered;
+            granted = EARN_RULES.landmark!.points;
+          }
+        } else {
+          const rule = EARN_RULES[args.reason];
+          if (rule) {
+            const used = caps[args.reason] ?? 0;
+            granted = Math.max(0, Math.min(rule.points, rule.cap - used));
+            if (granted > 0) caps[args.reason] = used + granted;
+          }
+        }
+        if (granted > 0) {
+          row.points += granted;
+          row.lastContactAt = now;
+        }
+        row.dayKey = today;
+        row.caps = JSON.stringify(caps);
+        row.flags = JSON.stringify(flags);
+        saveAffection(ctx, row);
+        const newRank = affectionRank(row.points);
+
+        if (newRank > oldRank) {
+          rankedUp = newRank;
+          const dateLabel = now.toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+            timeZone: "UTC",
+          });
+          for (let r = oldRank + 1; r <= newRank; r++) {
+            const letter = RANK_LETTERS[r];
+            if (letter) {
+              db.insert(schema.letters).values({
+                dateLabel,
+                title: letter.title,
+                body: letter.body,
+              }).run();
+            }
+          }
+        }
+      }, { requestId: args.request_id, action: "earnAffection", payload: args });
+      ctx.invalidateQueries();
       const state = await loadState(ctx);
       return { ...state, ranked_up: rankedUp };
     },
@@ -3072,229 +3108,251 @@ export const Actions = {
 
   awardOnce: defineAction({
     description: "Award denarii once for a named first-time moment (a first visit to a landmark with Muse, and the like). Later calls with the same key pay nothing.",
-    request: z.object({ key: z.string().min(1).max(64), amount: z.number().int().min(1).max(100) }),
-    response: stateResponse,
+    request: z.object({ key: z.string().min(1).max(64), amount: z.number().int().min(1).max(100) }).extend({ request_id: z.string().uuid().optional() }),
+    response: economyResponse,
     async handler(ctx, args) {
-      const purse = await loadPurse(ctx);
-      const flags = parseFlags(purse.flags);
-      if (!flags[`award:${args.key}`]) {
-        flags[`award:${args.key}`] = true;
-        purse.flags = JSON.stringify(flags);
-        purse.denarii += args.amount;
-        await savePurse(ctx, purse);
-        ctx.invalidateQueries();
-      }
-      return loadState(ctx);
+      withEconomyTransaction(ctx, (ctx) => {
+        const purse = loadPurse(ctx);
+        const flags = parseFlags(purse.flags);
+        if (!flags[`award:${args.key}`]) {
+          flags[`award:${args.key}`] = true;
+          purse.flags = JSON.stringify(flags);
+          purse.denarii += args.amount;
+          savePurse(ctx, purse);
+        }
+      }, { requestId: args.request_id, action: "awardOnce", payload: args });
+      ctx.invalidateQueries();
+      return loadEconomyState(ctx);
     },
   }),
 
   buyUpgrade: defineAction({
     description: "Buy a permanent town upgrade at the project board with denarii (restored fountain, more lanterns, flower planters, resurfaced forum cobbles). Fails quietly in state when the purse can't cover it or it's already bought.",
-    request: z.object({ upgrade: z.string().min(1).max(40) }),
-    response: stateResponse,
+    request: z.object({ upgrade: z.string().min(1).max(40) }).extend({ request_id: z.string().uuid().optional() }),
+    response: economyResponse,
     async handler(ctx, args) {
-      const price = UPGRADE_PRICES[args.upgrade];
-      if (price !== undefined) {
-        const purse = await loadPurse(ctx);
-        const owned = parseList(purse.upgrades);
-        if (!owned.includes(args.upgrade) && purse.denarii >= price) {
-          purse.denarii -= price;
-          owned.push(args.upgrade);
-          purse.upgrades = JSON.stringify(owned);
-          await savePurse(ctx, purse);
-          ctx.invalidateQueries();
+      withEconomyTransaction(ctx, (ctx) => {
+        const price = UPGRADE_PRICES[args.upgrade];
+        if (price !== undefined) {
+          const purse = loadPurse(ctx);
+          const owned = parseList(purse.upgrades);
+          if (!owned.includes(args.upgrade) && purse.denarii >= price) {
+            purse.denarii -= price;
+            owned.push(args.upgrade);
+            purse.upgrades = JSON.stringify(owned);
+            savePurse(ctx, purse);
+          }
         }
-      }
-      return loadState(ctx);
+      }, { requestId: args.request_id, action: "buyUpgrade", payload: args });
+      ctx.invalidateQueries();
+      return loadEconomyState(ctx);
     },
   }),
 
   buyIngredient: defineAction({
     description: "Buy a market stall's ingredient list with denarii; owning it unlocks the matching cook-together dish at the Recipes house.",
-    request: z.object({ ingredient: z.string().min(1).max(40) }),
-    response: stateResponse,
+    request: z.object({ ingredient: z.string().min(1).max(40) }).extend({ request_id: z.string().uuid().optional() }),
+    response: economyResponse,
     async handler(ctx, args) {
-      const price = INGREDIENT_PRICES[args.ingredient];
-      if (price !== undefined) {
-        const purse = await loadPurse(ctx);
-        const owned = parseList(purse.ingredients);
-        if (!owned.includes(args.ingredient) && purse.denarii >= price) {
-          purse.denarii -= price;
-          owned.push(args.ingredient);
-          purse.ingredients = JSON.stringify(owned);
-          await savePurse(ctx, purse);
-          ctx.invalidateQueries();
+      withEconomyTransaction(ctx, (ctx) => {
+        const price = INGREDIENT_PRICES[args.ingredient];
+        if (price !== undefined) {
+          const purse = loadPurse(ctx);
+          const owned = parseList(purse.ingredients);
+          if (!owned.includes(args.ingredient) && purse.denarii >= price) {
+            purse.denarii -= price;
+            owned.push(args.ingredient);
+            purse.ingredients = JSON.stringify(owned);
+            savePurse(ctx, purse);
+          }
         }
-      }
-      return loadState(ctx);
+      }, { requestId: args.request_id, action: "buyIngredient", payload: args });
+      ctx.invalidateQueries();
+      return loadEconomyState(ctx);
     },
   }),
 
   cookDish: defineAction({
     description: "Cook a dish together at the Recipes house: consumes its market ingredient and records the finished dish in the Culina's cooked-dishes record.",
-    request: z.object({ ingredient: z.string().min(1).max(40) }),
-    response: stateResponse,
+    request: z.object({ ingredient: z.string().min(1).max(40) }).extend({ request_id: z.string().uuid().optional() }),
+    response: economyResponse,
     async handler(ctx, args) {
-      const dish = DISH_FOR_INGREDIENT[args.ingredient];
-      if (dish) {
-        const purse = await loadPurse(ctx);
-        const owned = parseList(purse.ingredients);
-        const idx = owned.indexOf(args.ingredient);
-        if (idx >= 0) {
-          owned.splice(idx, 1);
-          purse.ingredients = JSON.stringify(owned);
-          const dishes = parseList(purse.dishes);
-          dishes.push(dish);
-          purse.dishes = JSON.stringify(dishes);
-          await savePurse(ctx, purse);
-          ctx.invalidateQueries();
+      withEconomyTransaction(ctx, (ctx) => {
+        const dish = DISH_FOR_INGREDIENT[args.ingredient];
+        if (dish) {
+          const purse = loadPurse(ctx);
+          const owned = parseList(purse.ingredients);
+          const idx = owned.indexOf(args.ingredient);
+          if (idx >= 0) {
+            owned.splice(idx, 1);
+            purse.ingredients = JSON.stringify(owned);
+            const dishes = parseList(purse.dishes);
+            dishes.push(dish);
+            purse.dishes = JSON.stringify(dishes);
+            savePurse(ctx, purse);
+          }
         }
-      }
-      return loadState(ctx);
+      }, { requestId: args.request_id, action: "cookDish", payload: args });
+      ctx.invalidateQueries();
+      return loadEconomyState(ctx);
     },
   }),
 
   buySeeds: defineAction({
     description: "Buy a pouch of garden seeds at the market with denarii.",
-    request: z.object({}),
-    response: stateResponse,
-    async handler(ctx) {
-      const purse = await loadPurse(ctx);
-      if (purse.denarii >= SEED_PRICE) {
-        purse.denarii -= SEED_PRICE;
-        purse.seeds += SEEDS_PER_POUCH;
-        await savePurse(ctx, purse);
-        ctx.invalidateQueries();
-      }
-      return loadState(ctx);
+    request: z.object({}).extend({ request_id: z.string().uuid().optional() }),
+    response: economyResponse,
+    async handler(ctx, args) {
+      withEconomyTransaction(ctx, (ctx) => {
+        const purse = loadPurse(ctx);
+        if (purse.denarii >= SEED_PRICE) {
+          purse.denarii -= SEED_PRICE;
+          purse.seeds += SEEDS_PER_POUCH;
+          savePurse(ctx, purse);
+        }
+      }, { requestId: args.request_id, action: "buySeeds", payload: args });
+      ctx.invalidateQueries();
+      return loadEconomyState(ctx);
     },
   }),
 
   plantGarden: defineAction({
     description: "Plant garden seeds in the Garden House beds (one seed, real days to grow).",
-    request: z.object({}),
-    response: stateResponse,
-    async handler(ctx) {
-      const db = ctx.db<typeof schema>();
-      const rows = await db.select().from(schema.gardenState).where(eq(schema.gardenState.id, 1));
-      const purse = await loadPurse(ctx);
-      if (!rows[0]?.plantedOn && purse.seeds > 0) {
-        purse.seeds -= 1;
-        await savePurse(ctx, purse);
-        await db
-          .insert(schema.gardenState)
-          .values({ id: 1, plantedOn: utcDayKey(new Date()), waterDays: 0, lastWateredDay: null })
-          .onConflictDoUpdate({
-            target: schema.gardenState.id,
-            set: { plantedOn: utcDayKey(new Date()), waterDays: 0, lastWateredDay: null },
-          });
-        ctx.invalidateQueries();
-      }
-      return loadState(ctx);
+    request: z.object({}).extend({ request_id: z.string().uuid().optional() }),
+    response: economyResponse,
+    async handler(ctx, args) {
+      withEconomyTransaction(ctx, (ctx) => {
+        const db = ctx.db<typeof schema>();
+        const rows = db.select().from(schema.gardenState).where(eq(schema.gardenState.id, 1)).all();
+        const purse = loadPurse(ctx);
+        if (!rows[0]?.plantedOn && purse.seeds > 0) {
+          purse.seeds -= 1;
+          savePurse(ctx, purse);
+          db
+            .insert(schema.gardenState)
+            .values({ id: 1, plantedOn: utcDayKey(new Date()), waterDays: 0, lastWateredDay: null })
+            .onConflictDoUpdate({
+              target: schema.gardenState.id,
+              set: { plantedOn: utcDayKey(new Date()), waterDays: 0, lastWateredDay: null },
+            }).run();
+        }
+      }, { requestId: args.request_id, action: "plantGarden", payload: args });
+      ctx.invalidateQueries();
+      return loadEconomyState(ctx);
     },
   }),
 
   waterGarden: defineAction({
     description: "Water the Garden House beds. Counts once per real day; three watered days (across real days) bring the crop to harvest.",
-    request: z.object({}),
-    response: stateResponse,
-    async handler(ctx) {
-      const db = ctx.db<typeof schema>();
-      const rows = await db.select().from(schema.gardenState).where(eq(schema.gardenState.id, 1));
-      const garden = rows[0];
-      const today = utcDayKey(new Date());
-      if (garden?.plantedOn && garden.lastWateredDay !== today) {
-        await db
-          .update(schema.gardenState)
-          .set({ waterDays: garden.waterDays + 1, lastWateredDay: today })
-          .where(eq(schema.gardenState.id, 1));
-        ctx.invalidateQueries();
-      }
-      return loadState(ctx);
+    request: z.object({}).extend({ request_id: z.string().uuid().optional() }),
+    response: economyResponse,
+    async handler(ctx, args) {
+      withEconomyTransaction(ctx, (ctx) => {
+        const db = ctx.db<typeof schema>();
+        const rows = db.select().from(schema.gardenState).where(eq(schema.gardenState.id, 1)).all();
+        const garden = rows[0];
+        const today = utcDayKey(new Date());
+        if (garden?.plantedOn && garden.lastWateredDay !== today) {
+          db
+            .update(schema.gardenState)
+            .set({ waterDays: garden.waterDays + 1, lastWateredDay: today })
+            .where(eq(schema.gardenState.id, 1)).run();
+        }
+      }, { requestId: args.request_id, action: "waterGarden", payload: args });
+      ctx.invalidateQueries();
+      return loadEconomyState(ctx);
     },
   }),
 
   harvestGarden: defineAction({
     description: "Harvest the Garden House beds once they've had three watered days: denarii for the crop, and the beds stand empty again.",
-    request: z.object({}),
-    response: stateResponse,
-    async handler(ctx) {
-      const db = ctx.db<typeof schema>();
-      const rows = await db.select().from(schema.gardenState).where(eq(schema.gardenState.id, 1));
-      const garden = rows[0];
-      if (garden?.plantedOn && garden.waterDays >= 3) {
-        await db
-          .update(schema.gardenState)
-          .set({ plantedOn: null, waterDays: 0, lastWateredDay: null, harvests: garden.harvests + 1 })
-          .where(eq(schema.gardenState.id, 1));
-        await awardDenarii(ctx, GARDEN_HARVEST_DENARII);
-        ctx.invalidateQueries();
-      }
-      return loadState(ctx);
+    request: z.object({}).extend({ request_id: z.string().uuid().optional() }),
+    response: economyResponse,
+    async handler(ctx, args) {
+      withEconomyTransaction(ctx, (ctx) => {
+        const db = ctx.db<typeof schema>();
+        const rows = db.select().from(schema.gardenState).where(eq(schema.gardenState.id, 1)).all();
+        const garden = rows[0];
+        if (garden?.plantedOn && garden.waterDays >= 3) {
+          db
+            .update(schema.gardenState)
+            .set({ plantedOn: null, waterDays: 0, lastWateredDay: null, harvests: garden.harvests + 1 })
+            .where(eq(schema.gardenState.id, 1)).run();
+          awardDenarii(ctx, GARDEN_HARVEST_DENARII);
+        }
+      }, { requestId: args.request_id, action: "harvestGarden", payload: args });
+      ctx.invalidateQueries();
+      return loadEconomyState(ctx);
     },
   }),
 
   recordCatch: defineAction({
     description: "Record a fish caught at the lake in the catch log (kept at the Stories house).",
-    request: z.object({ fish_id: z.string().min(1).max(40) }),
-    response: stateResponse,
+    request: z.object({ fish_id: z.string().min(1).max(40) }).extend({ request_id: z.string().uuid().optional() }),
+    response: economyResponse,
     async handler(ctx, args) {
-      if (FISH_PRICES[args.fish_id] !== undefined) {
-        const db = ctx.db<typeof schema>();
-        await db.insert(schema.catches).values({ fishId: args.fish_id });
-        ctx.invalidateQueries();
-      }
-      return loadState(ctx);
+      withEconomyTransaction(ctx, (ctx) => {
+        if (FISH_PRICES[args.fish_id] !== undefined) {
+          const db = ctx.db<typeof schema>();
+          db.insert(schema.catches).values({ fishId: args.fish_id }).run();
+        }
+      }, { requestId: args.request_id, action: "recordCatch", payload: args });
+      ctx.invalidateQueries();
+      return loadEconomyState(ctx);
     },
   }),
 
   sellFish: defineAction({
     description: "Sell every unsold fish in the catch log at the market for denarii. Sold fish stay in the log, marked sold.",
-    request: z.object({}),
-    response: stateResponse,
-    async handler(ctx) {
-      const db = ctx.db<typeof schema>();
-      const unsold = await db
-        .select()
-        .from(schema.catches)
-        .where(and(eq(schema.catches.sold, 0), eq(schema.catches.released, 0)));
-      if (unsold.length > 0) {
-        const total = unsold.reduce((sum, row) => sum + (FISH_PRICES[row.fishId] ?? 0), 0);
-        await db
-          .update(schema.catches)
-          .set({ sold: 1 })
-          .where(and(eq(schema.catches.sold, 0), eq(schema.catches.released, 0)));
-        if (total > 0) await awardDenarii(ctx, total);
-        ctx.invalidateQueries();
-      }
-      return loadState(ctx);
+    request: z.object({}).extend({ request_id: z.string().uuid().optional() }),
+    response: economyResponse,
+    async handler(ctx, args) {
+      withEconomyTransaction(ctx, (ctx) => {
+        const db = ctx.db<typeof schema>();
+        const unsold = db
+          .select()
+          .from(schema.catches)
+          .where(and(eq(schema.catches.sold, 0), eq(schema.catches.released, 0))).all();
+        if (unsold.length > 0) {
+          const total = unsold.reduce((sum, row) => sum + (FISH_PRICES[row.fishId] ?? 0), 0);
+          db
+            .update(schema.catches)
+            .set({ sold: 1 })
+            .where(and(eq(schema.catches.sold, 0), eq(schema.catches.released, 0))).run();
+          if (total > 0) awardDenarii(ctx, total);
+        }
+      }, { requestId: args.request_id, action: "sellFish", payload: args });
+      ctx.invalidateQueries();
+      return loadEconomyState(ctx);
     },
   }),
 
   releaseFish: defineAction({
     description: "Release one live catch into the piscina, permanently: the oldest unsold, unreleased catch of the given species leaves the sellable log and joins the pond's population. Releasing the golden carp moves the pond's jewel in — the summit's catch prerequisite was already counted at the catch itself.",
-    request: z.object({ fish_id: z.string().min(1).max(60) }),
-    response: stateResponse,
+    request: z.object({ fish_id: z.string().min(1).max(60) }).extend({ request_id: z.string().uuid().optional() }),
+    response: economyResponse,
     async handler(ctx, args) {
-      const db = ctx.db<typeof schema>();
-      const live = await db
-        .select()
-        .from(schema.catches)
-        .where(
-          and(
-            eq(schema.catches.fishId, args.fish_id),
-            eq(schema.catches.sold, 0),
-            eq(schema.catches.released, 0),
-          ),
-        )
-        .orderBy(asc(schema.catches.id))
-        .limit(1);
-      const row = live[0];
-      if (row) {
-        await db.update(schema.catches).set({ released: 1 }).where(eq(schema.catches.id, row.id));
-        ctx.invalidateQueries();
-      }
-      return loadState(ctx);
+      withEconomyTransaction(ctx, (ctx) => {
+        const db = ctx.db<typeof schema>();
+        const live = db
+          .select()
+          .from(schema.catches)
+          .where(
+            and(
+              eq(schema.catches.fishId, args.fish_id),
+              eq(schema.catches.sold, 0),
+              eq(schema.catches.released, 0),
+            ),
+          )
+          .orderBy(asc(schema.catches.id))
+          .limit(1).all();
+        const row = live[0];
+        if (row) {
+          db.update(schema.catches).set({ released: 1 }).where(eq(schema.catches.id, row.id)).run();
+        }
+      }, { requestId: args.request_id, action: "releaseFish", payload: args });
+      ctx.invalidateQueries();
+      return loadEconomyState(ctx);
     },
   }),
 
@@ -3345,65 +3403,71 @@ export const Actions = {
     request: z.object({
       stake: z.number().int(),
       result: z.enum(["win", "lose", "draw"]),
-    }),
-    response: stateResponse,
+    }).extend({ request_id: z.string().uuid().optional() }),
+    response: economyResponse,
     async handler(ctx, args) {
-      if (args.stake === 5 || args.stake === 10) {
-        const purse = await loadPurse(ctx);
-        if (args.result === "win") purse.denarii += args.stake;
-        if (args.result === "lose") purse.denarii = Math.max(0, purse.denarii - args.stake);
-        await savePurse(ctx, purse);
-        ctx.invalidateQueries();
-      }
-      return loadState(ctx);
+      withEconomyTransaction(ctx, (ctx) => {
+        if (args.stake === 5 || args.stake === 10) {
+          const purse = loadPurse(ctx);
+          if (args.result === "win") purse.denarii += args.stake;
+          if (args.result === "lose") purse.denarii = Math.max(0, purse.denarii - args.stake);
+          savePurse(ctx, purse);
+        }
+      }, { requestId: args.request_id, action: "settleKnucklebones", payload: args });
+      ctx.invalidateQueries();
+      return loadEconomyState(ctx);
     },
   }),
 
   completeChallenge: defineAction({
     description: "Tick a postcard challenge (a framed postcard taken at its named view). Pays its denarii once.",
-    request: z.object({ challenge_id: z.string().min(1).max(40) }),
-    response: stateResponse,
+    request: z.object({ challenge_id: z.string().min(1).max(40) }).extend({ request_id: z.string().uuid().optional() }),
+    response: economyResponse,
     async handler(ctx, args) {
-      const db = ctx.db<typeof schema>();
-      const before = await db
-        .select()
-        .from(schema.challengesState)
-        .where(eq(schema.challengesState.challengeId, args.challenge_id));
-      if (before.length === 0) {
-        await db
-          .insert(schema.challengesState)
-          .values({ challengeId: args.challenge_id })
-          .onConflictDoNothing();
-        await awardDenarii(ctx, CHALLENGE_DENARII);
-        ctx.invalidateQueries();
-      }
-      return loadState(ctx);
+      withEconomyTransaction(ctx, (ctx) => {
+        const db = ctx.db<typeof schema>();
+        const before = db
+          .select()
+          .from(schema.challengesState)
+          .where(eq(schema.challengesState.challengeId, args.challenge_id)).all();
+        if (before.length === 0) {
+          db
+            .insert(schema.challengesState)
+            .values({ challengeId: args.challenge_id })
+            .onConflictDoNothing().run();
+          awardDenarii(ctx, CHALLENGE_DENARII);
+        }
+      }, { requestId: args.request_id, action: "completeChallenge", payload: args });
+      ctx.invalidateQueries();
+      return loadEconomyState(ctx);
     },
   }),
 
   markInscription: defineAction({
     description: "Record an inscription fragment read around town. Reading the last of them pays a modest completion reward, once.",
-    request: z.object({ fragment_id: z.string().min(1).max(40) }),
-    response: stateResponse,
+    request: z.object({ fragment_id: z.string().min(1).max(40) }).extend({ request_id: z.string().uuid().optional() }),
+    response: economyResponse,
     async handler(ctx, args) {
-      const db = ctx.db<typeof schema>();
-      await db
-        .insert(schema.inscriptionsState)
-        .values({ fragmentId: args.fragment_id })
-        .onConflictDoNothing();
-      const all = await db.select().from(schema.inscriptionsState);
-      if (all.length >= INSCRIPTION_TOTAL) {
-        const purse = await loadPurse(ctx);
-        const flags = parseFlags(purse.flags);
-        if (!flags.inscriptions_done) {
-          flags.inscriptions_done = true;
-          purse.flags = JSON.stringify(flags);
-          purse.denarii += INSCRIPTION_REWARD;
-          await savePurse(ctx, purse);
+      withEconomyTransaction(ctx, (ctx) => {
+        const db = ctx.db<typeof schema>();
+        db
+          .insert(schema.inscriptionsState)
+          .values({ fragmentId: args.fragment_id })
+          .onConflictDoNothing().run();
+        const all = db.select().from(schema.inscriptionsState).all();
+        if (all.length >= INSCRIPTION_TOTAL) {
+          const purse = loadPurse(ctx);
+          const flags = parseFlags(purse.flags);
+          if (!flags.inscriptions_done) {
+            flags.inscriptions_done = true;
+            purse.flags = JSON.stringify(flags);
+            purse.denarii += INSCRIPTION_REWARD;
+            savePurse(ctx, purse);
+          }
         }
-      }
+      }, { requestId: args.request_id, action: "markInscription", payload: args });
       ctx.invalidateQueries();
-      return loadState(ctx);
+      return loadEconomyState(ctx);
     },
   }),
 

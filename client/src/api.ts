@@ -8,8 +8,9 @@
 
 import type { Actions } from "../../server/src/actions";
 import { createActionClient } from "@hatch/space-sdk/client";
+import { protectActions } from "./reliableActions";
 
-export const api = createActionClient<typeof Actions>();
+export const api = protectActions(createActionClient<typeof Actions>());
 
 // Re-exported for convenience so client code can do
 //

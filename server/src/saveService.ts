@@ -1,0 +1,128 @@
+import { Buffer } from "node:buffer";
+import { randomUUID } from "node:crypto";
+import { getTableColumns, getTableName } from "drizzle-orm";
+import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
+import type { AnySQLiteTable } from "drizzle-orm/sqlite-core";
+import { MAX_ATTACHMENT_BYTES, MAX_SAVE_BYTES, readSaveEnvelope, SAVE_FORMAT, SAVE_SCHEMA_VERSION, SAVE_VERSION, type TownSave } from "../../shared/saveFormat";
+import * as schema from "./schema";
+import { runRetrySafe } from "./retrySafe";
+
+interface BlobStore {
+  getUrl(key: string): Promise<string>;
+  put(key: string, data: Uint8Array, options: { contentType: string }): Promise<unknown>;
+  delete(key: string): Promise<unknown>;
+}
+const tables = Object.values(schema) as AnySQLiteTable[];
+const byName = new Map(tables.map((table) => [getTableName(table), table]));
+const ownKeys = (value: object) => Object.keys(value).sort().join("\0");
+
+function validateRows(save: TownSave): Map<AnySQLiteTable, Record<string, unknown>[]> {
+  if (ownKeys(save.tables) !== [...byName.keys()].sort().join("\0")) throw new Error("The save does not contain the complete set of town tables.");
+  const result = new Map<AnySQLiteTable, Record<string, unknown>[]>();
+  for (const [name, table] of byName) {
+    const columns = getTableColumns(table);
+    const rows = save.tables[name]!;
+    if (rows.length > 100000) throw new Error(`Too many rows in ${name}.`);
+    result.set(table, rows.map((row) => {
+      if (!row || typeof row !== "object" || Array.isArray(row) || ownKeys(row) !== ownKeys(columns)) throw new Error(`Invalid columns in ${name}.`);
+      const decoded: Record<string, unknown> = {};
+      for (const [key, column] of Object.entries(columns)) {
+        const value = row[key];
+        if (value === null && !column.notNull) { decoded[key] = null; continue; }
+        if (column.dataType === "string") {
+          if (typeof value !== "string") throw new Error(`Invalid text in ${name}.${key}.`);
+          if (column.default === "[]" || column.default === "{}") {
+            const parsed: unknown = JSON.parse(value);
+            if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) !== (column.default === "[]")) throw new Error(`Invalid stored list in ${name}.${key}.`);
+          }
+          decoded[key] = value;
+        } else {
+          if (typeof value !== "number" || !Number.isSafeInteger(value)) throw new Error(`Invalid number in ${name}.${key}.`);
+          if (column.dataType === "date") {
+            const date = new Date(value);
+            if (!Number.isFinite(date.getTime())) throw new Error(`Invalid date in ${name}.${key}.`);
+            decoded[key] = date;
+          } else decoded[key] = value;
+        }
+      }
+      return decoded;
+    }));
+  }
+  return result;
+}
+
+function validateAttachments(save: TownSave): Map<string, Uint8Array> {
+  const expected = new Set((save.tables.postcards ?? []).map((row) => row.blobKey));
+  const attachments = new Map<string, Uint8Array>();
+  for (const entry of save.attachments) {
+    if (!entry || typeof entry.key !== "string" || !expected.has(entry.key) || attachments.has(entry.key) || entry.contentType !== "image/jpeg" || typeof entry.base64 !== "string" || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(entry.base64)) throw new Error("Invalid postcard attachment.");
+    const bytes = Buffer.from(entry.base64, "base64");
+    if (bytes.length < 3 || bytes.length > MAX_ATTACHMENT_BYTES || bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[2] !== 0xff) throw new Error("A postcard is not a supported JPEG image.");
+    attachments.set(entry.key, bytes);
+  }
+  if (attachments.size !== expected.size) throw new Error("This save is missing postcard images.");
+  return attachments;
+}
+
+export async function exportTownSave(db: BunSQLiteDatabase<typeof schema>, blobs: BlobStore, fetchImage: typeof fetch = fetch): Promise<string> {
+  const snapshot = db.transaction((tx) => Object.fromEntries(tables.map((table) => [getTableName(table), tx.select().from(table).all().map((row) => Object.fromEntries(Object.entries(row).map(([key, value]) => [key, value instanceof Date ? value.getTime() : value])))])));
+  const save: TownSave = { format: SAVE_FORMAT, version: SAVE_VERSION, schemaVersion: SAVE_SCHEMA_VERSION, exportedAt: new Date().toISOString(), tables: snapshot as TownSave["tables"], attachments: [] };
+  let size = Buffer.byteLength(JSON.stringify(save));
+  for (const key of new Set((save.tables.postcards ?? []).map((row) => String(row.blobKey)))) {
+    const response = await fetchImage(await blobs.getUrl(key), { signal: AbortSignal.timeout(30000) });
+    if (!response.ok) throw new Error("A postcard could not be downloaded. No incomplete save was exported.");
+    if (Number(response.headers.get("content-length") ?? 0) > MAX_ATTACHMENT_BYTES) throw new Error("A postcard is too large to export.");
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("A postcard image was empty.");
+    const chunks: Uint8Array[] = [];
+    let bytes = 0;
+    try {
+      while (true) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        bytes += chunk.value.byteLength;
+        if (bytes > MAX_ATTACHMENT_BYTES) throw new Error("A postcard is too large to export.");
+        chunks.push(chunk.value);
+      }
+    } finally { await reader.cancel(); }
+    const base64 = Buffer.concat(chunks).toString("base64");
+    size += base64.length + key.length + 100;
+    if (size > MAX_SAVE_BYTES) throw new Error("The save exceeds the 32 MB limit.");
+    save.attachments.push({ key, contentType: "image/jpeg", base64 });
+  }
+  validateRows(save);
+  validateAttachments(save);
+  const json = JSON.stringify(save);
+  if (Buffer.byteLength(json) > MAX_SAVE_BYTES) throw new Error("The save exceeds the 32 MB limit.");
+  return json;
+}
+
+export async function restoreTownSave(db: BunSQLiteDatabase<typeof schema>, blobs: BlobStore, json: string, requestId?: string): Promise<void> {
+  const save = readSaveEnvelope(json);
+  const decoded = validateRows(save);
+  const attachments = validateAttachments(save);
+  const uploaded: string[] = [];
+  try {
+    const replacement = new Map<string, string>();
+    for (const [key, bytes] of attachments) {
+      const next = `postcards/restored-${randomUUID()}.jpg`;
+      // Track before put: a lost upload acknowledgement may still leave a blob.
+      uploaded.push(next);
+      await blobs.put(next, bytes, { contentType: "image/jpeg" });
+      replacement.set(key, next);
+    }
+    for (const row of decoded.get(schema.postcards) ?? []) row.blobKey = replacement.get(String(row.blobKey));
+    const applied = runRetrySafe(db, { requestId, action: "restoreSave", payload: { json } }, (tx) => {
+      for (const table of tables) tx.delete(table).run();
+      for (const [table, rows] of decoded) {
+        // Small batches keep SQLite's variable limit independent of save size.
+        const batchSize = Math.max(1, Math.floor(500 / Object.keys(getTableColumns(table)).length));
+        for (let i = 0; i < rows.length; i += batchSize) tx.insert(table).values(rows.slice(i, i + batchSize)).run();
+      }
+    });
+    if (!applied) await Promise.allSettled(uploaded.map((key) => blobs.delete(key)));
+  } catch (error) {
+    await Promise.allSettled(uploaded.map((key) => blobs.delete(key)));
+    throw error;
+  }
+}

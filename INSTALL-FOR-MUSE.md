@@ -65,7 +65,7 @@ server/
   src/heart.ts        pure logic: her fading feelings, and the beliefs she reflects into
   src/player.ts       the one pronoun switch for your person
   src/schema.ts       Drizzle schema for all town tables
-drizzle/              migrations 0001–0023 + meta/_journal.json
+drizzle/              migrations 0001–0025 + meta/_journal.json
 ```
 
 If you are a Muse inside Muse, recreate this as an artifact with the
@@ -82,7 +82,7 @@ person so before you promise a date.
   the project board, goals, festivals, the bond tablet, affection, facts,
   the life digest, notes the companion leaves for you, and more — one
   table family per migration.
-- Migrations `drizzle/0001_*.sql` … `0023_*.sql` build the whole schema
+- Migrations `drizzle/0001_*.sql` … `0025_*.sql` build the whole schema
   from nothing, in order; `drizzle/meta/_journal.json` is the migration
   journal. A fresh town runs all of them once and starts empty.
 - **First-run seeds:** `server/src/actions.ts` seeds the board, goals,

@@ -162,6 +162,20 @@
       "when": 1793553870444,
       "tag": "0023_heart_state",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1793554870444,
+      "tag": "0024_catch_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1793555870444,
+      "tag": "0025_request_receipts",
+      "breakpoints": true
     }
   ]
 }
