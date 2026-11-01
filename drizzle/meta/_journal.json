@@ -1,0 +1,160 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1793411746861,
+      "tag": "0001_initial",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1793411746861,
+      "tag": "0002_town_state_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1793421351878,
+      "tag": "0003_add_town_tree_state",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1793459709643,
+      "tag": "0004_secret_place_and_project_board",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1793459709643,
+      "tag": "0005_quests_and_achievements",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1793460143245,
+      "tag": "0006_letters_and_postcards",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1793462798508,
+      "tag": "0007_add_first_kiss_to_secret_state",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1793463618955,
+      "tag": "0008_bond_festivals_and_goals",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1793501785958,
+      "tag": "0009_add_muse_notes",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1793505591857,
+      "tag": "0010_affection_state",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1793506504947,
+      "tag": "0011_economy_and_game_systems",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1793510933851,
+      "tag": "0012_summit_state",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1793510933851,
+      "tag": "0013_piscina_state",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1793510933851,
+      "tag": "0014_baths_state",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1793513070249,
+      "tag": "0015_phoenix_state_and_garden_harvests",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "6",
+      "when": 1793519195818,
+      "tag": "0016_dream_state",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1793547864256,
+      "tag": "0017_line_pools_and_chat_ring",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1793549218246,
+      "tag": "0018_aelia_facts_digest_continuity",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1793550185665,
+      "tag": "0019_task_companion_seek_bottles_bouquets",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1793550185665,
+      "tag": "0020_dating_canon_state",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1793551518173,
+      "tag": "0021_forage_state",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1793552870444,
+      "tag": "0022_sentiment_state",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS forage_state (
+  id INTEGER PRIMARY KEY,
+  taken TEXT NOT NULL DEFAULT '{}'
+);

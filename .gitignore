@@ -1,0 +1,12 @@
+node_modules/
+dist/
+dist-*/
+.space-build*/
+*.db
+*.db-shm
+*.db-wal
+.DS_Store
+
+# Local process documents - never published (they spell the sweep patterns)
+SCRUB-LOG.md
+SWEEP-REPORT.md

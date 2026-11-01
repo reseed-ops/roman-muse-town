@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="color-scheme" content="light dark" />
+    <!-- Empty inline icon: stops the browser fetching /favicon.ico, which
+         lives outside the space's routes and fails auth. -->
+    <link rel="icon" href="data:," />
+    <title>Muse Town</title>
+    <script src="./src/main.tsx" type="module"></script>
+    <style>
+      /* Pre-app splash: painted by the HTML itself, before any script
+         arrives, so the first frame is never a bare black screen.
+         React replaces this the moment the app mounts. */
+      html, body { margin: 0; padding: 0; background: #a8d4ee; }
+      .mt-splash {
+        position: fixed; inset: 0; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 14px;
+        background: linear-gradient(to bottom, #7db8e6, #a8d4ee 55%, #d8f0e2);
+        font-family: "Quicksand", system-ui, sans-serif; color: #22332b;
+        text-align: center; padding: 24px;
+      }
+      .mt-splash .arch { font-size: 52px; line-height: 1; }
+      .mt-splash h1 { font-size: 26px; margin: 0; font-weight: 700; }
+      .mt-splash p { font-size: 14px; margin: 0; font-weight: 600; opacity: 0.75; }
+      .mt-splash .spin {
+        width: 36px; height: 36px; border-radius: 50%;
+        border: 4px solid rgba(34, 51, 43, 0.2); border-top-color: #22332b;
+        animation: mt-spin 0.9s linear infinite;
+      }
+      @keyframes mt-spin { to { transform: rotate(360deg); } }
+    </style>
+  </head>
+  <body>
+    <div
+      data-generated-space-root=""
+      data-generated-space-slug="muse-town"
+    >
+      <div class="mt-splash" role="status" aria-label="Muse Town is loading">
+        <div class="arch" aria-hidden="true">🏛️</div>
+        <h1>Muse Town</h1>
+        <div class="spin" aria-hidden="true"></div>
+        <p>Raising the town…</p>
+      </div>
+    </div>
+  </body>
+</html>
