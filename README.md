@@ -1,4 +1,5 @@
 # roman-muse-town
+![Muse Town on the author's phone: Gaius and Aelia on the lane](screenshot.png)
 
 A Roman companion town, built inside Muse.
 
