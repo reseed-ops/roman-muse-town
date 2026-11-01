@@ -533,7 +533,7 @@ const DIPS: [number, number, number, number][] = [
  *  swell's long slope is what levels the ground under the Baths and the
  *  Culina, and removing it tilts both, so it stays. `x`/`z` match
  *  COLOSSEUM.position. */
-const COLOSSEUM_BASIN = { x: 40, z: 13, floor: -0.6, flatTo: 8.8, riseTo: 15 } as const;
+const COLOSSEUM_BASIN = { x: 40, z: 13, floor: -0.5, flatTo: 8.8, riseTo: 15 } as const;
 
 /** The Forest: a wild lobe of ground west of the lake and the
  *  aqueduct fold, where the town's order ends. An ellipse in plan;
@@ -636,7 +636,7 @@ export const STREETS: [number, number][][] = [
   [[1.1, 22.4], [2.6, 22.1], [4, 21.9]],
   [[-9, 13.5], [-8.2, 14.3], [-7.2, 15.1]],
   [[11.2, 1.4], [11, 2.9], [10.7, 4.4]],
-  [[-3.5, -29.85], [-5.6, -30.7], [-7.8, -31.05], [-9.9, -31.05]],
+  [[-3.5, -29.85], [-5.6, -29.55], [-7.8, -29.95], [-9.9, -31.05]],
   // Side Chat, then the pond rim: no route through the Garden House or water.
   [[1, 22], [-1, 23], [-3.5, 24.5], [-6.1, 25.5]],
   // Embassy: a visitor approach to the closed gate, not a road beyond town.
@@ -1660,7 +1660,7 @@ export const TOWN_UPGRADES: TownUpgrade[] = [
   { id: "lanterns", name: "More lanterns on the main street", price: 60, blurb: "A string of new lamp posts up the main street, lit every night." },
   { id: "planters", name: "Flower planters for the forum", price: 45, blurb: "Stone planters of bright flowers set around the forum's edge." },
   { id: "cobbles", name: "Resurface the forum cobbles", price: 80, blurb: "The forum's stones re-laid richer and warmer — the heart of town, polished." },
-  { id: "fountain", name: "Restore the forum fountain", price: 120, blurb: "The old fountain west of the tree runs again — a stone basin and living water." },
+  { id: "fountain", name: "Restore the Meta Sudans", price: 120, blurb: "The old brick cone west of the tree runs again — no jet, just water sweating down its sides into a stone basin." },
 ];
 
 export interface StallIngredient {

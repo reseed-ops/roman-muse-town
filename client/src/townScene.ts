@@ -20,8 +20,10 @@ import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.j
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { BATHS, BED_SPOT, BOARD_SPOT, COLOSSEUM, FOREST, FOREST_BUSHES, FOREST_DEN_ROCKS, FOREST_EDGE_LINES, FOREST_SPOTS, FOREST_TRAILS, FOREST_TREES, FORAGE_SPOTS, GOALS_SPOT, LAKE, LAKE_PAVILION, LETTER_DESK_SPOT, MUSE, PISCINA, PLACES, PLAYER, QUEST_BOARD_SPOT, SECRET, SEEK_LINES, STREETS, forestNorm, groundHeightAt, isGoldenElevation, seasonForDate, solarAngles, streetDistance, terrainHeight, type Season, type WeatherId } from "./town";
 import { pickPooled } from "./linePools";
-import { setRainLevel } from "./audio";
-import { rainIntensity, rainSwell, wrapAround } from "./rainMood";
+import { setRainLevel, setRainShelter } from "./audio";
+import { FEEL } from "./feel";
+import { buildMetaSudans, META_SUDANS_LINES } from "./metaSudans";
+import { rainIntensity, rainSwell, SHELTER_HINT_LINE, SHELTERED_LINES, shelterAmount, wrapAround, type Shelter } from "./rainMood";
 import { pickRomanPool, ROMAN_PLACE_LINES, romanDate, romanHour, romanPools } from "./romanDay";
 import {
   circ,
@@ -1407,9 +1409,12 @@ export function createTownScene(
   /** 0 at the lake's centre, 1 on its water ellipse, more on dry land. */
   const lakeNorm = (x: number, z: number): number =>
     Math.hypot((x - LAKE_CX) / LAKE.rx, (z - LAKE_CZ) / LAKE.rz);
-  /** The dock's plank rectangle — the one dry crossing over the water. */
+  /** The dock's planks — the one dry crossing over the water — and
+   *  the bank leading onto them. The bank end must reach past the
+   *  walkers' shoreline fence (about x = -9.3), or the fence turns
+   *  them back a pace short of the first plank. */
   const onDock = (x: number, z: number): boolean =>
-    x >= -13.7 && x <= -10.3 && z >= LAKE_CZ - 0.62 && z <= LAKE_CZ + 0.62;
+    x >= -13.7 && x <= -8.9 && z >= LAKE_CZ - 0.62 && z <= LAKE_CZ + 0.62;
   // (dockTopAt retired: the dock's top is a WALK_SURFACES entry in
   // town.ts, and groundHeightAt covers it for every walker.)
 
@@ -2173,6 +2178,11 @@ export function createTownScene(
     depthWrite: false,
   });
   const rainFacing = new THREE.Vector3();
+  // Roofs a walker can stand under: the lake pavilion and the three stalls.
+  const RAIN_SHELTERS: Shelter[] = [
+    [LAKE_PAVILION.position[0], LAKE_PAVILION.position[1], 2.4],
+    [6.2, 21.5, 1.9], [-5.5, 16.5, 1.9], [10, 6.5, 1.9],
+  ];
   let lastRainLevelAt = -10;
   const rainLines = new THREE.LineSegments(rainGeo, rainMat);
   rainLines.frustumCulled = false;
@@ -2437,6 +2447,7 @@ export function createTownScene(
   // grass verge; its water disc turns slowly whenever it's restored.
   const upgradeGroups: Record<string, THREE.Group> = {};
   let fountainWater: THREE.Mesh | null = null;
+  let metaSweat: THREE.Mesh | null = null;
   {
     // Extra lanterns up the main street (heads join the lamp circuit).
     const lanternGroup = new THREE.Group();
@@ -2483,15 +2494,11 @@ export function createTownScene(
     water.position.set(fx, fy + 0.52, fz);
     fountainGroup.add(water);
     fountainWater = water;
-    const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.2, 0.8, 10), mat(0x9aa0a3, { rough: 0.85 }));
-    spout.position.set(fx, fy + 0.8, fz);
-    fountainGroup.add(spout);
-    const jet = new THREE.Mesh(
-      new THREE.ConeGeometry(0.16, 0.55, 8),
-      new THREE.MeshStandardMaterial({ color: 0x9fd4ef, roughness: 0.2, transparent: true, opacity: 0.7 }),
-    );
-    jet.position.set(fx, fy + 1.45, fz);
-    fountainGroup.add(jet);
+    // The Meta Sudans: no jet, just water sweating down a brick cone.
+    const meta = buildMetaSudans(mat(0xa8694a, { rough: 0.9 }));
+    meta.group.position.set(fx, fy + 0.5, fz);
+    fountainGroup.add(meta.group);
+    metaSweat = meta.sweat;
     fountainGroup.visible = false;
     world.add(fountainGroup);
     upgradeGroups.fountain = fountainGroup;
@@ -4658,7 +4665,7 @@ export function createTownScene(
       [-10.4, 7.5],
       [13.5, -26.5],
       [-20.9, 8.3],
-      [24.7, 28.1],
+      [28.2, 29.4],
     ] as [number, number][]
   ).forEach(([rx, rz], i) => {
     void placeWorld(rockPackUrl, { x: rx, z: rz, rotY: i * 0.9, width: 0.85 });
@@ -5174,7 +5181,7 @@ export function createTownScene(
     circ(-10.4, 7.5, 0.45),
     circ(13.5, -26.5, 0.45),
     circ(-20.9, 8.3, 0.45),
-    circ(24.7, 28.1, 0.45),
+    circ(28.2, 29.4, 0.45),
     // The lake's willows (trunks, at their planted spots) and its
     // two shore rocks. The water itself is fenced in resolveCollisions.
     circ(-21.6, -27.4, 0.34),
@@ -5575,6 +5582,7 @@ export function createTownScene(
       "My hem will be soaked and I will pretend not to mind, for the principle of the thing.",
       "Rain makes philosophers of the pigeons and poets of the rest of us. Walk on, Centurion, we're nearly lyrical.",
       "It will pass. It always passes, and the town comes up shining like it had been polished in the night.",
+      SHELTER_HINT_LINE,
     ],
     sparkles: [
       "Sparkles over the forum — the town showing off for us, I think.",
@@ -6438,7 +6446,11 @@ export function createTownScene(
     // of record; the spot is hard-coded here like the temple's).
     if (Math.hypot(mx - 10.5, mz - 43) < 6.5) return pickLine("companion:embassy", COMPANION_LINES.embassy!);
     if (wCur.sparkle > 0.4) return pickLine("companion:sparkles", COMPANION_LINES.sparkles!);
-    if (wCur.rain > 0.45) return pickLine("companion:rain", COMPANION_LINES.rain!);
+    if (wCur.rain > 0.45) {
+      if (shelterAmount(mx, mz, RAIN_SHELTERS) > 0.5) return pickLine("companion:sheltered", SHELTERED_LINES);
+      return pickLine("companion:rain", COMPANION_LINES.rain!);
+    }
+    if (upgradeGroups.fountain?.visible && Math.hypot(mx - -7, mz - -5) < 5) return pickLine("companion:meta-sudans", META_SUDANS_LINES);
     // The town wind, noticed out loud: only when it is actually up
     // (breeze or stronger — never in calm), and only sometimes, so
     // the lake and the night keep their own moments too.
@@ -6448,7 +6460,7 @@ export function createTownScene(
     if (Math.hypot(mx - LAKE.position[0], mz - LAKE.position[1]) < 9 && skyElevDeg < 9) return pickLine("companion:lake", COMPANION_LINES.lake!);
     // The Roman day, now and then: only what is true of today, in the
     // open, with no place or weather already claiming the moment.
-    if (Math.random() < 0.3) {
+    if (Math.random() < FEEL.romanLineChance) {
       const now = new Date();
       const hour = romanHour(now, (at) => solarAngles(at).elev);
       const pool = pickRomanPool(romanPools(romanDate(now), hour), Math.random);
@@ -9659,7 +9671,7 @@ export function createTownScene(
     sun.color.copy(sunWarm).lerp(tmpColorB.setHex(0x8fb4ff), nightMix);
     // Lamps come on at night — and early under fog or rain, where a
     // warm window against the grey does most of the cosy work.
-    const lampLevel = Math.min(1, nightMix + (weatherId === "fog" ? 0.45 : 0) + wCur.rain * 0.4);
+    const lampLevel = Math.min(1, nightMix + (weatherId === "fog" ? 0.45 : 0) + wCur.rain * FEEL.rainLampGlow);
     plazaGlow.intensity = lampLevel * 60;
     starMat.opacity = nightMix * 0.95 * (1 - Math.min(1, wCur.rain + wCur.snow)) * (weatherId === "fog" ? 0.25 : 1);
     // Fireflies belong to warm-season nights, and they keep to the
@@ -10370,6 +10382,7 @@ export function createTownScene(
         if (t - lastRainLevelAt > 1) {
           lastRainLevelAt = t;
           setRainLevel(rainAmt);
+          setRainShelter(walking ? shelterAmount(walkPos.x, walkPos.z, RAIN_SHELTERS) : 0);
         }
         if (rainLines.visible) {
           const slant = 0.35 + wCur.wind * 1.5 + (stormy ? 1.1 : 0);
@@ -10831,6 +10844,7 @@ export function createTownScene(
         if (fountainWater && upgradeGroups.fountain?.visible) {
           fountainWater.rotation.z = t * 0.25;
           (fountainWater.material as THREE.MeshStandardMaterial).opacity = 0.78 + Math.sin(t * 1.7) * 0.08;
+          if (metaSweat) (metaSweat.material as THREE.MeshStandardMaterial).opacity = 0.3 + Math.sin(t * 0.9) * 0.08;
         }
         moonGlitterMat.opacity = nightMix * (0.34 + 0.09 * Math.sin(t * 2.3) + 0.05 * Math.sin(t * 5.1));
         if (moonSpriteMat) moonSpriteMat.opacity = nightMix * 0.95;

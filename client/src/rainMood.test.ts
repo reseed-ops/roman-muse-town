@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { dripDelay, dropletDelay, rainIntensity, rainSwell, wrapAround } from "./rainMood";
+import { dripDelay, dropletDelay, rainIntensity, rainSwell, shelterAmount, shelterCutoff, wrapAround, type Shelter } from "./rainMood";
 
 const seq = (values: number[]) => {
   let i = 0;
@@ -77,5 +77,28 @@ describe("wrapAround", () => {
 
   test("it follows the viewer, however far they walk", () => {
     expect(Math.abs(wrapAround(-40, 50, 20) - 50)).toBeLessThanOrEqual(20);
+  });
+});
+
+describe("shelter", () => {
+  const spots: Shelter[] = [[0, 0, 2], [20, 0, 1.5]];
+
+  test("full under a roof, gone a few paces away", () => {
+    expect(shelterAmount(1, 0, spots)).toBe(1);
+    expect(shelterAmount(3, 0, spots)).toBeCloseTo(0.5);
+    expect(shelterAmount(10, 0, spots)).toBe(0);
+  });
+
+  test("any roof counts, and there may be none", () => {
+    expect(shelterAmount(20, 1, spots)).toBe(1);
+    expect(shelterAmount(1, 0, [])).toBe(0);
+  });
+
+  test("the rain closes down smoothly as you step under", () => {
+    expect(shelterCutoff(0)).toBe(16000);
+    expect(shelterCutoff(1)).toBeCloseTo(1100);
+    expect(shelterCutoff(0.5)).toBeLessThan(16000);
+    expect(shelterCutoff(0.5)).toBeGreaterThan(1100);
+    expect(shelterCutoff(2)).toBeCloseTo(1100);
   });
 });

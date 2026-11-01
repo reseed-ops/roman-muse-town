@@ -34,3 +34,33 @@ export function wrapAround(value: number, centre: number, half: number): number 
   const span = half * 2;
   return centre + ((((value - centre + half) % span) + span) % span) - half;
 }
+
+/** Somewhere the rain doesn't reach: a spot, and the radius of its roof. */
+export type Shelter = [x: number, z: number, radius: number];
+
+/** 1 under a roof, easing to 0 over a couple of paces beyond it. */
+export function shelterAmount(x: number, z: number, shelters: readonly Shelter[]): number {
+  let best = 0;
+  for (const [sx, sz, radius] of shelters) {
+    best = Math.max(best, Math.min(1, Math.max(0, 1 - (Math.hypot(x - sx, z - sz) - radius) / 2)));
+  }
+  return best;
+}
+
+/** Filter cutoff for rain heard from under a roof: open at 0, rounded
+ *  and low at 1. */
+export function shelterCutoff(amount: number): number {
+  return 16000 * Math.pow(1100 / 16000, Math.min(1, Math.max(0, amount)));
+}
+
+/** She mentions the roof while it rains, before you've found it. */
+export const SHELTER_HINT_LINE =
+  "There's a sound roof on the lake pavilion, if you'd like to sit this out and listen to it. I'd like that.";
+
+/** And says these once you're under one. */
+export const SHELTERED_LINES = [
+  "There. Dry as a scroll, and the whole sky drumming just out of reach.",
+  "No hurry at all now. It can rain as long as it likes.",
+  "I think rain sounds best from exactly here, a step inside the edge of it.",
+  "Stay a while. The town doesn't need us until it stops.",
+];

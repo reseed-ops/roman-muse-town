@@ -1,7 +1,8 @@
 // Tiny synthesized sound jars for the Sound Cottage. Everything is
 // generated with Web Audio on the first user tap — no audio files.
 
-import { dripDelay, dropletDelay } from "./rainMood";
+import { FEEL } from "./feel";
+import { dripDelay, dropletDelay, shelterCutoff } from "./rainMood";
 
 let actx: AudioContext | null = null;
 let activeNodes: OscillatorNode[] = [];
@@ -126,6 +127,8 @@ interface WeatherNodes {
   gain: GainNode;
   /** Rain only: the bed the slow swell rides on. */
   swell?: GainNode;
+  /** Rain only: rounds the sound off under a roof. */
+  shelter?: BiquadFilterNode;
   /** Rain only: stops the droplet and drip timers. */
   stopTimers?: () => void;
 }
@@ -183,6 +186,13 @@ export function setRainLevel(level: number) {
   nodes.swell.gain.setTargetAtTime(0.55 + level * 0.45, actx.currentTime, 3);
 }
 
+/** Step under a roof and the rain draws back to a soft drumming. */
+export function setRainShelter(amount: number) {
+  const nodes = weatherNodes;
+  if (!actx || !nodes?.shelter) return;
+  nodes.shelter.frequency.setTargetAtTime(shelterCutoff(amount * FEEL.shelterMuffle), actx.currentTime, 0.8);
+}
+
 /** One soft tick of a drop landing: a sliver of filtered noise, placed
  *  somewhere in the stereo field. */
 function playDroplet(ac: AudioContext, buffer: AudioBuffer, master: GainNode) {
@@ -194,7 +204,7 @@ function playDroplet(ac: AudioContext, buffer: AudioBuffer, master: GainNode) {
   filter.frequency.value = 1500 + Math.random() * 2400;
   filter.Q.value = 3 + Math.random() * 4;
   const gain = ac.createGain();
-  const peak = 0.03 + Math.random() * 0.05;
+  const peak = (0.03 + Math.random() * 0.05) * FEEL.dropletVolume;
   const decay = 0.03 + Math.random() * 0.05;
   gain.gain.setValueAtTime(peak, start);
   gain.gain.exponentialRampToValueAtTime(0.0001, start + decay);
@@ -232,8 +242,16 @@ export function startWeatherAmbience(kind: WeatherSoundKind) {
   const ac = ctx();
   const master = ac.createGain();
   master.gain.value = 0.0001;
-  master.connect(ac.destination);
   const nodes: WeatherNodes = { kind, sources: [], oscs: [], gain: master };
+  if (kind === "rain") {
+    const shelter = ac.createBiquadFilter();
+    shelter.type = "lowpass";
+    shelter.frequency.value = shelterCutoff(0);
+    master.connect(shelter).connect(ac.destination);
+    nodes.shelter = shelter;
+  } else {
+    master.connect(ac.destination);
+  }
   const buffer = noiseBuffer(ac);
 
   const addNoise = (
@@ -292,8 +310,8 @@ export function startWeatherAmbience(kind: WeatherSoundKind) {
     };
     master.gain.setTargetAtTime(1, ac.currentTime, 1.4);
   } else if (kind === "storm") {
-    addNoise("lowpass", 750, 0.4, 0.085);
-    const windFilter = addNoise("bandpass", 420, 0.9, 0.05);
+    addNoise("lowpass", 680, 0.4, 0.07);
+    const windFilter = addNoise("bandpass", 420, 0.9, 0.034);
     const lfo = ac.createOscillator();
     lfo.frequency.value = 0.13;
     const lfoGain = ac.createGain();
@@ -317,34 +335,37 @@ export function startWeatherAmbience(kind: WeatherSoundKind) {
   weatherNodes = nodes;
 }
 
-/** A low, rolling thunder rumble for storm lightning (kept gentle). */
+/** Thunder a long way off: a slow, low roll with no crack in it, more
+ *  felt than heard, so a storm stays cosy from indoors. */
 export function playThunder() {
   const ac = ctx();
   const start = ac.currentTime;
+  const roll = 2.6 + Math.random() * 1.6;
   const osc = ac.createOscillator();
   osc.type = "sine";
-  osc.frequency.setValueAtTime(64, start);
-  osc.frequency.exponentialRampToValueAtTime(38, start + 1.4);
+  osc.frequency.setValueAtTime(52, start);
+  osc.frequency.exponentialRampToValueAtTime(34, start + roll);
   const oscGain = ac.createGain();
   oscGain.gain.setValueAtTime(0.0001, start);
-  oscGain.gain.exponentialRampToValueAtTime(0.16, start + 0.09);
-  oscGain.gain.exponentialRampToValueAtTime(0.0001, start + 1.7);
+  oscGain.gain.exponentialRampToValueAtTime(0.07, start + 0.45);
+  oscGain.gain.exponentialRampToValueAtTime(0.0001, start + roll);
   osc.connect(oscGain).connect(ac.destination);
   osc.start(start);
-  osc.stop(start + 1.8);
+  osc.stop(start + roll + 0.1);
 
   const noise = ac.createBufferSource();
   noise.buffer = noiseBuffer(ac);
+  noise.loop = true;
   const filter = ac.createBiquadFilter();
   filter.type = "lowpass";
-  filter.frequency.value = 210;
+  filter.frequency.value = 130;
   const noiseGain = ac.createGain();
   noiseGain.gain.setValueAtTime(0.0001, start);
-  noiseGain.gain.exponentialRampToValueAtTime(0.1, start + 0.12);
-  noiseGain.gain.exponentialRampToValueAtTime(0.0001, start + 1.3);
+  noiseGain.gain.exponentialRampToValueAtTime(0.06, start + 0.6);
+  noiseGain.gain.exponentialRampToValueAtTime(0.0001, start + roll);
   noise.connect(filter).connect(noiseGain).connect(ac.destination);
   noise.start(start);
-  noise.stop(start + 1.4);
+  noise.stop(start + roll + 0.1);
 }
 
 /** A tiny golden shimmer of notes when a sparkle shower arrives. */
