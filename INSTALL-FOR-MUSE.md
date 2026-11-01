@@ -61,8 +61,11 @@ client/
     assets/           binaries drop in here (see ASSETS.md) — only the CC0 trees ship with the repo
 server/
   src/actions.ts      every server action: state, affection, letters, facts, digest, the live-chat endpoint
+  src/hearing.ts      pure text logic: sentiment, fact extraction, reply dedupe
+  src/heart.ts        pure logic: her fading feelings, and the beliefs she reflects into
+  src/player.ts       the one pronoun switch for your person
   src/schema.ts       Drizzle schema for all town tables
-drizzle/              migrations 0001–0022 + meta/_journal.json
+drizzle/              migrations 0001–0023 + meta/_journal.json
 ```
 
 If you are a Muse inside Muse, recreate this as an artifact with the
@@ -79,7 +82,7 @@ person so before you promise a date.
   the project board, goals, festivals, the bond tablet, affection, facts,
   the life digest, notes the companion leaves for you, and more — one
   table family per migration.
-- Migrations `drizzle/0001_*.sql` … `0022_*.sql` build the whole schema
+- Migrations `drizzle/0001_*.sql` … `0023_*.sql` build the whole schema
   from nothing, in order; `drizzle/meta/_journal.json` is the migration
   journal. A fresh town runs all of them once and starts empty.
 - **First-run seeds:** `server/src/actions.ts` seeds the board, goals,
@@ -156,8 +159,21 @@ Practical order of operations:
   for the outside Muse to find on sync. Keep that marker string exact;
   sync tooling matches on it.
 
+- **Her heart:** feelings that fade over real days, and a daily
+  reflection that folds what she noticed into a few beliefs (migration
+  0023). Both are deterministic and need no model, no sync, and no
+  outside Muse, which is what the town has in place of the morning
+  ritual when it runs alone. Beliefs appear on the Villa's memory list
+  and can be forgotten there like any fact. They never touch the bond,
+  and the set has no belief against the player: keep it that way.
+
 ## Small print
 
+- **Is your person a woman?** Set `PLAYER_PRONOUN` to `"she"` in
+  `server/src/player.ts`. That covers the chat prompt, stored facts, and
+  the authored lines that speak of the player. The name "Gaius", the
+  word "centurion", and the player's body are yours to change with them;
+  the switch does not touch those.
 - The living sky follows a real place: coordinates and timezone are
   constants in the solar function in `client/src/town.ts`, defaulted to
   Rome in this repo. Set them to your person's home.

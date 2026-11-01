@@ -15,6 +15,18 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { BATHS, BED_SPOT, BOARD_SPOT, COLOSSEUM, FOREST, FOREST_BUSHES, FOREST_DEN_ROCKS, FOREST_EDGE_LINES, FOREST_SPOTS, FOREST_TRAILS, FOREST_TREES, FORAGE_SPOTS, GOALS_SPOT, LAKE, LAKE_PAVILION, LETTER_DESK_SPOT, MUSE, PISCINA, PLACES, PLAYER, QUEST_BOARD_SPOT, SECRET, SEEK_LINES, STREETS, forestNorm, groundHeightAt, isGoldenElevation, seasonForDate, solarAngles, streetDistance, terrainHeight, type Season, type WeatherId } from "./town";
 import { pickPooled } from "./linePools";
 import {
+  circ,
+  obb,
+  obbLocal,
+  obbWorld,
+  pushOutOf,
+  resolveCollisions as resolveAgainst,
+  stepEntersBox,
+  type LiveBody,
+  type Obstacle,
+} from "./collision";
+import { aboutPlayer } from "../../server/src/player";
+import {
   applyWindToMaterial,
   currentWindState,
   setTownWindSpell,
@@ -6133,11 +6145,6 @@ export function createTownScene(
   // footprint's SURFACE (see updateWalk), so every "A — …" prompt
   // still fires standing outside the wall, exactly as it did when
   // the trigger was a centre radius the walls now exceed.
-  type CircleObstacle = { kind: "circle"; x: number; z: number; r: number; pad?: number; ghost?: boolean };
-  type ObbObstacle = { kind: "obb"; x: number; z: number; halfW: number; halfD: number; rot: number; pad?: number; ghost?: boolean };
-  type Obstacle = CircleObstacle | ObbObstacle;
-  const circ = (x: number, z: number, r: number, pad?: number): CircleObstacle => ({ kind: "circle", x, z, r, pad });
-  const obb = (x: number, z: number, halfW: number, halfD: number, rot: number): ObbObstacle => ({ kind: "obb", x, z, halfW, halfD, rot });
 
   // Per-place building footprints, keyed by place id so the prompt
   // system can measure surface distance to the same shapes that
@@ -6318,103 +6325,23 @@ export function createTownScene(
     obb(-18.7, 24.8, 0.85, 0.55, 0),
   ];
 
-  /** Point in an OBB's local frame (lx along its width, lz along its depth). */
-  function obbLocal(ob: ObbObstacle, x: number, z: number): { lx: number; lz: number } {
-    const dx = x - ob.x;
-    const dz = z - ob.z;
-    const c = Math.cos(ob.rot);
-    const s = Math.sin(ob.rot);
-    return { lx: dx * c - dz * s, lz: dx * s + dz * c };
-  }
-  /** Local-frame point (or direction, when dx/dz are deltas) back to world. */
-  function obbWorld(ob: ObbObstacle, lx: number, lz: number): { x: number; z: number } {
-    const c = Math.cos(ob.rot);
-    const s = Math.sin(ob.rot);
-    return { x: ob.x + lx * c + lz * s, z: ob.z - lx * s + lz * c };
-  }
-  /** How far a character with clearance `defAdd` keeps from a shape. */
-  function clearanceFor(ob: Obstacle, defAdd: number): number {
-    return ob.pad === undefined ? defAdd : Math.min(ob.pad, defAdd);
-  }
-
-  /** Push a point out of ONE obstacle (circle or OBB). Positional
-   *  push-out only ever removes the penetrating component, so a
-   *  diagonal push against a wall keeps its tangential part — that
-   *  is what makes walls slide instead of stick. */
-  function pushOutOf(ob: Obstacle, x: number, z: number, defAdd: number): { x: number; z: number } {
-    const add = clearanceFor(ob, defAdd);
-    if (ob.kind === "circle") {
-      const dx = x - ob.x;
-      const dz = z - ob.z;
-      const dist = Math.hypot(dx, dz);
-      const minDist = ob.r + add;
-      if (dist < minDist && dist > 0.0001) {
-        return { x: ob.x + (dx / dist) * minDist, z: ob.z + (dz / dist) * minDist };
-      }
-      if (dist <= 0.0001) return { x: ob.x + minDist, z };
-      return { x, z };
+  /** The lake: nobody wades. On-foot movers are pushed back to the
+   *  water's edge (an ellipse push-out, so pressure slides along the
+   *  shore), except on the dock's planks — the one dry crossing. The
+   *  boat never comes through here: it runs its own shoreline
+   *  constraint in the rowing code. */
+  function fenceLake(x: number, z: number, defAdd: number): { x: number; z: number } {
+    if (onDock(x, z)) return { x, z };
+    const ldx = (x - LAKE_CX) / (LAKE.rx + defAdd);
+    const ldz = (z - LAKE_CZ) / (LAKE.rz + defAdd);
+    const ln = Math.hypot(ldx, ldz);
+    if (ln < 1 && ln > 0.0001) {
+      return { x: LAKE_CX + (ldx / ln) * (LAKE.rx + defAdd), z: LAKE_CZ + (ldz / ln) * (LAKE.rz + defAdd) };
     }
-    const { lx, lz } = obbLocal(ob, x, z);
-    const qx = THREE.MathUtils.clamp(lx, -ob.halfW, ob.halfW);
-    const qz = THREE.MathUtils.clamp(lz, -ob.halfD, ob.halfD);
-    if (qx !== lx || qz !== lz) {
-      // Outside the box: keep `add` clearance from the closest point
-      // (face or corner) of the rectangle.
-      const ddx = lx - qx;
-      const ddz = lz - qz;
-      const d = Math.hypot(ddx, ddz);
-      if (d >= add || d <= 0.0001) return { x, z };
-      return obbWorld(ob, qx + (ddx / d) * add, qz + (ddz / d) * add);
-    }
-    // Inside the box: leave by the axis of least penetration.
-    const penX = ob.halfW - Math.abs(lx) + add;
-    const penZ = ob.halfD - Math.abs(lz) + add;
-    if (penX < penZ) return obbWorld(ob, lx >= 0 ? ob.halfW + add : -ob.halfW - add, lz);
-    return obbWorld(ob, lx, lz >= 0 ? ob.halfD + add : -ob.halfD - add);
+    return { x, z };
   }
-
-  /** Resolve a character at (x, z) out of every obstacle, iterating
-   *  a few passes so being pushed out of one shape into another (a
-   *  booth against a lamp, two walls at a corner) still settles
-   *  outside both. `extra` holds live circles (the other character's
-   *  body) that are not in the static list. The ghost (Muse's home
-   *  spot) never blocks anyone. */
-  function resolveCollisions(
-    x: number,
-    z: number,
-    defAdd: number,
-    extra?: { x: number; z: number; r: number },
-  ): { x: number; z: number } {
-    let px = x;
-    let pz = z;
-    for (let pass = 0; pass < 3; pass++) {
-      for (const ob of obstacles) {
-        if (ob.ghost) continue;
-        const out = pushOutOf(ob, px, pz, defAdd);
-        px = out.x;
-        pz = out.z;
-      }
-      if (extra) {
-        const out = pushOutOf(circ(extra.x, extra.z, extra.r), px, pz, defAdd);
-        px = out.x;
-        pz = out.z;
-      }
-      // The lake: nobody wades. On-foot movers are pushed back to
-      // the water's edge (an ellipse push-out, so pressure slides
-      // along the shore), except on the dock's planks — the one dry
-      // crossing. The boat never comes through here: it runs its own
-      // shoreline constraint in the rowing code.
-      if (!onDock(px, pz)) {
-        const ldx = (px - LAKE_CX) / (LAKE.rx + defAdd);
-        const ldz = (pz - LAKE_CZ) / (LAKE.rz + defAdd);
-        const ln = Math.hypot(ldx, ldz);
-        if (ln < 1 && ln > 0.0001) {
-          px = LAKE_CX + (ldx / ln) * (LAKE.rx + defAdd);
-          pz = LAKE_CZ + (ldz / ln) * (LAKE.rz + defAdd);
-        }
-      }
-    }
-    return { x: px, z: pz };
+  function resolveCollisions(x: number, z: number, defAdd: number, body?: LiveBody): { x: number; z: number } {
+    return resolveAgainst(obstacles, x, z, defAdd, body, (fx, fz) => fenceLake(fx, fz, defAdd));
   }
 
   /** Distance from a point to the nearest obstacle's surface (0 or
@@ -6813,7 +6740,7 @@ export function createTownScene(
     "Slowly, Centurion. The afternoon isn't going anywhere without us.",
     "I like how the town looks when we aren't hurrying through it — as if it saved its good side for people walking this slowly.",
     "Your hand, a whole afternoon, and no plan worth the name. If Rome disapproves, Rome may file a complaint with the tree.",
-    "People keep asking where we're going, as if 'with him' weren't a complete address.",
+    aboutPlayer("People keep asking where we're going, as if 'with him' weren't a complete address."),
     "One more lane, then. The town is long and neither of us is in danger of finishing it today.",
   ];
   const WANDER_IDLE_LINES = [
@@ -7078,11 +7005,17 @@ export function createTownScene(
       for (let s = 0; s < subSteps; s++) {
         const candX = newX + (mfx * totalStep) / subSteps;
         const candZ = newZ + (mfz * totalStep) / subSteps;
-        const resolved = resolveCollisions(candX, candZ, 0.5, {
-          x: museGroup.position.x,
-          z: museGroup.position.z,
-          r: 0.55,
-        });
+        // Her body only counts where she can be seen, and at about her
+        // real size: a companion out of sight is not an invisible wall,
+        // and one beside him should not close a doorway.
+        const resolved = resolveCollisions(
+          candX,
+          candZ,
+          0.5,
+          museGroup.visible ? { x: museGroup.position.x, z: museGroup.position.z, r: 0.4, pad: 0.15 } : undefined,
+        );
+        // Whatever pushed this step around, it may not land on a wall.
+        if (stepEntersBox(obstacles, newX, newZ, resolved.x, resolved.z)) continue;
         newX = resolved.x;
         newZ = resolved.z;
       }

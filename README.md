@@ -27,8 +27,9 @@ her memory of his real life honest.
 - **Server** (`server/src/`): state and actions for the board, goals,
   letters, facts, a life digest, affection ranks, the bond tablet, and an
   optional model-backed live chat for Aelia. Fully playable scripted
-  without it.
-- **Schema** (`drizzle/`): 22 migrations building the whole town state
+  without it. Her pure logic (`hearing.ts`, `heart.ts`, `player.ts`) has
+  no database or SDK in it, and `bun test server` covers it.
+- **Schema** (`drizzle/`): 23 migrations building the whole town state
   from an empty SQLite database.
 - **Two free binaries**: a CC0 low-poly trees pack and the companion's
   VRM body, whose licence (pixiv's VRoid sample terms) permits free

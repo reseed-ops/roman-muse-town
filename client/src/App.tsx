@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type ApiResponse } from "./api";
 import { linePools, pickPooled } from "./linePools";
+import { aboutPlayer } from "../../server/src/player";
+import { BELIEF_LINES } from "./town";
 import {
 ACHIEVEMENTS,
 CLOSE_LINES,
@@ -2658,7 +2660,7 @@ export function App() {
     if (dreamingRef.current || !walkingRef.current) return;
     if (summitScene) return;
     if (rowingRef.current || seatedBenchRef.current) {
-      setHintText("Stand up first — even a Centurion undresses his day standing.");
+      setHintText(aboutPlayer("Stand up first — even a Centurion undresses his day standing."));
       window.setTimeout(() => setHintText(null), 3200);
       return;
     }
@@ -2804,11 +2806,23 @@ export function App() {
       // through the bag (never the same fact on consecutive days),
       // or — more sparingly — a digest reference.
       const surfacedFacts = (cData?.facts ?? []).filter((f) => {
-        if (f.source === "weather") return false;
+        if (f.source === "weather" || f.source === "reflection") return false;
         if (!f.surfaced_on) return true;
         return (Date.parse(todayStr) - Date.parse(f.surfaced_on)) / 86400000 >= 2;
       });
-      if (!weatherAsked && surfacedFacts.length > 0 && Math.random() < 0.65) {
+      // A belief she came to on her own is said in her own words, not
+      // through the "you told me" fact frames, and rarely: at most once
+      // every few days, and ahead of any other memory beat.
+      const beliefFact = (cData?.facts ?? []).find(
+        (f) =>
+          f.source === "reflection" &&
+          BELIEF_LINES[f.topic] &&
+          (!f.surfaced_on || (Date.parse(todayStr) - Date.parse(f.surfaced_on)) / 86400000 >= 4),
+      );
+      if (!weatherAsked && beliefFact && Math.random() < 0.2) {
+        lines.push(pickPooled("belief-" + beliefFact.topic, BELIEF_LINES[beliefFact.topic]!));
+        void api.markFactSurfaced({ id: beliefFact.id }).catch(() => {});
+      } else if (!weatherAsked && surfacedFacts.length > 0 && Math.random() < 0.65) {
         const text = pickPooled("facts-surface", surfacedFacts.map((f) => f.text));
         const fact = surfacedFacts.find((f) => f.text === text);
         if (fact) {
@@ -3502,7 +3516,7 @@ export function App() {
       focusReportRef.current = false;
       const report = msg.trim().slice(0, 200);
       learnFactRef.current({
-        text: `After a focus sitting beside her, he said it went like this: ${report.replace(/\.$/, "")}`,
+        text: `${aboutPlayer("After a focus sitting beside her, he said it went like this:")} ${report.replace(/\.$/, "")}`,
         topic: "work",
         source: "chat",
       });
@@ -3518,7 +3532,7 @@ export function App() {
       const answer = msg.trim().replace(/\.+$/, "").slice(0, 60);
       if (answer) {
         learnFactRef.current({
-          text: pendingQ.fact.split("{answer}").join(answer),
+          text: aboutPlayer(pendingQ.fact).split("{answer}").join(answer),
           topic: pendingQ.topic,
           source: "question",
         });

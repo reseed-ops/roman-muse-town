@@ -404,6 +404,22 @@ export const sentimentState = sqliteTable("sentiment_state", {
   moodSpellLastHeavyDay: text("mood_spell_last_heavy_day").notNull().default(""),
 });
 
+/** Aelia's heart (migration 0023): a single private row (id = 1)
+ *  holding her fading feelings, the kinds of day already counted today,
+ *  the counted days not yet folded into a belief, and every belief key
+ *  she has ever formed. No message text is stored here, no feeling is
+ *  ever shown, and nothing here touches affection or the bond. */
+export const heartState = sqliteTable("heart_state", {
+  id: integer("id").primaryKey(),
+  dayKey: text("day_key").notNull().default(""),
+  warmth: integer("warmth").notNull().default(0),
+  joy: integer("joy").notNull().default(0),
+  concern: integer("concern").notNull().default(0),
+  dayKinds: text("day_kinds").notNull().default("[]"),
+  episodes: text("episodes").notNull().default("{}"),
+  beliefs: text("beliefs").notNull().default("[]"),
+});
+
 export const treeState = sqliteTable("tree_state", {
   id: integer("id").primaryKey(),
   plantedAt: integer("planted_at", { mode: "timestamp_ms" })
