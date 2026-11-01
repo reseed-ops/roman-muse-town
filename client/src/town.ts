@@ -951,7 +951,7 @@ export function groundHeightAt(x: number, z: number): number {
 }
 
 /** Her fish-watching lines, said from the coping now and then —
- *  unhurried, Jennie-and-Mattie at the water's edge. {name} is her
+ *  unhurried, at the water's edge. {name} is her
  *  favourite carp's name, once she has chosen one. */
 export const PISCINA_WATCH_LINES = [
   "The Romans kept ponds like this at their villas and spoiled the fish shamefully. I understand them completely.",
@@ -1134,7 +1134,7 @@ export const SECRET = {
 // --- Romance at the secret place ------------------------------------------
 // Only ever here, only ever at his invitation: her register warms, his
 // quick-pick lines sweeten, and a held hand can become a kiss. Wistful
-// and light — Jennie-and-Mattie in tone, nothing explicit, and nobody
+// and light in tone, nothing explicit, and nobody
 // else in town ever mentions any of it.
 
 export const SECRET_FLIRT_LINES = [
