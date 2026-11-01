@@ -1,3 +1,4 @@
+import { distanceToPaths, samplePath } from "./pathGeometry";
 // Muse Town content: the five places around the town-tree plaza, their
 // residents, the hidden collectibles, and the great tree in the middle of
 // town — which grows over time and changes with the seasons. Authored for
@@ -131,10 +132,10 @@ export const PLACES: Place[] = [
     greeting: "Nova is levelling her sundial under the open pavilion roof.",
     body: "The old Star Hut is an open Roman pavilion now — no roof between Nova and the heavens. On clear nights she charts the town's own tiny sky. Switch the town to night with the moon button below and look up: the stars over Muse Town spell out tonight's constellation.",
     tip: "Nova keeps a log: every night you spend stargazing here counts in your discoveries.",
-    position: [16, 22],
+    position: [11, 15],
     facing: Math.PI * 0.78,
-    cameraTarget: [16, 1.6, 22],
-    cameraPos: [8.5, 6, 11.9],
+    cameraTarget: [11, 1.6, 15],
+    cameraPos: [3.5, 6, 4.9],
   },
   {
     id: "recipes",
@@ -597,8 +598,8 @@ export function terrainHeight(x: number, z: number): number {
 // the forum to the basilica terrace on its rise; the other lanes join
 // the network where they may — the temple lane branches off the main
 // street halfway up the basilica climb, the Stories lane branches off
-// the west lane, and the south-west lane runs forum -> garden house ->
-// Side Chat house in one chain. The Town Tree's forum is simply the
+// the west lane. Garden, Side Chat, and the pond have separate dry
+// approaches. The Town Tree's forum is simply the
 // open space where several streets happen to meet.
 //
 // The network is fully joined up: every lane that leaves the forum
@@ -611,76 +612,44 @@ export function terrainHeight(x: number, z: number): number {
 // shows where paths meet or end.
 
 export const STREETS: [number, number][][] = [
-  // The main street: south gate -> forum -> basilica steps
+  // Main street: south gate -> forum -> basilica.
   [[1.7, 46], [3, 34], [1, 22], [-0.8, 12], [0.8, 3], [1.7, -7], [2.6, -17], [3.4, -27], [3.4, -33]],
-  // East lane: forum -> across the valley -> Colosseum plaza. It now
-  // starts INSIDE the forum disc, so the cobbles merge with the forum
-  // instead of ending a pace short of it on the grass.
-  [[4.2, 0.6], [15, 1.8], [21, 0.5], [27, 3.5], [33, 7], [37, 10.2]],
-  // Temple lane: branches off the main street -> temple steps
-  [[2.6, -17], [9, -20], [16, -23], [22, -25], [26.6, -26.1]],
-  // Stories lane: branches off the west lane -> the Villa of Stories'
-  // front steps (it used to stop a good four paces short of the door)
-  [[-17, 2.6], [-21, -4], [-24, -10], [-25.5, -15.5], [-24, -16.8], [-21.5, -16.9], [-20.9, -16.6]],
-  // West lane: forum -> the Atrium of Sounds' front steps
+  // East lane ends at the Colosseum's exterior forecourt, not its solid ring.
+  [[4.2, 0.6], [15, 1.8], [21, 0.5], [27, 3.5], [31.5, 7.4]],
+  // Approach the long temple's FRONT (+local Z), clear of its side walls.
+  [[2.6, -17], [10, -14.7], [17, -13.5], [22.8, -14]],
+  // Villa entrance: approach from the forum side, without cutting behind it.
+  [[-17, 2.6], [-17, -5], [-15.5, -10], [-17, -13], [-20, -15.2], [-20.9, -16.6]],
   [[-4.2, 0.6], [-17, 2.6], [-22, 4], [-26.1, 5.2]],
-  // South-west lane: forum -> past the Garden House's steps -> the
-  // Side Chat house's front steps
-  [[-1.9, 4.9], [-9, 13.5], [-14, 18], [-17, 21], [-15.5, 25.5], [-10.5, 28], [-8.5, 27.3], [-6.6, 26.6]],
-  // Piscina spur: branches off the south-west lane to the fish
-  // pond's south rim, between the Garden House and the Side Chat
-  // house — a quiet gravel-width lane to a quiet place.
-  [[-14.5, 19.3], [-12.8, 21.6], [-11.6, 24.3]],
-  // South-east lane: forum -> the Stargazing Pavilion's front steps
-  [[2.8, 4.7], [5.1, 8.5], [10.2, 14.5], [13.9, 18.8]],
-  // Baths spur: branches off the south-east lane to the thermae
-  // courtyard's south gate, in the south-eastern hollow.
-  [[15.2, 20.3], [18.6, 22.4], [21.6, 23.8], [23.6, 25.8], [24, 27.6]],
-  // Recipe lane: branches off the east lane -> the Culina's front
-  // steps. The kitchen used to have no path at all.
+  // Garden lane stops at its doorstep. Side Chat has its own dry approach.
+  [[-1.9, 4.9], [-9, 13.5], [-14, 17], [-16.4, 19]],
+  // Pond approach stays south of the basin, joining the Side Chat approach.
+  [[-6.1, 25.5], [-8.6, 25.7], [-11.5, 25.7]],
+  // Pavilion moved west to separate its platform from the bathhouse walls.
+  [[2.8, 4.7], [5.1, 8.5], [7.1, 10.4], [8.4, 11.4]],
+  // Baths: branch from the south main street, clear of the pavilion and market.
+  [[3, 34], [11, 33], [19, 32], [26, 30], [24, 28.8]],
   [[20.4, 0.6], [20.1, -1.7], [19.7, -4]],
-  // Basilica terrace lane: along the basilica's front, joining the
-  // main street and serving, in order, the letters desk, the basilica
-  // steps, the Goals Obelisk, the project board, and the quest board.
-  // None of them had a path before.
-  [[-6.2, -29.6], [-3, -29.9], [0.5, -29.7], [3.2, -29.6], [6, -30.4], [8.6, -31.6], [11.5, -31.9], [14.2, -30.1], [16.8, -28.9], [18.9, -27.5]],
-  // Aqueduct lane: branches off the Stories lane -> a viewpoint below
-  // the aqueduct's east leg. (It stops well short of the valley fold
-  // beyond — some corners of town stay unpathed on purpose.)
-  [[-24.7, -12.5], [-22.5, -16], [-20, -19.3]],
-  // Market spur A: main street -> the first market booth
+  [[-6.2, -29.6], [-3, -29.9], [0.5, -29.7], [3.2, -29.6], [6, -30.4], [8.6, -29.8], [11.5, -30.1], [14.2, -30.1], [16.8, -28.9], [18.9, -27.5]],
+  // Aqueduct viewpoint and forest approach go around the villa's west side.
+  [[-17, -5], [-24, -5], [-31, -7], [-35, -13], [-34, -20], [-29.5, -24]],
   [[1.1, 22.4], [2.6, 22.1], [4, 21.9]],
-  // Market spur B: south-west lane -> the second market booth
   [[-9, 13.5], [-8.2, 14.3], [-7.2, 15.1]],
-  // Market spur C: east lane -> the third market booth (swings a
-  // little wide of the stone bench beside Muse's spot)
   [[11.2, 1.4], [11, 2.9], [10.7, 4.4]],
-  // Lake lane: branches off the basilica terrace lane's west end,
-  // past the statue of Mars, down the basin slope to the lake dock's
-  // bank. (The secret terrace, further west, stays unpathed.)
   [[-3.5, -29.85], [-5.6, -30.7], [-7.8, -31.05], [-9.9, -31.05]],
+  // Side Chat, then the pond rim: no route through the Garden House or water.
+  [[1, 22], [-1, 23], [-3.5, 24.5], [-6.1, 25.5]],
+  // Embassy: a visitor approach to the closed gate, not a road beyond town.
+  [[2.5, 38], [5.8, 37.2], [8.4, 38], [9.8, 40.2]],
+  // Obelisk approached from the open east side of the basilica.
+  [[11.5, -30.1], [11.2, -32], [10.6, -33.3]],
 ];
 
+/** The pond promenade is narrower to fit the dry bank beside Side Chat. */
+export const streetWidth = (index: number): number => index === 6 ? 1.4 : 2.7;
+
 /** Distance from a point to the nearest street centreline. */
-export function streetDistance(x: number, z: number): number {
-  let best = Infinity;
-  for (const line of STREETS) {
-    for (let i = 0; i + 1 < line.length; i++) {
-      const [ax, az] = line[i]!;
-      const [bx, bz] = line[i + 1]!;
-      const abx = bx - ax;
-      const abz = bz - az;
-      const t = Math.max(
-        0,
-        Math.min(1, ((x - ax) * abx + (z - az) * abz) / (abx * abx + abz * abz || 1)),
-      );
-      const dx = x - (ax + abx * t);
-      const dz = z - (az + abz * t);
-      best = Math.min(best, Math.hypot(dx, dz));
-    }
-  }
-  return best;
-}
+export function streetDistance(x: number, z: number): number { return distanceToPaths(x, z, STREETS); }
 
 /** The lake in the aqueduct valley fold, below the basilica's west
  *  end: a small still pond ringed with weeping willows, umbrella
@@ -745,10 +714,9 @@ export const FOREST_SPOTS = {
 } as const;
 
 export const FOREST_TRAILS: [number, number][][] = [
-  // The one trailhead: off the aqueduct lane's end (-20, -19.3),
-  // west through the fold, threading just north of the aqueduct's
-  // western pier, and into the trees, ending at the glade.
-  [[-20, -19.3], [-24, -19.6], [-28, -19.9], [-32, -20.2], [-36, -20.6], [-40, -21.2], [-43, -22.1]],
+  // The one trailhead: off the aqueduct viewpoint (-29.5, -24),
+  // west around the aqueduct's piers and into the trees, ending at the glade.
+  [[-29.5, -24], [-34, -25], [-38, -25], [-40, -23], [-43, -22.1]],
   // Glade -> the moss shrine stone.
   [[-43, -22.1], [-42, -19.5], [-41.2, -17.4]],
   // Glade -> Lupa's den rocks.
@@ -779,20 +747,7 @@ export const FOREST_EDGE_LINES = [
   "No further, I think. Some of the forest is only for the forest.",
 ];
 
-function trailDistance(x: number, z: number): number {
-  let best = Infinity;
-  for (const line of FOREST_TRAILS) {
-    for (let i = 0; i + 1 < line.length; i++) {
-      const [ax, az] = line[i]!;
-      const [bx, bz] = line[i + 1]!;
-      const abx = bx - ax;
-      const abz = bz - az;
-      const t = Math.max(0, Math.min(1, ((x - ax) * abx + (z - az) * abz) / (abx * abx + abz * abz || 1)));
-      best = Math.min(best, Math.hypot(x - (ax + abx * t), z - (az + abz * t)));
-    }
-  }
-  return best;
-}
+function trailDistance(x: number, z: number): number { return distanceToPaths(x, z, FOREST_TRAILS); }
 
 function mulberry32(seed: number): () => number {
   let s = seed | 0;
@@ -810,7 +765,7 @@ const FOREST_CLEARINGS: [number, number, number][] = [
   [FOREST.den[0], FOREST.den[1], 3.6],
   [FOREST_SPOTS.shrine[0], FOREST_SPOTS.shrine[1], 2.8],
   [FOREST_SPOTS.hollow[0], FOREST_SPOTS.hollow[1], 3.4],
-  [-20, -19.3, 2.6], // the trailhead mouth stays open
+  [-29.5, -24, 2.6], // the trailhead mouth stays open
   // The aqueduct's western piers stand in the wood's east edge —
   // no trunks through Roman masonry.
   [-37.4, -21.5, 1.7],
@@ -2134,7 +2089,8 @@ export const QUESTS: Quest[] = [
 export function streetIndexAt(x: number, z: number): number {
   let best = -1;
   let bestD = 2.6;
-  STREETS.forEach((line, li) => {
+  STREETS.forEach((controlPoints, li) => {
+    const { points: line } = samplePath(controlPoints);
     for (let i = 0; i + 1 < line.length; i++) {
       const [ax, az] = line[i]!;
       const [bx, bz] = line[i + 1]!;

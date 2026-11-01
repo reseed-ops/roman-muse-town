@@ -1,3 +1,6 @@
+import { createPlaceFootprints } from "./buildingFootprints";
+import { samplePath } from "./pathGeometry";
+import { streetWidth } from "./town";
 import { repairRomanMaterials } from "./romanMaterials";
 import { TreePlacement } from "./treePlacement";
 import { type VrmRig, collectRig, poseBone, poseWave, poseWaveStill, poseUmbrellaArm, poseThrowArm, poseLinkArm, poseHoldHandPlayer, poseHoldHandMuse, type CharAnimator, createCharAnimator, prepareVrm, collectBlinkMorphs, setBlink } from "./characterAnimation";
@@ -1494,20 +1497,19 @@ export function createTownScene(
   // Winding cobblestone streets, draped over the terrain as ribbons.
   const streetMat = new THREE.MeshStandardMaterial({ map: cobbleTexture(), roughness: 0.92 });
   function buildStreet(points: [number, number][], width = 2.7, mat: THREE.Material = streetMat) {
-    const curve = new THREE.CatmullRomCurve3(
-      points.map(([x, z]) => new THREE.Vector3(x, 0, z)),
-    );
-    const length = curve.getLength();
-    const segs = Math.max(10, Math.floor(length / 1.1));
+    const { points: centreline, length } = samplePath(points);
+    const segs = centreline.length - 1;
     const positions: number[] = [];
     const uvs: number[] = [];
     const indices: number[] = [];
     for (let i = 0; i <= segs; i++) {
       const t = i / segs;
-      const pt = curve.getPoint(t);
-      const tan = curve.getTangent(t);
-      const nx = -tan.z;
-      const nz = tan.x;
+      const [x, z] = centreline[i]!;
+      const before = centreline[Math.max(0, i - 1)]!, after = centreline[Math.min(segs, i + 1)]!;
+      const dx = after[0] - before[0], dz = after[1] - before[1];
+      const distance = Math.hypot(dx, dz) || 1;
+      const pt = { x, z };
+      const nx = -dz / distance, nz = dx / distance;
       for (const sgn of [-1, 1]) {
         const vx = pt.x + nx * (width / 2) * sgn;
         const vz = pt.z + nz * (width / 2) * sgn;
@@ -1528,14 +1530,13 @@ export function createTownScene(
     mesh.receiveShadow = true;
     world.add(mesh);
   }
-  for (const line of STREETS) buildStreet(line);
+  STREETS.forEach((line, index) => buildStreet(line, streetWidth(index)));
   // The forest trails: dirt, not cobbles — the same draped ribbon,
   // narrower and browner, from the one trailhead at the aqueduct
   // lane's end to the glade and its landmarks.
   const dirtMat = new THREE.MeshStandardMaterial({ color: 0x8a6f4d, roughness: 1 });
   for (const trail of FOREST_TRAILS) buildStreet(trail, 1.7, dirtMat);
-  // A small cobbled apron in front of the Colosseum.
-  buildStreet([[37, 10.2], [39.5, 11.5], [41.5, 12.4]], 3.4);
+  // The east lane ends outside the solid Colosseum; its endpoint apron is below.
 
   // The forum: a cobbled disc draped over the (nearly level) heart of
   // town, where all the streets meet around the Town Tree.
@@ -1564,37 +1565,15 @@ export function createTownScene(
   // threshold. They are pure ground dressing at street height: no
   // collision of their own, so junctions and doorsteps stay walkable.
   const COBBLE_JOINTS: [number, number, number][] = [
-    // Junctions: where a branch lane leaves its parent, and where the
-    // Colosseum apron meets the east lane.
-    [2.6, -17, 2.0], // temple lane x main street
-    [-17, 2.6, 2.0], // Stories lane x west lane
-    [-24.7, -12.5, 1.8], // aqueduct lane x Stories lane
-    [20.4, 0.6, 1.8], // Recipe lane x east lane
-    [3.3, -29.6, 2.0], // basilica terrace lane x main street
-    [-3.5, -29.85, 1.8], // lake lane x basilica terrace lane
-    [1.1, 22.4, 1.7], // market spur A x main street
-    [-9, 13.5, 1.7], // market spur B x south-west lane
-    [11.2, 1.4, 1.7], // market spur C x east lane
-    [37, 10.2, 2.2], // Colosseum apron x east lane
-    // Threshold aprons: at the front steps / face of every destination.
-    [-20.9, -16.6, 1.9], // Villa of Stories steps
-    [-25.9, 5.2, 1.7], // Atrium of Sounds steps
-    [13.7, 18.8, 1.7], // Stargazing Pavilion steps
-    [-6.4, 26.5, 1.9], // Side Chat house steps
-    [-16.4, 19, 1.8], // Garden House steps (the south-west lane passes)
-    [19.7, -4.1, 1.9], // Culina (Recipe Kitchen) steps
-    [2.8, -29.2, 2.0], // basilica steps
-    [27.8, -26.4, 2.0], // temple steps
-    [15, -31.6, 1.9], // project board
-    [19.7, -28.6, 1.9], // quest board
-    [8.8, -33.3, 2.0], // Goals Obelisk
-    [-6.5, -30.9, 1.7], // letters desk
-    [4, 21.9, 1.6], // market booth A
-    [-7.2, 15.1, 1.6], // market booth B
-    [10.7, 4.4, 1.6], // market booth C
-    [-19.9, -19.5, 1.8], // aqueduct viewpoint
-    [-9.9, -31.05, 1.7], // lake dock bank (the lake lane's end)
-    [39.5, 11.5, 2.0], // Colosseum entrance
+    // Every route owns its joins; rerouting cannot leave old paving inside a wall.
+    ...STREETS.flatMap((line, i) => [line[0]!, line[line.length - 1]!].map(
+      ([x, z]) => [x, z, streetWidth(i) / 2] as [number, number, number],
+    )),
+    [2.8, -29.2, 1.7], // basilica steps
+    [8.66, 11.82, 1.4], // moved pavilion's front step
+    [-6.17, 26.46, 1.3], // Side Chat front step
+    [15, -31.6, 1.9], [19.7, -28.6, 1.9], // boards
+    [8.8, -33.3, 1.3], [-6.5, -30.9, 1.7], // obelisk and letters
   ];
   for (const [jx, jz, jr] of COBBLE_JOINTS) {
     const jointGeo = new THREE.CircleGeometry(jr, 26);
@@ -2933,7 +2912,7 @@ export function createTownScene(
   });
   // Columns flanking the main street as it winds through town.
   const ROMAN_COLUMN_SPOTS: [number, number][] = [
-    [6.1, 24.7], [-3.7, 25.5], [4.1, 14], [-5.1, 13.6],
+    [6.1, 24.7], [-1.6, 26.8], [2, 9.5], [-5.1, 13.6],
     [5.8, -11], [-2.7, -11.9], [10.5, -24.5], [-0.9, -23],
   ];
   for (const [cx, cz] of ROMAN_COLUMN_SPOTS) {
@@ -2978,7 +2957,7 @@ export function createTownScene(
   // used to stand at (-6.2, 16.8), inside the Side Chat house's reach,
   // and a duplicate set of these trees (placed without terrain height)
   // has been removed.
-  void placeWorld(cypressUrl, { x: 23.8, z: 29.8, height: 4.6 });
+  void placeWorld(cypressUrl, { x: 31.5, z: 33, height: 4.6 });
   void placeWorld(cypressUrl, { x: -27.2, z: 30.6, rotY: 1.2, height: 4.2 });
   void placeWorld(cypressUrl, { x: 34, z: -10.2, rotY: 2.1, height: 4.8 });
   void placeWorld(cypressUrl, { x: -39.1, z: -22.1, rotY: 0.6, height: 4.4 });
@@ -4645,11 +4624,11 @@ export function createTownScene(
     [-34.9, -7.7, 1.25],
     [28.9, 31.5, 1.1],
     [-20.4, 33.2, 1.05],
-    [11.6, 33.2, 1.2],
+    [15, 35.5, 1.2],
     [-34, 22.1, 1],
     [40.8, -13.6, 1.15],
     [19.6, 12.8, 0.9],
-    [-17.9, -4.3, 0.95],
+    [-20, -1, 0.95],
   ];
   treeSpots.forEach(([tx, tz, ts], i) => {
     void placeWorld(PACK_TREES[i % PACK_TREES.length]!, {
@@ -4660,11 +4639,11 @@ export function createTownScene(
     });
   });
   const pineSpots: [number, number, number][] = [
-    [4.8, 16.7, 1.2],
+    [16, 8, 1.2],
     [-6, -16.2, 1],
     [34, 28.9, 1.3],
     [-33.2, -16.2, 1.25],
-    [-27.5, -6.5, 0.9],
+    [-27.5, -9, 0.9],
   ];
   pineSpots.forEach(([px, pz, ps], i) => {
     void placeWorld(coniferUrl, { x: px, z: pz, rotY: i * 1.9, height: 4.2 * ps });
@@ -5084,43 +5063,7 @@ export function createTownScene(
   // placed width (groundModel scales by bbox width), ox/oz = the
   // ground footprint's centre offset from the bbox centre, same
   // fraction (several ground plans sit off-centre under their roofs).
-  const BUILDING_GROUND: Record<string, { gw: number; gd: number; ox: number; oz: number }> = {
-    stories: { gw: 0.9587, gd: 1.255, ox: 0.0045, oz: -0.044 },
-    sounds: { gw: 0.995, gd: 0.7477, ox: 0.0025, oz: -0.1123 },
-    garden: { gw: 0.8603, gd: 0.8477, ox: 0.0094, oz: -0.0013 },
-    recipes: { gw: 0.9489, gd: 0.7689, ox: 0.0051, oz: 0.0124 },
-    mainchat: { gw: 1, gd: 0.7092, ox: 0, oz: 0 },
-    sidechat: { gw: 0.8956, gd: 1.1564, ox: 0.0019, oz: -0.0139 },
-  };
-  const placeFootprints = new Map<string, Obstacle>();
-  for (const p of PLACES) {
-    const [hx, hz] = p.position;
-    const rot = Math.atan2(-hx, -hz);
-    const width = p.buildingWidth ?? 7.6;
-    // Building centre in world space (house-local (0, -0.3)).
-    const bcx = hx - 0.3 * Math.sin(rot);
-    const bcz = hz - 0.3 * Math.cos(rot);
-    if (p.id === "stars") {
-      // The round pavilion: a circle fitted to its column ring.
-      placeFootprints.set(p.id, circ(bcx, bcz, 3.5));
-      continue;
-    }
-    const g = BUILDING_GROUND[p.id] ?? { gw: 1, gd: 1, ox: 0, oz: 0 };
-    const inset = p.id === "mainchat" ? 1.5 : 0.9;
-    // Ground-footprint centre in house-local space: the building's
-    // own (0, -0.3) plus the ground plan's offset from the bbox
-    // centre, then pulled toward the back by half the doorstep
-    // inset (the inset shrinks the front face only, as before).
-    const clx = g.ox * width;
-    const clz = -0.3 + g.oz * width - inset / 2;
-    placeFootprints.set(p.id, obb(
-      hx + clx * Math.cos(rot) + clz * Math.sin(rot),
-      hz - clx * Math.sin(rot) + clz * Math.cos(rot),
-      (width * g.gw) / 2,
-      (width * g.gd) / 2 - inset / 2,
-      rot,
-    ));
-  }
+  const placeFootprints = createPlaceFootprints(PLACES);
   // The temple: a long rectangular temple (11 wide × ~25.8 deep as
   // placed, rotY -0.6 to match placeWorld) — an OBB, not the old
   // r 4.6 circle that covered barely a third of it. Sized to its
@@ -5209,7 +5152,7 @@ export function createTownScene(
     circ(-30, -19.5, 0.7),
     circ(-39.9, -12.4, 0.7),
     circ(-32.6, -10.5, 0.7),
-    treePlacement.bindCollider(circ(23.8, 29.8, 0.42, 0.15), 23.8, 29.8), treePlacement.bindCollider(circ(-27.2, 30.6, 0.42, 0.15), -27.2, 30.6), treePlacement.bindCollider(circ(34, -10.2, 0.42, 0.15), 34, -10.2), treePlacement.bindCollider(circ(-39.1, -22.1, 0.42, 0.15), -39.1, -22.1), // cypresses (their foliage columns)
+    treePlacement.bindCollider(circ(31.5, 33, 0.42, 0.15), 31.5, 33), treePlacement.bindCollider(circ(-27.2, 30.6, 0.42, 0.15), -27.2, 30.6), treePlacement.bindCollider(circ(34, -10.2, 0.42, 0.15), 34, -10.2), treePlacement.bindCollider(circ(-39.1, -22.1, 0.42, 0.15), -39.1, -22.1), // cypresses (their foliage columns)
     treePlacement.bindCollider(circ(-23, 34.26, 0.35), -23, 34), // the olive on the south lawn (trunk, offset from its canopy centre as placed) — it had no collider at all
     treePlacement.bindCollider(circ(-40, 10, 0.3), -40, 10), // the tall conifer on the west lawn — likewise uncollided until now
     circ(-11, -6, 0.38, 0.18), // ionic column with the pointy hat (its base, measured)
@@ -5677,7 +5620,8 @@ export function createTownScene(
    *  follow target drifting toward the paths rather than across lawns. */
   function nearestStreetPoint(x: number, z: number): { x: number; z: number; dist: number } {
     let best = { x, z, dist: Infinity };
-    for (const line of STREETS) {
+    for (const controlPoints of STREETS) {
+      const { points: line } = samplePath(controlPoints);
       for (let i = 0; i + 1 < line.length; i++) {
         const [ax, az] = line[i]!;
         const [bx, bz] = line[i + 1]!;
@@ -6241,8 +6185,8 @@ export function createTownScene(
       ["inscription", "mars", -9.3, -28.9, 2.8],
       ["inscription", "column", -11, -6, 2.8],
       ["inscription", "arch", 2, 36.8, 3.2],
-      ["inscription", "temple", 26.6, -26.1, 3.4],
-      ["inscription", "aqueduct", -20, -19.3, 3.4],
+      ["inscription", "temple", 22.8, -14, 3.4],
+      ["inscription", "aqueduct", -29.5, -24, 3.4],
       ["inscription", "terrace-hint", -18.4, -22.9, 3.0],
     ];
     for (const [kind, id, sx, sz, trigger] of promptSpots) {
@@ -6485,7 +6429,7 @@ export function createTownScene(
     }
     if (Math.hypot(mx - COLOSSEUM.position[0], mz - COLOSSEUM.position[1]) < 12.5) return pickLine("companion:colosseum", COMPANION_LINES.colosseum!);
     if (Math.hypot(mx - SECRET.position[0], mz - SECRET.position[1]) < 3.6) return pickLine("companion:secret", COMPANION_LINES.secret!);
-    if (Math.hypot(mx - 31, mz - -27) < 8.5) return pickLine("companion:temple", COMPANION_LINES.temple!);
+    if (Math.hypot(mx - 22.8, mz + 14) < 6) return pickLine("companion:temple", COMPANION_LINES.temple!);
     if (Math.hypot(mx, mz) < 5.6) return pickLine("companion:tree", COMPANION_LINES.tree!);
     if (Math.hypot(mx - 16, mz - 22) < 5.5) return pickLine("companion:stars", COMPANION_LINES.stars!);
     if (Math.hypot(mx - BATHS.position[0], mz - BATHS.position[1]) < 8) return pickLine("companion:baths", [...ROMAN_PLACE_LINES.baths]);
