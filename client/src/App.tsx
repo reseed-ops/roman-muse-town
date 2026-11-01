@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, type ApiResponse } from "./api";
+import { useMutation } from "@tanstack/react-query";
+import { useTownState } from "./useTownState";
+import { TownUtilities } from "./TownUtilities";
+import { api } from "./api";
 import { linePools, pickPooled } from "./linePools";
+import { aboutPlayer } from "../../server/src/player";
+import { BELIEF_LINES } from "./town";
 import {
 ACHIEVEMENTS,
 CLOSE_LINES,
@@ -313,6 +317,7 @@ export function App() {
     /* storage unavailable — the hint simply may show once per visit */
   }
   const [menuOpen, setMenuOpen] = useState(false);
+  const [utilitiesOpen, setUtilitiesOpen] = useState(false);
   // The secret place's warmer register: tracked from walk position.
   // At the terrace, her lines turn flirtatious, his quick-picks sweeten,
   // and the hold-hand / kiss buttons appear. Session-only, like a mood.
@@ -499,12 +504,9 @@ export function App() {
     if (weatherBanner) setBannerOrder((o) => [...o.filter((k) => k !== "weather"), "weather"]);
   }, [weatherBanner]);
 
-  const queryClient = useQueryClient();
-  const state = useQuery({ queryKey: ["town-state"], queryFn: () => api.getState({}) });
+  const { state, applyState } = useTownState();
   const stateRef = useRef(state.data);
   stateRef.current = state.data;
-  const applyState = (data: ApiResponse<typeof api, "getState">) =>
-    queryClient.setQueryData(["town-state"], data);
   // No-repeat line pools: hydrate the shared draw-state manager
   // from the server's durable store, and mark every draw back
   // server-side (fire-and-forget — a missed mark only means one
@@ -2658,7 +2660,7 @@ export function App() {
     if (dreamingRef.current || !walkingRef.current) return;
     if (summitScene) return;
     if (rowingRef.current || seatedBenchRef.current) {
-      setHintText("Stand up first — even a Centurion undresses his day standing.");
+      setHintText(aboutPlayer("Stand up first — even a Centurion undresses his day standing."));
       window.setTimeout(() => setHintText(null), 3200);
       return;
     }
@@ -2804,11 +2806,23 @@ export function App() {
       // through the bag (never the same fact on consecutive days),
       // or — more sparingly — a digest reference.
       const surfacedFacts = (cData?.facts ?? []).filter((f) => {
-        if (f.source === "weather") return false;
+        if (f.source === "weather" || f.source === "reflection") return false;
         if (!f.surfaced_on) return true;
         return (Date.parse(todayStr) - Date.parse(f.surfaced_on)) / 86400000 >= 2;
       });
-      if (!weatherAsked && surfacedFacts.length > 0 && Math.random() < 0.65) {
+      // A belief she came to on her own is said in her own words, not
+      // through the "you told me" fact frames, and rarely: at most once
+      // every few days, and ahead of any other memory beat.
+      const beliefFact = (cData?.facts ?? []).find(
+        (f) =>
+          f.source === "reflection" &&
+          BELIEF_LINES[f.topic] &&
+          (!f.surfaced_on || (Date.parse(todayStr) - Date.parse(f.surfaced_on)) / 86400000 >= 4),
+      );
+      if (!weatherAsked && beliefFact && Math.random() < 0.2) {
+        lines.push(pickPooled("belief-" + beliefFact.topic, BELIEF_LINES[beliefFact.topic]!));
+        void api.markFactSurfaced({ id: beliefFact.id }).catch(() => {});
+      } else if (!weatherAsked && surfacedFacts.length > 0 && Math.random() < 0.65) {
         const text = pickPooled("facts-surface", surfacedFacts.map((f) => f.text));
         const fact = surfacedFacts.find((f) => f.text === text);
         if (fact) {
@@ -3502,7 +3516,7 @@ export function App() {
       focusReportRef.current = false;
       const report = msg.trim().slice(0, 200);
       learnFactRef.current({
-        text: `After a focus sitting beside her, he said it went like this: ${report.replace(/\.$/, "")}`,
+        text: `${aboutPlayer("After a focus sitting beside her, he said it went like this:")} ${report.replace(/\.$/, "")}`,
         topic: "work",
         source: "chat",
       });
@@ -3518,7 +3532,7 @@ export function App() {
       const answer = msg.trim().replace(/\.+$/, "").slice(0, 60);
       if (answer) {
         learnFactRef.current({
-          text: pendingQ.fact.split("{answer}").join(answer),
+          text: aboutPlayer(pendingQ.fact).split("{answer}").join(answer),
           topic: pendingQ.topic,
           source: "question",
         });
@@ -4495,6 +4509,7 @@ export function App() {
   // the same panels with the same panel-closing discipline the
   // walk-up interactables use.
   const closeTownPanels = () => {
+    setUtilitiesOpen(false);
     setSelected(null);
     setMuseBubble(null);
     setYouOpen(false);
@@ -4570,7 +4585,7 @@ export function App() {
   const anyPanelOpen = !!(
     museBubble || youOpen || treeOpen || weatherOpen || boardOpen || questOpen || goalsOpen ||
     secretOpen || lettersOpen || selected || postcardDraft || postcardView ||
-    menuOpen || followOffer || marketOpen || dockChoice || inscriptionId || fishing || knuckle
+    menuOpen || utilitiesOpen || followOffer || marketOpen || dockChoice || inscriptionId || fishing || knuckle
   );
   // Walk-and-talk (user ask, Nov 1): Aelia's TALK BUBBLE is not a
   // full panel — the stick and ABXY stay visible and live while it
@@ -4588,7 +4603,7 @@ export function App() {
   const anyFullPanelOpen = !!(
     youOpen || treeOpen || weatherOpen || boardOpen || questOpen || goalsOpen ||
     secretOpen || lettersOpen || selected || postcardDraft || postcardView ||
-    menuOpen || followOffer || marketOpen || dockChoice || inscriptionId || fishing || knuckle
+    menuOpen || utilitiesOpen || followOffer || marketOpen || dockChoice || inscriptionId || fishing || knuckle
   );
   useEffect(() => {
     if (!anyFullPanelOpen) return;
@@ -4697,6 +4712,14 @@ export function App() {
             : "Muse Town 3D village — drag to look around, tap a house to visit it, or use Landscape in the town menu to turn the town sideways"
         }
       />
+
+      <TownUtilities open={utilitiesOpen} onClose={() => setUtilitiesOpen(false)} scene={sceneRef} state={state.data} ready={sceneReady}
+        onNavigate={(destination) => {
+          if (destination === "letters") selectLetters();
+          else if (destination === "garden") selectGarden();
+          else if (destination === "quests") selectQuests();
+          else { closeTownPanels(); setTreeOpen(true); }
+        }} />
 
       {/* Soft cinematic vignette over the 3D view */}
       <div
@@ -4922,6 +4945,9 @@ export function App() {
             aria-label="Town menu"
             className={`mt-scrollable absolute right-3 z-30 w-[min(320px,86vw)] overflow-y-auto rounded-3xl bg-[#22332b]/97 p-2 shadow-2xl backdrop-blur ${forcedLandscape ? "top-[60px] max-h-[calc(100%-118px)]" : isLandscape ? "top-[60px] max-h-[calc(100dvh-130px)]" : "top-[76px] max-h-[62vh] sm:right-4"}`}
           >
+            <button type="button" className="mx-1 mb-2 w-[calc(100%-8px)] rounded-2xl bg-white/10 px-3 py-3 text-left text-sm font-bold" onClick={() => { closeTownPanels(); setMenuOpen(false); setUtilitiesOpen(true); }}>
+              Your town — saves, daily summary & performance
+            </button>
             {activeFestival && (
               <div className="mx-1.5 mb-1 rounded-2xl bg-[#ffd34e]/15 px-3 py-2">
                 <p className="text-[13px] font-bold text-[#ffd34e]">🎉 Today: {activeFestival.name}</p>

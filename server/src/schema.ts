@@ -9,7 +9,15 @@
 // has been watered, and when it was last watered. Its growth stage and
 // season are derived from this plus the visitor's discoveries and journal.
 
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+
+/** Receipts are intentionally durable: old retries must never become new purchases. */
+export const requestReceipts = sqliteTable("request_receipts", {
+  requestId: text("request_id").primaryKey(),
+  action: text("action").notNull(),
+  payloadHash: text("payload_hash").notNull(),
+  completedAt: integer("completed_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+});
 
 export const discoveries = sqliteTable("discoveries", {
   collectibleId: text("collectible_id").primaryKey(),
@@ -159,7 +167,11 @@ export const catches = sqliteTable("catches", {
   caughtAt: integer("caught_at", { mode: "timestamp_ms" })
     .notNull()
     .$defaultFn(() => new Date()),
-});
+}, (table) => [
+  index("catches_species_idx").on(table.fishId),
+  index("catches_released_idx").on(table.released, table.id),
+  index("catches_inventory_idx").on(table.sold, table.released, table.id),
+]);
 
 /** The Baths: a single row (id = 1) — when the first shared soak
  *  in the caldarium happened (rank-8 gated, always her invitation).
@@ -402,6 +414,22 @@ export const sentimentState = sqliteTable("sentiment_state", {
   recentDays: text("recent_days").notNull().default("[]"),
   moodSpellNoted: integer("mood_spell_noted").notNull().default(0),
   moodSpellLastHeavyDay: text("mood_spell_last_heavy_day").notNull().default(""),
+});
+
+/** Aelia's heart (migration 0023): a single private row (id = 1)
+ *  holding her fading feelings, the kinds of day already counted today,
+ *  the counted days not yet folded into a belief, and every belief key
+ *  she has ever formed. No message text is stored here, no feeling is
+ *  ever shown, and nothing here touches affection or the bond. */
+export const heartState = sqliteTable("heart_state", {
+  id: integer("id").primaryKey(),
+  dayKey: text("day_key").notNull().default(""),
+  warmth: integer("warmth").notNull().default(0),
+  joy: integer("joy").notNull().default(0),
+  concern: integer("concern").notNull().default(0),
+  dayKinds: text("day_kinds").notNull().default("[]"),
+  episodes: text("episodes").notNull().default("{}"),
+  beliefs: text("beliefs").notNull().default("[]"),
 });
 
 export const treeState = sqliteTable("tree_state", {

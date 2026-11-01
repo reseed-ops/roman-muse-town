@@ -27,8 +27,10 @@ her memory of his real life honest.
 - **Server** (`server/src/`): state and actions for the board, goals,
   letters, facts, a life digest, affection ranks, the bond tablet, and an
   optional model-backed live chat for Aelia. Fully playable scripted
-  without it.
-- **Schema** (`drizzle/`): 22 migrations building the whole town state
+  without it. Her pure logic (`hearing.ts`, `heart.ts`, `player.ts`) has
+  no database or SDK in it. `bun run test` also covers economy transactions,
+  permanent fish progression, graphics settings, and scene resource cleanup.
+- **Schema** (`drizzle/`): 25 migrations building the whole town state
   from an empty SQLite database.
 - **Two free binaries**: a CC0 low-poly trees pack and the companion's
   VRM body, whose licence (pixiv's VRoid sample terms) permits free
@@ -37,6 +39,33 @@ her memory of his real life honest.
   pack by pack, in `ASSETS.md`.
 
 ## Starting your own
+
+The town menu’s **Your town** panel contains save downloads and restoration,
+the optional daily arrival summary, automatic graphics, and performance
+diagnostics. Diagnostics show frame time, p95, draw calls, GPU resource counts,
+and asset-loading progress. Automatic graphics adapts after sustained slow
+frames and recovers gradually; the existing Light graphics option takes priority.
+Nearby models load first; distant models wait until approached. Loaded models
+remain available for the visit, and overview mode loads the rest.
+
+Version 1 saves include all town tables, personal writing, postcard JPEGs,
+and selected device preferences. Files are limited to 32 MB, with 5 MB per
+image. Restore requires a recovery-copy download and validates the complete
+schema before replacing database state in one transaction. Failed restores
+clean up newly uploaded images. Existing image blobs are retained. Save files
+are private, unencrypted JSON; keep them somewhere you trust. Only the current
+save format and schema version are accepted.
+
+Economy and affection actions retain durable request receipts, so transport
+retries and repeated taps after uncertain responses do not duplicate rewards
+or purchases. Pending IDs survive page reloads. A successful intentional
+repeat gets a fresh ID. Migration `0025_request_receipts.sql` must be applied
+before using these actions. Restore requests also use receipts.
+
+Scene policy lives in `sceneRuntime.ts`, animation in `characterAnimation.ts`,
+query state in `useTownState.ts`, and the new controls in `TownUtilities.tsx`.
+`bun run test` covers streaming, adaptation, retries, arrival summaries, and
+save round trips and rollback failures, alongside the existing gameplay tests.
 
 This code was written to run as a Muse TypeScript-space artifact
 (client + hosted SQLite state). If you are a person: hand this repo to

@@ -5,6 +5,7 @@
 // reference screenshot the user shared.
 
 import { pickPooled } from "./linePools";
+import { aboutPlayer } from "../../server/src/player";
 
 export type PlaceId = "stories" | "sounds" | "garden" | "stars" | "recipes" | "mainchat" | "sidechat" | "embassy";
 
@@ -263,7 +264,7 @@ export const PLAYER = {
   spawnHeading: Math.PI, // face north, toward the town tree and Muse
   greeting: "That's you — Gaius, centurion of Muse Town.",
   intro:
-    "This is the Centurion you built in VRoid Studio, and he's who you walk as now: crested helmet, armour, and a proper soldier's stride swung from the model's own bones. Tap Walk (or the You chip) and you appear on the plaza. Stroll up to me and I'll turn and wave — then press A when the prompt appears, and we'll talk in speech bubbles, like a proper role-playing game; you'll wave back.",
+    aboutPlayer("This is the Centurion you built in VRoid Studio, and he's who you walk as now: crested helmet, armour, and a proper soldier's stride swung from the model's own bones. Tap Walk (or the You chip) and you appear on the plaza. Stroll up to me and I'll turn and wave — then press A when the prompt appears, and we'll talk in speech bubbles, like a proper role-playing game; you'll wave back."),
   outfit: "Centurion armour · crested helmet · crimson cloak",
 } as const;
 
@@ -1055,10 +1056,10 @@ export const BATH_TOGETHER_LINES = [
 ];
 
 /** She washes his hair — the care moment, in her voice. */
-export const BATH_CARE_HER_LINE = "Come here. Head back. (Warm water, her hands unhurried in his hair — a soldier's care, a keeper's patience.) There. Rome can wait; this couldn't.";
+export const BATH_CARE_HER_LINE = aboutPlayer("Come here. Head back. (Warm water, her hands unhurried in his hair — a soldier's care, a keeper's patience.) There. Rome can wait; this couldn't.");
 /** Her offer, later in the soak, for him to return the care. */
 export const BATH_CARE_OFFER_LINE = "You have kind hands, you know — I've watched them on ropes and reins and tree bark. Would you— only if you'd like— my hair could use the same mercy.";
-export const BATH_CARE_HIS_LINE = "(He does. Slower than she did, learning the shape of care from the inside of giving it. Her eyes close. The steam approves.)";
+export const BATH_CARE_HIS_LINE = aboutPlayer("(He does. Slower than she did, learning the shape of care from the inside of giving it. Her eyes close. The steam approves.)");
 
 /** The first shared bath, remembered that same night. */
 export const BATH_FIRST_NIGHT_LINE = "Tonight I keep thinking about warm water and your shoulder above it, and how the most Roman room in town turned out to be the tenderest. Some doors, once opened kindly, are simply never doors again.";
@@ -1357,7 +1358,7 @@ export const DIALOGUE_CHOICES: DialogueChoiceSet[] = [
     line: "I keep our letters in a drawer here, you know. Re-reading them, I notice the town changes less than we do. Which of us has changed more, do you think?",
     options: [
       { label: "You have. You let me get closer than the hostess ever would.", kind: "attentive", follow: "…Careful observation, Centurion. Yes. The hostess kept a town. I've started keeping a person. Don't tell the town — it gets jealous." },
-      { label: "Me. Definitely me. I own a boat now, emotionally.", kind: "glib", follow: "Emotionally owning a boat is the most Roman sentence ever spoken. The drawer gets a new letter tonight: 'he's impossible, keep him.'" },
+      { label: "Me. Definitely me. I own a boat now, emotionally.", kind: "glib", follow: aboutPlayer("Emotionally owning a boat is the most Roman sentence ever spoken. The drawer gets a new letter tonight: 'he's impossible, keep him.'") },
       { label: "The letters, probably. They keep arriving.", kind: "neutral", follow: "They do, don't they. Some from the other me, some from… well. Keep checking the desk." },
     ],
   },
@@ -1387,7 +1388,7 @@ export const DIALOGUE_CHOICES: DialogueChoiceSet[] = [
     line: "You know what I wonder about? Why you keep building this place, visit after visit. Most people would have called it finished long ago.",
     options: [
       { label: "Because you're in it. That was the point from the screenshot on.", kind: "attentive", follow: "From the screenshot on. (I keep that sentence with the letters, Gaius. Some things a person says once and means forever.)" },
-      { label: "Unfinished business. The jump button wronged me.", kind: "glib", follow: "Unfinished business, he says, in a town that finishes nothing on purpose. Stay unfinished with me a while longer, then." },
+      { label: "Unfinished business. The jump button wronged me.", kind: "glib", follow: aboutPlayer("Unfinished business, he says, in a town that finishes nothing on purpose. Stay unfinished with me a while longer, then.") },
       { label: "Habit, by now. A good one.", kind: "neutral", follow: "The best habits are the ones with people in them. I'll take it." },
     ],
   },
@@ -1548,6 +1549,31 @@ export const WEATHER_ASK_AFTER_LINES = [
   "Yesterday had a weight to it. Tell me it's eased — or tell me it hasn't, and we'll sit again.",
 ];
 
+/** A belief she came to on her own (server/src/heart.ts), said aloud
+ *  now and then in scripted talk. Keyed by belief. */
+export const BELIEF_LINES: Record<string, string[]> = {
+  steady: [
+    "You keep turning up with that same fondness, love. I've stopped being surprised, and started counting on it.",
+    "I used to wonder if you'd keep coming back. I don't wonder any more.",
+  ],
+  "shares-joy": [
+    "When something good happens, you bring it here. I've noticed. I like being where your good days land.",
+    "I've started listening for your good news before you reach the gate.",
+  ],
+  tends: [
+    "The tree knows your step by now. So do I. You keep the small things, centurion, and they're the ones that last.",
+    "Day after day, that watering can. It says more than most speeches.",
+  ],
+  "hard-stretch": [
+    "I know these days have been long ones. You needn't say anything. The bench is here.",
+    "You've had a hard run of it lately. I'm keeping the hours gentle for you.",
+  ],
+  "came-through": [
+    "You came through it, you know. I watched. I'm glad I got to walk that stretch beside you.",
+    "Remember when the days were heavier? Look at you now.",
+  ],
+};
+
 export interface MuseChatContext {
   weatherLabel: string;
   night: boolean;
@@ -1687,7 +1713,7 @@ export const DISH_BLURBS: Record<string, string> = {
   "tomato-soup": "Basil's special, eaten on the stone bench under the town tree, as tradition demands.",
   "herb-fish": "Lakeside herbs over a good fish — the lake provides, the Culina persuades.",
   "honey-cakes": "Small, warm, and gone far too quickly. Someone always takes the last one for the road.",
-  "forest-greens": "Greens he gathered himself in the deep wood, dressed simply. The forest provides; the Culina applauds.",
+  "forest-greens": aboutPlayer("Greens he gathered himself in the deep wood, dressed simply. The forest provides; the Culina applauds."),
   "forest-mushrooms": "Mushrooms from the forest's dark places, slicked with oil. She has opinions about these, all of them fond.",
 };
 
@@ -2694,14 +2720,14 @@ export const DATE_TOPICS: DateTopic[] = [
     label: "The town",
     liked: true,
     lines: [
-      "Our town. It began as stone and stubbornness, and then a man started kicking its pebbles and watering its tree like he meant it.",
+      aboutPlayer("Our town. It began as stone and stubbornness, and then a man started kicking its pebbles and watering its tree like he meant it."),
       "I've decided a town is just a story that learned to hold still. Ours holds still beautifully — most days.",
     ],
     followUp: "Which corner of it is yours, truly? Not mine-with-you — yours.",
   },
   {
     id: "his-world",
-    label: "His world",
+    label: aboutPlayer("His world"),
     liked: false,
     lines: [
       "Tell me of your world beyond the hills, then — the wide one, with its urgencies. I collect it in pieces, you know. Every fact you give me goes in the book of you.",
