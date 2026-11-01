@@ -69,7 +69,7 @@ original builder a day. Buy/convert the FBX one.
 
 ## 5. Roman Empire — Stylized Low Poly — HALBERSTRAM ART (Unity Asset Store)
 
-Drop at: `client/src/assets/roman/` — 54 GLB + 1 FBX + 2 PNG. The whole
+Drop at: `client/src/assets/roman/` — 53 GLB + 1 FBX + 2 PNG. The whole
 visible Roman district: buildings, forum, basilica ("senate"), Colosseum,
 temple, aqueduct, houses, market booths, columns, benches, banners,
 ballista, statue, trees, bushes, flowers, rocks, grass, pottery, boat.
@@ -88,7 +88,7 @@ EULA terms.
 `grass_patch.glb`, `house_garden.glb`, `house_sounds.glb`,
 `insulae_recipes.glb`, `olive.glb`, `paddle.glb`, `pavilion_stars.glb`,
 `platform_wooden.glb`, `pottery1.glb`, `pottery2.glb`, `rock_pack.glb`,
-`senate.glb`, `statue_mars.glb`, `sunflower.glb`, `temple.glb`,
+`senate.glb`, `statue_mars.glb`, `temple.glb`,
 `tree_a.glb`, `tree_b.glb`, `tree_c.glb`, `tree_d.glb`,
 `triumphal_arch.glb`, `villa_stories.glb`, `torch.fbx`, `palette.png`,
 `water_normal.png`

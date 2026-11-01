@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { SceneResources } from "./sceneResources";
+import { fetchClipBytes, takeClipBytes } from "./characterLoad";
 
 // --- VRM rigs --------------------------------------------------------------
 // VRoid skeletons use the J_Bip_* bone names. VRMs export in a T-pose, so
@@ -712,7 +713,11 @@ function pinHipXZInPlace(clip: THREE.AnimationClip) {
 type CharMode = "dance" | "poseA" | "poseB" | "talk" | "flirt" | "hug" | null;
 
 export interface CharAnimator {
+  /** The core clips are baked and the body can be shown animated. The
+   *  rest of the library keeps arriving behind it (see createCharAnimator). */
   ready: boolean;
+  /** The core clips will never be ready: procedural posing owns the body. */
+  failed: boolean;
   hasWave: boolean;
   hasSit: boolean;
   /** Festival dance + Sounds-house pose loops (Kevin Iglesias dance
@@ -728,20 +733,27 @@ export interface CharAnimator {
   hasPair: (kind: "flirt" | "hug") => boolean;
   pairDuration: (kind: "flirt" | "hug") => number;
   update: (dt: number, speed: number, waving: boolean, seated?: boolean, mode?: CharMode, benchSeated?: boolean) => void;
-  /** Snap the engage ramp to full and apply the idle clip NOW, so a
-   *  body revealed in the same tick is already standing in its idle
-   *  pose — never the bind pose, never a leftover measurement pose
-   *  from the bake. No-op until the animator is ready. */
+  /** Apply the idle clip NOW, so a body revealed in the same tick is
+   *  already standing in its idle pose — never the bind pose, never a
+   *  leftover measurement pose from the bake. No-op until the animator
+   *  is ready. */
   prime: () => void;
 }
 
 const animFbxLoader = new FBXLoader();
 
-/** Load a character's four clips, retarget them onto the model, and
- *  build the speed-blended mixer. Everything is failure-silent: if
- *  anything does not check out, `ready` stays false and the caller
- *  keeps the procedural posing — the model itself is rendered either
- *  way, so a failed gate can never make a character invisible.
+/** Load a character's clips, retarget them onto the model, and build
+ *  the speed-blended mixer. Everything is failure-silent: if anything
+ *  does not check out, `ready` stays false, `failed` goes true, and the
+ *  caller keeps the procedural posing — the model itself is rendered
+ *  either way, so a failed gate can never make a character invisible.
+ *
+ *  It comes in two stages. The core set (idle, walk, run, wave, sit) is
+ *  all a character needs to stand and move, so `ready` goes true as
+ *  soon as those are in; the old code waited for the whole library,
+ *  dozens of files baked one at a time, which outlasted the reveal
+ *  gate's grace and showed the body mid-bake. The rest then join the
+ *  live mixer one by one as they arrive.
  *
  *  The bake's "bind pose" is read from a snapshot taken HERE, at
  *  animator creation, while the model still stands in its true
@@ -769,6 +781,7 @@ export function createCharAnimator(args: {
   const { model, urls } = args;
   const out: CharAnimator = {
     ready: false,
+    failed: false,
     hasWave: false,
     hasSit: false,
     hasDance: false,
@@ -788,6 +801,22 @@ export function createCharAnimator(args: {
       o.position.copy(s.p);
     }
   };
+  /** Run a synchronous bake or measurement against the true bind pose,
+   *  then put the body back exactly as it stood. Nothing can paint in
+   *  between, so a character already on screen never shows it. */
+  const onBindPose = <T>(work: () => T): T => {
+    const live = new Map<THREE.Object3D, { q: THREE.Quaternion; p: THREE.Vector3 }>();
+    for (const o of bindPose.keys()) live.set(o, { q: o.quaternion.clone(), p: o.position.clone() });
+    restoreBindPose();
+    try {
+      return work();
+    } finally {
+      for (const [o, s] of live) {
+        o.quaternion.copy(s.q);
+        o.position.copy(s.p);
+      }
+    }
+  };
   void (async () => {
     try {
       // Displayed hip height (world units) for authored-speed scaling:
@@ -802,7 +831,9 @@ export function createCharAnimator(args: {
       let srcHipMeters = 0;
       const loadClip = async (url: string, rig: AnimRigSpec = IGLESIAS_RIG): Promise<THREE.AnimationClip | null> => {
         if (args.resources.disposed) throw new Error("Scene disposed");
-        const group = await animFbxLoader.loadAsync(url);
+        const bytes = await takeClipBytes(url);
+        if (args.resources.disposed) throw new Error("Scene disposed");
+        const group = animFbxLoader.parse(bytes, THREE.LoaderUtils.extractUrlBase(url));
         const clipResources = new SceneResources();
         clipResources.adopt(group);
         try {
@@ -810,10 +841,9 @@ export function createCharAnimator(args: {
           const src = group.animations[0];
           if (!src) return null;
           // The frame loop has been posing this body while the file
-          // downloaded; put it back in its true bind pose before the
-          // bake reads that bind (see the note above).
-          restoreBindPose();
-          const baked = bakeRetargetedClip(group, src, model, rig);
+          // downloaded; the bake must read its true bind (see the note
+          // above).
+          const baked = onBindPose(() => bakeRetargetedClip(group, src, model, rig));
           if (!baked) return null;
           if (srcHipMeters === 0) srcHipMeters = baked.srcHipHeight / 100;
           // A clip carrying even one non-finite value can poison the
@@ -824,6 +854,12 @@ export function createCharAnimator(args: {
           clipResources.dispose();
         }
       };
+      // The core set downloads side by side; the bakes stay in turn.
+      for (const url of [urls.idle, urls.walk, urls.run, urls.wave, urls.sit]) {
+        fetchClipBytes(url).catch(() => {
+          /* loadClip below surfaces the failure */
+        });
+      }
       const idle = await loadClip(urls.idle);
       if (!idle) return;
       const walk = await loadClip(urls.walk);
@@ -835,8 +871,7 @@ export function createCharAnimator(args: {
       // or body failing (or anything non-finite) retires the whole
       // animator to procedural posing; ARMS failing only retires
       // the arms (below) — never the character.
-      restoreBindPose();
-      const check = checkRetargetedClip(model, idle);
+      const check = onBindPose(() => checkRetargetedClip(model, idle));
       if (!check.finite || !check.legsOk || !check.bodyOk || !check.pivotOk) return;
       let useWave = wave !== null;
       if (!check.armsOk) {
@@ -855,7 +890,8 @@ export function createCharAnimator(args: {
         // The wave earns its place only if it truly raises an arm:
         // sampled mid-gesture, one upper arm must point UP, not
         // merely leave the body's side.
-        const wm = measureRetargetedClip(model, wave, [1.0, 1.4]);
+        const waveClip = wave;
+        const wm = onBindPose(() => measureRetargetedClip(model, waveClip, [1.0, 1.4]));
         const raised = wm.some((m) => m.finite && (m.armL > 0.15 || m.armR > 0.15));
         if (!raised) {
           wave = null;
@@ -870,59 +906,11 @@ export function createCharAnimator(args: {
       // or standing-in-the-bench sit.
       let useSit = false;
       if (sit) {
-        const sm = measureRetargetedClip(model, sit, [0.4, 0.9, 1.4]);
+        const sitClip = sit;
+        const sm = onBindPose(() => measureRetargetedClip(model, sitClip, [0.4, 0.9, 1.4]));
         useSit =
           sm.length > 0 && sm.every((m) => m.finite && m.legL > -0.45 && m.legR > -0.45);
         if (!useSit) sit = null;
-      }
-      // Dance + pose clips: same bake, a gate fitted to dancing —
-      // finite, upright, sane pivot; arms and legs may go where the
-      // music takes them.
-      const lenient = async (url?: string): Promise<THREE.AnimationClip | null> => {
-        if (!url) return null;
-        const clip = await loadClip(url);
-        if (!clip) return null;
-        restoreBindPose();
-        const c = checkRetargetedClip(model, clip);
-        return c.finite && c.bodyOk && c.pivotOk ? clip : null;
-      };
-      const dance = await lenient(urls.dance);
-      const poseA = await lenient(urls.poseA);
-      const poseB = await lenient(urls.poseB);
-      // Outdoor library clips: same lenient gate (finite, upright
-      // body, sane shoulder pivots — a seated clip's head still
-      // clears its hips by half a metre), baked through OUTDOOR_RIG.
-      // Seated families get their hip XZ pinned (the scene owns
-      // seat placement; see pinHipXZInPlace).
-      const lenientOutdoor = async (url: string | undefined, pinHipXZ: boolean): Promise<THREE.AnimationClip | null> => {
-        if (!url) return null;
-        const clip = await loadClip(url, OUTDOOR_RIG);
-        if (!clip) return null;
-        if (pinHipXZ) pinHipXZInPlace(clip);
-        restoreBindPose();
-        const c = checkRetargetedClip(model, clip);
-        return c.finite && c.bodyOk && c.pivotOk ? clip : null;
-      };
-      const talkClips: THREE.AnimationClip[] = [];
-      const sitTalkClips: THREE.AnimationClip[] = [];
-      const benchSitClips: THREE.AnimationClip[] = [];
-      let flirtClip: THREE.AnimationClip | null = null;
-      let hugClip: THREE.AnimationClip | null = null;
-      if (urls.outdoor) {
-        for (const u of urls.outdoor.talk) {
-          const c = await lenientOutdoor(u, false);
-          if (c) talkClips.push(c);
-        }
-        for (const u of urls.outdoor.sitTalk) {
-          const c = await lenientOutdoor(u, true);
-          if (c) sitTalkClips.push(c);
-        }
-        for (const u of urls.outdoor.benchSit) {
-          const c = await lenientOutdoor(u, true);
-          if (c) benchSitClips.push(c);
-        }
-        flirtClip = await lenientOutdoor(urls.outdoor.flirt, false);
-        hugClip = await lenientOutdoor(urls.outdoor.hug, false);
       }
       const walkTown = ANIM_WALK_MPS * (displayedHip / srcHipMeters);
       const runTown = ANIM_RUN_MPS * (displayedHip / srcHipMeters);
@@ -944,9 +932,9 @@ export function createCharAnimator(args: {
       const runA = mk(run);
       const waveA = mk(useWave ? wave : null);
       const sitA = mk(useSit ? sit : null);
-      const danceA = mk(dance);
-      const poseAA = mk(poseA);
-      const poseBA = mk(poseB);
+      let danceA: THREE.AnimationAction | null = null;
+      let poseAA: THREE.AnimationAction | null = null;
+      let poseBA: THREE.AnimationAction | null = null;
       const mkOnce = (clip: THREE.AnimationClip | null, clamp: boolean) => {
         if (!clip) return null;
         const a = mixer.clipAction(clip);
@@ -957,21 +945,19 @@ export function createCharAnimator(args: {
         a.play();
         return a;
       };
-      const onlyActions = (list: (THREE.AnimationAction | null)[]): THREE.AnimationAction[] =>
-        list.filter((a): a is THREE.AnimationAction => a !== null);
-      const talkActs = onlyActions(talkClips.map((c) => mkOnce(c, false)));
-      const sitTalkActs = onlyActions(sitTalkClips.map((c) => mkOnce(c, false)));
-      const benchActs = onlyActions(benchSitClips.map((c) => mk(c)));
-      const flirtA = mkOnce(flirtClip, true);
-      const hugA = mkOnce(hugClip, true);
+      const talkActs: THREE.AnimationAction[] = [];
+      const sitTalkActs: THREE.AnimationAction[] = [];
+      const benchActs: THREE.AnimationAction[] = [];
+      let flirtClip: THREE.AnimationClip | null = null;
+      let hugClip: THREE.AnimationClip | null = null;
+      let flirtA: THREE.AnimationAction | null = null;
+      let hugA: THREE.AnimationAction | null = null;
       out.hasPair = (kind) => (kind === "flirt" ? flirtA : hugA) !== null;
       out.pairDuration = (kind) => (kind === "flirt" ? flirtClip : hugClip)?.duration ?? 0;
       if (!idleA) return;
       idleA.weight = 1;
       out.hasWave = useWave && waveA !== null;
       out.hasSit = sitA !== null;
-      out.hasDance = danceA !== null;
-      out.danceDuration = dance?.duration ?? 0;
 
       const weights = { idle: 1, walk: 0, run: 0, wave: 0, sit: 0, dance: 0, pose: 0, talk: 0, sitTalk: 0, bench: 0, pair: 0 };
       let prevWaving = false;
@@ -979,7 +965,6 @@ export function createCharAnimator(args: {
       let poseFlipAt = 0;
       let benchFlipAt = 0;
       let benchActive = 0;
-      let engage = 0; // 0 -> 1 over the first moments, softening the handover
       // Shuffled-bag cycling for the talk gesture families: no clip
       // repeats until the bag is spent, and the clip just played is
       // kept out of the next bag's first slot.
@@ -1036,7 +1021,6 @@ export function createCharAnimator(args: {
       };
       out.update = (dt: number, speed: number, waving: boolean, seated = false, mode: CharMode = null, benchSeated = false) => {
         const step = Math.min(dt, 0.05);
-        engage = Math.min(1, engage + step / 0.6);
         const idleT = 1 - ss(0.12, 0.55, speed);
         const runT = ss(3.1, 3.9, speed);
         const walkT = Math.max(0, 1 - idleT - runT);
@@ -1095,7 +1079,7 @@ export function createCharAnimator(args: {
           activePose = activePose === poseAA ? poseBA : poseAA;
           poseFlipAt = performance.now() + 9000 + Math.random() * 6000;
         }
-        const locoScale = (1 - weights.wave) * (1 - weights.sit) * (1 - weights.dance) * (1 - weights.pose) * (1 - weights.talk) * (1 - weights.sitTalk) * (1 - weights.bench) * (1 - weights.pair) * engage;
+        const locoScale = (1 - weights.wave) * (1 - weights.sit) * (1 - weights.dance) * (1 - weights.pose) * (1 - weights.talk) * (1 - weights.sitTalk) * (1 - weights.bench) * (1 - weights.pair);
         idleA.weight = weights.idle * locoScale;
         if (walkA) {
           walkA.weight = weights.walk * locoScale;
@@ -1105,16 +1089,16 @@ export function createCharAnimator(args: {
           runA.weight = weights.run * locoScale;
           runA.timeScale = THREE.MathUtils.clamp(speed / Math.max(0.4, runTown), 0.7, 1.6);
         }
-        if (waveA) waveA.weight = weights.wave * (1 - weights.sit) * (1 - weights.pair) * engage;
-        if (sitA) sitA.weight = weights.sit * (1 - weights.sitTalk) * (1 - weights.bench) * engage;
-        if (danceA) danceA.weight = weights.dance * engage;
-        if (poseAA) poseAA.weight = poseAA === activePose ? weights.pose * engage : 0;
-        if (poseBA) poseBA.weight = poseBA === activePose ? weights.pose * engage : 0;
+        if (waveA) waveA.weight = weights.wave * (1 - weights.sit) * (1 - weights.pair);
+        if (sitA) sitA.weight = weights.sit * (1 - weights.sitTalk) * (1 - weights.bench);
+        if (danceA) danceA.weight = weights.dance;
+        if (poseAA) poseAA.weight = poseAA === activePose ? weights.pose : 0;
+        if (poseBA) poseBA.weight = poseBA === activePose ? weights.pose : 0;
         const nowMs = performance.now();
         const activeTalk = talkT ? talkBag.active(nowMs) : null;
-        for (const a of talkActs) a.weight = a === activeTalk ? weights.talk * engage : 0;
+        for (const a of talkActs) a.weight = a === activeTalk ? weights.talk : 0;
         const activeSitTalk = sitTalkT ? sitTalkBag.active(nowMs) : null;
-        for (const a of sitTalkActs) a.weight = a === activeSitTalk ? weights.sitTalk * engage : 0;
+        for (const a of sitTalkActs) a.weight = a === activeSitTalk ? weights.sitTalk : 0;
         if (benchT && benchFlipAt === 0) benchFlipAt = nowMs + 12000 + Math.random() * 6000;
         if (benchT && nowMs > benchFlipAt) {
           benchActive = (benchActive + 1) % Math.max(1, benchActs.length);
@@ -1122,24 +1106,77 @@ export function createCharAnimator(args: {
         }
         if (!benchT) benchFlipAt = 0;
         const activeBench = benchT ? benchActs[benchActive] ?? null : null;
-        for (const a of benchActs) a.weight = a === activeBench ? weights.bench * engage : 0;
-        if (flirtA) flirtA.weight = mode === "flirt" ? weights.pair * engage : 0;
-        if (hugA) hugA.weight = mode === "hug" ? weights.pair * engage : 0;
+        for (const a of benchActs) a.weight = a === activeBench ? weights.bench : 0;
+        if (flirtA) flirtA.weight = mode === "flirt" ? weights.pair : 0;
+        if (hugA) hugA.weight = mode === "hug" ? weights.pair : 0;
         mixer.update(step);
       };
       out.prime = () => {
-        // Reveal path: skip the soft engage ramp (there is no
-        // visible procedural pose to soften FROM — the body has
-        // been hidden) and apply the idle clip at full weight, so
-        // the skeleton stands in a true idle pose before the body
-        // is shown. Two steps settle the weight lerps.
-        engage = 1;
+        // Reveal path: apply the idle clip so the skeleton stands in
+        // a true idle pose before the body is shown. Two steps settle
+        // the weight lerps. (Clips start at full weight, always: the
+        // old fade-in ramp left the mixer blending in the bones'
+        // original values, and those are the T-pose, so a body shown
+        // before its clips landed visibly lifted its arms.)
         out.update(1 / 30, 0, false);
         out.update(1 / 30, 0, false);
       };
       out.ready = true;
+
+      // Stage two: the character is live; the rest of the library joins
+      // the running mixer as it arrives, each behind its own gate.
+      // Dance + pose clips: same bake, a gate fitted to dancing —
+      // finite, upright, sane pivot; arms and legs may go where the
+      // music takes them.
+      const passes = (clip: THREE.AnimationClip): boolean => {
+        const c = onBindPose(() => checkRetargetedClip(model, clip));
+        return c.finite && c.bodyOk && c.pivotOk;
+      };
+      const lenient = async (url?: string): Promise<THREE.AnimationClip | null> => {
+        if (!url) return null;
+        const clip = await loadClip(url);
+        return clip && passes(clip) ? clip : null;
+      };
+      const dance = await lenient(urls.dance);
+      danceA = mk(dance);
+      out.hasDance = danceA !== null;
+      out.danceDuration = dance?.duration ?? 0;
+      poseAA = mk(await lenient(urls.poseA));
+      poseBA = mk(await lenient(urls.poseB));
+      // Outdoor library clips: same lenient gate (finite, upright
+      // body, sane shoulder pivots — a seated clip's head still
+      // clears its hips by half a metre), baked through OUTDOOR_RIG.
+      // Seated families get their hip XZ pinned (the scene owns
+      // seat placement; see pinHipXZInPlace).
+      const lenientOutdoor = async (url: string | undefined, pinHipXZ: boolean): Promise<THREE.AnimationClip | null> => {
+        if (!url) return null;
+        const clip = await loadClip(url, OUTDOOR_RIG);
+        if (!clip) return null;
+        if (pinHipXZ) pinHipXZInPlace(clip);
+        return passes(clip) ? clip : null;
+      };
+      if (urls.outdoor) {
+        for (const u of urls.outdoor.talk) {
+          const a = mkOnce(await lenientOutdoor(u, false), false);
+          if (a) talkActs.push(a);
+        }
+        for (const u of urls.outdoor.sitTalk) {
+          const a = mkOnce(await lenientOutdoor(u, true), false);
+          if (a) sitTalkActs.push(a);
+        }
+        for (const u of urls.outdoor.benchSit) {
+          const a = mk(await lenientOutdoor(u, true));
+          if (a) benchActs.push(a);
+        }
+        flirtClip = await lenientOutdoor(urls.outdoor.flirt, false);
+        flirtA = mkOnce(flirtClip, true);
+        hugClip = await lenientOutdoor(urls.outdoor.hug, false);
+        hugA = mkOnce(hugClip, true);
+      }
     } catch {
       /* clips unavailable — procedural posing carries on */
+    } finally {
+      if (!out.ready) out.failed = true;
     }
   })();
   return out;

@@ -30,7 +30,7 @@ her memory of his real life honest.
   without it. Her pure logic (`hearing.ts`, `heart.ts`, `player.ts`) has
   no database or SDK in it. `bun run test` also covers economy transactions,
   permanent fish progression, graphics settings, and scene resource cleanup.
-- **Schema** (`drizzle/`): 25 migrations building the whole town state
+- **Schema** (`drizzle/`): 26 migrations building the whole town state
   from an empty SQLite database.
 - **Two free binaries**: a CC0 low-poly trees pack and the companion's
   VRM body, whose licence (pixiv's VRoid sample terms) permits free
@@ -40,7 +40,7 @@ her memory of his real life honest.
 
 ## Starting your own
 
-The town menu’s **Your town** panel contains save downloads and restoration,
+The town menu’s **Settings & saves** panel contains save downloads and restoration,
 the optional daily arrival summary, automatic graphics, and performance
 diagnostics. Diagnostics show frame time, p95, draw calls, GPU resource counts,
 and asset-loading progress. Automatic graphics adapts after sustained slow

@@ -15,6 +15,7 @@ type Ctx,
 } from "@hatch/space-sdk";
 import { and, asc, desc, eq } from "drizzle-orm";
 import * as schema from "./schema";
+import { FESTIVALS_SEED } from "./festivals";
 import {
   extractFact,
   isHeavyWeather,
@@ -286,15 +287,6 @@ const BOARD_SEED: { title: string; status: string; next_step: string }[] = [
   { title: "[EXAMPLE] Another project", status: "Not started yet.", next_step: "Decide the first step together." },
 ];
 const BOARD_AS_OF = "Template";
-const FESTIVALS_SEED: { month_day: string; name: string; dressing: string; colors: string }[] = [
-  // TEMPLATE calendar of generic festivals. The original town also kept
-  // the owner's family birthdays and race day; those were personal and
-  // are not included. A receiving Muse should add the new owner's own
-  // dates with them.
-  { month_day: "10-31", name: "Halloween — the town in costume colors", dressing: "Bunting in orange and black over the forum; the lamps glow a little more pumpkin than usual.", colors: "#e07b2a,#2b2b30,#8a4bff" },
-  { month_day: "12-17", name: "Saturnalia — the midwinter feast", dressing: "Garlands on the basilica, candles in every window, and the town turned briefly upside down in the old way.", colors: "#b03a2e,#f2c14e,#51683c" },
-  { month_day: "02-15", name: "Lupercalia — the February rite", dressing: "Red and white ribbons on the forum columns; the wolf keeps her distance, honoured.", colors: "#c0392b,#e8e3d8,#7a4a21" },
-];
 const GOALS_SEED: { grp: string; title: string; description: string; status: string }[] = [
   // TEMPLATE examples for a fresh town — replace with the new owner's
   // own goals on first sync. The original town's goals were personal

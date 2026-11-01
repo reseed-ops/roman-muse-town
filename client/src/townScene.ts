@@ -41,6 +41,7 @@ import { retainSharedModel, SceneResources } from "./sceneResources";
 import { SceneRuntime } from "./sceneRuntime";
 import type { PerformanceSnapshot } from "./performanceMonitor";
 import type { ProximityLoader } from "./proximityLoader";
+import { CHARACTER_WAIT_MS, fetchClipBytes, nextLoadJob, settleWithin } from "./characterLoad";
 import museAvatarUrl from "./assets/muse-avatar.vrm";
 import centurionUrl from "./assets/centurion.vrm";
 import fIdleUrl from "./assets/anim/f_idle.fbx";
@@ -155,7 +156,6 @@ import bushDUrl from "./assets/roman/bush_d.glb";
 import bushEUrl from "./assets/roman/bush_e.glb";
 import flowerAUrl from "./assets/roman/flower_a.glb";
 import flowerMedUrl from "./assets/roman/flower_med.glb";
-import sunflowerUrl from "./assets/roman/sunflower.glb";
 import flowerGroupUrl from "./assets/roman/flower_group.glb";
 import rockPackUrl from "./assets/roman/rock_pack.glb";
 import grassPatchUrl from "./assets/roman/grass_patch.glb";
@@ -572,24 +572,23 @@ let loadsSettled = 0;
 
 // Progressive loading, tiered by what the opening camera sees. The
 // camera opens over the plaza looking at the forum, so the buildings
-// stream first and Muse's VRM character LAST — the old order did
-// the opposite, and on the phone the houses stood as bare white
-// slabs while the characters' megabytes crowded out every building
-// fetch and parse. The one exception is the Centurion (tier 1):
-// walk mode opens in his boots, so he parses with the forum's
-// buildings and is embodied from the first walk frame.
+// stream next. The two characters come before everything (tier 0, at
+// the owner's word: they are who the visit is about, and a town that
+// fills in around them reads better than bodies arriving late). The
+// old order ran the other way, because on the phone their megabytes
+// crowded out every building fetch and the houses stood as bare white
+// slabs, so the buildings wait on them for CHARACTER_WAIT_MS at most.
 //
 // Fetch and parse are separate stages:
-//  - Building fetches (tiers 0–1) start the moment a model is
-//    registered — during scene construction, while the loading
-//    screen is up. Downloads don't block the main thread, so the
-//    procedural shell still paints its first frame immediately.
+//  - Character fetches start first thing in scene construction,
+//    while the loading screen is up (beginCharacterLoad); building
+//    fetches (tier 1) follow once they settle. Downloads don't block
+//    the main thread, so the procedural shell still paints its first
+//    frame immediately.
 //  - Parses wait for that first frame (the gate below), then run
 //    through a small parallel queue (MAX_PARALLEL_LOADS at a time),
 //    always taking the lowest tier waiting, registration order
-//    within a tier. A character only takes a slot when no building,
-//    landmark, or prop is waiting for one — parallel, but low
-//    priority, and never holding a building hostage.
+//    within a tier (nextLoadJob).
 //  - Model URLs are the bundler's content-hashed asset URLs: stable
 //    for unchanged models, so the browser's HTTP cache makes the
 //    second visit's fetches near-instant.
@@ -619,12 +618,6 @@ const LOAD_TIER_BY_URL = new Map<string, LoadTier>([
   [benchWoodenUrl, 1],
   [bannerUrl, 1],
   [bannerTriangleUrl, 1],
-  // The Centurion rides in tier 1, not with the characters below:
-  // walk mode opens standing in his boots at the plaza, so he must
-  // be parsed and attached from the first walk frame rather than
-  // streaming in behind the far landmarks (the plaza-start gap that
-  // left his spot empty at the start of walk mode).
-  [centurionUrl, 1],
   // Tier 2 — far landmarks (the Colosseum, the aqueduct) and, by
   // default, every unlisted prop and plant.
   [colosseumUrl, 2],
@@ -633,10 +626,17 @@ const LOAD_TIER_BY_URL = new Map<string, LoadTier>([
   [aqueductUrl, 2],
   [aqueductConnectorUrl, 2],
   [ballistaUrl, 2],
-  // Tier 3 — Muse's character, last and low priority (the Centurion
-  // is up in tier 1; see the note there).
-  [museAvatarUrl, 3],
+  // Tier 0 — the characters, before everything.
+  [centurionUrl, 0],
+  [museAvatarUrl, 0],
 ]);
+
+/** What each body needs to stand and move; the rest of the library
+ *  streams in behind them (see createCharAnimator). */
+const CORE_CLIP_URLS = [
+  mIdleUrl, mWalkUrl, mRunUrl, mWaveUrl, mSitUrl,
+  fIdleUrl, fWalkUrl, fRunUrl, fWaveUrl, fSitUrl,
+];
 
 let loadGateOpen = false;
 
@@ -652,18 +652,32 @@ const MAX_PARALLEL_LOADS = 5;
 
 function pumpLoadQueue() {
   if (!loadGateOpen) return;
-  while (activeLoads < MAX_PARALLEL_LOADS && loadQueue.length > 0) {
-    let best = 0;
-    for (let i = 1; i < loadQueue.length; i++) {
-      const a = loadQueue[i];
-      const b = loadQueue[best];
-      if (a && b && (a.tier < b.tier || (a.tier === b.tier && a.seq < b.seq))) best = i;
-    }
-    const job = loadQueue.splice(best, 1)[0];
+  while (activeLoads < MAX_PARALLEL_LOADS) {
+    const next = nextLoadJob(loadQueue, charactersSettled);
+    if (next < 0) break;
+    const job = loadQueue.splice(next, 1)[0];
     if (!job) break;
     activeLoads += 1;
     job.run();
   }
+}
+
+/** True once the characters' files are in, failed, or out of time. */
+let charactersSettled = true;
+let charactersArrived: Promise<void> = Promise.resolve();
+
+/** Start the characters' downloads ahead of everything else: both
+ *  bodies and the clips each needs to stand and move. Parsing still
+ *  waits for the load gate, so the shell paints first. */
+function beginCharacterLoad() {
+  charactersSettled = false;
+  charactersArrived = settleWithin(
+    [...[centurionUrl, museAvatarUrl].filter((url) => !modelCache.has(url)).map(fetchModelBytes), ...CORE_CLIP_URLS.map(fetchClipBytes)],
+    CHARACTER_WAIT_MS,
+  ).then(() => {
+    charactersSettled = true;
+    pumpLoadQueue();
+  });
 }
 
 function openLoadGate() {
@@ -699,12 +713,11 @@ function loadModelScene(url: string, opts?: { tier?: LoadTier }): Promise<THREE.
     loadsTotal += 1;
     loadProgressHook?.(loadsSettled, loadsTotal);
     const tier: LoadTier = opts?.tier ?? LOAD_TIER_BY_URL.get(url) ?? 2;
-    // Buildings start downloading right now — during the loading
-    // screen — even though their parse waits for the gate. Far
-    // pieces and the characters fetch only when their queue turn
-    // comes, so they can't steal the buildings' bandwidth.
-    if (tier <= 1) {
-      void fetchModelBytes(url).catch(() => {
+    // Buildings start downloading during the loading screen, right
+    // behind the characters, even though their parse waits for the
+    // gate. Far pieces fetch only when their queue turn comes.
+    if (tier === 1) {
+      void charactersArrived.then(() => fetchModelBytes(url)).catch(() => {
         /* the parse job below surfaces the failure properly */
       });
     }
@@ -1114,6 +1127,7 @@ export function createTownScene(
     opts.onSoftwareGl?.();
   }
   loadProgressHook = opts.onLoadProgress ?? null;
+  beginCharacterLoad();
   loadErrorHook = opts.onLoadError ?? null;
   // Out-of-band health flags on window: the shell in main.tsx runs a
   // plain-DOM watchdog that can still show a title, a cause, and a
@@ -2623,7 +2637,7 @@ export function createTownScene(
   // own canopy radius plus a margin — see VEG_SPOTS notes by each set.
   const PACK_BUSHES = [bushAUrl, bushBUrl, bushCUrl, bushDUrl, bushEUrl];
   const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];
-  const PACK_FLOWERS = [flowerAUrl, flowerMedUrl, sunflowerUrl, flowerGroupUrl];
+  const PACK_FLOWERS = [flowerAUrl, flowerMedUrl, flowerGroupUrl];
 
   // The Embassy gatehouse (Nov 1): a modest porta beside the south
   // gate, built procedurally — no pack model is a gatehouse, and
@@ -2871,7 +2885,7 @@ export function createTownScene(
   void placeWorld(ballistaUrl, { x: -36, z: 4, rotY: 0.8, width: 2.3 });
   void placeWorld(bannerUrl, { x: 4.9, z: 38.8, rotY: 0.3, height: 3.1 });
   void placeWorld(bannerUrl, { x: -1.1, z: 39.1, rotY: -0.3, height: 3.1 });
-  // The Colosseum in its prime on the eastern knoll — the pack's mesh is
+  // The Colosseum in its prime in the eastern basin — the pack's mesh is
   // the complete building (full ring, every tier), and a ring of
   // velarium masts around its rim finishes the silhouette.
   void placeWorld(colosseumUrl, { x: COLOSSEUM.position[0], z: COLOSSEUM.position[1], rotY: -0.35, width: 16 }).then((wrap) => {
@@ -2912,7 +2926,7 @@ export function createTownScene(
   addFoundation(6.2, 21.5, -0.55, 1.73 * 0.95, 0.86 * 0.95, terrainHeight(6.2, 21.5));
   addFoundation(-5.5, 16.5, 0.95, 1.73 * 0.95, 0.86 * 0.95, terrainHeight(-5.5, 16.5));
   addFoundation(10, 6.5, -0.95, 1.73 * 0.95, 0.86 * 0.95, terrainHeight(10, 6.5));
-  // The Colosseum's ring foundation on its knoll.
+  // The Colosseum's ring foundation on the basin floor.
   addRoundFoundation(
     COLOSSEUM.position[0],
     COLOSSEUM.position[1],
@@ -4687,7 +4701,7 @@ export function createTownScene(
       x: fx,
       z: fz,
       rotY: i * 1.13,
-      height: flowerUrl === sunflowerUrl ? 1.15 : flowerUrl === flowerGroupUrl ? 0.5 : 0.62,
+      height: flowerUrl === flowerGroupUrl ? 0.5 : 0.62,
     });
     if (i % 3 === 0) {
       const gx = fx + Math.cos(angle + 0.5) * 0.85;
@@ -6551,7 +6565,7 @@ export function createTownScene(
           "Morning rounds: bread still warm, grapes counted twice — Basil drives a hard bargain and I respect it entirely.",
           "I like the market before the town wakes up properly. Everything's possible at a stall at this hour.",
           "If you're choosing breakfast, the bread from the first stall. Trust the hostess.",
-          "Basil swears his tomatoes can tell the weather. So far the tomatoes have the better record.",
+          "Basil swears his lentils can tell the weather. So far the lentils have the better record.",
           "Fern's flowers go first, every morning. A town that buys its flowers before its bread has its priorities exactly right.",
         ];
       case "forum":
@@ -7627,7 +7641,7 @@ export function createTownScene(
         }
         placeTree("CypressTree", -15.6, 26.3, 5.2, 0.3);
         placeTree("CypressTree", -22.8, 26.8, 4.6, 2.1);
-        placeTree("LemonTree", -15.2, 20.2, 2.6, 1.2);
+        placeTree("AppleTree", -15.2, 20.2, 2.6, 1.2);
         placeTree("AppleTree", -23.4, 19.2, 3.0, 2.6);
         placeTree("CherryBlossom", -27.8, -13.8, 4.4, 0.9);
         // The forest stand (data in town.ts — the same list the
@@ -10005,7 +10019,7 @@ export function createTownScene(
         museAnim.prime();
         museBody.visible = true;
         museRevealed = true;
-      } else if (!museAnim || performance.now() - museAttachedAt > 6000) {
+      } else if (!museAnim || museAnim.failed || performance.now() - museAttachedAt > 6000) {
         museBody.visible = true;
         museRevealed = true;
       }
@@ -10015,7 +10029,7 @@ export function createTownScene(
         playerAnim.prime();
         playerBody.visible = true;
         playerRevealed = true;
-      } else if (!playerAnim || performance.now() - playerAttachedAt > 6000) {
+      } else if (!playerAnim || playerAnim.failed || performance.now() - playerAttachedAt > 6000) {
         playerBody.visible = true;
         playerRevealed = true;
       }

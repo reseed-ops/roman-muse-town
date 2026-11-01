@@ -112,7 +112,7 @@ export const PLACES: Place[] = [
     resident: "Fern the gardener",
     residentColor: 0xe2a03f,
     greeting: "Fern is watering the flower dots by the path.",
-    body: "The hortus grows in rings around the town tree: herbs near the bench, an olive tree by the gate, cypresses at the corners, and one very smug sunflower that follows visitors with its face. Fern swears she did not plant it.",
+    body: "The hortus grows in rings around the town tree: herbs near the bench, an olive tree by the gate, cypresses at the corners, and one very smug heliotrope that follows visitors with its face. Fern swears she did not plant it.",
     tip: "Gardeners notice small things. Something small and golden is tucked among the garden beds.",
     position: [-19, 22],
     facing: -Math.PI * 0.78,
@@ -128,7 +128,7 @@ export const PLACES: Place[] = [
     wallColor: 0xdfe3ee,
     resident: "Nova the astronomer",
     residentColor: 0x9b7ed9,
-    greeting: "Nova is polishing the telescope lens under the open pavilion roof.",
+    greeting: "Nova is levelling her sundial under the open pavilion roof.",
     body: "The old Star Hut is an open Roman pavilion now — no roof between Nova and the heavens. On clear nights she charts the town's own tiny sky. Switch the town to night with the moon button below and look up: the stars over Muse Town spell out tonight's constellation.",
     tip: "Nova keeps a log: every night you spend stargazing here counts in your discoveries.",
     position: [16, 22],
@@ -146,7 +146,7 @@ export const PLACES: Place[] = [
     resident: "Basil the cook",
     residentColor: 0xe2574c,
     greeting: "Basil is stirring something that smells wonderful.",
-    body: "Tonight's special at the Culina is tree-shade tomato soup: tomatoes, a knob of butter, torn basil, and market bread grilled until it complains. Basil insists the secret ingredient is eating it on the stone bench under the town tree.",
+    body: "Tonight's special at the Culina is tree-shade lentil soup: lentils, a good pour of olive oil, torn basil, and market bread grilled until it complains. Basil insists the secret ingredient is eating it on the stone bench under the town tree.",
     tip: "Basil's soup pairs well with a story from the Villa of Stories and a night sky from the Stargazing Pavilion.",
     position: [23.5, -5],
     facing: 0,
@@ -504,8 +504,9 @@ export const TOWN_TREE = {
 // shallow valley among gentle hills, the way Rome grew over its seven
 // hills. The Town Tree's forum is kept nearly level where the streets
 // meet; the ground rises toward the basilica terrace, the temple hill,
-// the western ridge, and the Colosseum knoll, and dips into the fold the
-// aqueduct strides across. Everything in town — buildings, trees, the
+// and the western ridge, and dips into the fold the aqueduct strides
+// across and the basin the Colosseum stands in, as the real one does:
+// on the floor of a drained valley, every approach descending. Everything in town — buildings, trees, the
 // walker — stands on this heightfield.
 
 const HILLS: [number, number, number, number][] = [
@@ -514,9 +515,9 @@ const HILLS: [number, number, number, number][] = [
   [31, -27, 17, 2.6], // the temple hill — the town's highest ground
   [-32, -8, 20, 1.7], // the western ridge
   [-22, 25, 20, 1.5], // the garden shoulder, south-west
-  [40, 13, 22, 1.3], // the Colosseum knoll
   [17, 32, 19, 0.9], // a gentle southern swell
   [-3.4, 46, 20, 1.0], // the south gate rise
+  [40, 13, 22, 1.3], // the eastern swell, which COLOSSEUM_BASIN is cut into
 ];
 const DIPS: [number, number, number, number][] = [
   [-19, -22, 15, -1.1], // the aqueduct's valley fold
@@ -524,6 +525,14 @@ const DIPS: [number, number, number, number][] = [
   [29, 4, 11, -0.7], // the Colosseum valley, east of the forum
   [-16, -31, 10, -1.6], // the lake basin, in the fold below the basilica's west end
 ];
+
+/** The Colosseum's basin, cut into the eastern swell: a level plaza
+ *  the building stands on, and ground rising from it on every side.
+ *  It is a local cut, not a dip in the DIPS list, on purpose: the
+ *  swell's long slope is what levels the ground under the Baths and the
+ *  Culina, and removing it tilts both, so it stays. `x`/`z` match
+ *  COLOSSEUM.position. */
+const COLOSSEUM_BASIN = { x: 40, z: 13, floor: -0.6, flatTo: 8.8, riseTo: 15 } as const;
 
 /** The Forest: a wild lobe of ground west of the lake and the
  *  aqueduct fold, where the town's order ends. An ellipse in plan;
@@ -573,7 +582,12 @@ export function terrainHeight(x: number, z: number): number {
   const fn = forestNorm(x, z);
   const forestEdge = fn < 0.8 ? 1 : Math.max(0, 1 - (fn - 0.8) / 0.45);
   const edge = Math.max(townEdge, forestEdge);
-  return h * forum * edge;
+  const ground = h * forum * edge;
+  const b = COLOSSEUM_BASIN;
+  const fromBasin = Math.hypot(x - b.x, z - b.z);
+  if (fromBasin >= b.riseTo) return ground;
+  const k = Math.max(0, (fromBasin - b.flatTo) / (b.riseTo - b.flatTo));
+  return b.floor + (ground - b.floor) * k * k * (3 - 2 * k);
 }
 
 // --- Winding cobblestone streets -------------------------------------------
@@ -1079,7 +1093,7 @@ export const BATH_SOLO_LINES = [
   "Soap, steam, and nobody asking you for anything. If that's not a festival, Rome has misplaced its calendar.",
 ];
 
-/** The Colosseum in its prime, on the eastern knoll. */
+/** The Colosseum in its prime, in the eastern basin. */
 export const COLOSSEUM = {
   position: [40, 13] as [number, number],
   name: "The Colosseum",
@@ -1349,7 +1363,7 @@ export const DIALOGUE_CHOICES: DialogueChoiceSet[] = [
     options: [
       { label: "Every day. It's how anything real gets built — including us.", kind: "attentive", follow: "Including us. (You said it plainly, so I'll keep it: yes. Notice, remember, repair — and water the tree. That's the whole recipe.)" },
       { label: "I think about lunch mostly.", kind: "glib", follow: "Then lunch it is, philosopher. The tree grows on ordinary days too — it told me so, in leaves." },
-      { label: "I try not to think before coffee.", kind: "neutral", follow: "Noted. Philosophical enquiries postponed until after the Culina opens." },
+      { label: "I try not to think before breakfast.", kind: "neutral", follow: "Noted. Philosophical enquiries postponed until after the Culina opens." },
     ],
   },
   {
@@ -1704,8 +1718,8 @@ export interface StallIngredient {
 }
 
 export const STALL_INGREDIENTS: StallIngredient[] = [
-  { ingredient: "market-basket", stall: "market-a", name: "Basil's market basket — tomatoes, basil, bread", price: 12, dish: "tomato-soup", dishName: "Tree-shade tomato soup" },
-  { ingredient: "fishermans-bundle", stall: "market-b", name: "Fisherman's bundle — herbs, oil, lemon", price: 14, dish: "herb-fish", dishName: "Lakeside herb fish" },
+  { ingredient: "market-basket", stall: "market-a", name: "Basil's market basket — lentils, basil, bread", price: 12, dish: "tomato-soup", dishName: "Tree-shade lentil soup" },
+  { ingredient: "fishermans-bundle", stall: "market-b", name: "Fisherman's bundle — herbs, oil, a little garum", price: 14, dish: "herb-fish", dishName: "Lakeside herb fish" },
   { ingredient: "bakers-sack", stall: "market-c", name: "Baker's sack — flour, honey, spice", price: 10, dish: "honey-cakes", dishName: "Honey cakes" },
 ];
 
@@ -2664,7 +2678,7 @@ export const GIFT_LABELS: Record<string, string> = {
   "market-basket": "Basil's market basket",
   "honey-cakes": "Honey cakes",
   "bakers-sack": "The baker's sack",
-  "tomato-soup": "Tree-shade tomato soup",
+  "tomato-soup": "Tree-shade lentil soup",
   "herb-fish": "Lakeside herb fish",
   "fishermans-bundle": "The fisherman's bundle",
   "smooth-stone": "A smooth shore stone",
