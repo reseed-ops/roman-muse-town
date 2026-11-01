@@ -2895,7 +2895,7 @@ export function solarAngles(now: Date): { elev: number; azim: number } {
   const min = g("minute");
   const sec = g("second");
   const doy = Math.floor((Date.UTC(y, mo - 1, d) - Date.UTC(y, 0, 0)) / 86400000);
-  // The Chicago UTC offset at this instant, in minutes.
+  // The town's UTC offset at this instant, in minutes.
   const asUtc = Date.UTC(y, mo - 1, d, hour, min, sec);
   const offsetMin = Math.round((asUtc - now.getTime()) / 60000);
   const gamma = ((2 * Math.PI) / 365) * (doy - 1 + (hour - 12) / 24);
@@ -2916,8 +2916,9 @@ export function solarAngles(now: Date): { elev: number; azim: number } {
     0.00148 * Math.sin(3 * gamma);
   const lat = (41.90 * Math.PI) / 180;
   const lon = 12.50;
-  const tst = hour * 60 + min + sec / 60 + eqtime + 4 * lon + offsetMin;
-  let ha = tst / 4;
+  const tst = hour * 60 + min + sec / 60 + eqtime + 4 * lon - offsetMin;
+  let ha = tst / 4 - 180;
+  if (ha < -180) ha += 360;
   if (ha > 180) ha -= 360;
   const haRad = (ha * Math.PI) / 180;
   const cosZen =

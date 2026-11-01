@@ -9,7 +9,7 @@ import { COLOSSEUM, terrainHeight } from "./town";
 const ABSENT = /tomato|sunflower|telescope|coffee|maize|potato/i;
 
 test("no plain anachronisms in the town's writing or its scene", () => {
-  for (const file of ["town.ts", "townScene.ts"]) {
+  for (const file of ["town.ts", "townScene.ts", "romanDay.ts"]) {
     const text = readFileSync(join(import.meta.dir, file), "utf8")
       .split(/\r?\n/)
       // Saved games know the soup by this id, so it stays.

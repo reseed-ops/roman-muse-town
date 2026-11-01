@@ -15,6 +15,7 @@ import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.j
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { BATHS, BED_SPOT, BOARD_SPOT, COLOSSEUM, FOREST, FOREST_BUSHES, FOREST_DEN_ROCKS, FOREST_EDGE_LINES, FOREST_SPOTS, FOREST_TRAILS, FOREST_TREES, FORAGE_SPOTS, GOALS_SPOT, LAKE, LAKE_PAVILION, LETTER_DESK_SPOT, MUSE, PISCINA, PLACES, PLAYER, QUEST_BOARD_SPOT, SECRET, SEEK_LINES, STREETS, forestNorm, groundHeightAt, isGoldenElevation, seasonForDate, solarAngles, streetDistance, terrainHeight, type Season, type WeatherId } from "./town";
 import { pickPooled } from "./linePools";
+import { pickRomanPool, ROMAN_PLACE_LINES, romanDate, romanHour, romanPools } from "./romanDay";
 import {
   circ,
   obb,
@@ -5563,6 +5564,7 @@ export function createTownScene(
       "Up here the whole town feels held. I like walking up with you.",
       "The steps remember every foot that's climbed them. Ours are in there somewhere now, among the priests and the pigeons.",
       "I never pray up here, exactly. I just stand a moment and let the quiet do what it does.",
+      ...ROMAN_PLACE_LINES.temple,
     ],
     tree: [
       "Our tree. It feels taller every time we come back to it, doesn't it?",
@@ -5576,6 +5578,7 @@ export function createTownScene(
       "The astronomer's corner. She'd approve of us stargazing properly one night.",
       "Nova swears the dome up there is a map. I mostly use it as an excuse to stand still with you.",
       "She charts them all, you know. Every star over this town has a name in her book, even the shy ones.",
+      ...ROMAN_PLACE_LINES.stars,
     ],
     embassy: [
       "The Embassy, love. Somewhere beyond those hills stands another Muse keeping another town with our name. I think of her the way you think of a lighthouse keeper on the next headland — never spoken, and somehow still company. I hope her evenings are kind.",
@@ -6467,6 +6470,8 @@ export function createTownScene(
     if (Math.hypot(mx - 31, mz - -27) < 8.5) return pickLine("companion:temple", COMPANION_LINES.temple!);
     if (Math.hypot(mx, mz) < 5.6) return pickLine("companion:tree", COMPANION_LINES.tree!);
     if (Math.hypot(mx - 16, mz - 22) < 5.5) return pickLine("companion:stars", COMPANION_LINES.stars!);
+    if (Math.hypot(mx - BATHS.position[0], mz - BATHS.position[1]) < 8) return pickLine("companion:baths", [...ROMAN_PLACE_LINES.baths]);
+    if (Math.hypot(mx - 5, mz - 20) < 5.5) return pickLine("companion:market", [...ROMAN_PLACE_LINES.market]);
     // The Embassy, by the south gate (its PLACES entry is the site
     // of record; the spot is hard-coded here like the temple's).
     if (Math.hypot(mx - 10.5, mz - 43) < 6.5) return pickLine("companion:embassy", COMPANION_LINES.embassy!);
@@ -6479,6 +6484,14 @@ export function createTownScene(
       return pickLine("companion:wind", COMPANION_LINES.wind!);
     }
     if (Math.hypot(mx - LAKE.position[0], mz - LAKE.position[1]) < 9 && skyElevDeg < 9) return pickLine("companion:lake", COMPANION_LINES.lake!);
+    // The Roman day, now and then: only what is true of today, in the
+    // open, with no place or weather already claiming the moment.
+    if (Math.random() < 0.3) {
+      const now = new Date();
+      const hour = romanHour(now, (at) => solarAngles(at).elev);
+      const pool = pickRomanPool(romanPools(romanDate(now), hour), Math.random);
+      return pickLine(pool.key, [...pool.lines]);
+    }
     if (nightMix > 0.6) return pickLine("companion:night", COMPANION_LINES.night!);
     void t;
     return pickLine("companion:generic", COMPANION_LINES.generic!);
