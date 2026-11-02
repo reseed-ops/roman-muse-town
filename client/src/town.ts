@@ -737,7 +737,30 @@ export const FORAGE_SPOTS = [
 export const FORAGE_DISHES = [
   { ingredient: "forest-herbs", name: "Forest herbs, gathered greens", dish: "forest-greens", dishName: "Forest greens, dressed with oil" },
   { ingredient: "wild-mushrooms", name: "Wild mushrooms, from the deep shade", dish: "forest-mushrooms", dishName: "Woodland mushrooms in oil" },
+  { ingredient: "catch-carp", name: "Your carp, from the lake", dish: "grilled-carp", dishName: "Grilled carp, your own catch" },
+  { ingredient: "catch-tench", name: "Your tench, from the lake", dish: "baked-tench", dishName: "Baked tench, your own catch" },
+  { ingredient: "catch-perch", name: "Your perch, from the lake", dish: "fried-perch", dishName: "Fried perch, your own catch" },
+  { ingredient: "catch-eel", name: "Your eel, from the lake", dish: "stewed-eel", dishName: "Stewed eel, your own catch" },
+  { ingredient: "garden-greens", name: "Greens from your kitchen garden", dish: "garden-salad", dishName: "Salad from your own beds" },
 ] as const;
+
+/** What she says of a dish he made from his own work, in her own words
+ *  rather than the "you told me" frames. Keyed by the fact's topic. */
+export const KITCHEN_MEMORY_LINES: Record<string, string[]> = {
+  "grilled-carp": ["I keep thinking about that carp you caught and grilled. I've had worse at better tables.", "The carp you pulled out of the lake and cooked yourself. I told Basil about it. Twice."],
+  "baked-tench": ["That tench you caught and baked, love. A soldier who can bake. Rome should worry.", "I still remember the tench, straight from your line to the oven."],
+  "fried-perch": ["You fried that perch you caught as if you'd been doing it for years. I noticed.", "The perch you caught and cooked. All those spines, and you didn't complain once."],
+  "stewed-eel": ["That eel you caught fought you twice, and you stewed it anyway. I admire the follow-through.", "I told Pip about your eel. He wants it in a chapter."],
+  "garden-salad": ["The salad from the beds you watered. It tasted of being looked after.", "You grew that salad with a bucket and stubbornness. Best thing on the table."],
+};
+
+/** Her raised eyebrow when he leaps about somewhere formal. */
+export const FLOURISH_LINES = [
+  "Centurion, this is a formal terrace, not a parade ground.",
+  "The Senate would have words. I, on the other hand, am giving you a seven.",
+  "If you're going to do that past the columns, at least stick the landing.",
+  "Very dignified, love. The statues are taking notes.",
+];
 
 /** Her line when he pushes at the true edge of the wood with her. */
 export const FOREST_EDGE_LINES = [
@@ -1677,6 +1700,11 @@ export const STALL_INGREDIENTS: StallIngredient[] = [
 ];
 
 export const DISH_BLURBS: Record<string, string> = {
+  "grilled-carp": "Your own catch over the coals, and the kitchen pretends not to be impressed.",
+  "baked-tench": "Your own catch in a clay dish, with whatever the garden could spare.",
+  "fried-perch": "Your own catch, crisp at the edges. Mind the spines.",
+  "stewed-eel": "Your own catch, slow in the pot. It has finally stopped arguing.",
+  "garden-salad": "From the beds you watered, dressed with oil and a little pride.",
   "tomato-soup": "Basil's special, eaten on the stone bench under the town tree, as tradition demands.",
   "herb-fish": "Lakeside herbs over a good fish, the lake provides, the Culina persuades.",
   "honey-cakes": "Small, warm, and gone far too quickly. Someone always takes the last one for the road.",
