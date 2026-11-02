@@ -1,8 +1,14 @@
 import { createHash } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import { canonicalJson } from "../../shared/retryActions";
 import * as schema from "./schema";
+
+/** Free, daily-capped affection ticks are the one receipt that piles up, and
+ * replaying a forgotten one costs nothing, so only those are ever pruned.
+ * Anything that spends money stays durable forever. */
+const PRUNED_ACTION = "earnAffection";
+export const PRUNED_RECEIPTS_KEPT = 500;
 
 export interface RequestIdentity { requestId?: string; action: string; payload: Record<string, unknown> }
 type Transaction = Parameters<Parameters<BunSQLiteDatabase<typeof schema>["transaction"]>[0]>[0];
@@ -22,7 +28,15 @@ export function runRetrySafe(db: BunSQLiteDatabase<typeof schema>, identity: Req
       }
     }
     work(tx);
-    if (requestId && identity) tx.insert(schema.requestReceipts).values({ requestId, action: identity.action, payloadHash: hash }).run();
+    if (requestId && identity) {
+      tx.insert(schema.requestReceipts).values({ requestId, action: identity.action, payloadHash: hash }).run();
+      // A scan, so run it on about one tick in 256: UUIDs make that stateless.
+      if (identity.action === PRUNED_ACTION && requestId.startsWith("00")) {
+        tx.run(sql`DELETE FROM request_receipts WHERE action = ${PRUNED_ACTION} AND rowid < (
+          SELECT rowid FROM request_receipts WHERE action = ${PRUNED_ACTION} ORDER BY rowid DESC LIMIT 1 OFFSET ${PRUNED_RECEIPTS_KEPT}
+        )`);
+      }
+    }
     return true;
   }, { behavior: "immediate" });
 }

@@ -7521,15 +7521,37 @@ export function createTownScene(
    *  every Greek prop pure black (see repairModelMaterials). The
    *  `greek` option is kept for call-site compatibility and no
    *  longer swaps any material. */
-  const fbxLoader2 = new FBXLoader();
+  const fbxManager = new THREE.LoadingManager();
+  // Pack FBXs name their textures by the paths they were authored at, which
+  // never exist in a bundle. Failing them here skips the 404 and keeps the
+  // result repairModelMaterials expects from a texture that didn't load.
+  fbxManager.setURLModifier((url) => (/\.(png|jpe?g|tga|tiff?|bmp)$/i.test(url) ? "data:image/png;base64," : url));
+  const fbxLoader2 = new FBXLoader(fbxManager);
+  /** One fetch and parse per file; placements clone the prepared source. */
+  const fbxSources = new Map<string, Promise<THREE.Group>>();
+  function loadFbxSource(url: string, prepare: (source: THREE.Group) => void): Promise<THREE.Group> {
+    let source = fbxSources.get(url);
+    if (!source) {
+      source = fbxLoader2.loadAsync(url).then((g) => {
+        prepare(g);
+        return g;
+      });
+      fbxSources.set(url, source);
+      source.catch(() => fbxSources.delete(url));
+    }
+    return source;
+  }
   function placeFbx(
     url: string,
     opts: { x: number; z: number; rotY?: number; width?: number; height?: number; greek?: boolean; y?: number },
   ): Promise<THREE.Group | null> {
-    return runtime.streaming.request(() => fbxLoader2.loadAsync(url), () => ({ x: opts.x, z: opts.z }))
-      .then((g) => {
+    return runtime.streaming.request(
+      () => loadFbxSource(url, (source) => repairModelMaterials(source, { label: "fbx prop" })),
+      () => ({ x: opts.x, z: opts.z }),
+    )
+      .then((source) => {
+        const g = source.clone(true);
         if (!resources.adopt(g)) return null;
-        repairModelMaterials(g, { label: "fbx prop" });
         const box = new THREE.Box3().setFromObject(g);
         const size = box.getSize(new THREE.Vector3());
         let s = 1;
@@ -7988,16 +8010,26 @@ export function createTownScene(
     home: { x: number; z: number; r: number },
     speed: number,
   ): Promise<Animal | null> {
-    return runtime.streaming.request(() => fbxLoader2.loadAsync(url), () => ({ x: home.x, z: home.z }))
-      .then((g) => {
-        if (!resources.adopt(g)) return null;
-        const take = g.animations[0];
+    return runtime.streaming.request(
+      // Her real coat, not the black of a texture that never came.
+      () => loadFbxSource(url, (source) => repairModelMaterials(source, { map: petTexture(kind), label: `${kind} coat` })),
+      () => ({ x: home.x, z: home.z }),
+    )
+      .then((source) => {
+        const take = source.animations[0];
         if (!take) return null;
-        // Her real coat, not the black of a texture that never came.
-        repairModelMaterials(g, { map: petTexture(kind), label: `${kind} coat` });
-        const box = new THREE.Box3().setFromObject(g);
+        // Measured on the source: a cloned skeleton has no pose to bound yet.
+        const box = new THREE.Box3().setFromObject(source);
         const size = box.getSize(new THREE.Vector3());
         if (size.y <= 0) return null;
+        const g = cloneSkeleton(source) as THREE.Group;
+        // Geometry is shared, materials aren't: the rooster's tint is his own.
+        g.traverse((o) => {
+          if (o instanceof THREE.Mesh) {
+            o.material = Array.isArray(o.material) ? o.material.map((m) => m.clone()) : o.material.clone();
+          }
+        });
+        if (!resources.adopt(g)) return null;
         const s = targetH / size.y;
         g.scale.setScalar(s);
         const inner = new THREE.Group();

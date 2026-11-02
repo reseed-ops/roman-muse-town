@@ -105,7 +105,7 @@ const stateResponse = z.object({
       id: z.number(),
       date_label: z.string(),
       title: z.string(),
-      body: z.string(),
+      preview: z.string(),
       read: z.boolean(),
     }),
   ),
@@ -311,9 +311,19 @@ Yours,
 Muse`,
 };
 
-const earnResponse = stateResponse.extend({
+/** Sent about once a minute, so it stays small: letters only arrive with the
+ *  rank-up that delivers one, and capped tells the client to stop asking today. */
+const earnResponse = z.object({
+  affection: stateResponse.shape.affection,
+  letters: stateResponse.shape.letters.optional(),
   ranked_up: z.number().int().nullable(),
+  capped: z.boolean(),
 });
+
+/** Letter bodies run to thousands of characters, so state carries one line. */
+function letterPreview(body: string): string {
+  return (body.split("\n").find((line) => line.trim().length > 0) ?? "").slice(0, 160);
+}
 
 // --- Affection (the dating-sim heart system) ---------------------------
 // 100 points make a heart rank; ranks are PERMANENT once earned. Points
@@ -1259,7 +1269,7 @@ async function loadState(ctx: Ctx): Promise<z.infer<typeof stateResponse>> {
       id: row.id,
       date_label: row.dateLabel,
       title: row.title,
-      body: row.body,
+      preview: letterPreview(row.body),
       read: row.readAt !== null,
     })),
     postcards: await Promise.all(
@@ -2270,6 +2280,21 @@ export const Actions = {
     },
   }),
 
+  getLetter: defineAction({
+    description: "Read the full text of one letter at the Main Chat desk. Town state lists letters by title and first line only.",
+    request: z.object({ id: z.number().int().positive() }),
+    response: z.object({ body: z.string().nullable() }),
+    async handler(ctx, args) {
+      const db = ctx.db<typeof schema>();
+      const [row] = await db
+        .select({ body: schema.letters.body })
+        .from(schema.letters)
+        .where(eq(schema.letters.id, args.id))
+        .limit(1);
+      return { body: row?.body ?? null };
+    },
+  }),
+
   markLetterRead: defineAction({
     description: "Mark a letter at the Main Chat desk as read.",
     request: z.object({ id: z.number().int().positive() }),
@@ -3021,11 +3046,12 @@ export const Actions = {
   }),
 
   earnAffection: defineAction({
-    description: "Record an affection-earning moment with town Muse (walking together, watering, a quest, an attentive reply…). Points and silent daily caps are server-kept; ranks are permanent, and a rank-up leaves a letter at the desk. Returns the full town state plus the rank reached if one was just earned.",
+    description: "Record an affection-earning moment with town Muse (walking together, watering, a quest, an attentive reply…). Points and silent daily caps are server-kept; ranks are permanent, and a rank-up leaves a letter at the desk. Returns the affection summary, the rank reached if one was just earned (with the letters then), and whether this reason is capped for today.",
     request: z.object({ reason: z.string().min(1).max(64) }).extend({ request_id: z.string().uuid().optional() }),
     response: earnResponse,
     async handler(ctx, args): Promise<z.infer<typeof earnResponse>> {
       let rankedUp: number | null = null;
+      let capped = false;
       withEconomyTransaction(ctx, (ctx) => {
         const db = ctx.db<typeof schema>();
         const now = new Date();
@@ -3063,6 +3089,7 @@ export const Actions = {
             const used = caps[args.reason] ?? 0;
             granted = Math.max(0, Math.min(rule.points, rule.cap - used));
             if (granted > 0) caps[args.reason] = used + granted;
+            capped = used + granted >= rule.cap;
           }
         }
         if (granted > 0) {
@@ -3095,9 +3122,13 @@ export const Actions = {
           }
         }
       }, { requestId: args.request_id, action: "earnAffection", payload: args });
-      ctx.invalidateQueries();
-      const state = await loadState(ctx);
-      return { ...state, ranked_up: rankedUp };
+      if (rankedUp !== null) {
+        ctx.invalidateQueries();
+        const { affection, letters } = await loadState(ctx);
+        return { affection, letters, ranked_up: rankedUp, capped };
+      }
+      const rank = affectionRank(cooledPoints(await loadAffection(ctx), new Date()));
+      return { affection: { rank, band: affectionBand(rank) }, ranked_up: null, capped };
     },
   }),
 

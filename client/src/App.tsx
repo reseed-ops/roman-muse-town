@@ -1,6 +1,6 @@
 import { TownMenu } from "./TownMenu";
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTownState } from "./useTownState";
 import { TownUtilities } from "./TownUtilities";
 import { api } from "./api";
@@ -372,6 +372,7 @@ export function App() {
   // pools, gates, initiations. No numbers are ever displayed.
   const affectionRef = useRef(0);
   const earnRef = useRef<(reason: string) => void>(() => {});
+  const earnCappedRef = useRef(new Map<string, string>());
   const talkedTodayRef = useRef(false);
   const pendingRankHintRef = useRef(false);
   const talkCountRef = useRef(0);
@@ -460,6 +461,11 @@ export function App() {
   const [achievementToast, setAchievementToast] = useState<string | null>(null);
   const [lettersOpen, setLettersOpen] = useState(false);
   const [openLetterId, setOpenLetterId] = useState<number | null>(null);
+  const openLetterBody = useQuery({
+    queryKey: ["letter", openLetterId],
+    queryFn: () => api.getLetter({ id: openLetterId! }),
+    enabled: openLetterId !== null,
+  });
   const [postcardDraft, setPostcardDraft] = useState<{ photo: string; caption: string } | null>(null);
   const [postcardView, setPostcardView] = useState<{ id: number; image_url: string; caption: string; date_label: string; weather: string } | null>(null);
   const lettersSeededRef = useRef(false);
@@ -1112,8 +1118,9 @@ export function App() {
   // left for the next talk, never a number.
   const earnAffection = useMutation({
     mutationFn: (reason: string) => api.earnAffection({ reason }),
-    onSuccess: (data) => {
+    onSuccess: (data, reason) => {
       applyState(data);
+      if (data.capped) earnCappedRef.current.set(reason, new Date().toISOString().slice(0, 10));
       if (data.ranked_up !== null) {
         pendingRankHintRef.current = true;
         playSparkleChime();
@@ -1122,7 +1129,12 @@ export function App() {
       }
     },
   });
-  earnRef.current = (reason: string) => earnAffection.mutate(reason);
+  earnRef.current = (reason: string) => {
+    // The server's caps roll over at UTC midnight; asking again before then
+    // can't earn anything.
+    if (earnCappedRef.current.get(reason) === new Date().toISOString().slice(0, 10)) return;
+    earnAffection.mutate(reason);
+  };
   // The game systems' mutations (Phases A–D): all return full state.
   const awardOnce = useMutation({
     mutationFn: (args: { key: string; amount: number }) => api.awardOnce(args),
@@ -6609,7 +6621,7 @@ export function App() {
                     <span className="shrink-0 text-[12px] font-semibold text-white/60">{letter.date_label}</span>
                   </span>
                   <span className="mt-0.5 block truncate text-[13px] text-white/70">
-                    {letter.body.split("\n").find((l) => l.trim().length > 0) ?? ""}
+                    {letter.preview}
                   </span>
                 </button>
               ))}
@@ -6634,7 +6646,9 @@ export function App() {
                     <p className="text-[12px] font-bold tracking-wide text-[#8a7a5f] uppercase">
                       {letter.date_label}
                     </p>
-                    <div className="mt-2 space-y-3 text-[15px] leading-[1.65] whitespace-pre-line">{letter.body}</div>
+                    <div className="mt-2 space-y-3 text-[15px] leading-[1.65] whitespace-pre-line">
+                      {openLetterBody.data?.body ?? (openLetterBody.isError ? "This letter wouldn't open just now. Try again in a moment." : "Unfolding the letter…")}
+                    </div>
                   </article>
                 );
               })()}

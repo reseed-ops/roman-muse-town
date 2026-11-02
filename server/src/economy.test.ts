@@ -3,6 +3,7 @@ import { Database } from "bun:sqlite";
 import { readdirSync, readFileSync } from "node:fs";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { z } from "zod";
+import { PRUNED_RECEIPTS_KEPT } from "./retrySafe";
 import * as schema from "./schema";
 
 // Only the hosted action registration is replaced. Handlers, validation,
@@ -128,5 +129,75 @@ describe("atomic economy", () => {
     expect(result.purse.seeds).toBe(3);
     expect(result).not.toHaveProperty("letters");
     expect(ctx.blobs.getUrl).not.toHaveBeenCalled();
+  });
+});
+
+describe("the affection tick stays small", () => {
+  const body = "Dear friend,\n\nThe olive by the gate came into flower.";
+  const earn = (reason = "walk", request_id = crypto.randomUUID()) => call("earnAffection", { reason, request_id });
+
+  test("a plain tick carries no letters and doesn't invalidate", async () => {
+    sqlite.run("INSERT INTO letters (date_label, title, body) VALUES ('June 1', 'A letter', ?)", [body]);
+    const result = await earn();
+    expect(result).not.toHaveProperty("letters");
+    expect(result.ranked_up).toBeNull();
+    expect(result.capped).toBe(false);
+    expect(ctx.invalidateQueries).not.toHaveBeenCalled();
+  });
+
+  test("it reports the cap on the tick that reaches it", async () => {
+    for (let i = 0; i < 4; i++) expect((await earn()).capped).toBe(false);
+    expect((await earn()).capped).toBe(true);
+  });
+
+  test("a landmark is never capped", async () => {
+    expect((await earn("landmark:forum")).capped).toBe(false);
+  });
+
+  test("a rank-up brings its letter with it", async () => {
+    sqlite.run("INSERT INTO affection_state (id, points) VALUES (1, 99)");
+    const result = await earn();
+    expect(result.ranked_up).toBe(1);
+    expect(result.letters?.length).toBeGreaterThan(0);
+    expect(ctx.invalidateQueries).toHaveBeenCalled();
+  });
+
+  test("a replayed tick still answers with the current rank", async () => {
+    const id = crypto.randomUUID();
+    await earn("walk", id);
+    expect((await earn("walk", id)).affection.rank).toBe(0);
+  });
+});
+
+describe("letters travel light", () => {
+  test("state has the first line and getLetter has the rest", async () => {
+    sqlite.run("INSERT INTO letters (id, date_label, title, body) VALUES (1, 'June 1', 'A letter', ?)", ["\nDear friend,\n\n" + "x".repeat(5000)]);
+    const state = await call("getState");
+    expect(state.letters[0]!.preview).toBe("Dear friend,");
+    expect(state.letters[0]).not.toHaveProperty("body");
+    expect((await call("getLetter", { id: 1 })).body).toHaveLength(5015);
+    expect((await call("getLetter", { id: 2 })).body).toBeNull();
+  });
+});
+
+describe("receipt pruning", () => {
+  const receipt = (id: string, action: string) =>
+    sqlite.run("INSERT INTO request_receipts (request_id, action, payload_hash, completed_at) VALUES (?, ?, 'x', 0)", [id, action]);
+  const count = (action: string) => row<{ count: number }>(`SELECT count(*) AS count FROM request_receipts WHERE action = '${action}'`).count;
+
+  test("only affection ticks are pruned, and the newest are kept", async () => {
+    for (let i = 0; i < 700; i++) receipt(`tick-${i}`, "earnAffection");
+    for (let i = 0; i < 700; i++) receipt(`sale-${i}`, "buyUpgrade");
+    await call("earnAffection", { reason: "walk", request_id: "00000000-0000-4000-8000-000000000000" });
+    expect(count("earnAffection")).toBe(PRUNED_RECEIPTS_KEPT + 1);
+    expect(count("buyUpgrade")).toBe(700);
+    expect(row("SELECT 1 AS found FROM request_receipts WHERE request_id = 'tick-699'")).toBeTruthy();
+    expect(row("SELECT 1 AS found FROM request_receipts WHERE request_id = 'tick-0'")).toBeNull();
+  });
+
+  test("most ticks leave the table alone", async () => {
+    for (let i = 0; i < 700; i++) receipt(`tick-${i}`, "earnAffection");
+    await call("earnAffection", { reason: "walk", request_id: "11111111-1111-4111-8111-111111111111" });
+    expect(count("earnAffection")).toBe(701);
   });
 });

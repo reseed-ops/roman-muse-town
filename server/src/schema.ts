@@ -11,7 +11,8 @@
 
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-/** Receipts are intentionally durable: old retries must never become new purchases. */
+/** Receipts are intentionally durable: old retries must never become new
+ * purchases. The one exception is the free earnAffection tick (see retrySafe). */
 export const requestReceipts = sqliteTable("request_receipts", {
   requestId: text("request_id").primaryKey(),
   action: text("action").notNull(),
