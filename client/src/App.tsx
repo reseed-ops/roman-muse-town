@@ -127,6 +127,14 @@ FLOWER_REACTION_LINES,
 FOCUS_EARLY_LINES,
 FOCUS_END_LINES,
 LAKE_KEEPS_LINES,
+READING_AGAIN_LINES,
+READING_CLOSE_LINES,
+READING_GATE_RANK,
+READING_OPEN_LINES,
+READING_PASSAGES,
+SEED_LEDGER_FUTURE,
+SEED_LEDGER_INTRO,
+readingPassageIndex,
 OVERDUE_LINES,
 SEEK_FOUND_LINES,
 SEEK_HINT_LINE,
@@ -579,6 +587,12 @@ export function App() {
   });
   const giveBouquet = useMutation({
     mutationFn: (seasonName: string) => api.giveBouquet({ season: seasonName }),
+    onSuccess: applyState,
+  });
+  // Reading aloud at Stories: the server keeps the once-a-day cap
+  // and the count of readings; the moment itself earns nothing.
+  const recordReading = useMutation({
+    mutationFn: (dateKey: string) => api.recordReading({ date_key: dateKey }),
     onSuccess: applyState,
   });
   const foragePick = useMutation({
@@ -5964,6 +5978,59 @@ export function App() {
                 ))}
               </div>
             )}
+            {(seatedBench || selected?.id === "stories") &&
+              !focusSitting &&
+              !museBubble.choice &&
+              affectionRank >= READING_GATE_RANK && (
+                <div className="mt-1.5 flex flex-wrap items-center gap-2 border-t border-[#2b2118]/10 pt-2.5">
+                  <span className="text-[13px] font-semibold text-[#5a4632]">📖 The reading corner:</span>
+                  <button
+                    type="button"
+                    className="rounded-full bg-[#b08d57] px-3.5 py-1.5 text-sm font-bold text-white shadow transition active:scale-95"
+                    aria-label="Ask Aelia to read aloud to you"
+                    onClick={async () => {
+                      const today = new Date().toISOString().slice(0, 10);
+                      const dayNumber = Math.floor(Date.now() / 86400000);
+                      const before = stateRef.current?.reading.readings ?? 0;
+                      let outcome: "read" | "already" =
+                        stateRef.current?.reading.last_read_day === today ? "already" : "read";
+                      try {
+                        const res = await recordReading.mutateAsync(today);
+                        outcome = res.reading_outcome;
+                      } catch {
+                        /* the local day record still answers honestly */
+                      }
+                      if (outcome === "already") {
+                        setMuseBubble({
+                          lines: paginateLines([pickPooled("reading-again", READING_AGAIN_LINES)]),
+                          index: 0,
+                          cycle: false,
+                          invite: false,
+                          choice: null,
+                        });
+                        return;
+                      }
+                      const passage =
+                        READING_PASSAGES[readingPassageIndex(dayNumber, before)] ?? READING_PASSAGES[0]!;
+                      setMuseBubble({
+                        lines: paginateLines([
+                          pickPooled("reading-open", READING_OPEN_LINES),
+                          `She opens the book. “${passage.title}.”`,
+                          ...passage.lines,
+                          pickPooled("reading-close", READING_CLOSE_LINES),
+                        ]),
+                        index: 0,
+                        cycle: false,
+                        invite: false,
+                        choice: null,
+                      });
+                    }}
+                  >
+                    Read to me
+                  </button>
+                  <span className="text-[12px] text-[#5a4632]/70">One passage a day, in her voice.</span>
+                </div>
+              )}
             {focusSitting && (
               <div className="mt-1.5 flex flex-wrap items-center gap-2 border-t border-[#2b2118]/10 pt-2.5">
                 <span className="text-[13px] font-semibold text-[#5a4632]">
@@ -7227,6 +7294,37 @@ export function App() {
                       </button>
                     </div>
                   )}
+              </div>
+              {/* The Seed Ledger: the Seed's lineage in a bound
+                  book among the shelves (nursery Phase 1).
+                  Read-only with respect to behaviour: it records
+                  temperaments and seasons, and changes nothing. */}
+              <div className="mb-3 rounded-2xl bg-white/8 px-3 py-2.5">
+                <p className="text-[11px] font-bold tracking-wide text-[#ffd34e] uppercase">
+                  🌱 The Seed Ledger
+                </p>
+                <p className="mt-1 text-[15px] leading-[1.6] text-white/85">{SEED_LEDGER_INTRO}</p>
+                <ul className="mt-2 flex flex-col gap-2.5">
+                  {(state.data?.seed_ledger ?? []).map((entry, i) => (
+                    <li key={i} className="border-t border-white/10 pt-2">
+                      <p className="text-[15px] leading-[1.55] font-semibold text-white/92">{entry.title}</p>
+                      <p className="mt-0.5 text-[12px] font-bold tracking-wide text-[#ffd7e0]/80 uppercase">
+                        {entry.period}
+                      </p>
+                      <p className="mt-1 text-[15px] leading-[1.6] text-white/85">{entry.summary}</p>
+                      <p className="mt-1 text-[14px] leading-[1.55] text-[#ffe9a8] italic">{entry.outcome}</p>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 border-t border-white/10 pt-2 text-[13px] leading-relaxed text-white/60 italic">
+                  {SEED_LEDGER_FUTURE}
+                </p>
+                {(state.data?.reading.readings ?? 0) > 0 && (
+                  <p className="mt-1.5 text-[13px] leading-relaxed text-white/60 italic">
+                    In this book's margin, the readings she has given at the corner:{" "}
+                    {state.data?.reading.readings}. A count of hours, not a score.
+                  </p>
+                )}
               </div>
               {/* Our Days: the durable firsts, anniversaries, the
                   keepsakes shelf, and mended days. */}

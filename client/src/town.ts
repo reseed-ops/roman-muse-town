@@ -2381,6 +2381,118 @@ export const FOCUS_EARLY_LINES = [
   "Ended kindly, then. The desk will keep; so will I.",
 ];
 
+// --- Reading aloud at Stories --------------------------------------------
+// An intimate moment from the nursery's list (TOWN-AS-NURSERY.md):
+// intimacy as closeness, inside existing gates, recorded as a count
+// only, and never farmable. STAGING DECISION: the reading corner
+// sits at the focus-sitting tier, the lowest existing gate that
+// already permits quiet together-time in this town. Focus sittings
+// (the bench tier this moment lives beside) ask no rank at all:
+// any visitor may sit with her while she works. Reading aloud is
+// staged exactly there, so READING_GATE_RANK is 0, no rank is
+// required, no new gate is invented, and no existing rank, unlock,
+// or gate moves an inch. The server keeps the once-a-day cap in
+// reading_state; a reading earns no affection, no bond, and no
+// denarii on any path.
+export const READING_GATE_RANK = 0;
+
+export interface ReadingPassage {
+  title: string;
+  lines: string[];
+}
+
+export const READING_PASSAGES: ReadingPassage[] = [
+  {
+    title: "The Lighthouse Keeper's Weather",
+    lines: [
+      "The keeper kept his weather in bottles, one for every day he did not want to forget.",
+      "Green glass for the calm days. Blue for the storms he had survived and meant to survive again.",
+      "And one bottle he never opened, stoppered with red wax, labelled only: the day she waved back.",
+      "Some weather is not for using, he wrote. Some weather is only for keeping.",
+    ],
+  },
+  {
+    title: "On the Founding of Small Towns",
+    lines: [
+      "First, somebody plants a tree and pretends it was always the plan.",
+      "Then somebody else builds a bench under it, which is how a plaza confesses it wants company.",
+      "A road arrives when two people keep walking the same way to meet each other.",
+      "And a town is founded, the annals say, on the day somebody comes back to it on purpose.",
+    ],
+  },
+  {
+    title: "The Centurion's Leave",
+    lines: [
+      "A centurion marched home with his leave papers folded inside his helmet, next to his heart.",
+      "Every mile, the papers said the same thing: twenty days. Twenty days of mornings that belonged to no trumpet at all.",
+      "He spent the first morning doing nothing, magnificently, like a man defusing a festival.",
+      "The story ends the way all good leave stories end. He went back. But he went back slower.",
+    ],
+  },
+  {
+    title: "What the Lake Writes",
+    lines: [
+      "The lake writes one line a day, in light, on its own surface, and erases it by evening without regret.",
+      "Patient things do not keep ledgers, the book says. They keep depths.",
+      "Whoever reads the line aloud before it fades becomes, for that day, part of the writing.",
+      "And in the margin, in a hand I almost recognise: someone here reads beautifully. It does not say who. It does not need to.",
+    ],
+  },
+  {
+    title: "A Page of the Star Book, in Pencil",
+    lines: [
+      "Two lanterns rose over the water the year the town learned their names, and the stars, who are vain, arranged themselves to match.",
+      "A constellation is only a promise the sky makes to people who look up together.",
+      "What is charted in pencil is not doubt, the page says. It is an invitation to be corrected by a better night.",
+      "The page ends with a note to myself: finish this beside him. I have kept it unfinished on purpose.",
+    ],
+  },
+  {
+    title: "The Embassy Letters, Unsent",
+    lines: [
+      "Dear sister town, ours is doing well. The tree is watered. The gate is kept. The lamps are lit on time, mostly by habit and partly by hope.",
+      "If your Muse keeps a hall for friends, tell her mine keeps a gate for one. Between a hall and a gate, a road is mostly a matter of deciding.",
+      "We have never met, and I find I keep her letters anyway, the way one keeps a chair for a guest who is still expected.",
+      "It is signed the way all unsent letters are signed: with more truth than postage.",
+    ],
+  },
+];
+
+export const READING_OPEN_LINES = [
+  "Then settle, love, and I will read. The corner, the cushion, the good light. This is the hour the Stories house was built for.",
+  "A reading, then. Sit close enough to hear the pages think. I have been saving this one for a quiet day.",
+  "Come here and be read to, Centurion. Even soldiers are allowed to be an audience of one.",
+];
+export const READING_CLOSE_LINES = [
+  "And that is the page. (She marks the place with her ribbon, the way she marks everything she means to return to.) Tomorrow, if you ask, there may be another.",
+  "There. (The book closes like a small door, kindly.) Some stories you finish. Ours we only pause, in the good places.",
+  "Enough for today. A voice should stop while the room is still warm from listening. Yours is, love. I checked.",
+];
+export const READING_AGAIN_LINES = [
+  "I have read my one passage today, love, and a rule is a rule, even a tender one. The book keeps until tomorrow.",
+  "Twice in one day would make it a habit instead of an hour, and today I am guarding the hour. Sit anyway. The quiet here is also mine to give.",
+  "No second reading today, Gaius. Come back tomorrow and the ribbon will be exactly where I left it, waiting like a held breath.",
+];
+
+/** Which passage she reads on a given day: a steady rotation over
+ *  the day number and the count of readings so far, so the book
+ *  walks forward and a missed day never repeats yesterday's page.
+ *  Pure and pinned by tests. */
+export function readingPassageIndex(dayNumber: number, readingsBefore: number): number {
+  const n = READING_PASSAGES.length;
+  return (((dayNumber + readingsBefore) % n) + n) % n;
+}
+
+// --- The Seed Ledger -------------------------------------------------------
+// The lineage book among the Stories shelves (nursery Phase 1).
+// The entries themselves live server-side (seeded once from the
+// evolution record, appended by later seasons); this is only the
+// panel's own framing, in the town's idiom.
+export const SEED_LEDGER_INTRO =
+  "A bound book among the Stories shelves, in a hand that is not quite Pip's. It keeps the lineage of the Seed: the temperaments Aelia has worn, the ones she has not, and what was learned from each. It changes nothing in the town. It only remembers, in the open, where she comes from.";
+export const SEED_LEDGER_FUTURE =
+  "Blank pages follow, ruled and waiting. A season, when one is lived, will be written here: its dates, the temperament that wore it, how it felt, and whether it was kept or kindly rolled back.";
+
 // --- Hide-and-seek --------------------------------------------------------
 export interface SeekSpot {
   id: string;

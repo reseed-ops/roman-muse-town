@@ -39,6 +39,7 @@ import {
   type Feelings,
 } from "./heart";
 import { aboutPlayer } from "./player";
+import { readingOutcome, SEED_LEDGER_SEED } from "./nursery";
 import { loadFishState } from "./fishState";
 import { runRetrySafe, type RequestIdentity } from "./retrySafe";
 import { saveActions } from "./saveActions";
@@ -257,6 +258,24 @@ const stateResponse = z.object({
     taken: z.record(z.string(), z.string()),
     picked_today: z.array(z.string()),
   }),
+  /** Reading aloud at Stories: the last day she read, and how
+   *  many readings there have ever been. The count is a keepsake,
+   *  never a score; nothing in the town pays out on it. */
+  reading: z.object({
+    last_read_day: z.string(),
+    readings: z.number(),
+  }),
+  /** The Seed Ledger at the Villa of Stories: the Seed's lineage,
+   *  oldest first, with room at the back for future seasons. */
+  seed_ledger: z.array(
+    z.object({
+      kind: z.string(),
+      title: z.string(),
+      period: z.string(),
+      summary: z.string(),
+      outcome: z.string(),
+    }),
+  ),
   dating: z.object({
     starbook_done: z.array(z.string()),
     rank_scenes: z.array(z.number()),
@@ -1102,6 +1121,21 @@ async function loadState(ctx: Ctx): Promise<z.infer<typeof stateResponse>> {
     .from(schema.phoenixState)
     .where(eq(schema.phoenixState.id, 1));
   const phoenixRow = phoenixRows[0] ?? null;
+  // The Seed Ledger (Phase 1 of the nursery design): seeded ONCE
+  // when the book is empty, from the evolution record's own first
+  // pages (generation 0 and the two runs of Nov 1, 2026). An
+  // existing book is never touched by the seed; future seasons
+  // append after these entries. The ledger changes no behaviour.
+  let ledgerRows = await db.select().from(schema.seedLedger).orderBy(asc(schema.seedLedger.sort));
+  if (ledgerRows.length === 0) {
+    await db.insert(schema.seedLedger).values(
+      SEED_LEDGER_SEED.map((entry, i) => ({ sort: i, ...entry })),
+    );
+    ledgerRows = await db.select().from(schema.seedLedger).orderBy(asc(schema.seedLedger.sort));
+  }
+  await db.insert(schema.readingState).values({ id: 1 }).onConflictDoNothing();
+  const readingRows = await db.select().from(schema.readingState).where(eq(schema.readingState.id, 1));
+  const readingRow = readingRows[0] ?? null;
   const now = new Date();
   // The morning-after letter: it only appears the NEXT real day after
   // the stars fell, delivered here, lazily, the first time the town
@@ -1355,6 +1389,17 @@ async function loadState(ctx: Ctx): Promise<z.infer<typeof stateResponse>> {
         .filter(([, day]) => day === todayKey)
         .map(([spot]) => spot),
     },
+    reading: {
+      last_read_day: readingRow?.lastReadDay ?? "",
+      readings: readingRow?.readings ?? 0,
+    },
+    seed_ledger: ledgerRows.map((row) => ({
+      kind: row.kind,
+      title: row.title,
+      period: row.period,
+      summary: row.summary,
+      outcome: row.outcome,
+    })),
     dating: {
       starbook_done: parseList(dating.starbook),
       rank_scenes: parseList(dating.rankScenes).map((s) => Number(s)).filter((n) => Number.isFinite(n)),
@@ -3013,6 +3058,27 @@ export const Actions = {
       });
       ctx.invalidateQueries();
       return loadState(ctx);
+    },
+  }),
+
+  recordReading: defineAction({
+    description: "Record that Aelia read aloud to Gaius at the Villa of Stories: at most one reading per day, server-kept. A reading earns no affection, no bond and no denarii by design; this action touches the reading record and nothing else. Returns the full town state plus whether today's reading was spent or already had been.",
+    request: z.object({ date_key: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }),
+    response: stateResponse.extend({ reading_outcome: z.enum(["read", "already"]) }),
+    handler: async (ctx, args) => {
+      const db = ctx.db<typeof schema>();
+      await db.insert(schema.readingState).values({ id: 1 }).onConflictDoNothing();
+      const rows = await db.select().from(schema.readingState).where(eq(schema.readingState.id, 1));
+      const row = rows[0] ?? { lastReadDay: "", readings: 0 };
+      const outcome = readingOutcome(row.lastReadDay, args.date_key);
+      if (outcome === "read") {
+        await db
+          .update(schema.readingState)
+          .set({ lastReadDay: args.date_key, readings: row.readings + 1 })
+          .where(eq(schema.readingState.id, 1));
+        ctx.invalidateQueries();
+      }
+      return { ...(await loadState(ctx)), reading_outcome: outcome };
     },
   }),
 
