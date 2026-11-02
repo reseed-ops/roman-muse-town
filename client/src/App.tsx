@@ -1061,7 +1061,7 @@ export function App() {
       if (sceneRef.current?.wolfInView()) challenge = "wolf-dusk";
       else if (atSecretRef.current) challenge = "terrace";
       else if (nightRef.current && Math.hypot(x - LAKE.position[0], z - LAKE.position[1]) < 10) challenge = "lake-night";
-      else if (upgradesNow.includes("fountain") && Math.hypot(x + 7, z + 5) < 6.5) challenge = "fountain";
+      else if (upgradesNow.includes("fountain") && Math.hypot(x, z - 15.5) < 6.5) challenge = "fountain";
       else if (Math.hypot(x - COLOSSEUM.position[0], z - COLOSSEUM.position[1]) < 13) challenge = "colosseum";
       else if (Math.hypot(x - 26.6, z + 26.1) < 7) challenge = "temple";
       else if (Math.hypot(x + 20, z + 19.3) < 7) challenge = "aqueduct";
@@ -2597,8 +2597,8 @@ export function App() {
     let place: DialogueChoiceSet["place"] = "generic";
     if (nightRef.current) place = "night";
     else if (Math.hypot(x - LAKE.position[0], z - LAKE.position[1]) < 9) place = "lake";
-    else if (Math.hypot(x - 0, z - 18) < 9) place = "market";
-    else if (Math.hypot(x + 24, z + 19) < 9) place = "stories";
+    else if (Math.hypot(x, z - 36) < 9) place = "market";
+    else if (Math.hypot(x + 17.5, z + 12) < 9) place = "stories";
     else if (Math.hypot(x, z) < 9) place = "forum";
     const byPlace = DIALOGUE_CHOICES.filter((s) => s.place === place);
     const generic = DIALOGUE_CHOICES.filter((s) => s.place === "generic");
@@ -3160,7 +3160,7 @@ export function App() {
         try {
           localStorage.setItem("muse-town-chapter", pc.id);
           if (pc.id === "ch2-shard") {
-            const spots: [number, number][] = [[6, -14], [-12, 8], [18, -22], [-20, -8], [10, 16]];
+            const spots: [number, number][] = [[6, -14], [9, 8], [18, -22], [-25, -6], [7, 16]];
             const dayNum = Math.floor(Date.now() / 86400000);
             const [sx, sz] = spots[dayNum % spots.length]!;
             localStorage.setItem(
@@ -4023,7 +4023,7 @@ export function App() {
       handle.setLowGraphics(lowGfxRef.current);
       if (festivalColorsRef.current) handle.setFestival(festivalColorsRef.current);
       // The town opens on foot now: straight into walk mode as the
-      // Centurion at the plaza spawn, Xbox controls up, follow camera
+      // Centurion at the peristyle spawn, Xbox controls up, follow camera
       // at its standard distance, no overview first. Overview is
       // still one tap away, and re-entering walk restores the same
       // standard framing.
@@ -5229,7 +5229,7 @@ export function App() {
           }, {
             key: "restart-forum",
             icon: "🏛️",
-            label: "Restart at the forum",
+            label: "Restart at the peristyle",
             detail: undefined,
             active: false,
             action: () => {
@@ -5239,7 +5239,7 @@ export function App() {
               try { localStorage.removeItem("muse-town-resume-v1"); } catch { /* storage unavailable */ }
               window.location.reload();
             },
-            aria: "Restart at the forum. Clear the resume snapshot and start from the town spawn",
+            aria: "Restart at the peristyle. Clear the resume snapshot and start from the town spawn",
           }]
         }]}
       />}
@@ -6744,7 +6744,7 @@ export function App() {
             <div>
               <h2 className="text-lg leading-tight font-bold">🗿 The Goals Obelisk</h2>
               <p className="text-xs font-semibold text-[#ffd34e]">
-                Inscribed in the forum, by the basilica
+                Inscribed in the peristyle, by the basilica
                 {state.data?.goals.as_of ? ` · as of ${state.data.goals.as_of}` : ""}
               </p>
             </div>

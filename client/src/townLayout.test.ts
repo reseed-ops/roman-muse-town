@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
 import { createPlaceFootprints } from "./buildingFootprints";
-import { circ, obb, obbLocal, obbWorld, type ObbObstacle, type Obstacle } from "./collision";
+import { circ, obb, obbLocal, type Obstacle } from "./collision";
 import { distanceToPaths, samplePath } from "./pathGeometry";
-import { BATHS, COLOSSEUM, FOREST_TRAILS, PISCINA, PLACES, STREETS, streetDistance, streetWidth } from "./town";
+import { BATHS, COLOSSEUM, FOREST_TRAILS, GARDEN_BEDS, MARKET_BOOTHS, PISCINA, PLACES, STREETS, VILLA_WALLS, streetDistance, streetWidth } from "./town";
 
 const buildings = [...createPlaceFootprints(PLACES).entries()];
 const constraints: [string, Obstacle][] = [
@@ -16,10 +16,11 @@ const constraints: [string, Obstacle][] = [
   ["Bath north wall", obb(24, 20, 5.5, .15, 0)],
   ["Bath south west wall", obb(20.85, 28, 2.35, .15, 0)],
   ["Bath south east wall", obb(27.35, 28, 2.15, .15, 0)],
-  ["Market A", obb(6.2, 21.5, 1.73, .86, -.55)],
-  ["Market B", obb(-5.5, 16.5, 1.73, .86, .95)],
-  ["Market C", obb(10, 6.5, 1.73, .86, -.95)],
+  ...MARKET_BOOTHS.map(([x, z, rot], i) => [`Market ${i}`, obb(x, z, 1.73, .86, rot)] as [string, Obstacle]),
+  ...GARDEN_BEDS.map(([x, z], i) => [`Garden bed ${i}`, obb(x, z, .85, .55, 0)] as [string, Obstacle]),
 ];
+/** The stair and the two walks that leave the terrace pass through its walls' gaps. */
+const walls = VILLA_WALLS.map(([x, z, hx, hz], i) => [`Wall ${i}`, obb(x, z, hx, hz, 0)] as [string, Obstacle]);
 function clearance(ob: Obstacle, x: number, z: number) {
   if (ob.kind === "circle") return Math.hypot(x - ob.x, z - ob.z) - ob.r;
   const { lx, lz } = obbLocal(ob, x, z);
@@ -30,7 +31,7 @@ function clearance(ob: Obstacle, x: number, z: number) {
 test("street centrelines never enter buildings, walls or water", () => {
   const conflicts: string[] = [];
   STREETS.forEach((path, i) => {
-    for (const [name, shape] of constraints) {
+    for (const [name, shape] of [...constraints, ...walls]) {
       if (samplePath(path).points.some(([x, z]) => clearance(shape, x, z) < -0.01)) conflicts.push(`${i}: ${name}`);
     }
   });
@@ -41,7 +42,8 @@ test("road edges clear structures except where the final approach meets a doorst
   const conflicts: string[] = [];
   STREETS.forEach((path, i) => {
     const { points, length } = samplePath(path);
-    const throughRoute = points.filter((_, j) => length * (1 - j / (points.length - 1)) > 2);
+    // Either end may be a doorstep: the north walk runs from door to door.
+    const throughRoute = points.filter((_, j) => Math.min(j, points.length - 1 - j) / (points.length - 1) * length > 2);
     for (const [name, shape] of constraints) {
       if (throughRoute.some(([x, z]) => clearance(shape, x, z) < streetWidth(i) / 2 - 0.01)) conflicts.push(`${i}: ${name}`);
     }
@@ -49,7 +51,7 @@ test("road edges clear structures except where the final approach meets a doorst
   expect(conflicts).toEqual([]);
 });
 
-test("all streets connect to the forum network, including the embassy and pond", () => {
+test("all streets connect to the axis, including the embassy and pond", () => {
   const connected = new Set(STREETS.flatMap((path, i) => samplePath(path).points.some(([x, z]) => Math.hypot(x, z) < 5.6) ? [i] : []));
   for (let pass = 0; pass < STREETS.length; pass++) STREETS.forEach((path, i) => {
     if (connected.has(i)) return;
@@ -60,26 +62,10 @@ test("all streets connect to the forum network, including the embassy and pond",
   expect(streetDistance(x, z)).toBeLessThan(0.01);
 });
 
-test("every building doorstep is reached by paving and the pavilion clears the baths", () => {
+test("every building doorstep is reached by paving", () => {
   for (const place of PLACES) {
-    const [x, z] = place.position, rot = Math.atan2(-x, -z), distance = (place.buildingWidth ?? 7.6) * .52;
+    const [x, z] = place.position, rot = place.facing, distance = (place.buildingWidth ?? 7.6) * .52;
     expect(streetDistance(x + Math.sin(rot) * distance, z + Math.cos(rot) * distance)).toBeLessThan(1.35);
-  }
-  const pavilion = PLACES.find(p => p.id === "stars")!;
-  const rot = Math.atan2(-pavilion.position[0], -pavilion.position[1]);
-  // Include the rotated rectangular platform, not merely the column circle.
-  const w = (pavilion.buildingWidth ?? 7.6) + 1.3;
-  const eastEdge = pavilion.position[0] + Math.abs(Math.cos(rot)) * (w + .4) / 2 + Math.abs(Math.sin(rot)) * w * .92 / 2;
-  expect(18.35 - eastEdge).toBeGreaterThan(1);
-  const platform = obb(...pavilion.position, (w + .4) / 2, w * .92 / 2, rot);
-  const corners = (box: ObbObstacle) => [-1, 1].flatMap(x => [-1, 1].map(z => obbWorld(box, x * box.halfW, z * box.halfD)));
-  for (const stall of [obb(6.2, 21.5, 1.8, 1.1, -.55), obb(10, 6.5, 1.8, 1.1, -.95)]) {
-    const separated = [platform.rot, platform.rot + Math.PI / 2, stall.rot, stall.rot + Math.PI / 2].some(angle => {
-      const project = (box: ObbObstacle) => corners(box).map(p => p.x * Math.cos(angle) - p.z * Math.sin(angle));
-      const a = project(platform), b = project(stall);
-      return Math.min(...a) - Math.max(...b) > .3 || Math.min(...b) - Math.max(...a) > .3;
-    });
-    expect(separated).toBe(true);
   }
 });
 

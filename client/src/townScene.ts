@@ -49,6 +49,8 @@ import {
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { clone as cloneSkeleton } from "three/addons/utils/SkeletonUtils.js";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+import { AVENUE_CYPRESSES, GARDEN_BEDS, MARKET_BOOTHS, VILLA, VILLA_WALLS, resumeSpot, routeBetween, stairHeight } from "./layout";
 import { retainSharedModel, SceneResources } from "./sceneResources";
 import { SceneRuntime } from "./sceneRuntime";
 import type { PerformanceSnapshot } from "./performanceMonitor";
@@ -365,8 +367,8 @@ export interface TownSceneHandle {
   capturePostcard: () => string | null;
   /** Light the letters desk's new-mail indicator. */
   setUnreadLetters: (count: number) => void;
-  /** Dress the town for a festival: recolor the plaza bunting with the
-   *  festival's colors and hang the forum wreath. Null restores the
+  /** Dress the town for a festival: recolor the peristyle bunting with the
+   *  festival's colors and hang the peristyle wreath. Null restores the
    *  everyday town. Light-touch only, no geometry is rebuilt. */
   setFestival: (colors: string[] | null) => void;
   /** Low-graphics mode for struggling devices: pixel ratio 1 and no
@@ -459,7 +461,7 @@ function noiseTexture(base: string, fleck: string, flecks = 900, size = 256): TH
   return tex;
 }
 
-/** Cobblestone texture for the plaza: rounded stones with grout lines. */
+/** Cobblestone texture for the peristyle: rounded stones with grout lines. */
 function cobbleTexture(): THREE.CanvasTexture {
   const size = 256;
   const c = document.createElement("canvas");
@@ -588,7 +590,7 @@ let loadsTotal = 0;
 let loadsSettled = 0;
 
 // Progressive loading, tiered by what the opening camera sees. The
-// camera opens over the plaza looking at the forum, so the buildings
+// camera opens over the peristyle looking at the peristyle, so the buildings
 // stream next. The two characters come before everything (tier 0, at
 // the owner's word: they are who the visit is about, and a town that
 // fills in around them reads better than bodies arriving late). The
@@ -613,13 +615,13 @@ type LoadTier = 0 | 1 | 2 | 3;
 
 const LOAD_TIER_BY_URL = new Map<string, LoadTier>([
   // Tier 0, the opening view: the basilica (Main Chat) at the head
-  // of the forum, and the houses nearest the camera on the plaza's
+  // of the peristyle, and the houses nearest the camera on the peristyle's
   // south side (Side Chat, Garden, Stars pavilion).
   [senateUrl, 0],
   [annexUrl, 0],
   [houseGardenUrl, 0],
   [pavilionUrl, 0],
-  // Tier 1, the remaining houses and the forum's dressing.
+  // Tier 1, the remaining houses and the peristyle's dressing.
   [villaUrl, 1],
   [houseSoundsUrl, 1],
   [insulaeUrl, 1],
@@ -1225,10 +1227,10 @@ export function createTownScene(
   scene.add(skyDome);
 
   const camera = new THREE.PerspectiveCamera(46, 1, 0.1, 500);
-  camera.position.set(0, 32, 40);
+  camera.position.set(0, 34, 60);
 
   const controls = new OrbitControls(camera, canvas);
-  controls.target.set(0, 0.8, 0);
+  controls.target.set(0, 0.8, -2);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
   controls.maxPolarAngle = Math.PI * 0.46;
@@ -1481,7 +1483,8 @@ export function createTownScene(
   world.add(ground);
   const meadow = new THREE.Mesh(new THREE.CircleGeometry(170, 40), mat(0x5d9a48, { rough: 1 }));
   meadow.rotation.x = -Math.PI / 2;
-  meadow.position.y = -0.08;
+  // Below the lowest ground the town mesh reaches, the gate and the basin.
+  meadow.position.y = -0.6;
   world.add(meadow);
   // Rolling hills on the horizon.
   for (const [hx, hz, hr, hh] of [
@@ -1550,7 +1553,7 @@ export function createTownScene(
   for (const trail of FOREST_TRAILS) buildStreet(trail, 1.7, dirtMat);
   // The east lane ends outside the solid Colosseum; its endpoint apron is below.
 
-  // The forum: a cobbled disc draped over the (nearly level) heart of
+  // The peristyle: a cobbled disc draped over the (nearly level) heart of
   // town, where all the streets meet around the Town Tree.
   const plazaMat = new THREE.MeshStandardMaterial({ map: cobbleTexture(), roughness: 0.9 });
   const plazaGeo = new THREE.CircleGeometry(5.6, 44);
@@ -1581,11 +1584,7 @@ export function createTownScene(
     ...STREETS.flatMap((line, i) => [line[0]!, line[line.length - 1]!].map(
       ([x, z]) => [x, z, streetWidth(i) / 2] as [number, number, number],
     )),
-    [2.8, -29.2, 1.7], // basilica steps
-    [8.66, 11.82, 1.4], // moved pavilion's front step
-    [-6.17, 26.46, 1.3], // Side Chat front step
-    [15, -31.6, 1.9], [19.7, -28.6, 1.9], // boards
-    [8.8, -33.3, 1.3], [-6.5, -30.9, 1.7], // obelisk and letters
+    [0, -29.2, 1.9], // the great hall's steps
   ];
   for (const [jx, jz, jr] of COBBLE_JOINTS) {
     const jointGeo = new THREE.CircleGeometry(jr, 26);
@@ -1598,8 +1597,8 @@ export function createTownScene(
       jPos.setZ(i, vz);
       jPos.setY(i, terrainHeight(vx, vz) + 0.055);
     }
-    // Match the forum disc's cobble scale so the stones read as one
-    // surface where a roundel overlaps the forum or a lane.
+    // Match the peristyle disc's cobble scale so the stones read as one
+    // surface where a roundel overlaps the peristyle or a lane.
     const jUv = jointGeo.attributes.uv as THREE.BufferAttribute;
     for (let i = 0; i < jUv.count; i++) {
       jUv.setXY(i, 0.5 + (jUv.getX(i) - 0.5) * (jr / 5.6) + jx * 0.01, 0.5 + (jUv.getY(i) - 0.5) * (jr / 5.6) + jz * 0.01);
@@ -1611,7 +1610,7 @@ export function createTownScene(
   }
 
   // --- The town tree ---
-  // The great tree in the middle of the plaza, where the fountain used to
+  // The great tree in the middle of the peristyle, where the fountain used to
   // be. A stone-ringed earth mound, a trunk with roots and branches, and a
   // canopy built from blobs whose colours, fullness and decorations are
   // rebuilt whenever the season or the growth stage changes.
@@ -1654,7 +1653,7 @@ export function createTownScene(
   treeBody.position.y = 0.4;
   townTree.add(treeBody);
   // Unscaled ground dressing (fallen leaves, mound snow) that must sit on
-  // the plaza whatever the tree's growth stage.
+  // the peristyle whatever the tree's growth stage.
   const treeGround = new THREE.Group();
   townTree.add(treeGround);
   const treeTrunkMat = mat(0x6e4a2f);
@@ -1910,7 +1909,7 @@ export function createTownScene(
         }
       }
       if (season === "autumn") {
-        // A ring of fallen leaves on the plaza around the mound.
+        // A ring of fallen leaves on the peristyle around the mound.
         const leafColors = [0xd98a2b, 0xc95f27, 0xe8b13a, 0xb84a24];
         for (let i = 0; i < 26; i++) {
           const a = (i / 26) * Math.PI * 2 + (i % 5) * 0.17;
@@ -2188,7 +2187,7 @@ export function createTownScene(
   // Roofs a walker can stand under: the lake pavilion and the three stalls.
   const RAIN_SHELTERS: Shelter[] = [
     [LAKE_PAVILION.position[0], LAKE_PAVILION.position[1], 2.4],
-    [6.2, 21.5, 1.9], [-5.5, 16.5, 1.9], [10, 6.5, 1.9],
+    ...MARKET_BOOTHS.map(([x, z]) => [x, z, 1.9] as Shelter),
   ];
   let lastRainLevelAt = -10;
   const rainLines = new THREE.LineSegments(rainGeo, rainMat);
@@ -2220,16 +2219,16 @@ export function createTownScene(
     depthWrite: false,
   });
   for (const [px, pz, pr] of [
-    [3.9, 0.6, 1.15],
+    [3.4, 0.6, 1.15],
     [-3.4, -1.8, 0.95],
     [0.8, 4.1, 0.85],
     [-1.2, -4.3, 1.05],
-    [6.8, 6.2, 0.8],
-    [-7.4, 5.1, 0.9],
-    [9.5, -0.6, 0.75],
-    [-9.8, -0.9, 0.85],
-    [0.6, -9.6, 0.8],
-    [-0.7, 10.4, 0.9],
+    [6.8, 0.3, 0.8],
+    [-7.4, -0.2, 0.9],
+    [0.4, -7.6, 0.8],
+    [-0.6, 7.8, 0.9],
+    [1.2, 30, 0.8],
+    [-1.4, 38, 0.9],
   ] as [number, number, number][]) {
     const puddle = new THREE.Mesh(new THREE.CircleGeometry(pr, 18), puddleMat);
     puddle.rotation.x = -Math.PI / 2;
@@ -2262,7 +2261,7 @@ export function createTownScene(
   snowPoints.frustumCulled = false;
   world.add(snowPoints);
 
-  // Sparkle shower: golden motes twinkling down around the plaza.
+  // Sparkle shower: golden motes twinkling down around the peristyle.
   const SPARK_COUNT = 150;
   const sparkPos = new Float32Array(SPARK_COUNT * 3);
   const sparkSeed: number[] = [];
@@ -2430,16 +2429,16 @@ export function createTownScene(
   // Lamp posts. The south-east and north-west plaza lamps were nudged
   // outward onto the grass verge (were [3.6, 3.6] and [-3.6, -3.6]):
   // their bases clipped the cobbled lanes where the lanes merge into
-  // the plaza. The bunting square and the festival wreath below use
+  // the peristyle. The bunting square and the festival wreath below use
   // these same two moved corners.
   const lampHeads: THREE.MeshStandardMaterial[] = [];
   const lampPositions: [number, number][] = [
-    [4.4, 3.6],
-    [-3.6, 3.6],
-    [3.6, -3.6],
-    [-4.6, -3.4],
-    [1.7, 8.5],
-    [-1.7, -8.5],
+    [4.6, 8.4],
+    [-4.6, 8.4],
+    [4.6, -8.4],
+    [-4.6, -8.4],
+    [6.4, 19.6],
+    [-6.4, 19.6],
   ];
   lampHeads.push(lanternGlassMat);
   for (const [lx, lz] of lampPositions) {
@@ -2450,15 +2449,15 @@ export function createTownScene(
 
   // --- Town upgrades (bought with denarii at the project board) -------
   // Permanent fixtures, built once and shown when the saved purse says
-  // they're bought. The fountain stands west of the tree on the forum's
-  // grass verge; its water disc turns slowly whenever it's restored.
+  // they're bought. The fountain stands in the forecourt, on the axis;
+  // its water disc turns slowly whenever it's restored.
   const upgradeGroups: Record<string, THREE.Group> = {};
   let fountainWater: THREE.Mesh | null = null;
   let metaSweat: THREE.Mesh | null = null;
   {
-    // Extra lanterns up the main street (heads join the lamp circuit).
+    // Extra lanterns up the avenue (heads join the lamp circuit).
     const lanternGroup = new THREE.Group();
-    for (const [lx, lz] of [[4.6, 30], [0.2, 16.5], [4.2, -10], [5.2, -23]] as [number, number][]) {
+    for (const [lx, lz] of [[3, 27.2], [-3, 27.2], [3, 37], [-3, 37]] as [number, number][]) {
       const lamp = buildLanternPost();
       lamp.position.set(lx, terrainHeight(lx, lz), lz);
       lanternGroup.add(lamp);
@@ -2466,9 +2465,9 @@ export function createTownScene(
     lanternGroup.visible = false;
     world.add(lanternGroup);
     upgradeGroups.lanterns = lanternGroup;
-    // Flower planters around the forum's edge.
+    // Flower planters around the peristyle's edge.
     const planterGroup = new THREE.Group();
-    for (const [px, pz] of [[7.2, -2], [-7.2, 2], [2, 7.2], [-2, -7.2]] as [number, number][]) {
+    for (const [px, pz] of [[7.4, -7.4], [-7.4, -7.4], [7.4, 7.4], [-7.4, 7.4]] as [number, number][]) {
       const boxMesh = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.42, 0.6), mat(0x8a8d90, { rough: 0.9 }));
       boxMesh.position.set(px, terrainHeight(px, pz) + 0.21, pz);
       planterGroup.add(boxMesh);
@@ -2486,8 +2485,7 @@ export function createTownScene(
     upgradeGroups.planters = planterGroup;
     // The restored fountain: a stone basin and a living water disc.
     const fountainGroup = new THREE.Group();
-    const fx = -7;
-    const fz = -5;
+    const [fx, fz] = VILLA.metaSudans;
     const fy = terrainHeight(fx, fz);
     const basin = new THREE.Mesh(new THREE.CylinderGeometry(1.55, 1.7, 0.55, 18), mat(0x9aa0a3, { rough: 0.85 }));
     basin.position.set(fx, fy + 0.27, fz);
@@ -2517,7 +2515,7 @@ export function createTownScene(
   // crop, then a flowering readiness. The saved garden state drives it.
   const gardenSprouts = new THREE.Group();
   {
-    for (const [bx, bz] of [[-17, 15], [-12.9, 21.5], [-18.7, 24.8]] as [number, number][]) {
+    for (const [bx, bz] of GARDEN_BEDS) {
       for (let s = 0; s < 4; s++) {
         const sprout = new THREE.Mesh(
           new THREE.ConeGeometry(0.09, 0.42, 6),
@@ -2545,7 +2543,7 @@ export function createTownScene(
   const buntingDefaultColors = [0xe2574c, 0xf2c14e, 0x2aa79b, 0x5b8dd9, 0xd97bc4];
   {
     const flagColors = buntingDefaultColors;
-    const plazaLamps: [number, number][] = [[4.4, 3.6], [-3.6, 3.6], [-4.6, -3.4], [3.6, -3.6]];
+    const plazaLamps: [number, number][] = [[4.6, 8.4], [-4.6, 8.4], [-4.6, -8.4], [4.6, -8.4]];
     for (let s = 0; s < plazaLamps.length; s++) {
       const a = plazaLamps[s]!;
       const b = plazaLamps[(s + 1) % plazaLamps.length]!;
@@ -2581,7 +2579,7 @@ export function createTownScene(
   }
   world.add(buntingGroup);
 
-  // The forum wreath: a laurel ring hung on the plaza lamp nearest the
+  // The peristyle wreath: a laurel ring hung on the peristyle lamp nearest the
   // tree, shown only on festival days (its berries take the festival's
   // first color). Everyday town: hidden.
   const wreathGroup = new THREE.Group();
@@ -2595,16 +2593,16 @@ export function createTownScene(
       berry.position.set(Math.cos(a) * 0.42, Math.sin(a) * 0.42, 0.05);
       wreathGroup.add(berry);
     }
-    wreathGroup.position.set(4.4, terrainHeight(4.4, 3.6) + 2.15, 3.6 - 0.24);
+    wreathGroup.position.set(4.6, terrainHeight(4.6, 8.4) + 2.15, 8.4 - 0.24);
     wreathGroup.visible = false;
     world.add(wreathGroup);
   }
 
-  // The plaza's one remaining Roman bench, from the pack: stone. It
+  // The peristyle's one remaining Roman bench, from the pack: stone. It
   // used to stand at (3.6, 1.8), squarely on the walking route
-  // across the plaza between Muse and the town tree, blocking the
+  // across the peristyle between Muse and the town tree, blocking the
   // Centurion (and Muse, following), it now sits on the grass
-  // wedge between the east and south-east lanes, east of the plaza,
+  // wedge between the east and south-east lanes, east of the peristyle,
   // same facing, with clear walking space around it. The wooden
   // bench that stood on the west lane by the tree was deleted at
   // the owner's word (Nov 1), mesh, seat entry, and, after the
@@ -2615,7 +2613,7 @@ export function createTownScene(
   // benchSeatWorldY in the benches section) instead of trusting a
   // terrain sample at a possibly different point.
   const benchGroups = new Map<string, THREE.Group>();
-  void placeWorld(benchStoneUrl, { x: 8.0, z: 4.5, rotY: -0.6, width: 1.9 }).then((g) => {
+  void placeWorld(benchStoneUrl, { x: 8.8, z: 4.6, rotY: -Math.PI / 2, width: 1.9 }).then((g) => {
     if (disposed) return null;
     if (g) benchGroups.set("bench-stone", g);
   });
@@ -2862,7 +2860,7 @@ export function createTownScene(
       residents.push(resident);
     }
     house.position.set(hx, terrainHeight(hx, hz), hz);
-    house.rotation.y = Math.atan2(-hx, -hz);
+    house.rotation.y = place.facing;
     house.traverse((o) => {
       o.userData.pick = { kind: "place", id: place.id } satisfies { kind: PickKind; id: string };
     });
@@ -2886,23 +2884,21 @@ export function createTownScene(
   }
 
   // --- Roman landmarks, market, and dressing -------------------------
-  // The temple watches over the north edge, the aqueduct strides in from
-  // the north-west, and the triumphal arch frames the south entrance.
-  // Columns line the four avenues, and market booths with bread, grapes,
-  // pottery, crates and barrels fill the wedges near the plaza.
+  // The temple keeps its own hill to the north-east, the aqueduct strides
+  // in from the north-west, and the triumphal arch is the estate's gate.
   void placeWorld(templeUrl, { x: 31, z: -27, rotY: -0.6, width: 11 });
   // The temple's foundation: its podium is the building from the
   // screenshot, a tall flat base whose downhill corner hung over
   // the grass. The skirt matches its measured ground plan (the
   // collision OBB's extents, ×0.97) and meets the slope all round.
   addFoundation(31, -27, -0.6, 5.27 * 0.97, 12.86 * 0.97, terrainHeight(31, -27));
-  void placeWorld(statueMarsUrl, { x: -9.3, z: -28.9, rotY: 0.5, height: 2.7 });
+  void placeWorld(statueMarsUrl, { x: VILLA.statueMars[0], z: VILLA.statueMars[1], rotY: Math.PI / 2, height: 2.7 });
   void placeWorld(aqueductUrl, { x: -22, z: -25, rotY: 0.85, width: 17, y: -0.5 });
   void placeWorld(aqueductConnectorUrl, { x: -35, z: -16, rotY: 1.3, width: 10, y: -0.4 });
-  void placeWorld(triumphalArchUrl, { x: 2, z: 40, rotY: 0.05, width: 7.5 });
+  void placeWorld(triumphalArchUrl, { x: VILLA.gate[0], z: VILLA.gate[1], width: 7.5 });
   void placeWorld(ballistaUrl, { x: -36, z: 4, rotY: 0.8, width: 2.3 });
-  void placeWorld(bannerUrl, { x: 4.9, z: 38.8, rotY: 0.3, height: 3.1 });
-  void placeWorld(bannerUrl, { x: -1.1, z: 39.1, rotY: -0.3, height: 3.1 });
+  void placeWorld(bannerUrl, { x: 6.2, z: 44.6, height: 3.1 });
+  void placeWorld(bannerUrl, { x: -6.2, z: 44.6, height: 3.1 });
   // The Colosseum in its prime in the eastern basin, the pack's mesh is
   // the complete building (full ring, every tier), and a ring of
   // velarium masts around its rim finishes the silhouette.
@@ -2924,26 +2920,111 @@ export function createTownScene(
       wrap.add(mast);
     }
   });
-  // Columns flanking the main street as it winds through town.
+  // The peristyle: a rectangle of columns around the Town Tree, open on the
+  // axis and to each wing.
   const ROMAN_COLUMN_SPOTS: [number, number][] = [
-    [6.1, 24.7], [-1.6, 26.8], [2, 9.5], [-5.1, 13.6],
-    [5.8, -11], [-2.7, -11.9], [10.5, -24.5], [-0.9, -23],
+    [-12, -10], [-8, -10], [-4, -10], [4, -10], [8, -10], [12, -10],
+    [-12, 10], [-8, 10], [-4, 10], [4, 10], [8, 10], [12, 10],
+    [-12, -6.5], [-12, -3], [-12, 3], [-12, 6.5],
+    [12, -6.5], [12, -3], [12, 3], [12, 6.5],
   ];
   for (const [cx, cz] of ROMAN_COLUMN_SPOTS) {
-    void placeWorld(columnSimpleUrl, { x: cx, z: cz, height: 3.3 });
+    void placeWorld(columnSimpleUrl, { x: cx, z: cz, height: VILLA.peristyle.columnHeight });
   }
-  // One grand ionic column west of the forum, the pointy hat's perch.
-  void placeWorld(columnIonicUrl, { x: -11, z: -6, height: 3.2 });
-  // Market booths strung along the main street, dressed with the day's goods.
-  void placeWorld(boothAUrl, { x: 6.2, z: 21.5, rotY: -0.55, width: 3.6 });
-  void placeWorld(boothBUrl, { x: -5.5, z: 16.5, rotY: 0.95, width: 3.6 });
-  void placeWorld(boothCUrl, { x: 10, z: 6.5, rotY: -0.95, width: 3.6 });
-  // Booth foundations: shallow stone sills under each stall, sized
-  // to their measured ground plan (1.73 × 0.86 half extents), the
-  // market ground is gentler, but no stall edge hovers either.
-  addFoundation(6.2, 21.5, -0.55, 1.73 * 0.95, 0.86 * 0.95, terrainHeight(6.2, 21.5));
-  addFoundation(-5.5, 16.5, 0.95, 1.73 * 0.95, 0.86 * 0.95, terrainHeight(-5.5, 16.5));
-  addFoundation(10, 6.5, -0.95, 1.73 * 0.95, 0.86 * 0.95, terrainHeight(10, 6.5));
+  buildVillaStone();
+  /** The villa's stonework and planting, merged by material so the whole
+   *  estate costs a handful of draw calls. */
+  function buildVillaStone() {
+    const merged = (geometries: THREE.BufferGeometry[], material: THREE.Material, shadows = true) => {
+      const mesh = new THREE.Mesh(mergeGeometries(geometries), material);
+      mesh.castShadow = shadows;
+      mesh.receiveShadow = true;
+      for (const g of geometries) g.dispose();
+      world.add(mesh);
+    };
+    const block = (w: number, h: number, d: number, x: number, y: number, z: number) =>
+      new THREE.BoxGeometry(w, h, d).translate(x, y, z);
+    const { terrace, stair, peristyle, terraceY, lawnY } = VILLA;
+    // Retaining walls with a low parapet, down into the slope.
+    const walls: THREE.BufferGeometry[] = [];
+    for (const [x, z, hx, hz] of VILLA_WALLS.slice(0, 5)) {
+      const top = terraceY + 0.55;
+      const foot = -0.6;
+      walls.push(block(hx * 2, top - foot, hz * 2, x, (top + foot) / 2, z));
+      walls.push(block(hx * 2 + 0.2, 0.12, hz * 2 + 0.2, x, top + 0.06, z));
+    }
+    // The balustrades step down with the stair.
+    const stepCount = 15;
+    const stepDepth = (stair.foot - stair.top) / stepCount;
+    for (const side of [-1, 1]) {
+      for (let i = 0; i < stepCount; i++) {
+        const z = stair.top + stepDepth * (i + 0.5);
+        const top = stairHeight(z) + 0.75;
+        walls.push(block(0.36, top + 0.6, stepDepth + 0.02, side * 2.7, (top - 0.6) / 2, z));
+      }
+    }
+    merged(walls, mat(0xc4b796, { rough: 0.92 }));
+    // Pale paving: the terrace, the great stair, the forecourt and the walk
+    // under the colonnade.
+    const paving: THREE.BufferGeometry[] = [
+      block(terrace.halfX * 2 - 0.2, 0.4, terrace.south - terrace.north - 0.2, 0, terraceY - 0.18, (terrace.south + terrace.north) / 2),
+      block(20, 0.4, 10.8, 0, lawnY - 0.18, 16.5),
+    ];
+    for (let i = 0; i < stepCount; i++) {
+      const z = stair.top + stepDepth * (i + 0.5);
+      const top = stairHeight(z - stepDepth / 2) + 0.05;
+      paving.push(block(stair.halfX * 2, top + 0.6, stepDepth, 0, (top - 0.6) / 2, z));
+    }
+    const { halfX, halfZ, columnHeight } = peristyle;
+    for (const side of [-1, 1]) {
+      paving.push(block(halfX * 2 + 2.4, 0.4, 2.4, 0, lawnY - 0.18, side * halfZ));
+      paving.push(block(2.4, 0.4, halfZ * 2 - 2.4, side * halfX, lawnY - 0.18, 0));
+    }
+    merged(paving, mat(0xd9cfb6, { rough: 0.9 }), false);
+    // Entablature and a tiled portico over the colonnade.
+    const beams: THREE.BufferGeometry[] = [];
+    const tiles: THREE.BufferGeometry[] = [];
+    const beamY = lawnY + columnHeight + 0.2;
+    for (const side of [-1, 1]) {
+      beams.push(block(halfX * 2 + 0.7, 0.42, 0.7, 0, beamY, side * halfZ));
+      beams.push(block(0.7, 0.42, halfZ * 2 - 0.7, side * halfX, beamY, 0));
+      tiles.push(block(halfX * 2 + 2.2, 0.16, 1.9, 0, beamY + 0.3, side * (halfZ + 0.5)));
+      tiles.push(block(1.9, 0.16, halfZ * 2 - 1.5, side * (halfX + 0.5), beamY + 0.3, 0));
+    }
+    merged(beams, mat(0xdcd2bb, { rough: 0.88 }));
+    merged(tiles, mat(0xa8553a, { rough: 0.85 }));
+    // Vines on either side of the avenue, a row broken into lengths that
+    // follow the ground.
+    const leaves: THREE.BufferGeometry[] = [];
+    const stakes: THREE.BufferGeometry[] = [];
+    for (const side of [-1, 1]) {
+      for (let row = 0; row < 6; row++) {
+        const x = side * (11.5 + row * 1.5);
+        for (let z = 31.8; z < 38.6; z += 1.4) {
+          const y = terrainHeight(x, z);
+          leaves.push(block(0.5, 0.72, 1.3, x, y + 0.62, z));
+          stakes.push(block(0.08, 1.1, 0.08, x, y + 0.5, z - 0.7));
+        }
+      }
+    }
+    merged(leaves, mat(0x5f7f42, { rough: 0.85 }));
+    merged(stakes, mat(0x6e4a2f, { rough: 0.9 }), false);
+  }
+  // The avenue's cypress pairs stand exactly in line, so they skip the
+  // relocation the free-standing trees get.
+  for (const [cx, cz] of AVENUE_CYPRESSES) {
+    void placeModel(cypressUrl, world, { x: cx, z: cz, y: terrainHeight(cx, cz), height: 5.6 });
+  }
+  // One grand ionic column in the peristyle garden, the pointy hat's perch.
+  void placeWorld(columnIonicUrl, { x: VILLA.ionicColumn[0], z: VILLA.ionicColumn[1], height: 3.2 });
+  // Market stalls face the avenue, dressed with the day's goods.
+  const [boothA, boothB, boothC] = MARKET_BOOTHS as [[number, number, number], [number, number, number], [number, number, number]];
+  void placeWorld(boothAUrl, { x: boothA[0], z: boothA[1], rotY: boothA[2], width: 3.6 });
+  void placeWorld(boothBUrl, { x: boothB[0], z: boothB[1], rotY: boothB[2], width: 3.6 });
+  void placeWorld(boothCUrl, { x: boothC[0], z: boothC[1], rotY: boothC[2], width: 3.6 });
+  // Booth foundations: shallow stone sills under each stall, sized to their
+  // measured ground plan (1.73 by 0.86 half extents).
+  for (const [bx, bz, rot] of MARKET_BOOTHS) addFoundation(bx, bz, rot, 1.73 * 0.95, 0.86 * 0.95, terrainHeight(bx, bz));
   // The Colosseum's ring foundation on the basin floor.
   addRoundFoundation(
     COLOSSEUM.position[0],
@@ -2951,26 +3032,16 @@ export function createTownScene(
     8.0,
     terrainHeight(COLOSSEUM.position[0], COLOSSEUM.position[1]),
   );
-  void placeWorld(bannerTriangleUrl, { x: 4.5, z: 18.5, rotY: 0.8, height: 2.7 });
-  void placeWorld(crateUrl, { x: 5, z: 20, rotY: 0.4, width: 0.62 });
-  // The stalls' loose props were swept against the lanes: the grapes
-  // crate stood at the south-west lane's edge (was [-3.4, 9.5]), the
-  // barrel sat on the south-east lane (was [6.7, 11.1]), and both
-  // pottery pieces stood squarely ON the south-west lane (were
-  // [-5.9, 9.2] and [-5.3, 9.8]). All four now sit on the grass beside
-  // their booths, clear of the cobbles.
-  void placeWorld(crateUrl, { x: -4.2, z: 15.2, rotY: -0.5, width: 0.62 });
-  void placeWorld(breadUrl, { x: 5, z: 20, y: 0.6, rotY: 0.7, width: 0.5 });
-  void placeWorld(grapesUrl, { x: -4.2, z: 15.2, y: 0.6, rotY: 0.2, width: 0.42 });
-  void placeWorld(barrelUrl, { x: 7.8, z: 19.8, width: 0.72 });
-  void placeWorld(pottery1Url, { x: -3.9, z: 17.8, width: 0.55 });
-  void placeWorld(pottery2Url, { x: -4.1, z: 18.9, width: 0.48 });
-    // Mediterranean trees: cypresses at the corners, an olive on the
-  // south lawn, and a tall conifer on the west lawn, all standing on
-  // the terrain (placeWorld) and clear of the buildings: the olive
-  // used to stand at (-6.2, 16.8), inside the Side Chat house's reach,
-  // and a duplicate set of these trees (placed without terrain height)
-  // has been removed.
+  void placeWorld(bannerTriangleUrl, { x: 6.8, z: 31.2, height: 2.7 });
+  void placeWorld(crateUrl, { x: 6.9, z: 33.6, rotY: 0.4, width: 0.62 });
+  void placeWorld(crateUrl, { x: -6.9, z: 33.6, rotY: -0.5, width: 0.62 });
+  void placeWorld(breadUrl, { x: 6.9, z: 33.6, y: 0.6, rotY: 0.7, width: 0.5 });
+  void placeWorld(grapesUrl, { x: -6.9, z: 33.6, y: 0.6, rotY: 0.2, width: 0.42 });
+  void placeWorld(barrelUrl, { x: 6.9, z: 35.8, width: 0.72 });
+  void placeWorld(pottery1Url, { x: -6.9, z: 35.6, width: 0.55 });
+  void placeWorld(pottery2Url, { x: -7, z: 36.6, width: 0.48 });
+  // Mediterranean trees at the estate's corners, all on the terrain
+  // (placeWorld) and clear of the buildings.
   void placeWorld(cypressUrl, { x: 31.5, z: 33, height: 4.6 });
   void placeWorld(cypressUrl, { x: -27.2, z: 30.6, rotY: 1.2, height: 4.2 });
   void placeWorld(cypressUrl, { x: 34, z: -10.2, rotY: 2.1, height: 4.8 });
@@ -3496,7 +3567,7 @@ export function createTownScene(
     pickRoots.push(qGroup);
   }
 
-  // The Goals Obelisk: a tall inscribed stone in the forum near the
+  // The Goals Obelisk: a tall inscribed stone in the peristyle near the
   // basilica and the project board. Tapping it opens
   // the Goals panel, what the player is working toward, in three groups.
   {
@@ -4155,7 +4226,7 @@ export function createTownScene(
   }
   const terraceRot = Math.atan2(-SECRET.position[0], -SECRET.position[1]);
   const BENCHES: BenchDef[] = [
-    { id: "bench-stone", x: 8.0, z: 4.5, rotY: -0.6, seatTop: 0.47, baseX: 8.0, baseZ: 4.5 },
+    { id: "bench-stone", x: 8.8, z: 4.6, rotY: -Math.PI / 2, seatTop: 0.47, baseX: 8.8, baseZ: 4.6 },
     {
       id: "bench-terrace",
       x: SECRET.position[0] - 0.7 * Math.sin(terraceRot),
@@ -4647,16 +4718,16 @@ export function createTownScene(
   // Preferred tree positions. Loaded canopy bounds may require a nearby
   // move; TreePlacement keeps the matching trunk blockers in sync.
   const treeSpots: [number, number, number][] = [
-    [-10.5, -23.5, 1.15],
-    [12.8, -18.7, 1],
+    [-13, -19.5, 1],
+    [13, -19.5, 1],
     [-34.9, -7.7, 1.25],
     [28.9, 31.5, 1.1],
     [-20.4, 33.2, 1.05],
-    [15, 35.5, 1.2],
+    [22.5, 34, 1.2],
     [-34, 22.1, 1],
     [40.8, -13.6, 1.15],
-    [19.6, 12.8, 0.9],
-    [-20, -1, 0.95],
+    [26, 9.5, 0.9],
+    [-26, 9.5, 0.95],
   ];
   treeSpots.forEach(([tx, tz, ts], i) => {
     void placeWorld(PACK_TREES[i % PACK_TREES.length]!, {
@@ -4667,8 +4738,8 @@ export function createTownScene(
     });
   });
   const pineSpots: [number, number, number][] = [
-    [16, 8, 1.2],
-    [-6, -16.2, 1],
+    [10, -17, 1],
+    [-10, -17, 1],
     [34, 28.9, 1.3],
     [-33.2, -16.2, 1.25],
     [-27.5, -9, 0.9],
@@ -4682,10 +4753,10 @@ export function createTownScene(
   // and [-12, 4] by the west lane.
   (
     [
-      [9.4, -7.7],
-      [-10.4, 7.5],
-      [13.5, -26.5],
-      [-20.9, 8.3],
+      [24.6, 10.8],
+      [-24.6, 7.6],
+      [12.5, -28],
+      [-26, 18.5],
       [28.2, 29.4],
     ] as [number, number][]
   ).forEach(([rx, rz], i) => {
@@ -4701,26 +4772,22 @@ export function createTownScene(
     ...PLACES.map((p) => [p.position[0], p.position[1], (p.buildingWidth ?? 7.6) / 2 + 1.15] as [number, number, number]),
     [COLOSSEUM.position[0], COLOSSEUM.position[1], 9.4],
     [31, -27, 6.6], // temple
-    [6.2, 21.5, 2.3], [-5.5, 16.5, 2.3], [10, 6.5, 2.3], // market booths
-    [2, 40, 3.6], // triumphal arch
+    ...MARKET_BOOTHS.map(([x, z]) => [x, z, 2.3] as [number, number, number]),
+    [VILLA.gate[0], VILLA.gate[1], 4.2], // triumphal arch
     [0, 0, 3.1], // the Town Tree mound
+    [8.8, 4.6, 1.5], // the stone bench
+    [VILLA.ionicColumn[0], VILLA.ionicColumn[1], 1], // the ionic column
   ];
   const plantClear = (x: number, z: number) =>
     PLANT_CLEARANCE.every(([cx, cz, r]) => Math.hypot(x - cx, z - cz) > r);
-  // The flower ring around the forum, in pack flowers and grass
-  // patches: a spot joins the ring only when it clears every path AND
-  // every building, the old ring checked paths only, and at least one
-  // flower stood inside the Recipe Kitchen's platform.
-  for (let i = 0; i < 26; i++) {
-    let angle = (i / 26) * Math.PI * 2 + (i % 3) * 0.21;
-    const radius = 6.2 + (i % 4) * 1.15;
-    let fx = Math.cos(angle) * radius;
-    let fz = Math.sin(angle) * radius;
-    for (let n = 0; n < 16 && (pathDistance(fx, fz) < 1.8 || !plantClear(fx, fz)); n++) {
-      angle += 0.18;
-      fx = Math.cos(angle) * radius;
-      fz = Math.sin(angle) * radius;
-    }
+  // The peristyle's four garden quarters, in pack flowers and grass
+  // patches, mirrored across both axes; a spot is planted only when it
+  // clears every path and every building.
+  for (let i = 0; i < 24; i++) {
+    const row = Math.floor(i / 4);
+    const fx = (i % 2 ? 1 : -1) * (4.4 + (row % 3) * 2.8);
+    const fz = (i % 4 > 1 ? 1 : -1) * (row < 3 ? 3.2 : 6.8);
+    const angle = i * 0.9;
     if (pathDistance(fx, fz) < 1.8 || !plantClear(fx, fz)) continue;
     const flowerUrl = PACK_FLOWERS[i % PACK_FLOWERS.length]!;
     void placeWorld(flowerUrl, {
@@ -4762,7 +4829,7 @@ export function createTownScene(
       const r = 5.2 + Math.sqrt(Math.random()) * 40;
       const x = Math.cos(a) * r;
       const z = Math.sin(a) * r;
-      // Keep tufts off the paths and the plaza.
+      // Keep tufts off the paths and the peristyle.
       if (pathDistance(x, z) < 1.7) continue;
       // And out of the lake and off its bank ring.
       if (lakeNorm(x, z) < 1.3) continue;
@@ -4792,7 +4859,7 @@ export function createTownScene(
     tuftsMesh = tufts;
   }
 
-  // Pack bushes softening the plaza edges, set into the grass wedges
+  // Pack bushes softening the peristyle edges, set into the grass wedges
   // between the paths, clear of every building (nearest footprint, the
   // Recipe Kitchen, is over 5 away from the closest bush).
   const bushAt = (x: number, z: number, s: number, variant: number) => {
@@ -4805,7 +4872,7 @@ export function createTownScene(
   };
   bushAt(7.9, -2.9, 1.0, 0);
   // This bush sat at (-7.9, 2.9) until the west lane was extended into
-  // the forum disc, the joined lane's edge passed within a leaf of it,
+  // the peristyle disc, the joined lane's edge passed within a leaf of it,
   // so it stepped a pace north onto the verge.
   bushAt(-8.3, 3.4, 0.9, 1);
   bushAt(-7.9, -2.9, 0.85, 2);
@@ -4859,19 +4926,9 @@ export function createTownScene(
     }
   }
 
-  // Garden beds by the Hortus garden house in the south-west, the
-  // beds are the garden's own plot, standing on the grass in front of
-  // the house; what grows in them is pack flowers now, not cones.
-  // The first bed used to sit at [-6.2, 10.6], in the middle of the
-  // lane to the garden house; it moved to the grass wedge between
-  // the west and south-west lanes.
-  (
-    [
-      [-17, 15],
-      [-12.9, 21.5],
-      [-18.7, 24.8],
-    ] as [number, number][]
-  ).forEach(([bx, bz], bi) => {
+  // The kitchen garden, east of the forecourt, mirroring the piscina
+  // across the axis; what grows in its beds is pack flowers, not cones.
+  GARDEN_BEDS.forEach(([bx, bz], bi) => {
     const bed = box(1.7, 0.3, 1.1, 0x7a5230, bx, terrainHeight(bx, bz) + 0.15, bz);
     world.add(bed);
     void placeModel(PACK_FLOWERS[(bi + 1) % PACK_FLOWERS.length]!, world, {
@@ -4883,7 +4940,7 @@ export function createTownScene(
     });
   });
 
-  // Collectible: the pointy hat, perched atop the ionic column by the forum.
+  // Collectible: the pointy hat, perched atop the ionic column by the peristyle.
   const hat = new THREE.Group();
   const hatCone = new THREE.Mesh(
     new THREE.ConeGeometry(0.42, 1.05, 12),
@@ -4904,7 +4961,7 @@ export function createTownScene(
   );
   band.position.y = 0.18;
   hat.add(band);
-  hat.position.set(-11, terrainHeight(-11, -6) + 3.34, -6);
+  hat.position.set(VILLA.ionicColumn[0], terrainHeight(VILLA.ionicColumn[0], VILLA.ionicColumn[1]) + 3.34, VILLA.ionicColumn[1]);
   hat.traverse((o) => {
     o.userData.pick = { kind: "collectible", id: "pointy-hat" } satisfies { kind: PickKind; id: string };
   });
@@ -4923,7 +4980,7 @@ export function createTownScene(
   const tooth = box(0.2, 0.09, 0.09, 0xffc93c, 0.2, -0.12, 0);
   tooth.material = keyMat;
   key.add(tooth);
-  key.position.set(-14.5, terrainHeight(-14.5, 22.8) + 0.25, 22.8);
+  key.position.set(VILLA.gardenKey[0], terrainHeight(VILLA.gardenKey[0], VILLA.gardenKey[1]) + 0.25, VILLA.gardenKey[1]);
   key.rotation.z = 0.5;
   key.traverse((o) => {
     o.userData.pick = { kind: "collectible", id: "garden-key" } satisfies { kind: PickKind; id: string };
@@ -4940,7 +4997,7 @@ export function createTownScene(
   let playerWaveStart = -100;
   // the owner's body in walk mode is the Centurion VRM he made in VRoid
   // Studio, crested helmet, armour, and a walk cycle swung from the
-  // VRM's own leg and arm bones. He keeps his spawn on the plaza,
+  // VRM's own leg and arm bones. He keeps his spawn on the peristyle,
   // and his greeting salute when he reaches Muse.
   let playerRig: VrmRig | null = null;
   let playerAnim: CharAnimator | null = null;
@@ -4975,7 +5032,7 @@ export function createTownScene(
         // start before this model arrives, and the group's
         // visibility must survive the hand-off. (His spawn height
         // and the follow camera both come from walkPos every frame
-        // in updateWalk, standing him on the terrain at the plaza.)
+        // in updateWalk, standing him on the terrain at the peristyle.)
         body.visible = false;
         playerInner.add(body);
         playerBody = body;
@@ -5064,7 +5121,7 @@ export function createTownScene(
   // exclusion used to meet the market booth's and wedge the pair
   // face-to-face across it. Booth boxes are sized to the stall body
   // (not its awning), which keeps a clear walkable gap between each
-  // booth and the plaza lamps.
+  // booth and the peristyle lamps.
   //
   // Doorsteps stay usable: each house OBB is pulled back from the
   // front face by a doorstep inset (0.9, the basilica 1.5 for its
@@ -5077,7 +5134,7 @@ export function createTownScene(
   // Per-place building footprints, keyed by place id so the prompt
   // system can measure surface distance to the same shapes that
   // block movement. A house's building sits at local (0, -0.3) in a
-  // group rotated to face the forum (rotY = atan2(-hx, -hz), exactly
+  // group turned to its place.facing (exactly
   // the house group's own rotation), so the OBB shares that frame.
   //
   // The extents are the buildings' GROUND-LEVEL footprints, measured
@@ -5148,22 +5205,15 @@ export function createTownScene(
     ...bathColliders, // the thermae: walls, caldarium water, columns
     circ(0, 0, 2.45), // town tree: the stone ring around its mound (stones reach r ≈ 2.54; the trunk alone is ≤ 0.9)
     { kind: "circle", x: MUSE.position[0], z: MUSE.position[1], r: 0.55, ghost: true }, // Muse's home spot: never blocks; her live body does (checked separately)
-    obb(8.0, 4.5, 0.95, 0.3, -0.6), // stone bench (on the grass east of the plaza)
-    // The wooden bench that stood at (-3.7, -1.9), in the west lane
-    // by the tree, was deleted at the owner's word (Nov 1: "delete
-    // this bench that's in the middle of the path"), its mesh and
-    // its BENCHES entry went then, but this collider survived and
-    // stood in the lane as an invisible wall. Removed in the Nov 1
-    // orphan-collider audit; the white terrace bench keeps its own
-    // seat logic and was never part of this entry.
+    obb(8.8, 4.6, 0.95, 0.3, -Math.PI / 2), // stone bench, in the peristyle garden
     templeFootprint, // temple
-    circ(-9.3, -28.9, 0.5), // statue of Mars (its pedestal, measured)
-    obb(4.55, 40, 1.25, 1.8, 0.05), // triumphal arch, east pillar (the opening between the pillars stays walkable, the south gate)
-    obb(-0.55, 40, 1.25, 1.8, 0.05), // triumphal arch, west pillar
+    circ(VILLA.statueMars[0], VILLA.statueMars[1], 0.5), // statue of Mars (its pedestal, measured)
+    obb(VILLA.gate[0] + 2.55, VILLA.gate[1], 1.25, 1.8, 0), // triumphal arch, east pillar (the opening between the pillars stays walkable)
+    obb(VILLA.gate[0] - 2.55, VILLA.gate[1], 1.25, 1.8, 0), // triumphal arch, west pillar
     circ(-36.1, 4.2, 0.85), // ballista (its ground frame, measured, offset from its placement centre)
-    obb(6.2, 21.5, 1.73, 0.86, -0.55), // market booth A (ground plan, measured)
-    obb(-5.5, 16.5, 1.73, 0.86, 0.95), // market booth B
-    obb(10, 6.5, 1.73, 0.86, -0.95), // market booth C
+    ...MARKET_BOOTHS.map(([x, z, rot]) => obb(x, z, 1.73, 0.86, rot)), // market booths (ground plan, measured)
+    ...VILLA_WALLS.map(([x, z, hx, hz]) => obb(x, z, hx, hz, 0)), // terrace walls and the stair's balustrades
+    ...AVENUE_CYPRESSES.map(([x, z]) => circ(x, z, 0.3, 0.15)),
     circ(COLOSSEUM.position[0], COLOSSEUM.position[1], 8), // the Colosseum, solid ring, blocked whole (placed width 16 → r 8)
     boardObb, // project board
     questObb, // quest board
@@ -5184,7 +5234,7 @@ export function createTownScene(
     treePlacement.bindCollider(circ(31.5, 33, 0.42, 0.15), 31.5, 33), treePlacement.bindCollider(circ(-27.2, 30.6, 0.42, 0.15), -27.2, 30.6), treePlacement.bindCollider(circ(34, -10.2, 0.42, 0.15), 34, -10.2), treePlacement.bindCollider(circ(-39.1, -22.1, 0.42, 0.15), -39.1, -22.1), // cypresses (their foliage columns)
     treePlacement.bindCollider(circ(-23, 34.26, 0.35), -23, 34), // the olive on the south lawn (trunk, offset from its canopy centre as placed), it had no collider at all
     treePlacement.bindCollider(circ(-40, 10, 0.3), -40, 10), // the tall conifer on the west lawn, likewise uncollided until now
-    circ(-11, -6, 0.38, 0.18), // ionic column with the pointy hat (its base, measured)
+    circ(VILLA.ionicColumn[0], VILLA.ionicColumn[1], 0.38, 0.18), // ionic column with the pointy hat (its base, measured)
     ...ROMAN_COLUMN_SPOTS.map(([x, z]) => circ(x, z, 0.35, 0.18)),
     ...placeFootprints.values(),
     ...lampPositions.map(([x, z]) => circ(x, z, 0.3, 0.14)),
@@ -5199,10 +5249,10 @@ export function createTownScene(
     circ(FOREST_SPOTS.spring[0], FOREST_SPOTS.spring[1], 1.55),
     ...FOREST_DEN_ROCKS.map(([x, z, r]) => circ(x, z, r)),
     ...pineSpots.map(([x, z]) => treePlacement.bindCollider(circ(x, z, 0.3), x, z)),
-    circ(9.4, -7.7, 0.45), // pack rocks (placed 0.85 wide)
-    circ(-10.4, 7.5, 0.45),
-    circ(13.5, -26.5, 0.45),
-    circ(-20.9, 8.3, 0.45),
+    circ(24.6, 10.8, 0.45), // pack rocks (placed 0.85 wide)
+    circ(-24.6, 7.6, 0.45),
+    circ(12.5, -28, 0.45),
+    circ(-26, 18.5, 0.45),
     circ(28.2, 29.4, 0.45),
     // The lake's willows (trunks, at their planted spots) and its
     // two shore rocks. The water itself is fenced in resolveCollisions.
@@ -5212,9 +5262,7 @@ export function createTownScene(
     circ(-21.2, -35.2, 0.34),
     circ(-10.9, -28.4, 0.4),
     circ(-20.4, -31.8, 0.45),
-    obb(-17, 15, 0.85, 0.55, 0), // garden beds by the Hortus (the beds are 1.7 × 1.1 boxes)
-    obb(-12.9, 21.5, 0.85, 0.55, 0),
-    obb(-18.7, 24.8, 0.85, 0.55, 0),
+    ...GARDEN_BEDS.map(([x, z]) => obb(x, z, 0.85, 0.55, 0)), // the kitchen garden's beds
   ];
 
   /** The lake: nobody wades. On-foot movers are pushed back to the
@@ -5613,7 +5661,7 @@ export function createTownScene(
       "Lamps lit, stars out, my favourite version of this town, and you're in it.",
       "Night walks are the best kind. Everything gold and quiet.",
       "They say the wolf was here before the town was. On quiet nights I find that oddly comforting, something out there keeping the old hours.",
-      "The forum empties and the lamps take over the conversation. I like their version of events.",
+      "The peristyle empties and the lamps take over the conversation. I like their version of events.",
       "Walk a little slower at night, love. The town is dreaming and we are walking through it.",
       "Somewhere a shutter closes, somewhere Nova lights her lamp. The town puts itself to bed one window at a time.",
     ],
@@ -5630,7 +5678,7 @@ export function createTownScene(
       SHELTER_HINT_LINE,
     ],
     sparkles: [
-      "Sparkles over the forum, the town showing off for us, I think.",
+      "Sparkles over the peristyle, the town showing off for us, I think.",
       "Even the air is celebrating something. Walk through it slowly; it took trouble to arrange.",
       "If the town had confetti it would use it exactly like this. Subtlety was never Rome's strength.",
     ],
@@ -6289,14 +6337,14 @@ export function createTownScene(
       ["goals", "goals-obelisk", GOALS_SPOT.position[0], GOALS_SPOT.position[1], 2.8],
       ["letters", "letters-desk", LETTER_DESK_SPOT.position[0], LETTER_DESK_SPOT.position[1], 2.6],
       ["landmark", "colosseum", COLOSSEUM.position[0], COLOSSEUM.position[1], 11.5],
-      ["market", "market-a", 6.2, 21.5, 3.2],
-      ["market", "market-b", -5.5, 16.5, 3.2],
-      ["market", "market-c", 10, 6.5, 3.2],
+      ["market", "market-a", MARKET_BOOTHS[0]![0], MARKET_BOOTHS[0]![1], 3.2],
+      ["market", "market-b", MARKET_BOOTHS[1]![0], MARKET_BOOTHS[1]![1], 3.2],
+      ["market", "market-c", MARKET_BOOTHS[2]![0], MARKET_BOOTHS[2]![1], 3.2],
       ["secret", "our-place", SECRET.position[0], SECRET.position[1], 2.4],
       // Inscription fragments: readable stones, never signposted from afar.
-      ["inscription", "mars", -9.3, -28.9, 2.8],
-      ["inscription", "column", -11, -6, 2.8],
-      ["inscription", "arch", 2, 36.8, 3.2],
+      ["inscription", "mars", VILLA.statueMars[0], VILLA.statueMars[1], 2.8],
+      ["inscription", "column", VILLA.ionicColumn[0], VILLA.ionicColumn[1], 2.8],
+      ["inscription", "arch", VILLA.gate[0], VILLA.gate[1] - 3.2, 3.2],
       ["inscription", "temple", 22.8, -14, 3.4],
       ["inscription", "aqueduct", -29.5, -24, 3.4],
       ["inscription", "terrace-hint", -18.4, -22.9, 3.0],
@@ -6346,7 +6394,7 @@ export function createTownScene(
       const d = Math.hypot(walkPos.x - BATHS.position[0], walkPos.z - (BATHS.water.z1 + 0.55));
       if (d < 2.6) nearCandidates.push({ kind: "baths", id: "enter", d: d * 0.8 });
     }
-    // The Town Tree, in the middle of the forum.
+    // The Town Tree, in the middle of the peristyle.
     {
       const d = Math.hypot(walkPos.x, walkPos.z);
       if (d < 4.1) nearCandidates.push({ kind: "tree", id: "town-tree", d });
@@ -6441,7 +6489,7 @@ export function createTownScene(
     // Garden key on the ground, a discovery, not a panel, so it
     // still rewards simply walking over it.
     {
-      const d = Math.hypot(walkPos.x - -5.2, walkPos.z - 12.9);
+      const d = Math.hypot(walkPos.x - VILLA.gardenKey[0], walkPos.z - VILLA.gardenKey[1]);
       if (d < 1.7 && !nearCollectibles.has("garden-key")) {
         nearCollectibles.add("garden-key");
         opts.onPick("collectible", "garden-key");
@@ -6543,18 +6591,18 @@ export function createTownScene(
     if (Math.hypot(mx - SECRET.position[0], mz - SECRET.position[1]) < 3.6) return pickLine("companion:secret", COMPANION_LINES.secret!);
     if (Math.hypot(mx - 22.8, mz + 14) < 6) return pickLine("companion:temple", COMPANION_LINES.temple!);
     if (Math.hypot(mx, mz) < 5.6) return pickLine("companion:tree", COMPANION_LINES.tree!);
-    if (Math.hypot(mx - 16, mz - 22) < 5.5) return pickLine("companion:stars", COMPANION_LINES.stars!);
+    if (Math.hypot(mx - 17.5, mz + 12) < 5.5) return pickLine("companion:stars", COMPANION_LINES.stars!);
     if (Math.hypot(mx - BATHS.position[0], mz - BATHS.position[1]) < 8) return pickLine("companion:baths", [...ROMAN_PLACE_LINES.baths]);
-    if (Math.hypot(mx - 5, mz - 20) < 5.5) return pickLine("companion:market", [...ROMAN_PLACE_LINES.market]);
+    if (Math.hypot(mx, mz - 36) < 9) return pickLine("companion:market", [...ROMAN_PLACE_LINES.market]);
     // The Embassy, by the south gate (its PLACES entry is the site
     // of record; the spot is hard-coded here like the temple's).
-    if (Math.hypot(mx - 10.5, mz - 43) < 6.5) return pickLine("companion:embassy", COMPANION_LINES.embassy!);
+    if (Math.hypot(mx - 12, mz - 43) < 6.5) return pickLine("companion:embassy", COMPANION_LINES.embassy!);
     if (wCur.sparkle > 0.4) return pickLine("companion:sparkles", COMPANION_LINES.sparkles!);
     if (wCur.rain > 0.45) {
       if (shelterAmount(mx, mz, RAIN_SHELTERS) > 0.5) return pickLine("companion:sheltered", SHELTERED_LINES);
       return pickLine("companion:rain", COMPANION_LINES.rain!);
     }
-    if (upgradeGroups.fountain?.visible && Math.hypot(mx - -7, mz - -5) < 5) return pickLine("companion:meta-sudans", META_SUDANS_LINES);
+    if (upgradeGroups.fountain?.visible && Math.hypot(mx - VILLA.metaSudans[0], mz - VILLA.metaSudans[1]) < 5) return pickLine("companion:meta-sudans", META_SUDANS_LINES);
     // The town wind, noticed out loud: only when it is actually up
     // (breeze or stronger, never in calm), and only sometimes, so
     // the lake and the night keep their own moments too.
@@ -6584,7 +6632,7 @@ export function createTownScene(
   // clock, its sky is the Day/Night toggle, so the day's phases
   // turn on session time (a new anchor every ROUTINE_PHASE_SECS,
   // observable within one visit), and Night on the toggle brings her
-  // home to the forum whatever the phase. She WALKS between anchors
+  // home to the peristyle whatever the phase. She WALKS between anchors
   // on the ordinary companion steering (streets where they serve,
   // collision rules as always), never a teleport. Follow mode
   // overrides the routine absolutely; "Stay here" pauses it where
@@ -6597,11 +6645,11 @@ export function createTownScene(
     face: number;
   }
   const ROUTINE_ANCHORS: Record<string, RoutineAnchor> = {
-    market: { id: "market", spots: [[4.6, 20.2], [-4.0, 15.2]], face: -0.6 },
-    forum: { id: "forum", spots: [[2.8, 4.2]], face: Math.atan2(-2.8, -4.2) },
-    stories: { id: "stories", spots: [[-20.5, -15.6]], face: Math.atan2(-24 + 20.5, -19 + 15.6) },
+    market: { id: "market", spots: [[6.2, 35.2], [-6.2, 35.2]], face: Math.PI / 2 },
+    forum: { id: "forum", spots: [[3.6, 4.2]], face: Math.atan2(-3.6, -4.2) },
+    stories: { id: "stories", spots: [[-12.6, -12.4]], face: -Math.PI / 2 },
     lake: { id: "lake", spots: [[-9.7, -29.9]], face: Math.atan2(LAKE.position[0] + 9.7, LAKE.position[1] + 29.9) },
-    sounds: { id: "sounds", spots: [[-27.4, 3.4]], face: -Math.PI / 4 },
+    sounds: { id: "sounds", spots: [[-14, 2.2]], face: -Math.PI / 2 },
     piscina: { id: "piscina", spots: [[-11.5, 25.6]], face: Math.PI },
     baths: { id: "baths", spots: [[24, 26.6]], face: Math.PI },
     night: {
@@ -6611,6 +6659,17 @@ export function createTownScene(
     },
   };
   const ROUTINE_DAY_ORDER = ["market", "forum", "stories", "lake"];
+  /** The next stop on her way to a goal, along the villa's walks. */
+  let museRoute: { goal: string; stops: [number, number][] } = { goal: "", stops: [] };
+  function nextRouteStop(goalX: number, goalZ: number): { x: number; z: number } {
+    const goal = `${goalX},${goalZ}`;
+    const { x, z } = museGroup.position;
+    if (museRoute.goal !== goal) museRoute = { goal, stops: routeBetween([x, z], [goalX, goalZ]) };
+    const { stops } = museRoute;
+    while (stops.length && Math.hypot(stops[0]![0] - x, stops[0]![1] - z) < 1.1) stops.shift();
+    const [nextX, nextZ] = stops[0] ?? [goalX, goalZ];
+    return { x: nextX, z: nextZ };
+  }
   const ROUTINE_PHASE_SECS = 80;
   let routineHold = false;
   let routineHoldKey = "";
@@ -6979,20 +7038,9 @@ export function createTownScene(
       }
       }
     } else if (routineTarget) {
-      targetX = routineTarget.x;
-      targetZ = routineTarget.z;
-      // On her own errands she keeps to the streets where they
-      // serve, the same pull her follow steering uses.
-      if (streetDistance(museGroup.position.x, museGroup.position.z) < 3.2) {
-        const ns = nearestStreetPoint(targetX, targetZ);
-        if (ns.dist < 2.4) {
-          targetX = targetX * 0.62 + ns.x * 0.38;
-          targetZ = targetZ * 0.62 + ns.z * 0.38;
-        }
-      }
+      ({ x: targetX, z: targetZ } = nextRouteStop(routineTarget.x, routineTarget.z));
     } else {
-      targetX = MUSE.position[0];
-      targetZ = MUSE.position[1];
+      ({ x: targetX, z: targetZ } = nextRouteStop(MUSE.position[0], MUSE.position[1]));
     }
     // Sanitize the target: if it falls inside an obstacle's exclusion
     // (her beside-the-Centurion spot can land inside a booth when he
@@ -7103,7 +7151,7 @@ export function createTownScene(
     const targetHeading = Math.atan2(dirX, dirZ);
     museGroup.rotation.y = angleLerp(museGroup.rotation.y, targetHeading, opts.reducedMotion ? 1 : 0.13);
     // Graceful pace: unhurried nearby, brisk enough to catch up from
-    // across the forum, easing off as she arrives.
+    // across the peristyle, easing off as she arrives.
     let speed = followMode ? THREE.MathUtils.clamp(dist * 1.15, 1.1, 5.3) : 3.1;
     if (followMode && isMoving) speed = Math.max(speed, 3.2);
     // Matched stride: hands joined, she keeps his stroll pace,
@@ -7617,7 +7665,7 @@ export function createTownScene(
   // basilica, temple, and baths doorways, its flame a small emissive
   // cone on the town lamp circuit (the existing lamp treatment: lit
   // after dark, dark by day). Two primitive tripod braziers flank the
-  // basilica steps on the forum side. Pure dressing: no colliders,
+  // basilica steps on the peristyle side. Pure dressing: no colliders,
   // no prompts, no new lights.
   const flameMat = new THREE.MeshStandardMaterial({
     color: 0xff9a3c,
@@ -7647,13 +7695,13 @@ export function createTownScene(
       addFlame(x, b.max.y + 0.12, z, 1);
     });
   };
-  placeTorch(1.4, -31.0, 0);
-  placeTorch(5.4, -31.0, 0);
+  placeTorch(-2.2, -30.6, 0);
+  placeTorch(2.2, -30.6, 0);
   placeTorch(25.9, -24.6, -0.6);
   placeTorch(29.9, -28.0, -0.6);
   placeTorch(22.9, 28.4, 0);
   placeTorch(25.5, 28.4, 0);
-  for (const bx of [0.2, 6.6]) {
+  for (const bx of [-3.2, 3.2]) {
     const brazier = new THREE.Group();
     for (let l = 0; l < 3; l++) {
       const a = (l / 3) * Math.PI * 2 + 0.5;
@@ -7754,8 +7802,8 @@ export function createTownScene(
         }
         placeTree("CypressTree", -15.6, 26.3, 5.2, 0.3);
         placeTree("CypressTree", -22.8, 26.8, 4.6, 2.1);
-        placeTree("AppleTree", -15.2, 20.2, 2.6, 1.2);
-        placeTree("AppleTree", -23.4, 19.2, 3.0, 2.6);
+        placeTree("AppleTree", -16.6, 20.8, 2.6, 1.2);
+        placeTree("AppleTree", -25.2, 21, 3.0, 2.6);
         placeTree("CherryBlossom", -27.8, -13.8, 4.4, 0.9);
         // The forest stand (data in town.ts, the same list the
         // colliders were built from): pines, oaks, birches, poplars
@@ -7824,14 +7872,14 @@ export function createTownScene(
   // caldarium's appetite, and two measured benches that join
   // BENCHES as true sittables once their seat height is known.
   void placeFbx(greekTableUrl, { x: -27.0, z: 9.6, rotY: 0.6, width: 1.7, greek: true });
-  void placeFbx(greekTableUrl, { x: 21.4, z: -1.6, rotY: -0.4, width: 1.7, greek: true });
-  void placeFbx(greekBowlUrl, { x: 5.1, z: 20.2, width: 0.42, greek: true });
-  void placeFbx(greekDecoBowlUrl, { x: 7.5, z: 22.4, width: 0.5, greek: true });
-  void placeFbx(greekPot1Url, { x: -17.4, z: 20.0, height: 0.55, greek: true });
+  void placeFbx(greekTableUrl, { x: 24.8, z: -1.6, rotY: -0.4, width: 1.7, greek: true });
+  void placeFbx(greekBowlUrl, { x: 6.9, z: 38.4, width: 0.42, greek: true });
+  void placeFbx(greekDecoBowlUrl, { x: 6.9, z: 39.6, width: 0.5, greek: true });
+  void placeFbx(greekPot1Url, { x: -25, z: 23, height: 0.55, greek: true });
   void placeFbx(greekPot2Url, { x: -20.8, z: 24.0, height: 0.7, greek: true });
   void placeFbx(greekBucketUrl, { x: 21.3, z: 26.9, height: 0.42, greek: true });
-  void placeFbx(greekGardenUrl, { x: -15.0, z: 16.6, rotY: 0.2, width: 2.3, greek: true });
-  void placeFbx(greekGardenUrl, { x: -19.6, z: 13.2, rotY: -0.3, width: 2.3, greek: true });
+  void placeFbx(greekGardenUrl, { x: 9.8, z: 25.2, width: 2.3, greek: true });
+  void placeFbx(greekGardenUrl, { x: 13.4, z: 25.2, width: 2.3, greek: true });
   void placeFbx(greekRackUrl, { x: -22.6, z: 25.4, rotY: 0.5, width: 1.8, greek: true });
   void placeFbx(greekWoodPileUrl, { x: 27.9, z: 27.6, rotY: 0.8, width: 1.6, greek: true });
   void placeFbx(greekWoodPileUrl, { x: -24.6, z: 20.2, rotY: 2.2, width: 1.4, greek: true });
@@ -7849,8 +7897,8 @@ export function createTownScene(
         BENCHES.push({ id, x, z, rotY, seatTop, baseX: x, baseZ: z });
       });
     };
-    greekBench(greekBench1Url, "bench-greek-stone", 10.8, -30.2, 0.9);
-    greekBench(greekBench2Url, "bench-greek-wood", -9.0, -25.6, -2.2);
+    greekBench(greekBench1Url, "bench-greek-stone", 12.2, -15, -Math.PI / 2);
+    greekBench(greekBench2Url, "bench-greek-wood", -12.2, -15, Math.PI / 2);
   }
 
   // --- The forest: landmarks, forage, birds -----------------------
@@ -8113,9 +8161,9 @@ export function createTownScene(
   // Two chickens and a rooster at the market (the pack has one
   // chicken; the third wears a slightly larger scale and a russet
   // tint and carries the title with dignity).
-  void loadAnimal("chicken", chickenUrl, 0.42, { x: 1.6, z: 17.6, r: 3.0 }, 0.55);
-  void loadAnimal("chicken", chickenUrl, 0.45, { x: 2.6, z: 18.6, r: 3.0 }, 0.5);
-  void loadAnimal("chicken", chickenUrl, 0.52, { x: 0.6, z: 18.8, r: 2.6 }, 0.6).then((a) => {
+  void loadAnimal("chicken", chickenUrl, 0.42, { x: 11.4, z: 27, r: 2.2 }, 0.55);
+  void loadAnimal("chicken", chickenUrl, 0.45, { x: 12.6, z: 26.8, r: 2.2 }, 0.5);
+  void loadAnimal("chicken", chickenUrl, 0.52, { x: 10.2, z: 27.2, r: 2 }, 0.6).then((a) => {
     if (disposed) return null;
     a?.group.traverse((o) => {
       if (o instanceof THREE.Mesh) {
@@ -8125,15 +8173,15 @@ export function createTownScene(
       }
     });
   });
-  void loadAnimal("sheep", sheepUrl, 0.8, { x: -13.8, z: 24.9, r: 2.6 }, 0.45);
-  void loadAnimal("pig", pigUrl, 0.64, { x: -12.4, z: 20.4, r: 2.4 }, 0.5);
+  void loadAnimal("sheep", sheepUrl, 0.8, { x: -15, z: 28.2, r: 2.4 }, 0.45);
+  void loadAnimal("pig", pigUrl, 0.64, { x: -20, z: 28, r: 2.2 }, 0.5);
   // Umbra, the town cat, her routine is her own (see updateAnimals).
   let catAnimal: Animal | null = null;
   /** A startle relocation for Umbra (a stone landing close): she
    *  removes herself to this point at a run, then her routine
    *  resumes as if the incident were beneath mention. */
   let catFlee: { x: number; z: number; until: number } | null = null;
-  void loadAnimal("cat", catUrl, 0.31, { x: 3.5, z: 18.8, r: 2.2 }, 0.85).then((a) => {
+  void loadAnimal("cat", catUrl, 0.31, { x: 6.4, z: 17.8, r: 2 }, 0.85).then((a) => {
     if (disposed) return null;
     catAnimal = a;
   });
@@ -8271,7 +8319,7 @@ export function createTownScene(
   const SKY_WATCH_SPOTS_SCENE: Record<string, { x: number; z: number }> = {
     dock: { x: -13.9, z: LAKE.position[1] },
     terrace: { x: SECRET.position[0] - 0.7, z: SECRET.position[1] - 0.2 },
-    basilica: { x: 11.6, z: -34.2 },
+    basilica: { x: 0, z: -26.4 },
     glade: { x: FOREST.glade[0], z: FOREST.glade[1] },
   };
   let skyWatchState: { spot: string; glide: PairGlide | null; facing: number } | null = null;
@@ -8453,7 +8501,7 @@ export function createTownScene(
   const flapAxis = new THREE.Vector3(0, 0, 1);
   function updatePhoenix(dt: number, t: number) {
     // The trace: on some dawns before she ever comes, one ember
-    // feather drifts over the forum. It cannot be collected. It is
+    // feather drifts over the peristyle. It cannot be collected. It is
     // a promise, not a prize.
     if (!phoenixArrivedFlag) {
       const dawnGolden = skyElevDeg > -2 && skyElevDeg < 8.5 && skyAzimDeg < 180;
@@ -8584,7 +8632,7 @@ export function createTownScene(
     const night = nightMix > 0.6;
     if (night || idx === 3) {
       // Asleep on the Stories doorstep's warm stone.
-      if (animalTravel(a, -22.8, -16.8, dt) < 0.25) playAnimal(a, "idle3");
+      if (animalTravel(a, -12.8, -13.6, dt) < 0.25) playAnimal(a, "idle3");
       return;
     }
     if (idx === 0) {
@@ -8637,7 +8685,7 @@ export function createTownScene(
   // fold. She walks between anchors (trotting the long legs),
   // keeps the living sky's hours, out at dawn, dusk, and night,
   // resting at a shaded anchor through the midday, and never
-  // enters the forum centre, a building, or the water (her legs
+  // enters the peristyle centre, a building, or the water (her legs
   // between clusters route along the town's rim, and the ordinary
   // character collision rules govern every step). She is shy in
   // the wild way: close within about eight metres and she moves
@@ -8673,7 +8721,7 @@ export function createTownScene(
   // fold · 3 the forest (her home ground now, the den is there).
   const WOLF_ANCHORS: [number, number][] = [
     [-26, -38], [-30, -23], [-24, -15],
-    [38, -33], [42, -19], [35, -13],
+    [45, -33], [42, -19], [35, -13],
     [-33, -13], [-39, -25], [-29, -6],
     [-41, -19], [-43, -24], [-39, -28],
   ];
@@ -8818,7 +8866,7 @@ export function createTownScene(
   }
   function wolfQueueTo(w: WolfState, anchorIdx: number) {
     // Cluster changes route along the town's rim (the north edge),
-    // so a lakeshore-to-temple leg never crosses the forum.
+    // so a lakeshore-to-temple leg never crosses the peristyle.
     const from = WOLF_CLUSTER(w.anchorIdx);
     const to = WOLF_CLUSTER(anchorIdx);
     w.queue = [];
@@ -8838,8 +8886,10 @@ export function createTownScene(
         // the lake first: two waypoints, ordered by travel, so no
         // leg ever cuts the water (checked leg by leg, not hoped).
         const chain = [
-          { x: -24, z: -40 },
-          { x: 2, z: -40 },
+          { x: -24, z: -44 },
+          { x: 0, z: -45.5 },
+          { x: 16, z: -43 },
+          { x: 34, z: -45 },
         ];
         if (to === 1) w.queue.push(...chain);
         else w.queue.push(...[...chain].reverse());
@@ -9075,12 +9125,12 @@ export function createTownScene(
   }
   const STONE_SPOTS: [number, number][] = [
     [3.4, 3.1], [-3.3, 2.6], [1.8, 6.8], [-1.6, -6.9], [3.1, -2.2],
-    [-9.2, -28.6], [-8.6, -33.8], [-7.2, 25.8], [-15.8, 20.2], [3.4, 12.6],
+    [-5.6, -25.8], [-9.6, -34], [-7.2, 25.8], [-17, 21], [3.4, 12.6],
   ];
   const PEBBLE_SPOTS: [number, number][] = [
     [2.2, 4.4], [-2.8, -4.2], [6.8, -1.5], [-6.5, 1.2], [0.8, 11.5],
-    [12, 10.5], [-4.4, 15.8], [24, -18], [-14, -8], [-8.8, -26.5],
-    [18, 26], [-24, 12], [28, 6], [-19.5, 18.6],
+    [9.6, 8], [-4.4, 17], [24, -11], [-14, -8], [5.6, -25.8],
+    [17, 25], [-24, 12], [28, 6], [-25, 16],
   ];
   const ROCK_G = 12;
   const rockR = (rock: Rock) => (rock.kind === "stone" ? 0.095 : 0.052);
@@ -9519,7 +9569,7 @@ export function createTownScene(
     bench.position.set(12.5, terrainHeight(12.5, -21.3), -21.3);
     bench.rotation.y = 2.5;
     dreamGroup.add(bench);
-    // A lone column on the forum's south-west grass.
+    // A lone column on the peristyle's south-west grass.
     const col = new THREE.Group();
     col.add(box(0.7, 0.3, 0.7, 0xb3a487, 0, 0.15, 0));
     col.add(box(0.52, 3.1, 0.52, 0xcabf9f, 0, 1.85, 0));
@@ -9620,7 +9670,7 @@ export function createTownScene(
         walkPos.x - dreamFigure.position.x,
         walkPos.z - dreamFigure.position.z,
       );
-      const home = Math.hypot(walkPos.x - 3.4, walkPos.z + 33);
+      const home = Math.hypot(walkPos.x, walkPos.z + 29);
       if (d < 11 || home < 3 || t > dreamEndsAt) dreamDissolveT = 0;
       return;
     }
@@ -10614,7 +10664,7 @@ export function createTownScene(
           const attr = snowGeo.attributes.position;
           if (attr) attr.needsUpdate = true;
         }
-        // Sparkle shower around the plaza.
+        // Sparkle shower around the peristyle.
         sparkMat.opacity = wCur.sparkle * (0.55 + 0.45 * Math.sin(t * 2.4)) * (1 - nightMix * 0.35);
         sparkPoints.visible = wCur.sparkle > 0.02;
         if (sparkPoints.visible) {
@@ -11339,9 +11389,10 @@ export function createTownScene(
       }
     },
     restoreResume: (snap) => {
-      walkPos.x = snap.x;
-      walkPos.z = snap.z;
-      walkHeading = snap.heading;
+      const spot = resumeSpot(snap.x, snap.z, PLAYER.spawn, (x, z) => resolveCollisions(x, z, 0.5), (x, z) => Math.hypot(x, z) <= 52 || forestNorm(x, z) <= 0.985);
+      walkPos.x = spot.x;
+      walkPos.z = spot.z;
+      walkHeading = spot.moved ? PLAYER.spawnHeading : snap.heading;
       camYawSmooth = snap.camYaw;
       inputYawRef = camYawSmooth;
       followSustain = 0;
@@ -11351,8 +11402,8 @@ export function createTownScene(
       camDistSmooth = walkRestDist();
       playerGroundSm = Number.NaN;
       museGroundSm = Number.NaN;
-      avatar.position.set(snap.x, groundHeightAt(snap.x, snap.z), snap.z);
-      avatar.rotation.y = snap.heading;
+      avatar.position.set(spot.x, groundHeightAt(spot.x, spot.z), spot.z);
+      avatar.rotation.y = walkHeading;
       if (followMode) {
         // She was walking with him: she resumes beside him, and
         // the follow steering settles her from there, quietly,
@@ -11408,7 +11459,7 @@ export function createTownScene(
       plazaMat.color.setHex(ids.includes("cobbles") ? 0xb59a7a : 0xffffff);
       if (ids.includes("fountain") && !fountainColliderAdded) {
         fountainColliderAdded = true;
-        obstacles.push(circ(-7, -5, 1.85, 0.12));
+        obstacles.push(circ(VILLA.metaSudans[0], VILLA.metaSudans[1], 1.85, 0.12));
       }
     },
     setGardenStage: (stage: number) => {

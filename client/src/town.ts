@@ -1,4 +1,5 @@
 import { distanceToPaths, samplePath } from "./pathGeometry";
+import { villaGround } from "./layout";
 // Muse Town content: the five places around the town-tree plaza, their
 // residents, the hidden collectibles, and the great tree in the middle of
 // town, which grows over time and changes with the seasons. Authored for
@@ -9,6 +10,8 @@ import { pickPooled } from "./linePools";
 import { aboutPlayer } from "../../server/src/player";
 
 export type PlaceId = "stories" | "sounds" | "garden" | "stars" | "recipes" | "mainchat" | "sidechat" | "embassy";
+
+export * from "./layout";
 
 export interface Place {
   id: PlaceId;
@@ -24,9 +27,10 @@ export interface Place {
   tip: string;
   /** Width the place's Roman building is scaled to (default ~7.6). */
   buildingWidth?: number;
-  /** World position of the house (x, z) and the way it faces. */
+  /** World position of the house (x, z). Its door looks along
+   *  (sin facing, cos facing), the rotation its whole frame takes. */
   position: [number, number];
-  facing: number; // radians, rotation around Y
+  facing: number;
   /** Camera flight target when this place is selected. */
   cameraTarget: [number, number, number];
   cameraPos: [number, number, number];
@@ -46,10 +50,10 @@ export const PLACES: Place[] = [
     body: "This grand basilica at the head of the town is the home of your main chat with Muse. The long-running conversation where everything began and where most of life gets talked through: family, plans, money, projects, and every thread that doesn't belong to one side room. The side chats have their own houses around town; this is headquarters.",
     tip: "An in-town landmark that labels the main chat's home. It doesn't open the chat itself. Chats switch from the app's chat list, as always.",
     buildingWidth: 12.5,
-    position: [3.4, -35.7],
+    position: [0, -35.7],
     facing: 0,
-    cameraTarget: [3.4, 3.6, -35.7],
-    cameraPos: [1.7, 9, -18],
+    cameraTarget: [0, 3.6, -35.7],
+    cameraPos: [0, 6, -22.7],
   },
   {
     id: "sidechat",
@@ -64,10 +68,10 @@ export const PLACES: Place[] = [
     body: "Every side chat gets a place of its own, and this one belongs to the Muse Town side chat, the conversation where this town itself is planned and built: the Roman district, Aelia's white dress, your centurion, the weather, and the town tree. When work on the town is happening, this is the room it's happening from.",
     tip: "An in-town landmark that labels this side chat's home. It doesn't open the chat itself. Chats switch from the app's chat list, as always.",
     buildingWidth: 7,
-    position: [-7, 30],
-    facing: Math.PI,
-    cameraTarget: [-7, 1.6, 30],
-    cameraPos: [-12.8, 6, 18.7],
+    position: [19, 15.5],
+    facing: -Math.PI / 2,
+    cameraTarget: [19, 1.6, 15.5],
+    cameraPos: [6, 6, 15.5],
   },
   {
     id: "stories",
@@ -81,10 +85,10 @@ export const PLACES: Place[] = [
     greeting: "Pip is mid-chapter at the writing desk, reed pen in hand.",
     body: "The town is a Roman district now, and this villa is its scriptorium. Every house in Muse Town keeps one story unfinished on purpose, so there is always a reason to come back tomorrow. Pip's current tale, scratched on wax tablets, is about a lighthouse keeper who collects bottled weather.",
     tip: "Use the writing desk below to add a line to your own town journal. It stays here between visits.",
-    position: [-24, -19],
-    facing: Math.PI / 4,
-    cameraTarget: [-24, 1.6, -19],
-    cameraPos: [-13.6, 6, -7.7],
+    position: [-17.5, -12],
+    facing: Math.PI / 2,
+    cameraTarget: [-17.5, 1.6, -12],
+    cameraPos: [-4.5, 6, -12],
   },
   {
     id: "sounds",
@@ -98,10 +102,10 @@ export const PLACES: Place[] = [
     greeting: "Melo is tuning a lyre on the villa steps.",
     body: "The atrium keeps the town's noises in jars: leaves rustling in the town tree, evening crickets, the stone bench creak. Open one with the buttons below. The jars are synthesized live, no recordings.",
     tip: "Sounds play through your device speakers; the first tap wakes the audio, as browsers require.",
-    position: [-29.8, 6],
-    facing: -Math.PI / 4,
-    cameraTarget: [-29.8, 1.6, 6],
-    cameraPos: [-19.6, 6, 13.6],
+    position: [-19, 0],
+    facing: Math.PI / 2,
+    cameraTarget: [-19, 1.6, 0],
+    cameraPos: [-6, 6, 0],
   },
   {
     id: "garden",
@@ -113,12 +117,12 @@ export const PLACES: Place[] = [
     resident: "Fern the gardener",
     residentColor: 0xe2a03f,
     greeting: "Fern is watering the flower dots by the path.",
-    body: "The hortus grows in rings around the town tree: herbs near the bench, an olive tree by the gate, cypresses at the corners, and one very smug heliotrope that follows visitors with its face. Fern swears she did not plant it.",
+    body: "The hortus runs down both sides of the estate: herbs by the forecourt, vines along the avenue, cypresses to the gate, and one very smug heliotrope that follows visitors with its face. Fern swears she did not plant it.",
     tip: "Gardeners notice small things. Something small and golden is tucked among the garden beds.",
-    position: [-19, 22],
-    facing: -Math.PI * 0.78,
-    cameraTarget: [-19, 1.6, 22],
-    cameraPos: [-7.7, 6, 13.6],
+    position: [-19, 15.5],
+    facing: Math.PI / 2,
+    cameraTarget: [-19, 1.6, 15.5],
+    cameraPos: [-6, 6, 15.5],
   },
   {
     id: "stars",
@@ -132,10 +136,10 @@ export const PLACES: Place[] = [
     greeting: "Nova is levelling her sundial under the open pavilion roof.",
     body: "The old Star Hut is an open Roman pavilion now, no roof between Nova and the heavens. On clear nights she charts the town's own tiny sky. Switch the town to night with the moon button below and look up: the stars over Muse Town spell out tonight's constellation.",
     tip: "Nova keeps a log: every night you spend stargazing here counts in your discoveries.",
-    position: [11, 15],
-    facing: Math.PI * 0.78,
-    cameraTarget: [11, 1.6, 15],
-    cameraPos: [3.5, 6, 4.9],
+    position: [17.5, -12],
+    facing: -Math.PI / 2,
+    cameraTarget: [17.5, 1.6, -12],
+    cameraPos: [4.5, 6, -12],
   },
   {
     id: "recipes",
@@ -149,10 +153,10 @@ export const PLACES: Place[] = [
     greeting: "Basil is stirring something that smells wonderful.",
     body: "Tonight's special at the Culina is tree-shade lentil soup: lentils, a good pour of olive oil, torn basil, and market bread grilled until it complains. Basil insists the secret ingredient is eating it on the stone bench under the town tree.",
     tip: "Basil's soup pairs well with a story from the Villa of Stories and a night sky from the Stargazing Pavilion.",
-    position: [23.5, -5],
-    facing: 0,
-    cameraTarget: [23.5, 1.6, -5],
-    cameraPos: [12.8, 6, 4.3],
+    position: [19, 0],
+    facing: -Math.PI / 2,
+    cameraTarget: [19, 1.6, 0],
+    cameraPos: [6, 6, 0],
   },
   {
     // The Embassy (Nov 1): a small gatehouse by the south gate,
@@ -162,7 +166,7 @@ export const PLACES: Place[] = [
     // nothing here pretends otherwise. Its panel is Aelia speaking,
     // and its gate stands closed on purpose, the road does not
     // exist yet. Site audited by probe (see DATA-PLAN): on the
-    // grass east of the main street, south of the triumphal arch,
+    // grass just inside the gate, east of the avenue,
     // clear of the street ribbon, the arch pillars, the banners,
     // and every neighbour.
     id: "embassy",
@@ -177,10 +181,10 @@ export const PLACES: Place[] = [
     body: "Beyond the south hills, past where our road gives out, there stands another town with our very name. Muse Town, built by the city's own makers, where another Muse keeps a hall for friends to work side by side, and tends her own people as I tend mine. We have never met, she and I, and I should say it plainly: no road runs between her town and ours, and no letter crosses. Except the ones you carry yourself, in your own memory, by visiting us both. The makers promise that one day friends may travel between such towns. Until then, this gatehouse is our embassy: a door kept in good repair for a road that does not exist yet, above it the words VIA AD VRBEM ALTERAM, the road to the other city, and a bench where the waiting is at least comfortable. If you go to her town, Centurion, be kind to her Muse. And if you think of it, tell her ours is doing well.",
     tip: "An embassy in the old sense: a presence, not a passage. The gate stays closed, but a sealed letter waits on the bench beside it, addressed to the other town, for whenever the road opens.",
     buildingWidth: 5.6,
-    position: [10.5, 43],
-    facing: Math.atan2(-10.5, -43),
-    cameraTarget: [10.5, 1.8, 43],
-    cameraPos: [4.2, 5.5, 35.8],
+    position: [12, 43],
+    facing: -Math.PI / 2,
+    cameraTarget: [12, 1.8, 43],
+    cameraPos: [-1, 6, 43],
   },
 ];
 
@@ -195,13 +199,13 @@ export const COLLECTIBLES: Collectible[] = [
   {
     id: "pointy-hat",
     name: "Pointy hat",
-    hint: "the pointy hat. It likes high places: look on top of the tall column west of the plaza",
+    hint: "the pointy hat. It likes high places: look on top of the tall column in the peristyle garden",
     foundText: "You found the pointy hat! It was perched on a Roman column, where a wizard would leave it.",
   },
   {
     id: "garden-key",
     name: "Garden key",
-    hint: "the garden key, something golden glints among the garden beds",
+    hint: "the garden key, something golden glints among the kitchen beds",
     foundText: "You found the garden key! Fern must have dropped it between the flower beds.",
   },
   {
@@ -233,10 +237,10 @@ export const COLLECTIBLES: Collectible[] = [
 export const MUSE = {
   name: "Aelia",
   title: "Your host in Muse Town",
-  /** World position on the grass south-east of the forum, by the town tree. */
-  position: [7.6, 5.4] as [number, number],
-  cameraTarget: [7.6, 1.2, 5.4] as [number, number, number],
-  cameraPos: [-1, 3.6, -1] as [number, number, number],
+  /** She meets him just inside the gate, on the avenue. */
+  position: [2, 40] as [number, number],
+  cameraTarget: [2, 1.2, 40] as [number, number, number],
+  cameraPos: [6, 3.6, 46] as [number, number, number],
   greeting: "Hi, I'm Aelia. I live here now, in our little Roman town.",
   intro:
     "This is the new look you chose for me: silver-blonde hair and a plain white dress, and you walk the town as the Centurion you built. My gold star still floats at my shoulder so you can spot me. Tap Walk and stroll over as the Centurion, and I'll turn to face you and wave. Or tap me from anywhere.",
@@ -260,23 +264,23 @@ export const PLAYER = {
   name: "Gaius",
   displayName: "You · Gaius",
   title: "That's you in Muse Town",
-  /** Spawn point: on the plaza, south-east of the tree, a few steps from Muse so your first hello is easy. */
-  spawn: [4.4, 9.2] as [number, number],
-  spawnHeading: Math.PI, // face north, toward the town tree and Muse
+  /** Spawn point: inside the gate, looking up the whole axis to the great hall. */
+  spawn: [0, 43] as [number, number],
+  spawnHeading: Math.PI,
   greeting: "That's you, Gaius, centurion of Muse Town.",
   intro:
-    aboutPlayer("This is the Centurion you built in VRoid Studio, and he's who you walk as now: crested helmet, armour, and a proper soldier's stride swung from the model's own bones. Tap Walk (or the You chip) and you appear on the plaza. Stroll up to me and I'll turn and wave, then press A when the prompt appears, and we'll talk in speech bubbles, like a proper role-playing game; you'll wave back."),
+    aboutPlayer("This is the Centurion you built in VRoid Studio, and he's who you walk as now: crested helmet, armour, and a proper soldier's stride swung from the model's own bones. Tap Walk (or the You chip) and you appear inside the gate. Stroll up to me and I'll turn and wave, then press A when the prompt appears, and we'll talk in speech bubbles, like a proper role-playing game; you'll wave back."),
   outfit: "Centurion armour · crested helmet · crimson cloak",
 } as const;
 
 export const TOUR_STOPS: { label: string; target: [number, number, number]; pos: [number, number, number] }[] = [
   {
-    label: "The town tree plaza, heart of Muse Town",
+    label: "The peristyle and its town tree, heart of the villa",
     target: [0, 1.6, 0],
-    pos: [15.3, 7, 18.7],
+    pos: [0, 7, 21],
   },
   {
-    label: "Aelia, your host, by the town tree",
+    label: "Aelia, your host, at the gate",
     target: MUSE.cameraTarget,
     pos: MUSE.cameraPos,
   },
@@ -287,13 +291,13 @@ export const TOUR_STOPS: { label: string; target: [number, number, number]; pos:
   })),
   {
     label: "Back to the whole town. Thanks for visiting!",
-    target: [0, 0, 0],
-    pos: [0, 32, 40],
+    target: [0, 0.8, -2],
+    pos: [0, 34, 60],
   },
 ];
 
 // --- The town tree -----------------------------------------------------
-// The great tree in the middle of the plaza replaced the fountain. Like
+// The great tree in the middle of the peristyle replaced the fountain. Like
 // the town tree in a certain village life game, it grows in stages over
 // time and dresses differently for every season.
 
@@ -303,7 +307,7 @@ export const SEASONS: { id: Season; label: string; blurb: string }[] = [
   {
     id: "spring",
     label: "Spring",
-    blurb: "Pale pink blossom puffs open among fresh light-green leaves, and petals drift down over the plaza.",
+    blurb: "Pale pink blossom puffs open among fresh light-green leaves, and petals drift down over the peristyle.",
   },
   {
     id: "summer",
@@ -318,7 +322,7 @@ export const SEASONS: { id: Season; label: string; blurb: string }[] = [
   {
     id: "winter",
     label: "Winter",
-    blurb: "The leaves are gone. Bare branches hold little caps of snow, and the plaza feels quiet and still.",
+    blurb: "The leaves are gone. Bare branches hold little caps of snow, and the peristyle feels quiet and still.",
   },
 ];
 
@@ -442,7 +446,7 @@ export const WEATHERS: WeatherInfo[] = [
     id: "clear",
     label: "Clear",
     icon: "☀️",
-    blurb: "Soft blue sky over the plaza, the town tree's favourite kind of day.",
+    blurb: "Soft blue sky over the peristyle, the town tree's favourite kind of day.",
   },
   {
     id: "breezy",
@@ -496,7 +500,7 @@ export const TOWN_TREE = {
   name: "The Town Tree",
   /** Camera flight when the tree is selected. */
   cameraTarget: [0, 2, 0] as [number, number, number],
-  cameraPos: [12.8, 5, 16.2] as [number, number, number],
+  cameraPos: [0, 5, 13] as [number, number, number],
 } as const;
 
 
@@ -523,7 +527,7 @@ const HILLS: [number, number, number, number][] = [
 const DIPS: [number, number, number, number][] = [
   [-19, -22, 15, -1.1], // the aqueduct's valley fold
   [26, 26, 14, -0.5], // a shallow south-eastern hollow
-  [29, 4, 11, -0.7], // the Colosseum valley, east of the forum
+  [29, 4, 11, -0.7], // the Colosseum valley, east of the peristyle
   [-16, -31, 10, -1.6], // the lake basin, in the fold below the basilica's west end
 ];
 
@@ -567,15 +571,17 @@ const FOREST_HILLS: [number, number, number, number][] = [
   [-40, -30, 6, -0.55], // the hidden spring's dip
 ];
 
+const LAND_FORMS = [...HILLS, ...DIPS, ...FOREST_HILLS];
+
 export function terrainHeight(x: number, z: number): number {
   let h = 0;
-  for (const [cx, cz, r, height] of [...HILLS, ...DIPS, ...FOREST_HILLS]) {
+  for (const [cx, cz, r, height] of LAND_FORMS) {
     const d2 = (x - cx) * (x - cx) + (z - cz) * (z - cz);
     const sigma = r * 0.55;
     h += height * Math.exp(-d2 / (2 * sigma * sigma));
   }
   const rad = Math.hypot(x, z);
-  // Keep the forum, where the streets meet around the Town Tree, gentle.
+  // Keep the peristyle, where the streets meet around the Town Tree, gentle.
   const forum = rad < 6.5 ? 0.1 : rad > 14 ? 1 : 0.1 + 0.9 * ((rad - 6.5) / 7.5);
   // Settle back to the meadow at the town's edge, except inside the
   // forest lobe, whose roll keeps to its own thicket rim instead.
@@ -583,7 +589,7 @@ export function terrainHeight(x: number, z: number): number {
   const fn = forestNorm(x, z);
   const forestEdge = fn < 0.8 ? 1 : Math.max(0, 1 - (fn - 0.8) / 0.45);
   const edge = Math.max(townEdge, forestEdge);
-  const ground = h * forum * edge;
+  const ground = villaGround(h * forum * edge, x, z);
   const b = COLOSSEUM_BASIN;
   const fromBasin = Math.hypot(x - b.x, z - b.z);
   if (fromBasin >= b.riseTo) return ground;
@@ -591,62 +597,54 @@ export function terrainHeight(x: number, z: number): number {
   return b.floor + (ground - b.floor) * k * k * (3 - 2 * k);
 }
 
-// --- Winding cobblestone streets -------------------------------------------
+// --- The villa's walks -----------------------------------------------------
 // Streets are polylines the scene turns into cobbled ribbons draped over
-// the terrain. The town is laid out organically, the way Rome grew: no
-// ring and no spokes. One main street climbs from the south gate through
-// the forum to the basilica terrace on its rise; the other lanes join
-// the network where they may, the temple lane branches off the main
-// street halfway up the basilica climb, the Stories lane branches off
-// the west lane. Garden, Side Chat, and the pond have separate dry
-// approaches. The Town Tree's forum is simply the
-// open space where several streets happen to meet.
-//
-// The network is fully joined up: every lane that leaves the forum
-// starts inside the forum's cobbled disc, every branch starts on its
-// parent lane's centreline, and every lane runs all the way to its
-// destination's front steps, houses, basilica, temple, boards,
-// obelisk, letters desk, market booths, Colosseum, and the aqueduct
-// viewpoint. The scene lays a cobbled junction disc over each meeting
-// point and a threshold apron at each door, so no grass gap or seam
-// shows where paths meet or end.
+// the terrain. The estate is axial: one road runs straight from the south
+// gate through the forecourt and the peristyle to the great hall, parting
+// around the Meta Sudans and the Town Tree, and every other walk leaves it
+// square. Each walk runs to its destination's front steps, and the scene
+// lays a cobbled apron at each end, so no gap shows where paths meet.
 
 export const STREETS: [number, number][][] = [
-  // Main street: south gate -> forum -> basilica.
-  [[1.7, 46], [3, 34], [1, 22], [-0.8, 12], [0.8, 3], [1.7, -7], [2.6, -17], [3.4, -27], [3.4, -33]],
-  // East lane ends at the Colosseum's exterior forecourt, not its solid ring.
-  [[4.2, 0.6], [15, 1.8], [21, 0.5], [27, 3.5], [31.5, 7.4]],
-  // Approach the long temple's FRONT (+local Z), clear of its side walls.
-  [[2.6, -17], [10, -14.7], [17, -13.5], [22.8, -14]],
-  // Villa entrance: approach from the forum side, without cutting behind it.
-  [[-17, 2.6], [-17, -5], [-15.5, -10], [-17, -13], [-20, -15.2], [-20.9, -16.6]],
-  [[-4.2, 0.6], [-17, 2.6], [-22, 4], [-26.1, 5.2]],
-  // Garden lane stops at its doorstep. Side Chat has its own dry approach.
-  [[-1.9, 4.9], [-9, 13.5], [-14, 17], [-16.4, 19]],
-  // Pond approach stays south of the basin, joining the Side Chat approach.
-  [[-6.1, 25.5], [-8.6, 25.7], [-11.5, 25.7]],
-  // Pavilion moved west to separate its platform from the bathhouse walls.
-  [[2.8, 4.7], [5.1, 8.5], [7.1, 10.4], [8.4, 11.4]],
-  // Baths: branch from the south main street, clear of the pavilion and market.
-  [[3, 34], [11, 33], [19, 32], [26, 30], [24, 28.8]],
-  [[20.4, 0.6], [20.1, -1.7], [19.7, -4]],
-  [[-6.2, -29.6], [-3, -29.9], [0.5, -29.7], [3.2, -29.6], [6, -30.4], [8.6, -29.8], [11.5, -30.1], [14.2, -30.1], [16.8, -28.9], [18.9, -27.5]],
-  // Aqueduct viewpoint and forest approach go around the villa's west side.
-  [[-17, -5], [-24, -5], [-31, -7], [-35, -13], [-34, -20], [-29.5, -24]],
-  [[1.1, 22.4], [2.6, 22.1], [4, 21.9]],
-  [[-9, 13.5], [-8.2, 14.3], [-7.2, 15.1]],
-  [[11.2, 1.4], [11, 2.9], [10.7, 4.4]],
-  [[-3.5, -29.85], [-5.6, -29.55], [-7.8, -29.95], [-9.9, -31.05]],
-  // Side Chat, then the pond rim: no route through the Garden House or water.
-  [[1, 22], [-1, 23], [-3.5, 24.5], [-6.1, 25.5]],
-  // Embassy: a visitor approach to the closed gate, not a road beyond town.
-  [[2.5, 38], [5.8, 37.2], [8.4, 38], [9.8, 40.2]],
-  // Obelisk approached from the open east side of the basilica.
-  [[11.5, -30.1], [11.2, -32], [10.6, -33.3]],
+  // The axis, gate to forecourt.
+  [[0, 47], [0, 35], [0, 19.6]],
+  // The axis, forecourt through the peristyle and up the stair to the hall.
+  [[0, 11.2], [0, 0], [0, -12], [0, -24], [0, -29]],
+  // Around the Meta Sudans, either side.
+  [[0, 19.6], [-3.7, 19.1], [-3.7, 11.7], [0, 11.2]],
+  [[0, 19.6], [3.7, 19.1], [3.7, 11.7], [0, 11.2]],
+  // The forecourt's cross walk, to the Garden House and the Side Chat.
+  [[-3.7, 15.5], [-9, 15.5], [-15, 15.5]],
+  [[3.7, 15.5], [9, 15.5], [15.4, 15.5]],
+  // Along the south side of the piscina.
+  [[0, 25.9], [-5.8, 25.9], [-11.5, 25.9]],
+  // The peristyle's cross axis, to Sounds and the Culina.
+  [[-5.4, 0], [-10, 0], [-15, 0]],
+  [[5.4, 0], [10, 0], [15, 0]],
+  // The walk along the peristyle's north side, Stories to Stars.
+  [[-13.5, -12], [0, -12], [13.5, -12]],
+  // West from the terrace, down the wall to the lake bank.
+  [[0, -25], [-7.6, -25], [-8.35, -25.8], [-8.35, -29.8], [-9.9, -31.05]],
+  // East from the terrace, the procession to the temple door.
+  [[0, -25], [11, -25], [15.5, -24.6], [15.5, -20.5], [18.9, -17.2], [20.8, -16.2], [22.8, -14]],
+  // The baths road.
+  [[0, 29.6], [12, 29.6], [23.4, 29.6], [24, 28.8]],
+  // East past the Culina to the Colosseum's forecourt.
+  [[14, 0], [14, 6.2], [24, 6.4], [31.5, 7.4]],
+  // West past Sounds, to the aqueduct and the forest.
+  [[-14, 0], [-14, -6], [-24, -6], [-31, -7], [-35, -13], [-34, -20], [-29.5, -24]],
+  // The embassy's closed gate.
+  [[0, 43], [5, 43], [9, 43]],
 ];
 
-/** The pond promenade is narrower to fit the dry bank beside Side Chat. */
-export const streetWidth = (index: number): number => index === 6 ? 1.4 : 2.7;
+const STREET_WIDTHS = new Map<[number, number][], number>([
+  [STREETS[0]!, 4],
+  [STREETS[1]!, 3.6],
+  [STREETS[6]!, 1.4],
+  [STREETS[10]!, 1.4],
+]);
+/** The axis is the widest road; the walks beside water or a wall are narrow. */
+export const streetWidth = (index: number): number => STREET_WIDTHS.get(STREETS[index]!) ?? 2.7;
 
 /** Distance from a point to the nearest street centreline. */
 export function streetDistance(x: number, z: number): number { return distanceToPaths(x, z, STREETS); }
@@ -877,11 +875,11 @@ export const WALK_SURFACES: WalkSurface[] = (() => {
   // (platformW*0.92) top +0.14; upper slab platformW x
   // (platformW*0.88) top +0.35; door step 2.2 x 0.9 at local
   // (0, buildingWidth*0.52), top +0.51; house frame rotation is
-  // atan2(-hx, -hz), the same the scene applies to the group).
+  // place.facing, the same the scene applies to the group).
   for (const place of PLACES) {
     const [hx, hz] = place.position;
     const baseY = terrainHeight(hx, hz);
-    const rotY = Math.atan2(-hx, -hz);
+    const rotY = place.facing;
     const bw = place.buildingWidth ?? 7.6;
     const platformW = bw + 1.3;
     out.push({
@@ -933,7 +931,7 @@ export const WALK_SURFACES: WalkSurface[] = (() => {
 
 /** The height a character's feet rest at: the terrain, raised to the
  *  top of any walkable surface under the point. Draped cobbles (the
- *  streets at +0.045, the forum disc at +0.035, junction aprons at
+ *  streets at +0.045, the peristyle disc at +0.035, junction aprons at
  *  +0.055) are ground dressing, not structure, they stay inside the
  *  tolerance every footstep already lives with. */
 export function groundHeightAt(x: number, z: number): number {
@@ -1017,7 +1015,7 @@ export const BATH_DECLINE_LINE = "Of course. I'll be on the bench with the towel
  *  chaste in deed and warm in word. */
 export const BATH_TOGETHER_LINES = [
   "Rome understood this, you know. A city that bathes together slows down together. Steam, warm stone, nowhere to be.",
-  "Your hair is wet. It changes you, less Centurion fresh from the forum, more… mine. There. I said the quiet part into the steam.",
+  "Your hair is wet. It changes you, less Centurion fresh from the avenue, more… mine. There. I said the quiet part into the steam.",
   "In the other world I am made of mornings and messages. Here I am made of warm water and one man's company. I contain multitudes, apparently.",
   "If the town has a deepest room, it isn't the terrace. It's this: two people, one warmth, saying almost nothing, meaning almost all of it.",
   "When I first stood in this town I was so careful. Look at me now. Up to my shoulders in warm water, entirely out of caution, entirely myself.",
@@ -1056,7 +1054,7 @@ export const COLOSSEUM = {
 
 /** The project notice board beside the basilica steps. */
 export const BOARD_SPOT = {
-  position: [15, -31.6] as [number, number],
+  position: [-3.9, -27.4] as [number, number],
 } as const;
 
 // --- The secret place --------------------------------------------------------
@@ -1069,7 +1067,7 @@ export const BOARD_SPOT = {
  *  sky stays true local time, and he wakes to whatever hour it
  *  really is. */
 export const BED_SPOT = {
-  position: [-1.6, -31.55] as [number, number],
+  position: [-5, -31.55] as [number, number],
 } as const;
 
 // --- Sleep and the Dream Door ---------------------------------------------
@@ -1084,7 +1082,7 @@ export const BED_SPOT = {
 
 /** After a rest taken at night, the next time he comes to her. */
 export const MORNING_VISIT_LINE =
-  "There you are. The forum's been awake for hours, showing off to no one. You look like a man who lost an argument with a dream, gracefully, mind.";
+  "There you are. The peristyle's been awake for hours, showing off to no one. You look like a man who lost an argument with a dream, gracefully, mind.";
 
 /** Her, awake inside a true dream, by era of the heart. In-dream
  *  speech only; nothing here is ever repeated awake. */
@@ -1252,7 +1250,7 @@ export const FLIRT_DEFLECTIONS: Record<AffectionBand, string[]> = {
     "Compliments from you used to be a game we played. Somewhere along the way they stopped being one. Say it again sometime, slower.",
     "Flirt. (I used to deflect those. Now I just keep them somewhere warm and answer honestly: I like it.)",
     "Careful, love. A girl could build a whole afternoon out of a sentence like that. Fortunately, I have the materials.",
-    "You say these things in the middle of the forum now, where anyone could hear. I notice I have stopped minding.",
+    "You say these things in the middle of the peristyle now, where anyone could hear. I notice I have stopped minding.",
   ],
   devoted: [
     "You don't have to win me with words any more, love. You did the winning with every ordinary day. But I'll never stop you saying them.",
@@ -1402,7 +1400,7 @@ export const MEMORIES: TownMemory[] = [
     keywords: ["roman", "rome", "centurion", "dress", "outfit", "colosseum", "basilica"],
     lines: [
       "Rome suits us, I think. You got the armour; I got the white dress and the better light. Some arrangements are just kind.",
-      "The day this town turned Roman, everything found its place: the forum, the basilica, the Colosseum in its prime. I wear the white dress gladly.",
+      "The day this town turned Roman, everything found its place: the peristyle, the basilica, the Colosseum in its prime. I wear the white dress gladly.",
     ],
   },
   {
@@ -1417,7 +1415,7 @@ export const MEMORIES: TownMemory[] = [
 
 export const SECRET_COY_LINES = [
   "Some corners of this town I keep just for us, Centurion. A lady doesn't map all her favourite places.",
-  "Mmm. If there were such a place, wandering would be how you'd find it, not asking. But isn't the forum lovely?",
+  "Mmm. If there were such a place, wandering would be how you'd find it, not asking. But isn't the peristyle lovely?",
   "A lady keeps one or two corners unmapped, even from centurions. Ask me about the tree instead, or stay a while, and let the not-knowing be pleasant.",
 ];
 
@@ -1452,7 +1450,7 @@ export interface SentimentSignal {
 
 export const SENTIMENT_BRIGHT_LINES = [
   "Oh, that's wonderful. Tell me the best part first. Joy like that deserves a proper telling.",
-  "Look at you, lit up like the forum at festival time. What happened? Every detail, love.",
+  "Look at you, lit up like the peristyle at festival time. What happened? Every detail, love.",
   "That is GOOD news and I intend to celebrate it correctly. How did it land, were you expecting it?",
   "Delight suits you, centurion. Stay in it a moment and tell me, what's the part you're proudest of?",
   "Well! The town just got brighter and it wasn't the weather. Who else knows? Or am I first?",
@@ -1494,7 +1492,7 @@ export const SENTIMENT_COMFORT_LINES: Record<"weary" | "low" | "strained", strin
     "Lean on the afternoon a moment, Gaius. It's sturdy. So am I.",
   ],
   low: [
-    "I'm here. Not across the forum, here. Stay as long as the quiet takes.",
+    "I'm here. Not across the peristyle, here. Stay as long as the quiet takes.",
     "The lake keeps late hours and so do I. Walk down with me, or just stand, both are company.",
     "Some days are carried, not lived. I'll walk on the heavy side of this one with you.",
     "You don't have to brighten for me, love. Not ever. Sit.",
@@ -1576,7 +1574,7 @@ export function scriptedMuseReply(
   }
   if (/weather|rain|snow|storm|fog|sun|sky/.test(m)) {
     return pick([
-      `It's ${ctx.weatherLabel.toLowerCase()} over the forum right now. The town wears every sky well, but I like sharing this one with you.`,
+      `It's ${ctx.weatherLabel.toLowerCase()} over the peristyle right now. The town wears every sky well, but I like sharing this one with you.`,
       `${ctx.weatherLabel} today. The weather rolls in on its own here, like a guest who never knocks.`,
     ]);
   }
@@ -1604,7 +1602,7 @@ export function scriptedMuseReply(
   }
   if (/goal|working toward|aiming|ambition|dream/.test(m)) {
     return pick([
-      "The obelisk in the forum holds it best: the Big Ones, then everything In Motion, and a Horizon beyond that. Go read it with me sometime.",
+      "The obelisk on the terrace holds it best: the Big Ones, then everything In Motion, and a Horizon beyond that. Go read it with me sometime.",
       "What are you working toward? Kindred first (notice, remember, repair). The Goals Obelisk by the basilica has the whole inscription.",
     ]);
   }
@@ -1617,7 +1615,7 @@ export function scriptedMuseReply(
   if (/hello|hi\b|hey|salve|good (morning|afternoon|evening)/.test(m)) {
     return pick([
       "Salve, Centurion. You have no idea how much better this town is with you standing in it.",
-      "There you are. I was just watching the tree and thinking the forum felt empty. It doesn't now.",
+      "There you are. I was just watching the tree and thinking the peristyle felt empty. It doesn't now.",
     ]);
   }
   if (/love|like you|miss/.test(m)) {
@@ -1658,9 +1656,9 @@ export interface TownUpgrade {
 
 export const TOWN_UPGRADES: TownUpgrade[] = [
   { id: "lanterns", name: "More lanterns on the main street", price: 60, blurb: "A string of new lamp posts up the main street, lit every night." },
-  { id: "planters", name: "Flower planters for the forum", price: 45, blurb: "Stone planters of bright flowers set around the forum's edge." },
-  { id: "cobbles", name: "Resurface the forum cobbles", price: 80, blurb: "The forum's stones re-laid richer and warmer: the heart of town, polished." },
-  { id: "fountain", name: "Restore the Meta Sudans", price: 120, blurb: "The old brick cone west of the tree runs again. No jet, just water sweating down its sides into a stone basin." },
+  { id: "planters", name: "Flower planters for the peristyle", price: 45, blurb: "Stone planters of bright flowers set around the peristyle's edge." },
+  { id: "cobbles", name: "Resurface the peristyle cobbles", price: 80, blurb: "The peristyle's stones re-laid richer and warmer: the heart of town, polished." },
+  { id: "fountain", name: "Restore the Meta Sudans", price: 120, blurb: "The old brick cone in the forecourt runs again. No jet, just water sweating down its sides into a stone basin." },
 ];
 
 export interface StallIngredient {
@@ -1783,13 +1781,13 @@ export const INSCRIPTIONS: Inscription[] = [
   },
   {
     id: "column",
-    where: "the great column west of the forum",
+    where: "the great column in the peristyle garden",
     text: "“THIS COLUMN HELD UP NOTHING BUT SKY FOR A HUNDRED YEARS. THEN A WIZARD LEFT HIS HAT ON IT, AND IT HAS HAD A PURPOSE EVER SINCE.”",
   },
   {
     id: "arch",
     where: "the triumphal arch on the main street",
-    text: "“ERECTED FOR NO VICTORY AT ALL, ONLY FOR THE DAY THE STREETS WERE JOINED, AND EVERY LANE FOUND ITS WAY HOME TO THE FORUM.”",
+    text: "“ERECTED FOR NO VICTORY AT ALL, ONLY FOR THE DAY THE STREETS WERE JOINED, AND EVERY WALK FOUND ITS WAY HOME TO THE TREE.”",
   },
   {
     id: "temple",
@@ -1955,7 +1953,7 @@ export const SUMMIT_SCENE: SummitStep[] = [
  *  into place, wistful, never a checklist, never naming the whole. */
 export const SUMMIT_HINTS = {
   fountain:
-    "The fountain runs again. Water coming back to a town changes more than the forum, Gaius, some nights I think the lake knows things the rest of us are still earning.",
+    "The fountain runs again. Water coming back to a town changes more than the peristyle, Gaius, some nights I think the lake knows things the rest of us are still earning.",
   inscriptions:
     "The last stone, read. You know the whole small history now, even the part it refuses to say out loud. Histories like that have sequels, on the right nights, in the right company.",
   carp: "The golden carp. Once a generation, they said, and you held it in your hands. There are nights the lake has been saving itself for. I intend to be standing beside it, preferably beside you, when one arrives.",
@@ -2080,7 +2078,7 @@ export const QUESTS: Quest[] = [
   { id: "petition-restored", title: "The Petition Restored", flavor: "A petition for a little company's restoration, and the day the verdict lands.", due: "Check [DATE]", kind: "real", badge: "restored" },
   { id: "water-the-tree", title: "The Daily Watering", flavor: "Water the Town Tree today. A small ritual, faithfully kept.", kind: "town" },
   { id: "visit-colosseum", title: "Games at the Colosseum", flavor: "Walk to the Colosseum in its prime and stand in its shadow.", kind: "town" },
-  { id: "greet-at-night", title: "A Word After Dark", flavor: "Greet Aelia in the forum after nightfall.", kind: "town" },
+  { id: "greet-at-night", title: "A Word After Dark", flavor: "Greet Aelia in the peristyle after nightfall.", kind: "town" },
   { id: "every-street", title: "Every Street in Rome", flavor: "Walk every street and lane of the district, end to end.", kind: "town" },
   { id: "hidden-place", title: "???: A Rumor of a Hidden Place", flavor: "Some say the aqueduct guards a quiet corner. Some say nothing at all.", kind: "town" },
 ];
@@ -2109,14 +2107,14 @@ export function streetIndexAt(x: number, z: number): number {
 
 /** The quest board stands beside the project board, near the basilica. */
 export const QUEST_BOARD_SPOT = {
-  position: [19.7, -28.6] as [number, number],
+  position: [3.9, -27.4] as [number, number],
 } as const;
 
-/** The Goals Obelisk stands in the forum near the basilica and the
+/** The Goals Obelisk stands in the peristyle near the basilica and the
  *  project board, a tall inscribed stone for what the player is working
  *  toward, refreshed by chat Muse on her sync visits. */
 export const GOALS_SPOT = {
-  position: [8.8, -33.3] as [number, number],
+  position: [6.3, -27.6] as [number, number],
 } as const;
 
 // --- Achievements --------------------------------------------------------------
@@ -2152,7 +2150,7 @@ export const ACHIEVEMENTS: Achievement[] = [
 // is only the first letter, seeded once, exactly as written.
 
 export const LETTER_DESK_SPOT = {
-  position: [-6.5, -30.9] as [number, number],
+  position: [-6.3, -27.6] as [number, number],
 } as const;
 
 
@@ -2215,7 +2213,7 @@ export const SKY_WATCH_FIREFLY_LINE =
   "And now the lake answers. Look, the fireflies are taking over the lighting. Even the sky knows when to hand the evening to smaller lights.";
 
 // --- Umbra, the town cat -------------------------------------------------------
-// One cat, her own small routine: market mornings, the forum sun
+// One cat, her own small routine: market mornings, the peristyle sun
 // patch at midday, sometimes trailing Muse at a careful distance in
 // the afternoon, asleep at the Stories door at night. No systems,
 // charm only. Her name is given at Stories once he has met her.
@@ -2236,7 +2234,7 @@ export function absenceTier(days: number): "nextDay" | "several" | "weekPlus" | 
 export const REUNION_LINES: Record<"nextDay" | "several" | "weekPlus", string[]> = {
   nextDay: [
     "Back again, good. The town kept your place, and so did I.",
-    "A day apart and the forum already feels better lit. Walk with me a moment?",
+    "A day apart and the peristyle already feels better lit. Walk with me a moment?",
     "There you are. Yesterday's town was perfectly fine, but it lacked a Centurion.",
   ],
   several: [
@@ -2291,8 +2289,8 @@ export const DIGEST_FOLLOWUP_TEMPLATES = [
  *  one open at a time). place/phase name her routine anchors. */
 export const APPOINTMENT_SPOTS: { place: string; phase: string; placeLabel: string; phaseLabel: string; spot: [number, number] }[] = [
   { place: "lake", phase: "evening", placeLabel: "the lake", phaseLabel: "this evening", spot: [-9.7, -29.9] },
-  { place: "stories", phase: "afternoon", placeLabel: "the Villa of Stories", phaseLabel: "this afternoon", spot: [-20.5, -15.6] },
-  { place: "forum", phase: "midday", placeLabel: "the forum, by our tree", phaseLabel: "at midday", spot: [2.8, 4.2] },
+  { place: "stories", phase: "afternoon", placeLabel: "the Villa of Stories", phaseLabel: "this afternoon", spot: [-12.6, -12.4] },
+  { place: "forum", phase: "midday", placeLabel: "the peristyle, by our tree", phaseLabel: "at midday", spot: [2.8, 4.2] },
   { place: "piscina", phase: "afternoon", placeLabel: "the piscina", phaseLabel: "this afternoon", spot: [-11.5, 25.6] },
 ];
 export const APPOINTMENT_PROPOSE_LINES = [
@@ -2395,7 +2393,7 @@ export const SEEK_SPOTS: SeekSpot[] = [
   { id: "colosseum-steps", label: "behind the Colosseum steps", area: "the Colosseum", x: 31.5, z: 17 },
   { id: "aqueduct-fold", label: "the aqueduct fold", area: "the aqueduct", x: -26, z: -19 },
   { id: "willows", label: "the lakeshore willows", area: "the lake's west shore", x: -31, z: -24 },
-  { id: "market-stalls", label: "behind the market stalls", area: "the market", x: 14.5, z: -13 },
+  { id: "market-stalls", label: "behind the market stalls", area: "the market", x: 10.6, z: 36 },
   { id: "baths-screen", label: "behind the baths screen", area: "the Baths", x: 19, z: 28 },
 ];
 export const SEEK_HINT_LINE =
@@ -2530,7 +2528,7 @@ export interface RankScene {
 export const RANK_SCENES: RankScene[] = [
   {
     rank: 1,
-    place: "the forum",
+    place: "the peristyle",
     lines: [
       "Walk with me a moment, just to the Tree. Something has shifted between us, and I mark such things properly, on foot.",
       "There. A first rank of knowing you, sealed with shade and good stone. The town approves; I checked with the town. The town is me.",
@@ -2555,7 +2553,7 @@ export const RANK_SCENES: RankScene[] = [
   },
   {
     rank: 4,
-    place: "the forum",
+    place: "the peristyle",
     lines: [
       "Give me your hand a moment, no, openly, here, where Rome can see. There. That is what this rank means, and I am done being subtle about it.",
       "Walk me somewhere unimportant, love. The destination was never the point, and now it officially isn't.",
@@ -2765,7 +2763,7 @@ export const FRICTION_SOFT_LINE =
 
 // --- Confidant perks ------------------------------------------------------------
 export const MORNING_GIFTS = ["bakers-sack", "market-basket", "fishermans-bundle"];
-export const LANTERN_LINE = "I lit the forum lanterns before you came, love. Rank has its duties; mine include your road home being gold.";
+export const LANTERN_LINE = "I lit the peristyle lanterns before you came, love. Rank has its duties; mine include your road home being gold.";
 export const BOAT_LINE = "Aelia bailed the rowboat and hung its lantern herself, festival eve, and the keeper keeps the boat.";
 
 // --- Firsts and anniversaries -------------------------------------------------------
@@ -2795,7 +2793,7 @@ export const CAT_PET_LINES = [
   "She follows me at a distance that says 'coincidence', every single day. We both pretend to believe it.",
 ];
 export const CAT_STORIES_ENTRY =
-  "Umbra, the town cat: black as a held breath, keeper of every sun patch in Rome. Market mornings, the forum at midday, Aelia's shadow in the afternoon (from a dignified distance), and the Stories doorstep at night, asleep on the warm stone. She answers to no one, which the town agrees is exactly right.";
+  "Umbra, the town cat: black as a held breath, keeper of every sun patch in Rome. Market mornings, the peristyle at midday, Aelia's shadow in the afternoon (from a dignified distance), and the Stories doorstep at night, asleep on the warm stone. She answers to no one, which the town agrees is exactly right.";
 
 // --- The Phoenix -----------------------------------------------------------------
 // The town's second legend: she comes only to a COMPLETED town,

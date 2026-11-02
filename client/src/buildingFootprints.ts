@@ -14,7 +14,7 @@ export function createPlaceFootprints(places: Place[]): Map<string, Obstacle> {
   const placeFootprints = new Map<string, Obstacle>();
   for (const p of places) {
     const [hx, hz] = p.position;
-    const rot = Math.atan2(-hx, -hz);
+    const rot = p.facing;
     const width = p.buildingWidth ?? 7.6;
     // Building centre in world space (house-local (0, -0.3)).
     const bcx = hx - 0.3 * Math.sin(rot);

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { createPlaceFootprints } from "./buildingFootprints";
 import { circ, obb, obbLocal, type Obstacle } from "./collision";
 import { samplePath } from "./pathGeometry";
+import { routeBetween, WALK_ROUTES } from "./layout";
 import * as town from "./town";
 
 // The walking audit. It runs on the REAL obstacle list, read straight out
@@ -146,11 +147,53 @@ test("every street end and every doorstep can actually be walked to", () => {
   });
   for (const place of town.PLACES) {
     const [x, z] = place.position;
-    const rot = Math.atan2(-x, -z);
+    const rot = place.facing;
     const out = (place.buildingWidth ?? 7.6) * 0.52 + 0.6;
     if (!reachable(x + Math.sin(rot) * out, z + Math.cos(rot) * out, 2)) stranded.push(`door of ${place.id}`);
   }
   expect(stranded).toEqual([]);
+});
+
+const clearOfEverything = (x: number, z: number) =>
+  !inLake(x, z) && obstacles.every((ob) => coreDistance(ob, x, z) >= Math.min(ob.pad ?? 0.28, 0.28));
+
+test("every walk Aelia keeps to is clear from end to end", () => {
+  const blocked: string[] = [];
+  for (const [a, b] of WALK_ROUTES.edges) {
+    const [ax, az] = WALK_ROUTES.nodes[a]!, [bx, bz] = WALK_ROUTES.nodes[b]!;
+    for (let t = 0; t <= 1; t += 0.02) {
+      const x = ax + (bx - ax) * t, z = az + (bz - az) * t;
+      if (!clearOfEverything(x, z)) { blocked.push(`${a}-${b} at ${x.toFixed(1)},${z.toFixed(1)}`); break; }
+    }
+  }
+  expect(blocked).toEqual([]);
+});
+
+test("she can get from any stop of her day to any other", () => {
+  const stops: [number, number][] = [[6.2, 35.2], [-6.2, 35.2], [3.6, 4.2], [-12.6, -12.4], [-9.7, -29.9], [-14, 2.2], [-11.5, 25.6], [24, 26.6], [2, 40]];
+  for (const from of stops) for (const to of stops) {
+    if (from === to) continue;
+    const route = routeBetween(from, to);
+    expect(route.at(-1) ?? to).toEqual(to);
+    // Stepping on and off the surveyed walks is a short, clear hop.
+    const [first] = route;
+    if (first) expect(Math.hypot(first[0] - from[0], first[1] - from[1])).toBeLessThan(9);
+    if (route.length > 1) {
+      const last = route[route.length - 2]!;
+      expect(Math.hypot(last[0] - to[0], last[1] - to[1])).toBeLessThan(9);
+    }
+  }
+});
+
+test("the wolf's way round the north of the estate stays on open ground", () => {
+  const way: [number, number][] = [[-30, -23], [-24, -44], [0, -45.5], [16, -43], [34, -45], [45, -33]];
+  for (let i = 1; i < way.length; i++) {
+    const [ax, az] = way[i - 1]!, [bx, bz] = way[i]!;
+    for (let t = 0; t <= 1; t += 0.02) {
+      const x = ax + (bx - ax) * t, z = az + (bz - az) * t;
+      expect(obstacles.some((ob) => ob.kind === "obb" && coreDistance(ob, x, z) < 0)).toBe(false);
+    }
+  }
 });
 
 test("no pocket of open ground is sealed off from the town", () => {
