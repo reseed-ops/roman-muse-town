@@ -243,7 +243,7 @@ export const MUSE = {
   cameraPos: [6, 3.6, 46] as [number, number, number],
   greeting: "Hi, I'm Aelia. I live here now, in our little Roman town.",
   intro:
-    "This is the red Courtesan look you chose for me, and you walk the town as the Centurion you built. My gold star still floats at my shoulder so you can spot me. Tap Walk and stroll over as the Centurion, and I'll turn to face you and wave. Or tap me from anywhere.",
+    "This is the new look you chose for me: silver-blonde hair and a plain white dress, and you walk the town as the Centurion you built. My gold star still floats at my shoulder so you can spot me. Tap Walk and stroll over as the Centurion, and I'll turn to face you and wave. Or tap me from anywhere.",
   lines: [
     "I keep an eye on the whole town from here, the town tree, the stone bench, and everyone coming down the avenues. Towns look small until you love one; then they're endless.",
     "My favourite spot is right here at dusk. Switch the town to Night and the lamps and stars come out together, as if they'd arranged it.",
