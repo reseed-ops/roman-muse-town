@@ -3803,14 +3803,27 @@ export function createTownScene(
     stock.forEach(([c, s], i) => addPondFish(c, s, i + 1));
   }
   const pondReleasedGroup: PondFish[] = [];
+  let pondStockKey = "";
   function setPiscinaStock(speciesIds: string[]) {
+    // This runs on every state change, nearly all of which leave the pond
+    // alone; restocking each time also lost the fish it replaced.
+    const stock = speciesIds.slice(0, 10);
+    const key = stock.join("\n");
+    if (key === pondStockKey) return;
+    pondStockKey = key;
     for (const f of pondReleasedGroup) {
       pondGroup.remove(f.g);
       const i = pondFish.indexOf(f);
       if (i >= 0) pondFish.splice(i, 1);
+      f.g.traverse((o) => {
+        if (o instanceof THREE.Mesh) {
+          o.geometry.dispose();
+          (o.material as THREE.Material).dispose();
+        }
+      });
     }
     pondReleasedGroup.length = 0;
-    speciesIds.slice(0, 10).forEach((id, i) => {
+    stock.forEach((id, i) => {
       if (id === "golden-carp") {
         // The pond's jewel: bigger, brighter, unmistakable.
         pondReleasedGroup.push(addPondFish(0xffc84d, 1.5, 101 + i, 0x7a5200));

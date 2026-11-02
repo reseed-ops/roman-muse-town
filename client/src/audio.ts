@@ -294,12 +294,19 @@ export function startWeatherAmbience(kind: WeatherSoundKind) {
       }, seconds * 1000);
       timers.add(id);
     };
+    // Scheduled on a stopped clock, a drop never plays, never ends and is
+    // never freed, so a backgrounded phone would stack them up by the
+    // thousand. Asking to resume brings the rain back with the page.
+    const whenAudible = (play: () => void) => {
+      if (ac.state === "running") play();
+      else void ac.resume();
+    };
     const nextDroplet = () => {
-      playDroplet(ac, buffer, master);
+      whenAudible(() => playDroplet(ac, buffer, master));
       after(dropletDelay(rainLevel, Math.random), nextDroplet);
     };
     const nextDrip = () => {
-      playDrip(ac, master);
+      whenAudible(() => playDrip(ac, master));
       after(dripDelay(Math.random), nextDrip);
     };
     after(1, nextDroplet);

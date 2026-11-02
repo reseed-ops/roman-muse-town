@@ -51,6 +51,35 @@ function validateRows(save: TownSave): Map<AnySQLiteTable, Record<string, unknow
   return result;
 }
 
+/** What the actions allow into the tables the outside Muse and Aelia read.
+ *  A save file is a stranger's data: without these, it could carry what no
+ *  action would accept. Set above the action limits so old saves still load. */
+const RESTORE_LIMITS: Record<string, { rows: number; text: Record<string, number> }> = {
+  muse_notes: { rows: 5000, text: { text: 500 } },
+  life_digest: { rows: 12, text: { text: 240 } },
+  aelia_facts: { rows: 80, text: { text: 400 } },
+  letters: { rows: 5000, text: { title: 200, body: 12000 } },
+};
+
+function checkRestoreLimits(save: TownSave): void {
+  for (const [name, limit] of Object.entries(RESTORE_LIMITS)) {
+    const rows = save.tables[name]!;
+    if (rows.length > limit.rows) throw new Error(`Too many rows in ${name}.`);
+    for (const row of rows) {
+      for (const [column, max] of Object.entries(limit.text)) {
+        if (String(row[column]).length > max) throw new Error(`Text too long in ${name}.${column}.`);
+      }
+    }
+  }
+  // The rest of the server trusts this shape on every landmark it records.
+  for (const row of save.tables.affection_state!) {
+    const discovered = (JSON.parse(String(row.flags)) as { discovered?: unknown }).discovered;
+    if (discovered !== undefined && !(Array.isArray(discovered) && discovered.every((id) => typeof id === "string"))) {
+      throw new Error("Invalid affection flags.");
+    }
+  }
+}
+
 function validateAttachments(save: TownSave): Map<string, Uint8Array> {
   const expected = new Set((save.tables.postcards ?? []).map((row) => row.blobKey));
   const attachments = new Map<string, Uint8Array>();
@@ -100,6 +129,7 @@ export async function exportTownSave(db: BunSQLiteDatabase<typeof schema>, blobs
 export async function restoreTownSave(db: BunSQLiteDatabase<typeof schema>, blobs: BlobStore, json: string, requestId?: string): Promise<void> {
   const save = readSaveEnvelope(json);
   const decoded = validateRows(save);
+  checkRestoreLimits(save);
   const attachments = validateAttachments(save);
   const uploaded: string[] = [];
   try {

@@ -85,3 +85,22 @@ test("request receipts reject payload reuse and roll back with failed work", () 
   expect(db.select().from(schema.journal).all()).toHaveLength(2);
   expect(db.select().from(schema.requestReceipts).all()).toHaveLength(1);
 });
+
+test("a save carrying what no action would accept is refused", async () => {
+  const original = JSON.parse(await exportTownSave(db, blobs, fetchImage));
+  for (const mutate of [
+    (save: typeof original) => { save.tables.muse_notes.push({ id: 1, text: "x".repeat(501), done: 0, createdAt: 1 }); },
+    (save: typeof original) => { save.tables.aelia_facts = Array.from({ length: 81 }, (_, id) => ({ id, text: "x", topic: "life", learnedOn: "", source: "chat", surfacedOn: null })); },
+    (save: typeof original) => { save.tables.life_digest.push({ id: 1, text: "x".repeat(241), expiresOn: "", followUp: 0, questId: null, asked: 0 }); },
+    (save: typeof original) => { save.tables.affection_state = [{ id: 1, points: 0, dayKey: "", caps: "{}", flags: '{"discovered":"forum"}', lastContactAt: null }]; },
+  ]) {
+    const save = structuredClone(original); mutate(save);
+    await expect(restoreTownSave(db, blobs, JSON.stringify(save))).rejects.toThrow();
+    expect(db.select().from(schema.journal).all()).toHaveLength(1); expect(stored.size).toBe(0);
+  }
+});
+
+test("limits never stop the town backing up what it already holds", async () => {
+  db.insert(schema.museNotes).values({ text: "x".repeat(600) }).run();
+  expect(await exportTownSave(db, blobs, fetchImage)).toContain("xxxx");
+});

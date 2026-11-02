@@ -136,6 +136,8 @@ export function TownUtilities({ open, onClose, scene, state, ready, onNavigate, 
           {selected && <div className="town-restore-preview">
             <p>Save from <strong>{new Date(selected.save.exportedAt).toLocaleString()}</strong></p>
             <p>{selected.save.tables.letters?.length ?? 0} letters · {selected.save.tables.aelia_facts?.length ?? 0} memories · {selected.save.attachments.length} postcards</p>
+            <p>{selected.save.tables.muse_notes?.length ?? 0} notes for Muse · {selected.save.tables.life_digest?.length ?? 0} digest entries</p>
+            {(selected.save.tables.muse_notes ?? []).slice(-3).map((note, i) => <p key={i} className="town-restore-note">“{String(note.text).slice(0, 120)}”</p>)}
             <p>Restoring replaces the current town. Download a recovery copy first.</p>
             <button disabled={busy} onClick={() => void run(async () => { await reliableActions.pause(); const json = await exportCurrent(); setRecovery(json); saveDownload(json, "before-restore"); setMessage("Keep this recovery copy before restoring."); })}>{recovery ? "Download recovery copy again" : "Download recovery copy"}</button>
             <button disabled={busy || !recovery} onClick={() => void run(async () => {

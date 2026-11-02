@@ -201,3 +201,22 @@ describe("receipt pruning", () => {
     expect(count("earnAffection")).toBe(701);
   });
 });
+
+describe("tables only answer for their own keys", () => {
+  test("a fish called constructor isn't a catch", async () => {
+    await call("recordCatch", { fish_id: "constructor" });
+    expect(row<{ count: number }>("SELECT count(*) AS count FROM catches").count).toBe(0);
+  });
+
+  test("one already in a save can't spoil the fish market", async () => {
+    sqlite.run("INSERT INTO purse_state (id, denarii, seeds) VALUES (1, 0, 0)");
+    sqlite.run("INSERT INTO catches (fish_id, caught_at) VALUES ('constructor', 0), ('carp', 0)");
+    await call("sellFish", {});
+    expect(row<{ denarii: number }>("SELECT denarii FROM purse_state").denarii).toBeGreaterThan(0);
+  });
+
+  test("an affection reason from the prototype earns nothing and caps nothing", async () => {
+    const result = await call("earnAffection", { reason: "constructor", request_id: crypto.randomUUID() });
+    expect(result.capped).toBe(false);
+  });
+});

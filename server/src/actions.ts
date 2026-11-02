@@ -313,6 +313,12 @@ Muse`,
 
 /** Sent about once a minute, so it stays small: letters only arrive with the
  *  rank-up that delivers one, and capped tells the client to stop asking today. */
+/** Price and rule tables are plain objects, so a client-sent key of
+ *  "constructor" would otherwise find something on the prototype. */
+function own<T>(table: Record<string, T>, key: string): T | undefined {
+  return Object.hasOwn(table, key) ? table[key] : undefined;
+}
+
 const earnResponse = z.object({
   affection: stateResponse.shape.affection,
   letters: stateResponse.shape.letters.optional(),
@@ -3016,7 +3022,7 @@ export const Actions = {
     response: stateResponse,
     handler: async (ctx, args) => {
       withEconomyTransaction(ctx, (ctx) => {
-        const item = FORAGE_ITEMS[args.spot_id];
+        const item = own(FORAGE_ITEMS, args.spot_id);
         if (item) {
           const db = ctx.db<typeof schema>();
           const today = utcDayKey(new Date());
@@ -3084,7 +3090,7 @@ export const Actions = {
             granted = EARN_RULES.landmark!.points;
           }
         } else {
-          const rule = EARN_RULES[args.reason];
+          const rule = own(EARN_RULES, args.reason);
           if (rule) {
             const used = caps[args.reason] ?? 0;
             granted = Math.max(0, Math.min(rule.points, rule.cap - used));
@@ -3158,7 +3164,7 @@ export const Actions = {
     response: economyResponse,
     async handler(ctx, args) {
       withEconomyTransaction(ctx, (ctx) => {
-        const price = UPGRADE_PRICES[args.upgrade];
+        const price = own(UPGRADE_PRICES, args.upgrade);
         if (price !== undefined) {
           const purse = loadPurse(ctx);
           const owned = parseList(purse.upgrades);
@@ -3181,7 +3187,7 @@ export const Actions = {
     response: economyResponse,
     async handler(ctx, args) {
       withEconomyTransaction(ctx, (ctx) => {
-        const price = INGREDIENT_PRICES[args.ingredient];
+        const price = own(INGREDIENT_PRICES, args.ingredient);
         if (price !== undefined) {
           const purse = loadPurse(ctx);
           const owned = parseList(purse.ingredients);
@@ -3204,7 +3210,7 @@ export const Actions = {
     response: economyResponse,
     async handler(ctx, args) {
       withEconomyTransaction(ctx, (ctx) => {
-        const dish = DISH_FOR_INGREDIENT[args.ingredient];
+        const dish = own(DISH_FOR_INGREDIENT, args.ingredient);
         if (dish) {
           const purse = loadPurse(ctx);
           const owned = parseList(purse.ingredients);
@@ -3318,7 +3324,7 @@ export const Actions = {
     response: economyResponse,
     async handler(ctx, args) {
       withEconomyTransaction(ctx, (ctx) => {
-        if (FISH_PRICES[args.fish_id] !== undefined) {
+        if (own(FISH_PRICES, args.fish_id) !== undefined) {
           const db = ctx.db<typeof schema>();
           db.insert(schema.catches).values({ fishId: args.fish_id }).run();
         }
@@ -3340,7 +3346,7 @@ export const Actions = {
           .from(schema.catches)
           .where(and(eq(schema.catches.sold, 0), eq(schema.catches.released, 0))).all();
         if (unsold.length > 0) {
-          const total = unsold.reduce((sum, row) => sum + (FISH_PRICES[row.fishId] ?? 0), 0);
+          const total = unsold.reduce((sum, row) => sum + (own(FISH_PRICES, row.fishId) ?? 0), 0);
           db
             .update(schema.catches)
             .set({ sold: 1 })

@@ -6,6 +6,13 @@ dist-*/
 *.db-shm
 *.db-wal
 .DS_Store
+.bun-cache/
+
+# Licensed art lives here on the owner's machine and may never be published
+# (see ASSETS.md). Only the two files cleared for this repo are tracked.
+client/src/assets/*
+!client/src/assets/trees_pack.glb
+!client/src/assets/muse-avatar.vrm
 
 # Local process documents - never published (they spell the sweep patterns)
 SCRUB-LOG.md
