@@ -9074,7 +9074,25 @@ export function createTownScene(
     const hand = playerRig?.rHand ?? null;
     if (hand) {
       hand.add(carriedMesh);
-      carriedMesh.position.set(0.02, -0.08, 0.03);
+      // Palm anchor (owner fix, Nov 1): the old fixed offset
+      // (0.02, -0.08, 0.03) sat at the wrist with its along-hand
+      // component pointing BACK toward the elbow — measured on the
+      // shipped Centurion rig, -0.02 along the finger axis — so the
+      // stone rendered mid-forearm instead of in his hand. The palm
+      // lies OUT along the finger axis: the middle finger's base
+      // bone is a direct child of the hand bone, so its local
+      // position is the finger direction in hand space — ride out
+      // along it to palm centre, 0.085 m from the wrist joint (just
+      // past the knuckle, which sits at 0.074). The offset lives in
+      // hand-bone space, so it stays seated in the palm through
+      // idle, the walk swing, and the throw sweep alike. The
+      // fallback is the same point measured on the Centurion rig.
+      const fingerBase = hand.children.find((c) => c.name.endsWith("_Middle1")) ?? null;
+      if (fingerBase && fingerBase.position.lengthSq() > 0.0001) {
+        carriedMesh.position.copy(fingerBase.position).normalize().multiplyScalar(0.085);
+      } else {
+        carriedMesh.position.set(-0.085, 0.01, 0.003);
+      }
       // The bone's world scale is not the town's: counter it so the
       // stone renders at its true size in his grip.
       const ws = new THREE.Vector3();

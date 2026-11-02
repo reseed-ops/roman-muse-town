@@ -1950,11 +1950,6 @@ export function App() {
         // nights, the town dreams back. No panel; the veil is the
         // whole interface.
         restInTownRef.current();
-      } else if (kind === "stone") {
-        // A toy, not a panel: pick the stone up, or throw it. The
-        // scene owns the carry, the arc, and the splash.
-        if (id === "pickup") sceneRef.current?.pickUpStone();
-        else if (id === "throw") sceneRef.current?.throwStone();
       } else if (kind === "forage") {
         // Forest forage: the server keeps the days (one picking
         // per spot per real day) and grants the yield.
@@ -4241,7 +4236,7 @@ export function App() {
       case "sky":
         return "Stop watching";
       case "stone":
-        return target.id === "pickup" ? "Pick up stone" : "Throw";
+        return target.id === "pickup" ? "Pick up stone" : "Throw the stone";
       case "forage":
         return target.id === "herbs-glade" ? "Gather forest herbs" : "Gather wild mushrooms";
       case "rest":
@@ -4293,7 +4288,9 @@ export function App() {
   //      action (chat with Aelia, water the tree, …). The keyboard
   //      interact keys — E or Enter — do exactly the same thing.
   //  B = Back — close the open panel, or leave walk mode if none is open.
-  //  X = Hint from Muse.  Y = Day / night.
+  //  X = Stones — pick up a loose stone / throw the held one (the
+  //      hint lives on X too, when no stone is in play).
+  //  Y = Day / night.
   const xboxInteract = () => {
     // A advances the summit scene first while it runs — it is the
     // night's "next" button, ahead of every other conversation.
@@ -4324,6 +4321,10 @@ export function App() {
     if (!treeOpen && !youOpen && !selected && !weatherOpen && !lettersOpen && !goalsOpen) {
       const target = nearbyRef.current;
       if (target) {
+        // Stones belong to X now (see xboxStone): A never picks
+        // up or throws, so an A press facing a stone prompt does
+        // not spend itself on the toy.
+        if (target.kind === "stone") return;
         openInteractable(target.kind, target.id);
         return;
       }
@@ -4424,6 +4425,29 @@ export function App() {
   const xboxHint = () => {
     showHint();
     sceneRef.current?.greetMuse();
+  };
+
+  // X = Stones (owner ask, Nov 1): X picks up a loose stone at his
+  // feet and X again throws the one he is holding, in his facing
+  // direction — the scene owns the carry, the arc, the skim, and
+  // the splash, exactly as it did when the toy lived on the A
+  // prompt. The move is a MOVE: A no longer picks up or throws
+  // (see the guard in xboxInteract), while every other A duty is
+  // untouched. With no stone in play — not carrying, and none
+  // within the scene's pickup reach — X keeps its old hint duty,
+  // so the button is never dead.
+  const xboxStone = () => {
+    const scene = sceneRef.current;
+    if (!scene) {
+      xboxHint();
+      return;
+    }
+    if (scene.hasCarriedStone()) {
+      scene.throwStone();
+      return;
+    }
+    scene.pickUpStone();
+    if (!scene.hasCarriedStone()) xboxHint();
   };
 
   const selectPlace = (place: Place) => {
@@ -7605,6 +7629,45 @@ export function App() {
         </div>
       )}
 
+      {/* Camera toggle — ALWAYS on the town screen itself, in both
+          orientations, in the same bottom-centre spot. This is the
+          fix for the Nov 1 trap: B (xboxBack → exitWalkMode) drops
+          him into the overview, but every walk control — B included —
+          unmounts with walk mode, and the only way back was a menu
+          row inside the collapsed "View & weather" section, so the
+          overview read as a one-way door. Now the control that took
+          him up is still there to bring him back: while walking it
+          offers the overview; in the overview the SAME spot carries
+          a prominent gold "Back to Gaius" that re-enters walk mode
+          (scene.enterWalk snaps the third-person follow camera back
+          behind him at its standard framing). It hides only while a
+          panel, the menu, a tour, or a dream owns the screen — and
+          the resume restore honours it too: a visit quit in the
+          overview restores the overview WITH this exit present. */}
+      {sceneReady && !dreaming && tourStep === null && !menuOpen && !anyPanelOpen && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-[18px] z-20 flex justify-center px-4 pb-safe">
+          {walking ? (
+            <button
+              type="button"
+              className={chipClass}
+              onClick={goOverview}
+              aria-label="Town overview — see the whole town from above"
+            >
+              <span aria-hidden="true">🗺</span> Town overview
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="pointer-events-auto flex items-center gap-2 rounded-full bg-[#ffd34e] px-5 py-2.5 text-[15px] font-black text-[#4a3600] shadow-xl transition active:scale-95"
+              onClick={toggleWalk}
+              aria-label="Back to Gaius — return to the third-person follow view behind Gaius"
+            >
+              <span aria-hidden="true">🚶</span> Back to Gaius · third-person view
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Walk mode: hint + Xbox controller (joystick + ABXY) */}
       {walking && (
         <>
@@ -7612,7 +7675,9 @@ export function App() {
           {/* The interaction prompt: walking near an interactable shows
               ONLY this chip — never the panel itself. Tapping the chip
               (or pressing A / E / Enter) opens the nearest one's panel.
-              One prompt at a time: the scene reports only the nearest. */}
+              One prompt at a time: the scene reports only the nearest.
+              EXCEPTION — a stone target wears an X badge and answers
+              to X (xboxStone): stones moved off A entirely. */}
           {nearby && !anyPanelOpen && (
             <div
               className={
@@ -7624,15 +7689,28 @@ export function App() {
               <button
                 type="button"
                 className="pointer-events-auto flex items-center gap-2.5 rounded-full bg-[#22332b]/92 py-2 pr-4 pl-2 text-sm font-bold text-white shadow-xl backdrop-blur transition active:scale-95"
-                onClick={xboxInteract}
-                aria-label={`Interact — ${nearbyPrompt(nearby) ?? "interact"}`}
+                onClick={nearby.kind === "stone" ? xboxStone : xboxInteract}
+                aria-label={
+                  nearby.kind === "stone"
+                    ? `X — ${nearbyPrompt(nearby) ?? "stone"}`
+                    : `Interact — ${nearbyPrompt(nearby) ?? "interact"}`
+                }
               >
-                <span
-                  aria-hidden="true"
-                  className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#52b043] bg-[#1b1b1b] text-[13px] font-black text-[#7ed37a]"
-                >
-                  A
-                </span>
+                {nearby.kind === "stone" ? (
+                  <span
+                    aria-hidden="true"
+                    className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#2d7dd2] bg-[#1b1b1b] text-[13px] font-black text-[#5aa2e8]"
+                  >
+                    X
+                  </span>
+                ) : (
+                  <span
+                    aria-hidden="true"
+                    className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#52b043] bg-[#1b1b1b] text-[13px] font-black text-[#7ed37a]"
+                  >
+                    A
+                  </span>
+                )}
                 {nearbyPrompt(nearby)}
               </button>
             </div>
@@ -7709,9 +7787,9 @@ export function App() {
             <span />
             <button
               type="button"
-              aria-label="X button — ask Aelia for a hint"
+              aria-label="X button — pick up a loose stone at your feet, or throw the stone you are holding; with no stone in play, ask Aelia for a hint"
               className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#2d7dd2]/90 bg-[#1b1b1b]/55 text-lg font-black text-[#5aa2e8] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8),1px_0_0_rgba(0,0,0,0.6),-1px_0_0_rgba(0,0,0,0.6)] transition active:scale-90 active:bg-[#2d7dd2] active:text-white"
-              onClick={xboxHint}
+              onClick={xboxStone}
             >
               X
             </button>
