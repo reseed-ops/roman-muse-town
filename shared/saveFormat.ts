@@ -1,6 +1,6 @@
 export const SAVE_FORMAT = "roman-muse-town";
 export const SAVE_VERSION = 1;
-export const SAVE_SCHEMA_VERSION = 25;
+export const SAVE_SCHEMA_VERSION = 26;
 export const MAX_SAVE_BYTES = 32 * 1024 * 1024;
 export const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 export interface TownSave {

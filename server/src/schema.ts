@@ -441,3 +441,33 @@ export const treeState = sqliteTable("tree_state", {
   waterings: integer("waterings").notNull().default(0),
   lastWateredAt: integer("last_watered_at", { mode: "timestamp_ms" }),
 });
+
+/** Reading aloud at Stories (migration 0028): a single row (id = 1)
+ *  holding only the last day Aelia read aloud and how many readings
+ *  there have ever been. The once-a-day cap lives here, server-side.
+ *  A reading earns NOTHING by design (no affection, no bond, no
+ *  denarii): it is closeness, not currency, so this table is the
+ *  only store the reading action is ever allowed to touch. */
+export const readingState = sqliteTable("reading_state", {
+  id: integer("id").primaryKey(),
+  lastReadDay: text("last_read_day").notNull().default(""),
+  readings: integer("readings").notNull().default(0),
+});
+
+/** The Seed Ledger (migration 0028): the lineage book kept at the
+ *  Villa of Stories. One row per entry: the ancestor temperament,
+ *  each evolution run, and in time each lived season, with its
+ *  outcome (living, not promoted, promoted, rolled back). Seeded
+ *  once when empty from the nursery's own record; afterwards the
+ *  morning sync appends seasons through the same seed-once care.
+ *  Read-only with respect to behaviour: nothing in the town reads
+ *  this table to decide anything. */
+export const seedLedger = sqliteTable("seed_ledger", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  sort: integer("sort").notNull().default(0),
+  kind: text("kind").notNull().default("season"),
+  title: text("title").notNull(),
+  period: text("period").notNull().default(""),
+  summary: text("summary").notNull(),
+  outcome: text("outcome").notNull().default(""),
+});
