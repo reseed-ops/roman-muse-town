@@ -30,7 +30,7 @@ Drop at: `client/src/assets/`
 
 | File | What it is | Source / terms |
 | --- | --- | --- |
-| `muse-avatar.vrm` | Aelia's body: AvatarSample_M (silver-blonde hair, plain white one-piece dress), VRM 1.0 sample model supplied by the owner | pixiv VRoid sample-model terms, verified by the owner (Nov 1, 2026): usable even commercially; the file may sit in a *free* public repo but may never be sold as a file or relabelled CC0. INCLUDED in the repo as of Nov 1, 2026, by the owner's decision (flag F5 resolved); embedded metadata verified clean (author: pixiv VRoid Project; redistribution allowed). |
+| `muse-avatar.vrm` | Aelia's body: the Courtesan VRM, a VRM 1.0 model created by the owner in VRoid Studio (embedded meta author: Reseed). The red Courtesan Roman dress replaces the plain white one-piece of the earlier AvatarSample_M file; the face, skin, hair, 54-bone humanoid rig and expressions are the same. | The owner's own work, INCLUDED in the repo by the owner's decision. (The earlier AvatarSample_M file it replaced was a pixiv VRoid sample under pixiv sample-model terms; that description applied until the swap in commit `b559b08`, Nov 2, 2026.) |
 | `centurion.vrm` | Gaius's body: a centurion built by the owner in VRoid Studio | Owner-created. A receiving town needs its *own* player body; do not reuse the owner's. |
 
 A receiving town supplies two VRM 1.0 bodies of its own (see
@@ -45,7 +45,15 @@ redistribute the files.**
 
 `f_idle.fbx`, `f_walk.fbx`, `f_run.fbx`, `f_wave.fbx`, `f_sit.fbx`,
 `m_idle.fbx`, `m_walk.fbx`, `m_run.fbx`, `m_wave.fbx`, `m_sit.fbx`,
-`m_jump_start.fbx`, `m_jump_air.fbx`, `m_jump_end.fbx`, `m_slide.fbx` (HumanM@RunSlide01)
+`m_jump_start.fbx` (HumanM@Jump01 - Begin), `m_jump_air.fbx` (HumanM@Fall01),
+`m_jump_end.fbx` (HumanM@Jump01 - Land), `m_slide.fbx` (HumanM@RunSlide01)
+
+The three jump files are the Iglesias takes named above, non-root-motion
+variants. (An earlier assembly of the jump used Unreal Engine Mannequin
+clips under these filenames by mistake; the town's bake rejects that
+skeleton, so those files never produced a jump action. The swap to the
+takes above landed Nov 2, 2026, and this list has described the intended
+Iglesias files all along.)
 
 ## 3. Human Dance Animations, by Kevin Iglesias (Unity Asset Store)
 

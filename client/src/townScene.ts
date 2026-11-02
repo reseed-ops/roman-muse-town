@@ -10602,22 +10602,45 @@ export function createTownScene(
   // clips failed says so in the console instead of standing stiff
   // in silence. (That silence is how the reduced-motion freeze
   // survived four releases; the next stiff town should arrive
-  // self-diagnosed.)
+  // self-diagnosed.) The verdict waits for stage two as well as
+  // stage one, and it counts actions, not just animators: a clip
+  // the bake refuses earns no action and throws nothing, so an
+  // animator can be "ready" over a jump that does not exist. The
+  // wrong-pack jump clips hid exactly that way through v0.6.1,
+  // behind a menu line that read "full". This line names what is
+  // missing, and quotes the caught error when there is one.
   let animSummaryLogged = false;
   function logAnimSummaryOnce() {
     if (animSummaryLogged || !museAnim || !playerAnim) return;
-    if (!(museAnim.ready || museAnim.failed) || !(playerAnim.ready || playerAnim.failed)) return;
+    const settled = (a: CharAnimator) => a.failed || (a.ready && a.librarySettled);
+    if (!settled(museAnim) || !settled(playerAnim)) return;
     animSummaryLogged = true;
+    const missG = playerAnim.missingActions;
+    const missA = museAnim.missingActions;
+    let extra = "";
+    if (missG.length) extra += `; gaius missing: ${missG.join(", ")}`;
+    if (missA.length) extra += `; aelia missing: ${missA.join(", ")}`;
+    if (playerAnim.failureReason) extra += `; gaius error: ${playerAnim.failureReason}`;
+    if (museAnim.failureReason) extra += `; aelia error: ${museAnim.failureReason}`;
     console.info(
-      `[muse-town] animators: gaius=${playerAnim.ready ? "ready" : "failed"}, aelia=${museAnim.ready ? "ready" : "failed"}, reducedMotion=${opts.reducedMotion}`,
+      `[muse-town] animators: gaius=${playerAnim.ready ? "ready" : "failed"}, aelia=${museAnim.ready ? "ready" : "failed"}, reducedMotion=${opts.reducedMotion}${extra}`,
     );
     // The same verdict where a phone's owner can actually read it:
     // one quiet line in the town menu.
-    opts.onMotionStatus?.(
-      playerAnim.ready && museAnim.ready
-        ? "Motion: full (both animators ready)"
-        : `Motion: fallback posing (gaius ${playerAnim.ready ? "ready" : "failed"}, aelia ${museAnim.ready ? "ready" : "failed"})`,
-    );
+    const part = (name: string, a: CharAnimator) =>
+      a.ready ? `${name} ready` : `${name} failed${a.failureReason ? `: ${a.failureReason}` : ""}`;
+    let status: string;
+    if (!playerAnim.ready || !museAnim.ready) {
+      status = `Motion: fallback posing (${part("gaius", playerAnim)}, ${part("aelia", museAnim)})`;
+    } else if (missG.length || missA.length) {
+      const parts: string[] = [];
+      if (missG.length) parts.push(`gaius ${missG.join(", ")} missing`);
+      if (missA.length) parts.push(`aelia ${missA.join(", ")} missing`);
+      status = `Motion: partial (${parts.join("; ")})`;
+    } else {
+      status = "Motion: full (both animators ready)";
+    }
+    opts.onMotionStatus?.(status);
   }
 
   function driveClipAnims(dt: number, t: number) {

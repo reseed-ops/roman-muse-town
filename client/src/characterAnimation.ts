@@ -718,6 +718,21 @@ export interface CharAnimator {
   ready: boolean;
   /** The core clips will never be ready: procedural posing owns the body. */
   failed: boolean;
+  /** Verbatim "Name: message" of the error that retired this animator,
+   *  when the failure arrived as a thrown error. Null while the animator
+   *  is fine, and null when a gate retired it quietly (nothing was
+   *  thrown, so there is nothing honest to quote). */
+  failureReason: string | null;
+  /** Core actions that were asked for (a URL was supplied) but never
+   *  earned an action, named the way the menu's motion line names them:
+   *  "walk", "run", "jump start", "jump air", "jump land", "slide".
+   *  Filled as each stage settles; final once librarySettled is true.
+   *  (Idle is not on this list: without idle the animator is failed,
+   *  not partial.) */
+  missingActions: string[];
+  /** Stage two has finished arriving, or failed trying: the
+   *  missingActions list is final and the animator's story is complete. */
+  librarySettled: boolean;
   hasWave: boolean;
   hasSit: boolean;
   /** Festival dance + Sounds-house pose loops (Kevin Iglesias dance
@@ -791,6 +806,9 @@ export function createCharAnimator(args: {
   const out: CharAnimator = {
     ready: false,
     failed: false,
+    failureReason: null,
+    missingActions: [],
+    librarySettled: false,
     hasWave: false,
     hasSit: false,
     hasDance: false,
@@ -971,6 +989,8 @@ export function createCharAnimator(args: {
       idleA.weight = 1;
       out.hasWave = useWave && waveA !== null;
       out.hasSit = sitA !== null;
+      if (!walkA) out.missingActions.push("walk");
+      if (!runA) out.missingActions.push("run");
 
       const weights = { idle: 1, walk: 0, run: 0, wave: 0, sit: 0, dance: 0, pose: 0, talk: 0, sitTalk: 0, bench: 0, pair: 0, jump: 0 };
       let prevWaving = false;
@@ -1176,15 +1196,24 @@ export function createCharAnimator(args: {
         return clip && onBindPose(() => checkRetargetedClip(model, clip)).finite ? clip : null;
       };
       // First in line: a press of the jump button is likelier than a dance.
+      // A clip the bake refuses earns no action, and nothing throws:
+      // the refusal is recorded by name, so the menu's motion line can
+      // say "jump missing" instead of reporting full motion over a
+      // jump that does not exist. (That false "full" is how the
+      // wrong-pack jump clips hid through the v0.6.1 build.)
       if (urls.jump) {
         jumpUpA = mkOnce(await lenient(urls.jump.start), true);
         // Hurried, so the crouch-and-spring fits the rise of a short hop.
         if (jumpUpA) jumpUpA.timeScale = jumpUpA.getClip().duration / 0.28;
+        else out.missingActions.push("jump start");
         jumpAirA = mk(await lenient(urls.jump.air));
+        if (!jumpAirA) out.missingActions.push("jump air");
         jumpLandA = mkOnce(await action(urls.jump.end), true);
+        if (!jumpLandA) out.missingActions.push("jump land");
       }
       slideA = mkOnce(await action(urls.slide), true);
       if (slideA) slideA.timeScale = slideA.getClip().duration / SLIDE_SEC;
+      else if (urls.slide) out.missingActions.push("slide");
       const dance = await lenient(urls.dance);
       danceA = mk(dance);
       out.hasDance = danceA !== null;
@@ -1226,9 +1255,13 @@ export function createCharAnimator(args: {
       // Loud on purpose: this catch used to be silent, and its
       // silence hid a missing slide clip for one release and a
       // frozen town for four. Procedural posing still carries on.
+      // The error is also kept verbatim, so the menu's motion line
+      // can quote it to the phone's owner, who has no console.
+      out.failureReason = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
       console.error("[muse-town] character clips failed:", err);
     } finally {
       if (!out.ready) out.failed = true;
+      out.librarySettled = true;
     }
   })();
   return out;
