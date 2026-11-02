@@ -1,5 +1,5 @@
 // Tiny synthesized sound jars for the Sound Cottage. Everything is
-// generated with Web Audio on the first user tap — no audio files.
+// generated with Web Audio on the first user tap, no audio files.
 
 import { FEEL } from "./feel";
 import { dripDelay, dropletDelay, shelterCutoff } from "./rainMood";
@@ -63,7 +63,7 @@ export function playChime() {
 }
 
 /** A pebble's tick on the cobbles (Nov 1): one tiny filtered noise
- *  click — a stone sound, not a note. Deliberately does NOT stop
+ *  click, a stone sound, not a note. Deliberately does NOT stop
  *  other sounds: it's a garnish, not an event. */
 export function playStoneTick(heavy = false) {
   try {
@@ -90,7 +90,7 @@ export function playStoneTick(heavy = false) {
   }
 }
 
-/** A stone meeting water (Nov 1): a soft descending plip — a short
+/** A stone meeting water (Nov 1): a soft descending plip: a short
  *  sine that falls in pitch as it fades, smaller for a skip. */
 export function playSplash(small = false) {
   try {

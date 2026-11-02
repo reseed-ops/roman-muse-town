@@ -5,7 +5,7 @@
 // journal: the visitor's own town journal entries, written at the Story
 // House writing desk.
 // tree_state: a single row (id = 1) for the town tree that replaced the
-// fountain in the middle of the plaza — when it was planted, how often it
+// fountain in the middle of the plaza, when it was planted, how often it
 // has been watered, and when it was last watered. Its growth stage and
 // season are derived from this plus the visitor's discoveries and journal.
 
@@ -131,7 +131,7 @@ export const museNotes = sqliteTable("muse_notes", {
  *  her earned points (100 points = one heart rank, ranks permanent),
  *  the current day's silent earning caps, one-time flags (landmarks
  *  discovered together), and when she last had affection-earning
- *  contact — points within the current rank cool after quiet days,
+ *  contact, points within the current rank cool after quiet days,
  *  never below the rank's floor. No numbers are shown in the UI. */
 export const affectionState = sqliteTable("affection_state", {
   id: integer("id").primaryKey(),
@@ -143,7 +143,7 @@ export const affectionState = sqliteTable("affection_state", {
 });
 
 /** The denarii purse and everything bought with it: a single row
- *  (id = 1) — coin balance, town upgrades bought (permanent fixtures),
+ *  (id = 1): coin balance, town upgrades bought (permanent fixtures),
  *  market ingredients owned, dishes cooked together at the Culina,
  *  garden seeds in hand, and one-time reward flags. */
 export const purseState = sqliteTable("purse_state", {
@@ -158,7 +158,7 @@ export const purseState = sqliteTable("purse_state", {
 
 /** One row per fish caught at the lake; sold fish stay in the log.
  *  A fish RELEASED at the piscina (released = 1) is neither sold nor
- *  sellable — it lives in the pond now, permanently. */
+ *  sellable, it lives in the pond now, permanently. */
 export const catches = sqliteTable("catches", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   fishId: text("fish_id").notNull(),
@@ -173,7 +173,7 @@ export const catches = sqliteTable("catches", {
   index("catches_inventory_idx").on(table.sold, table.released, table.id),
 ]);
 
-/** The Baths: a single row (id = 1) — when the first shared soak
+/** The Baths: a single row (id = 1): when the first shared soak
  *  in the caldarium happened (rank-8 gated, always her invitation).
  *  A lesser mark than the summit's, kept the same quiet way. */
 export const bathsState = sqliteTable("baths_state", {
@@ -181,7 +181,7 @@ export const bathsState = sqliteTable("baths_state", {
   firstSharedAt: integer("first_shared_at", { mode: "timestamp_ms" }),
 });
 
-/** The Piscina: a single row (id = 1) — the name Muse chose for
+/** The Piscina: a single row (id = 1): the name Muse chose for
  *  her favourite gold carp in the pond, once she chose it. The
  *  pond's released population is read from the catches log. */
 export const piscinaState = sqliteTable("piscina_state", {
@@ -191,18 +191,18 @@ export const piscinaState = sqliteTable("piscina_state", {
 
 /** The Garden House beds: what was planted, on which real day, and on
  *  how many distinct days the beds have been watered since. Growth is
- *  derived from those real days — slow on purpose. */
+ *  derived from those real days, slow on purpose. */
 export const gardenState = sqliteTable("garden_state", {
   id: integer("id").primaryKey(),
   plantedOn: text("planted_on"),
   waterDays: integer("water_days").notNull().default(0),
   lastWateredDay: text("last_watered_day"),
-  /** Lifetime completed harvests — the beds reset each crop, but
+  /** Lifetime completed harvests, the beds reset each crop, but
    *  the count of what the garden has given is kept. */
   harvests: integer("harvests").notNull().default(0),
 });
 
-/** The Phoenix: a single row (id = 1) — when she arrived (the first
+/** The Phoenix: a single row (id = 1): when she arrived (the first
  *  dawn after the town stood complete), how many of her feathers
  *  rest at the Stories house, which week the last one fell, and
  *  whether her arrival letter has reached the desk. Readiness is
@@ -232,7 +232,7 @@ export const inscriptionsState = sqliteTable("inscriptions_state", {
 });
 
 /** The Night the Stars Fall: a single row (id = 1) written once, when
- *  the summit scene completes — its real-world date, the private name
+ *  the summit scene completes, its real-world date, the private name
  *  she gave him, the shared constellation's name, and whether the
  *  morning-after letter has been delivered to the desk (it only
  *  appears the next real day). Prerequisites are NOT stored here;
@@ -246,7 +246,7 @@ export const summitState = sqliteTable("summit_state", {
   letterDelivered: integer("letter_delivered").notNull().default(0),
 });
 
-/** Sleep and the Dream Door: a single private row (id = 1) — how
+/** Sleep and the Dream Door: a single private row (id = 1): how
  *  many rests he has taken, what kind the last one was (the rarity
  *  gates read it: no false dream twice in a row, true dreams rarer
  *  still), and two pending flags Aelia's next conversation may
@@ -262,7 +262,7 @@ export const dreamState = sqliteTable("dream_state", {
   echoEra: text("echo_era").notNull().default("low"),
 });
 
-/** No-repeat line pools: one row per authored ambient pool — the
+/** No-repeat line pools: one row per authored ambient pool, the
  *  shuffled bag of line ids not yet heard (drawn without
  *  replacement) and the last 1-2 heard ids (kept out of the next
  *  reshuffle so a pool never echoes across its own boundary). Line
@@ -284,7 +284,7 @@ export const chatRing = sqliteTable("chat_ring", {
   replies: text("replies").notNull().default("[]"),
 });
 
-/** Aelia's fact memory: durable facts she has learned about Gaius —
+/** Aelia's fact memory: durable facts she has learned about Gaius,
  *  seeded once from the curated shared memories, then grown from
  *  his typed town chat (conservative pattern extraction) and from
  *  his answers to her questions. Viewable and deletable by the
@@ -302,7 +302,7 @@ export const aeliaFacts = sqliteTable("aelia_facts", {
 /** The life digest: small, expiring notes from the real world that
  *  chat Muse refreshes on her sync visits (via updateDigest), so
  *  town Aelia can reference what is current in his life and ask
- *  after flagged items once their quest completes. Seeded EMPTY —
+ *  after flagged items once their quest completes. Seeded EMPTY,
  *  an empty digest simply means she never does any of this. */
 export const lifeDigest = sqliteTable("life_digest", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -313,7 +313,7 @@ export const lifeDigest = sqliteTable("life_digest", {
   asked: integer("asked").notNull().default(0),
 });
 
-/** Continuity: a single row (id = 1) — when he was last in town
+/** Continuity: a single row (id = 1): when he was last in town
  *  (for absence-scaled reunion greetings), the open appointment
  *  (JSON: {place, phase, day, status} or null), her appointment
  *  cooldown after a miss, and the ids of her questions already
@@ -353,7 +353,7 @@ export const forageState = sqliteTable("forage_state", {
 });
 
 /** The lake bottles: one sealed wish or worry per real day. The
- *  contents are PRIVATE — they are never placed in any line pool,
+ *  contents are PRIVATE, they are never placed in any line pool,
  *  prompt, or state list; state carries only ids and dates, and the
  *  text is read solely through getBottle for the Stories page. */
 export const bottles = sqliteTable("bottles", {
@@ -365,7 +365,7 @@ export const bottles = sqliteTable("bottles", {
     .$defaultFn(() => new Date()),
 });
 
-/** Bouquets given to Aelia: the vase at the Villa of Stories —
+/** Bouquets given to Aelia: the vase at the Villa of Stories,
  *  each bouquet's day and season, a growing visible history. */
 export const bouquets = sqliteTable("bouquets", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -395,7 +395,7 @@ export const datingState = sqliteTable("dating_state", {
 });
 
 /** Sentiment weather (Nov 1): a single private row (id = 1) holding
- *  ONLY the bookkeeping Aelia's ear needs — today's per-weather
+ *  ONLY the bookkeeping Aelia's ear needs, today's per-weather
  *  message counts, whether today has run heavy (a strong heavy
  *  message, or mild heavy ones repeated), whether today's heavy
  *  weather has been laid down once as a soft fact, the recent days'

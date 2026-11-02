@@ -12,15 +12,15 @@ if (!rootEl) {
 
 // --- Out-of-band safety net ------------------------------------------------
 // The town's one unforgivable failure is a bare sky-blue screen with
-// no title, no buttons, nothing to tap — which is what a visitor gets
+// no title, no buttons, nothing to tap, which is what a visitor gets
 // if the 3D scene dies in a way that also takes the React tree (or
 // the tree's own error overlay) down with it. Two guards live OUTSIDE
 // the app's failure path:
 //  1. An ErrorBoundary that replaces a crashed tree with a small
 //     working panel (title, cause, Retry / Light graphics).
 //  2. A plain-DOM watchdog (no React at all) that watches health
-//     flags the scene stamps on window — first frame, frame
-//     heartbeat, fatal scene error — plus whether the React root is
+//     flags the scene stamps on window, first frame, frame
+//     heartbeat, fatal scene error, plus whether the React root is
 //     still mounted, and paints its own emergency overlay when the
 //     town is dead and nothing else has spoken up. It defers to the
 //     app's own overlays (marked data-mt-overlay) and to the
@@ -86,7 +86,7 @@ class TownErrorBoundary extends Component<{ children: ReactNode }, { error: Erro
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Muse Town</h1>
         <p style={{ fontSize: 14, lineHeight: 1.55, maxWidth: 340, margin: 0, color: "rgba(255,255,255,0.85)" }}>
           The town ran into a problem and its screen had to be rebuilt
-          {error.message ? ` — ${error.message}` : ""}. Your saved progress is untouched.
+          {error.message ? `: ${error.message}` : ""}. Your saved progress is untouched.
         </p>
         <button
           type="button"
@@ -130,7 +130,7 @@ class TownErrorBoundary extends Component<{ children: ReactNode }, { error: Erro
 function installWatchdog() {
   const installedAt = Date.now();
   let overlay: HTMLDivElement | null = null;
-  // The root only counts as "gone" once it has been seen alive — a
+  // The root only counts as "gone" once it has been seen alive, a
   // slow first boot on a weak phone must never trip the alarm.
   let sawChildren = false;
 
@@ -150,7 +150,7 @@ function installWatchdog() {
     title.textContent = "Muse Town";
     title.style.cssText = "font-size:22px;font-weight:700;margin:0;";
     const msg = document.createElement("p");
-    msg.textContent = `The town couldn't load — tap to retry. ${cause} A fresh load brings it back, and your saved progress is untouched.`;
+    msg.textContent = `The town couldn't load, tap to retry. ${cause} A fresh load brings it back, and your saved progress is untouched.`;
     msg.style.cssText = "font-size:14px;line-height:1.55;max-width:340px;margin:0;color:rgba(255,255,255,0.85);";
     const retry = document.createElement("button");
     retry.type = "button";
@@ -191,7 +191,7 @@ function installWatchdog() {
       showOverlay(
         sceneError ??
           (noFrameTooLong
-            ? "The 3D town never painted its first picture (this happens under memory pressure on a phone — it isn't anything you did)."
+            ? "The 3D town never painted its first picture (this happens under memory pressure on a phone. It isn't anything you did)."
             : (mtFlags.__mtLastError ?? "The town's screen stopped answering.")),
       );
     } else if (firstFrameAt && !sceneError) {
@@ -206,7 +206,7 @@ function installWatchdog() {
 // attribute on the outer div. The SDK styles select on
 // `.hatch-space-root[data-hatch-space-root]` to apply mobile safe-area
 // insets (notches, gesture bars, etc.), correct viewport sizing, and the
-// hosting header/chrome offsets — dropping either breaks layout silently.
+// hosting header/chrome offsets, dropping either breaks layout silently.
 createRoot(rootEl).render(
   <StrictMode>
     <QueryClientProvider client={spaceQueryClient}>

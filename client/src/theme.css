@@ -1,5 +1,5 @@
 /* Web-font slot: uncomment the line below and put your font there. A web-font
-   @import must come before the Tailwind import — an @import placed after any
+   @import must come before the Tailwind import, an @import placed after any
    other rule is a build error, and it is reported against a line number in the
    expanded Tailwind output, far past the end of this file, so the message
    cannot point you at the mistake. */
@@ -62,11 +62,11 @@
    scroll or pull-to-refresh gesture, and a long press must never raise
    the touch callout or a text selection. The defences are page-wide,
    in layers (widened after the game-surface scoping still leaked on
-   the user's phone — a pull starting on UI gaps or chips could still
+   the user's phone, a pull starting on UI gaps or chips could still
    refresh):
    1. overscroll-behavior:none on the document, so no scroll chaining
       out of anything can become a refresh;
-   2. the body itself is FIXED (inset 0, overflow hidden) — the
+   2. the body itself is FIXED (inset 0, overflow hidden), the
       document has no scrollable area at all, so there is nothing for
       a pull gesture to grab;
    3. touch-action:none on the app roots (below), so the browser
@@ -92,7 +92,7 @@ body {
 }
 
 /* The one sanctioned scrollable kind: panel bodies and long lists.
-   Their scroll is contained — it works inside the panel and chains
+   Their scroll is contained. It works inside the panel and chains
    to nothing outside it. */
 .mt-scrollable {
   overscroll-behavior: contain;
@@ -114,7 +114,7 @@ body {
 }
 
 /* The long-press callout is suppressed across the whole town UI
-   (buttons, prompts, chips included) — it is a game surface, not a
+   (buttons, prompts, chips included). It is a game surface, not a
    document. Text inside panels stays readable and tappable as usual.
    Touch-action none here too: the shell wrapper itself never scrolls
    (only .mt-scrollable panels do, and they re-enable panning for

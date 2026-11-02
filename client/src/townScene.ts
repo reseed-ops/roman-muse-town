@@ -20,6 +20,7 @@ import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.j
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { BATHS, BED_SPOT, BOARD_SPOT, COLOSSEUM, FOREST, FOREST_BUSHES, FOREST_DEN_ROCKS, FOREST_EDGE_LINES, FOREST_SPOTS, FOREST_TRAILS, FOREST_TREES, FORAGE_SPOTS, GOALS_SPOT, LAKE, LAKE_PAVILION, LETTER_DESK_SPOT, MUSE, PISCINA, PLACES, PLAYER, QUEST_BOARD_SPOT, SECRET, SEEK_LINES, STREETS, forestNorm, groundHeightAt, isGoldenElevation, seasonForDate, solarAngles, streetDistance, terrainHeight, type Season, type WeatherId } from "./town";
 import { pickPooled } from "./linePools";
+import { FOLLOW_CAM, followCamSustain, followCamYawStep, type FollowCamGate } from "./followCam";
 import { setRainLevel, setRainShelter } from "./audio";
 import { FEEL } from "./feel";
 import { buildMetaSudans, META_SUDANS_LINES } from "./metaSudans";
@@ -72,7 +73,7 @@ import fDanceUrl from "./assets/anim/f_dance.fbx";
 import mDanceUrl from "./assets/anim/m_dance.fbx";
 import fPoseAUrl from "./assets/anim/f_pose_a.fbx";
 import fPoseBUrl from "./assets/anim/f_pose_b.fbx";
-// Outdoor FBX library (Kevin Iglesias, FBX edition — Nov 1 pass):
+// Outdoor FBX library (Kevin Iglesias, FBX edition, Nov 1 pass):
 // conversation gestures, seated talk, bench idles, and the gated
 // flirt/hug pair clips. These files speak a DIFFERENT bone naming
 // than the basic motions (Hips / Left_UpperArm / ...), handled by
@@ -102,7 +103,7 @@ import pigUrl from "./assets/pets/pig.fbx";
 // The HONETi pets' real coat textures, extracted from the user's own
 // pack: the FBX files reference them by the author's Windows paths,
 // so they never load in the bundle (see repairModelMaterials).
-// Umbra wears the pack's BLACK cat variant (cat_05 — same UV layout
+// Umbra wears the pack's BLACK cat variant (cat_05, same UV layout
 // as the FBX's cat_01 reference, and black is her written coat);
 // the sheep is the pack's sheep05, matching the shipped sheep FBX.
 import chickenTexUrl from "./assets/pets/chicken_01.png";
@@ -176,9 +177,9 @@ import waterNormalUrl from "./assets/roman/water_normal.png";
 export type PickKind = "place" | "collectible" | "tree" | "muse" | "board" | "secret" | "landmark" | "questboard" | "letters" | "goals" | "market" | "bench" | "dock" | "inscription" | "summit" | "piscina" | "baths" | "cat" | "phoenix" | "sky" | "stone" | "rest" | "forage";
 
 /** The nearest walk-mode interactable, reported by the scene so the
- *  shell can show a small "A — …" prompt. Panels open only when the
+ *  shell can show a small "A, …" prompt. Panels open only when the
  *  visitor presses the interact control (or taps the prompt / the
- *  interactable itself) — never merely by walking up. */
+ *  interactable itself), never merely by walking up. */
 export interface NearbyTarget {
   kind: PickKind;
   id: string;
@@ -217,8 +218,8 @@ export interface TownSceneHandle {
    *  While this is on, canvas pointer vectors are remapped from screen
    *  axes into stage axes (walk drag, tap pick, and the overview's
    *  orbit rotate) so every gesture behaves exactly as it does in a
-   *  true landscape viewport. Pinch spread is a distance — rotation-
-   *  invariant — and needs no remap. */
+   *  true landscape viewport. Pinch spread is a distance, rotation-
+   *  invariant, and needs no remap. */
   setForcedLandscape: (on: boolean) => void;
   isWalking: () => boolean;
   greetMuse: () => void;
@@ -236,12 +237,17 @@ export interface TownSceneHandle {
   placeMuseAt: (x: number, z: number) => void;
   /** Focus sittings: hush ambient chatter lines and seeking. */
   setQuietMode: (on: boolean) => void;
+  /** Loose follow camera hold: while a panel, menu, or conversation
+   *  owns the screen, the follow camera must not auto-rotate at all
+   *  (the player may be reading, not walking). The shell drives this
+   *  from its any-panel-open state. */
+  setCameraHold: (on: boolean) => void;
   /** Forest forage: the spot ids already gathered today (their
    *  visuals hide and their prompts stop offering until tomorrow). */
   setForageTaken: (ids: string[]) => void;
   /** Resume snapshot (ephemeral scene state only): where Gaius
    *  stands, his facing, and the follow camera's yaw/pitch/zoom.
-   *  Null while dreaming or rowing — those are never resumed into. */
+   *  Null while dreaming or rowing, those are never resumed into. */
   resumeState: () => { x: number; z: number; heading: number; camYaw: number; camPitch: number; userZoom: number; walking: boolean; ov?: { cx: number; cy: number; cz: number; tx: number; ty: number; tz: number } } | null;
   restoreResume: (snap: { x: number; z: number; heading: number; camYaw: number; camPitch: number; userZoom: number }) => void;
   /** Restore the overview camera framing (OrbitControls position +
@@ -270,7 +276,7 @@ export interface TownSceneHandle {
   /** Pick up the loose stone the prompt is offering (he carries
    *  one at a time, visible in his right hand). */
   pickUpStone: () => void;
-  /** Throw the carried stone in his facing direction — a composed
+  /** Throw the carried stone in his facing direction, a composed
    *  overarm throw; the stone arcs, bounces, and rests where it
    *  fell (or splashes, and sometimes skips, on the water). */
   throwStone: () => void;
@@ -281,8 +287,8 @@ export interface TownSceneHandle {
   /** Is Lupa the wolf in the camera's frame right now, at a golden
    *  or night phase? (The "Wolf at Dusk" postcard challenge.) */
   wolfInView: () => boolean;
-  /** Enter a false dream: the town remixed — fog, wrong-warm lamp
-   *  light, a few props displaced, no townsfolk — and one distant
+  /** Enter a false dream: the town remixed: fog, wrong-warm lamp
+   *  light, a few props displaced, no townsfolk, and one distant
    *  figure who is never reached. Ends itself (opts.onDreamEnd). */
   enterFalseDream: () => void;
   /** Enter a true dream: the pair wake together on the secret
@@ -316,8 +322,8 @@ export interface TownSceneHandle {
   /** The Night the Stars Fall: the shell reports the saved-data side
    *  of the gate (ready = every prerequisite earned, done = the
    *  scene has happened) and whether tonight is a meteor night. The
-   *  scene owns the rest of the gate — night, the lake pavilion, her
-   *  company — and the prompt that begins it. Nothing is labelled
+   *  scene owns the rest of the gate, night, the lake pavilion, her
+   *  company, and the prompt that begins it. Nothing is labelled
    *  anywhere in the UI before the night itself. */
   setSummitState: (s: { ready: boolean; done: boolean; meteor: boolean }) => void;
   /** Lakeside foreheads-rest beat for the summit scene: the pair
@@ -325,7 +331,7 @@ export interface TownSceneHandle {
    *  held while the meteors streak. False when it can't start. */
   playSummitMoment: () => boolean;
   /** Whether meteors are streaking right now (a meteor night, and
-   *  night fallen) — the sky's only outward sign. */
+   *  night fallen), the sky's only outward sign. */
   isMeteorActive: () => boolean;
   /** The piscina's visible population from released catches (the
    *  golden carp becomes the pond's jewel). */
@@ -337,7 +343,7 @@ export interface TownSceneHandle {
    *  gathers to that spot for a little while. */
   scatterFeed: () => void;
   /** The baths: he steps into the caldarium (she joins only when
-   *  the shell has arranged her invitation and he said yes — see
+   *  the shell has arranged her invitation and he said yes, see
    *  joinBath). */
   enterBath: () => void;
   /** She joins him in the caldarium. */
@@ -347,7 +353,7 @@ export interface TownSceneHandle {
   /** Whether he is soaking (and whether she is in with him). */
   bathState: () => { soaking: boolean; museIn: boolean };
   /** A care moment in the baths: one of them washes the other's
-   *  hair — a few seconds of raised hands and a bowed head. */
+   *  hair, a few seconds of raised hands and a bowed head. */
   playBathCare: (by: "muse" | "player") => void;
   /** Tell the scene the golden carp lives in the piscina, so her
    *  rounds may include a stop at her jewel's rim. */
@@ -360,7 +366,7 @@ export interface TownSceneHandle {
   setUnreadLetters: (count: number) => void;
   /** Dress the town for a festival: recolor the plaza bunting with the
    *  festival's colors and hang the forum wreath. Null restores the
-   *  everyday town. Light-touch only — no geometry is rebuilt. */
+   *  everyday town. Light-touch only, no geometry is rebuilt. */
   setFestival: (colors: string[] | null) => void;
   /** Low-graphics mode for struggling devices: pixel ratio 1 and no
    *  shadow rendering. The town keeps every feature; it just asks
@@ -374,7 +380,7 @@ export interface TownSceneHandle {
   stopDance: () => void;
   isDancing: () => boolean;
   /** The living sky: drive it by real local time (Europe/Rome)
-   *  or hold an override phase. Transitions always ease — the sun
+   *  or hold an override phase. Transitions always ease, the sun
    *  visibly travels; there are no hard cuts. */
   setSkyMode: (mode: "auto" | "day" | "night") => void;
   /** The sky right now: sun elevation/azimuth (degrees), darkness
@@ -391,7 +397,7 @@ export interface TownSceneHandle {
   /** Petting Umbra: she pauses and purrs. Charm only. */
   petCat: () => void;
   /** The phoenix: the shell reports her arrival (saved state); the
-   *  scene keeps her hours — perch at dawn and morning, a midday
+   *  scene keeps her hours, perch at dawn and morning, a midday
    *  circuit, gone by night. */
   setPhoenixArrived: (arrived: boolean, summitDone: boolean) => void;
   phoenixPresent: () => boolean;
@@ -605,14 +611,14 @@ let loadsSettled = 0;
 type LoadTier = 0 | 1 | 2 | 3;
 
 const LOAD_TIER_BY_URL = new Map<string, LoadTier>([
-  // Tier 0 — the opening view: the basilica (Main Chat) at the head
+  // Tier 0, the opening view: the basilica (Main Chat) at the head
   // of the forum, and the houses nearest the camera on the plaza's
   // south side (Side Chat, Garden, Stars pavilion).
   [senateUrl, 0],
   [annexUrl, 0],
   [houseGardenUrl, 0],
   [pavilionUrl, 0],
-  // Tier 1 — the remaining houses and the forum's dressing.
+  // Tier 1, the remaining houses and the forum's dressing.
   [villaUrl, 1],
   [houseSoundsUrl, 1],
   [insulaeUrl, 1],
@@ -628,7 +634,7 @@ const LOAD_TIER_BY_URL = new Map<string, LoadTier>([
   [benchWoodenUrl, 1],
   [bannerUrl, 1],
   [bannerTriangleUrl, 1],
-  // Tier 2 — far landmarks (the Colosseum, the aqueduct) and, by
+  // Tier 2, far landmarks (the Colosseum, the aqueduct) and, by
   // default, every unlisted prop and plant.
   [colosseumUrl, 2],
   [boatSmallUrl, 2],
@@ -636,7 +642,7 @@ const LOAD_TIER_BY_URL = new Map<string, LoadTier>([
   [aqueductUrl, 2],
   [aqueductConnectorUrl, 2],
   [ballistaUrl, 2],
-  // Tier 0 — the characters, before everything.
+  // Tier 0, the characters, before everything.
   [centurionUrl, 0],
   [museAvatarUrl, 0],
 ]);
@@ -780,7 +786,7 @@ function loadModelScene(url: string, opts?: { tier?: LoadTier }): Promise<THREE.
               activeLoads -= 1;
               loadsSettled += 1;
               // Name the failing asset in the console AND tell the
-              // shell, which shows a friendly retry note — a missing
+              // shell, which shows a friendly retry note, a missing
               // model leaves an empty spot, never a silent screen.
               console.warn(`[muse-town] model failed to load: ${url}`, err);
               loadErrorHook?.(assetLabel(url));
@@ -806,17 +812,17 @@ function loadModelScene(url: string, opts?: { tier?: LoadTier }): Promise<THREE.
  *  placements share the smaller textures. Best-effort: any texture
  *  that resists is left exactly as it was. */
 // The Roman pack's shared colour palette (M_colorpalette_BaseColor):
-// a 1024² atlas of flat swatches — reds, blues, greens, wood tones,
-// stone greys — that most of the pack's surfaces sample by UV cell.
+// a 1024² atlas of flat swatches, reds, blues, greens, wood tones,
+// stone greys, that most of the pack's surfaces sample by UV cell.
 // The converted GLBs reference it by unresolvable relative paths
 // ("..\..\colorpallete_romanempire.png", in one case the converter's
 // own Windows desktop), so it never loads; some conversions dropped
 // the reference entirely (their palette material survives as plain
-// "M_color" — proven the same material by its UVs, which land in
+// "M_color", proven the same material by its UVs, which land in
 // the identical atlas cells as the senate's working reference).
 // UV origin in these files is top-left (glTF convention), so the
 // texture loads flipY = false. One shared texture for the whole
-// town: a single 9 KB PNG, fetched once — a streaming WIN, not a
+// town: a single 9 KB PNG, fetched once: a streaming WIN, not a
 // cost.
 const ROMAN_ARCHITECTURE = new Set([
   colosseumUrl, templeUrl, senateUrl, annexUrl, insulaeUrl,
@@ -842,7 +848,7 @@ function getPaletteTexture(): Promise<THREE.Texture> {
 
 // --- Model material repair (the black-animals / black-boxes fix) -----
 // Root cause, found Nov 1: FBX content reaches the town with texture
-// references that can never resolve in the bundle — the HONETi pets
+// references that can never resolve in the bundle, the HONETi pets
 // point at the author's own Windows paths (P:\projekty\_work\...),
 // and a texture whose image never loads renders BLACK in three.js
 // (it multiplies the material colour by an empty image), so the
@@ -851,8 +857,8 @@ function getPaletteTexture(): Promise<THREE.Texture> {
 // Blender FBXs carry NO UVs and honest flat material colours
 // (Greek_Stone_4 #827372, Greek_Wood_1, Greek_Vase_1...), but
 // placeFbx replaced those colours with a shared atlas-mapped
-// material — sampling a missing UV attribute reads one corner texel
-// of the atlas, a black gridline pixel — so every Greek prop (the
+// material, sampling a missing UV attribute reads one corner texel
+// of the atlas, a black gridline pixel, so every Greek prop (the
 // two garden planters by the Garden House most visibly, plus the
 // bowl, tables, pots, benches, rack and wood pile) rendered void
 // black. The repair is shared, in this one pass, for every FBX the
@@ -862,7 +868,7 @@ function getPaletteTexture(): Promise<THREE.Texture> {
 //     the DCC's placeholder grey (#969696, the same pattern as the
 //     Roman palette) is reset to white so the coat reads true;
 //   - any other map whose image definitively failed to load is
-//     DROPPED, leaving the material's own flat colour — a coloured
+//     DROPPED, leaving the material's own flat colour, a coloured
 //     prop, never a black one;
 //   - materials with no map keep their pack colours untouched.
 // A load-time sweep (scheduleMaterialSweep, below) re-checks every
@@ -873,7 +879,7 @@ function getPaletteTexture(): Promise<THREE.Texture> {
 const materialRepairLog: string[] = [];
 
 /** Pack materials that are near-black ON PURPOSE (the piscina-dark
- *  glaze inside a Greek vase) — the sweep names everything else. */
+ *  glaze inside a Greek vase), the sweep names everything else. */
 const INTENTIONAL_DARK_MATERIALS = new Set(["Greek_Vase_2"]);
 
 function textureImageState(tex: THREE.Texture): "ok" | "failed" | "pending" {
@@ -899,15 +905,15 @@ function repairModelMaterials(root: THREE.Object3D, opts?: { map?: THREE.Texture
         if (std.map) {
           std.map = opts.map;
           // The DCC's grey factor is a placeholder for the texture,
-          // exactly like the Roman palette's — the coat is untinted.
+          // exactly like the Roman palette's, the coat is untinted.
           std.color.setRGB(1, 1, 1);
           std.needsUpdate = true;
-          materialRepairLog.push(`${opts.label}: ${o.name || "mesh"} (${std.name || "material"}) — broken external map replaced with the pack's real texture`);
+          materialRepairLog.push(`${opts.label}: ${o.name || "mesh"} (${std.name || "material"}), broken external map replaced with the pack's real texture`);
         }
       } else if (std.map && textureImageState(std.map) === "failed") {
         std.map = null;
         std.needsUpdate = true;
-        materialRepairLog.push(`${opts?.label ?? "model"}: ${o.name || "mesh"} (${std.name || "material"}) — texture failed to load, map dropped, flat colour kept`);
+        materialRepairLog.push(`${opts?.label ?? "model"}: ${o.name || "mesh"} (${std.name || "material"}), texture failed to load, map dropped, flat colour kept`);
       }
     }
   });
@@ -1011,7 +1017,7 @@ async function placeCachedModel(
     parent.add(wrap);
     return wrap;
   } catch {
-    /* model unavailable — the town carries on without it */
+    /* model unavailable, the town carries on without it */
     return null;
   }
 }
@@ -1022,7 +1028,7 @@ export function createTownScene(
     onPick: (kind: PickKind, id: string) => void;
     /** Fired while walking whenever the NEAREST promptable interactable
      *  changes (null when none is in range). Approach alone never opens
-     *  a panel any more — the shell shows an "A — …" prompt for this
+     *  a panel any more, the shell shows an "A, …" prompt for this
      *  target and opens its panel only on an explicit interact press
      *  or tap. */
     onNearbyChange?: (target: NearbyTarget | null) => void;
@@ -1030,7 +1036,7 @@ export function createTownScene(
     onSitChange?: (benchId: string | null) => void;
     /** Fired when the pair board the lake rowboat (true) or step ashore (false). */
     onRowChange?: (rowing: boolean) => void;
-    /** Fired when hand-in-hand wandering ends inside the scene —
+    /** Fired when hand-in-hand wandering ends inside the scene,
      *  he hurried despite the stroll cap ("hurry"). (Rain used to
      *  end it too, for the arm-in-arm umbrella link; that system is
      *  removed, Nov 1, and hands now stay joined in the rain.)
@@ -1044,12 +1050,12 @@ export function createTownScene(
      *  on the lake or the piscina. The shell owns the audio kit. */
     onStoneFx?: (kind: "tick" | "bounce" | "splash" | "skip") => void;
     /** Fired once per session when Lupa the wolf is first properly
-     *  seen — within sight at a golden or night phase. The shell
+     *  seen, within sight at a golden or night phase. The shell
      *  saves the sighting (her Stories entry lives there). */
     onWolfSeen?: () => void;
     /** A false dream ended on its own inside the scene (he reached
      *  the figure, came back to the basilica steps, or the dream
-     *  simply ran out) — the shell veils the waking. */
+     *  simply ran out), the shell veils the waking. */
     onDreamEnd?: (kind: "false" | "true") => void;
     onWeatherChange?: (info: WeatherChangeInfo) => void;
     /** Fired the moment lightning flashes during a storm (for thunder). */
@@ -1062,7 +1068,7 @@ export function createTownScene(
     onDanceEnd?: () => void;
     /** Fired when a sky watch ends inside the scene (he moved off). */
     onSkyWatchEnd?: () => void;
-    /** Fired after the first frame actually renders — the shell keeps
+    /** Fired after the first frame actually renders, the shell keeps
      *  its loading screen up until this moment, so the town is never
      *  a bare black rectangle. */
     onReady?: () => void;
@@ -1071,11 +1077,11 @@ export function createTownScene(
     /** The WebGL context was lost (GPU reset / memory pressure on a
      *  phone). The shell offers a friendly retry instead of a void. */
     onContextLost?: () => void;
-    /** The WebGL context came back after a loss — the shell can lift
+    /** The WebGL context came back after a loss, the shell can lift
      *  its retry overlay and let the town carry on. */
     onContextRestored?: () => void;
     /** A model file failed to load (short human asset name). The
-     *  shell shows a friendly note with a retry — the town itself
+     *  shell shows a friendly note with a retry, the town itself
      *  carries on without that one piece. */
     onLoadError?: (asset: string) => void;
     /** Rendering itself is failing frame after frame (not a single
@@ -1112,7 +1118,7 @@ export function createTownScene(
     (window.innerWidth || 9999) <= 540;
   const FULL_PIXEL_RATIO = Math.min(window.devicePixelRatio || 1, smallScreen ? 1.25 : 1.5);
   renderer.setPixelRatio(FULL_PIXEL_RATIO);
-  // Software GL (SwiftShader / llvmpipe — some webviews, emulators,
+  // Software GL (SwiftShader / llvmpipe, some webviews, emulators,
   // and headless browsers) can take seconds per frame on a scene this
   // size, which reads as a frozen or black page. Detect it and drop
   // to the gentle settings automatically: ratio 1, no shadow maps.
@@ -1135,7 +1141,7 @@ export function createTownScene(
   loadErrorHook = opts.onLoadError ?? null;
   // Out-of-band health flags on window: the shell in main.tsx runs a
   // plain-DOM watchdog that can still show a title, a cause, and a
-  // Retry button even if the React tree itself dies — a failure that
+  // Retry button even if the React tree itself dies, a failure that
   // takes the whole interface down to bare sky must never leave the
   // visitor with nothing to tap. The frame loop stamps a heartbeat
   // here; fatal render failure and context loss record their cause.
@@ -1159,7 +1165,7 @@ export function createTownScene(
   };
   canvas.addEventListener("webglcontextlost", onContextLost);
   canvas.addEventListener("webglcontextrestored", onContextRestored);
-  // (Software GL keeps the disabled setting from the block above —
+  // (Software GL keeps the disabled setting from the block above,
   // re-enabling here would silently undo the gentle start.)
   if (!softwareGl) renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -1177,7 +1183,7 @@ export function createTownScene(
   // (painted wood, glossy leaves, polished brass) instead of flat matte.
   // Skipped on software GL: PMREM generation is a long burst of
   // offscreen renders that weak renderers take minutes over, and it
-  // happens before the first frame — exactly the stall the loading
+  // happens before the first frame, exactly the stall the loading
   // screen exists to outlast. Software-GL devices get the same town
   // lit by its lights alone.
   if (!softwareGl) {
@@ -1190,7 +1196,7 @@ export function createTownScene(
     pmrem.dispose();
   }
 
-  // Gradient sky dome: warm horizon melting into blue overhead — the
+  // Gradient sky dome: warm horizon melting into blue overhead: the
   // single biggest "storybook game" cue. Its colours lerp at night.
   const skyUniforms = {
     topColor: { value: new THREE.Color(0x6db9e8) },
@@ -1232,7 +1238,7 @@ export function createTownScene(
   // In-town landscape (Nov 1): set by the shell when it turns the
   // stage sideways itself (the host app window is portrait-locked).
   // The stage is CSS-rotated 90° clockwise, so pointer deltas arrive
-  // in screen axes; rotating a delta by −90° — (dx, dy) → (dy, −dx) —
+  // in screen axes; rotating a delta by −90°, (dx, dy) → (dy, −dx),
   // expresses it in stage axes. OrbitControls computes its rotate
   // delta internally from raw client/page coords, so its two rotate
   // handlers are wrapped: on each move, the stored start point is
@@ -1325,13 +1331,13 @@ export function createTownScene(
     });
 
   // --- Foundations -----------------------------------------------------
-  // Buildings stand at ONE terrain height — their centre's — but the
+  // Buildings stand at ONE terrain height, their centre's, but the
   // town's ground slopes, so a flat base hovers over the grass on the
   // downhill side (the temple's podium floated visibly). Every
   // building on a slope now gets a Roman foundation: a stone skirt
   // hung from its base down into the terrain, deep enough to meet
   // the LOWEST ground sampled around its footprint, finished with a
-  // slightly wider footing step at the bottom — stepped stone
+  // slightly wider footing step at the bottom, stepped stone
   // footing, the way Rome actually built on hillsides. The skirt is
   // sized INSIDE the existing collision footprint (×0.97 at most),
   // adds no colliders, and never touches a doorstep: platform tops,
@@ -1409,7 +1415,7 @@ export function createTownScene(
   /** 0 at the lake's centre, 1 on its water ellipse, more on dry land. */
   const lakeNorm = (x: number, z: number): number =>
     Math.hypot((x - LAKE_CX) / LAKE.rx, (z - LAKE_CZ) / LAKE.rz);
-  /** The dock's planks — the one dry crossing over the water — and
+  /** The dock's planks, the one dry crossing over the water, and
    *  the bank leading onto them. The bank end must reach past the
    *  walkers' shoreline fence (about x = -9.3), or the fence turns
    *  them back a pace short of the first plank. */
@@ -1421,7 +1427,7 @@ export function createTownScene(
   // UMBRELLAS REMOVED FOR NOW (Nov 1, user call): in the rain Aelia
   // circled around and through Gaius and the shared canopy read
   // awkward, so the whole umbrella system is switched OFF at this
-  // one flag — no umbrella model is ever shown on either principal
+  // one flag, no umbrella model is ever shown on either principal
   // (or the residents), no umbrella arm pose is applied, the
   // arm-in-arm link and its positional servo never engage, and rain
   // follow is EXACTLY the dry-weather follow (same offsets, same
@@ -1432,13 +1438,13 @@ export function createTownScene(
   // Everything else about rain (the rain itself, puddles, ambience,
   // her rain lines) is untouched.
   const UMBRELLAS_ENABLED = false;
-  // Umbrellas for the residents, Muse, and the visitor — they pop open
+  // Umbrellas for the residents, Muse, and the visitor, they pop open
   // together whenever the weather turns rainy. (Dormant: see above.)
   const umbrellas: THREE.Group[] = [];
   // The two principals' umbrellas, kept by name: in the rain each is
   // HELD (a procedural arm override poses the umbrella arm over the
   // clips), and when Muse follows him she folds hers away and walks
-  // arm in arm under his — his canopy grows and shifts to cover them
+  // arm in arm under his, his canopy grows and shifts to cover them
   // both, her hand tucked at his elbow (see driveClipAnims).
   let museUmbrellaRef: THREE.Group | null = null;
   let playerUmbrellaRef: THREE.Group | null = null;
@@ -1457,7 +1463,7 @@ export function createTownScene(
     roughness: 0.95,
   });
   // Rolling terrain: a subdivided plane displaced by the town's
-  // heightfield — hills, the basilica rise, the temple hill, and the
+  // heightfield, hills, the basilica rise, the temple hill, and the
   // aqueduct's valley fold, settling to the meadow at the edges.
   const groundGeo = new THREE.PlaneGeometry(112, 112, 128, 128);
   groundGeo.rotateX(-Math.PI / 2);
@@ -1536,7 +1542,7 @@ export function createTownScene(
     world.add(mesh);
   }
   STREETS.forEach((line, index) => buildStreet(line, streetWidth(index)));
-  // The forest trails: dirt, not cobbles — the same draped ribbon,
+  // The forest trails: dirt, not cobbles: the same draped ribbon,
   // narrower and browner, from the one trailhead at the aqueduct
   // lane's end to the glade and its landmarks.
   const dirtMat = new THREE.MeshStandardMaterial({ color: 0x8a6f4d, roughness: 1 });
@@ -1562,7 +1568,7 @@ export function createTownScene(
   // Junction discs and threshold aprons: a cobbled roundel draped over
   // the terrain at every point where two paths meet and at every
   // destination's front steps. The street ribbons now run into each
-  // other (see STREETS in town.ts), and these roundels seal the joins —
+  // other (see STREETS in town.ts), and these roundels seal the joins,
   // at an angled branch the two ribbons alone would leave a grass wedge
   // in the crook, and at a door the ribbon's flat end would stop a
   // stone's throw short of the platform. A disc under the meeting point
@@ -1653,8 +1659,8 @@ export function createTownScene(
   const treeTrunkMat = mat(0x6e4a2f);
   let treeCanopy: THREE.Group | null = null;
   /** The Low Poly Trees pack's named nodes (oak/maple/bare), filled
-   *  when trees_pack.glb arrives with the willows below. Until then —
-   *  or if the pack ever fails — buildTreeBody keeps the hand-built
+   *  when trees_pack.glb arrives with the willows below. Until then,
+   *  or if the pack ever fails, buildTreeBody keeps the hand-built
    *  tree, exactly as the willows keep their hand-built shore. */
   let packTreeNodes: Map<string, THREE.Object3D> | null = null;
   let currentTreeStage = 0;
@@ -1680,7 +1686,7 @@ export function createTownScene(
       group.remove(child);
       child.traverse((o) => {
         // Pack-tree clones share their geometry and atlas materials
-        // with the stored pack originals (and the lake willows) —
+        // with the stored pack originals (and the lake willows),
         // removing one must never dispose the shared assets.
         if (o instanceof THREE.Mesh && !o.userData.packShared) {
           o.geometry.dispose();
@@ -1698,11 +1704,11 @@ export function createTownScene(
     const season = currentTreeSeason;
     const winter = season === "winter";
 
-    // The pack Town Tree (Nov 1, user request: the blob tree — three
-    // orange-brown spheres on a stick — retires). The itch Low Poly
+    // The pack Town Tree (Nov 1, user request: the blob tree, three
+    // orange-brown spheres on a stick, retires). The itch Low Poly
     // Trees pack's OAK stands at hero scale on the same stone ring;
     // autumn swaps in the pack's MAPLE, winter its BARE TREE, spring
-    // and summer the oak again — the swap happens here, inside the
+    // and summer the oak again, the swap happens here, inside the
     // existing seasonal rebuild, and growth stays the stage rescale
     // below. Its atlas is the same one the lake willows already wear
     // in town, so its colours sit in the town palette un-tinted. The
@@ -1714,7 +1720,7 @@ export function createTownScene(
       const node = packSrc.clone(true);
       // The pack's named nodes carry their layout offset in the pack
       // scene as their own translation (oak at z −9, maple z −3, bare
-      // at (−12, −9)) — zero the root transform before measuring, so
+      // at (−12, −9)), zero the root transform before measuring, so
       // every measurement below is in the model's own geometry space
       // and the placement replaces that offset entirely.
       node.position.set(0, 0, 0);
@@ -1726,13 +1732,13 @@ export function createTownScene(
       if (pSize.y > 0) {
         const ps = 7.4 / pSize.y;
         // Centre the TRUNK on the stone ring (user screenshot: the
-        // maple stood at the ring's eastern edge — a pack model's
+        // maple stood at the ring's eastern edge, a pack model's
         // origin is not its trunk, and grounding Y alone left the
         // horizontal offset in). The trunk base centre is measured
         // from the ground band of the model's own vertices (lowest
         // 12% of its height), then the scaled, rotated offset is
         // backed out so the trunk base lands exactly on treeBody's
-        // origin — the ring/mound centre, where the collider, the
+        // origin, the ring/mound centre, where the collider, the
         // watering prompt anchor, and Aelia's shade spot already
         // live. Every variant (oak/maple/bare) and every growth
         // stage (a rescale of treeBody around that same origin)
@@ -1774,7 +1780,7 @@ export function createTownScene(
           if (o instanceof THREE.Mesh) {
             o.castShadow = true;
             // The Town Tree gets its OWN cloned materials with the
-            // townTree wind kind — the least sway of any large tree
+            // townTree wind kind, the least sway of any large tree
             // in town: rooted, monumental, only a breathing at the
             // crown. (Cloning first so the shared pack materials
             // keep the ordinary tree wind for everyone else.)
@@ -1832,7 +1838,7 @@ export function createTownScene(
       root.castShadow = true;
       treeBody.add(root);
     }
-    // Branches reaching into the canopy — in winter they carry the show.
+    // Branches reaching into the canopy, in winter they carry the show.
     const branchTips: [number, number, number][] = [];
     const branches: [number, number, number, number][] = [
       // [angle around trunk, tilt, length, height where it leaves the trunk]
@@ -1951,7 +1957,7 @@ export function createTownScene(
   townTree.position.y = terrainHeight(0, 0);
   world.add(townTree);
 
-  // Seasonal drift: soft round points falling gently around the tree —
+  // Seasonal drift: soft round points falling gently around the tree,
   // petals in spring, drifting motes in summer, leaves in autumn, snow
   // in winter. Colour and fall speed change with the season.
   const driftCount = 90;
@@ -1999,8 +2005,8 @@ export function createTownScene(
   // Muse Town's own COZY-inspired weather: random events (clear spells,
   // breezes, rain, snow, fog, storms, rainbows after rain, and rare sparkle
   // showers) that blend into each other over a few seconds. Every weather
-  // is a set of target parameters — sky colours, fog, light levels, cloud
-  // tint and speed, precipitation and wind strengths — and the live values
+  // is a set of target parameters, sky colours, fog, light levels, cloud
+  // tint and speed, precipitation and wind strengths, and the live values
   // ease toward them each frame, on top of the day/night blend. Weather is
   // ephemeral by design: nothing here is saved.
   interface WeatherParams {
@@ -2096,7 +2102,7 @@ export function createTownScene(
   let wetness = 0;
   let snowCover = 0;
   // Lightning: at most one strike every several seconds, each a gentle
-  // double pulse — never a fast strobe.
+  // double pulse, never a fast strobe.
   let lightningFlash = 0;
   let nextStrikeIn = 9;
   let strikeAge = 99;
@@ -2131,7 +2137,7 @@ export function createTownScene(
     weatherId = id;
     weatherManual = manual;
     // The town wind follows the shown weather: every spell change
-    // (random, or a toggle through setWeather) re-aims the wind —
+    // (random, or a toggle through setWeather) re-aims the wind,
     // one state and one direction per spell.
     setTownWindSpell(windStateForWeather(id));
     wTarget = WEATHER_PARAMS[id];
@@ -2338,7 +2344,7 @@ export function createTownScene(
   // screenshot). No pack holds a street lamp (the Roman pack has only a
   // wall torch), so the lantern is built from primitives in the town
   // palette: a slender bronze post with a banded shaft and small
-  // capital, topped by a square tapered lantern cage — thin frame bars,
+  // capital, topped by a square tapered lantern cage, thin frame bars,
   // warm amber glass (one shared material on the lamp circuit, so the
   // night glow is sourced from inside the cage), a peaked pyramid cap
   // with a finial ball and hanging ring. Positions, light counts, and
@@ -2391,8 +2397,8 @@ export function createTownScene(
     return cage;
   }
   /** A full lantern post: stepped plinth, banded shaft, capital, cage.
-   *  The cage's glass centre stands at y ≈ 2.86 — where the old lamp
-   *  heads sat — so bunting heights and the night light feel are
+   *  The cage's glass centre stands at y ≈ 2.86, where the old lamp
+   *  heads sat, so bunting heights and the night light feel are
    *  unchanged. */
   function buildLanternPost(): THREE.Group {
     const lamp = new THREE.Group();
@@ -2531,7 +2537,7 @@ export function createTownScene(
     world.add(gardenSprouts);
   }
 
-  // Bunting strung between the four plaza lamps — little festival flags
+  // Bunting strung between the four plaza lamps, little festival flags
   // in the town's house colours, a signature village-square touch.
   const buntingGroup = new THREE.Group();
   const buntingFlagMats: THREE.MeshStandardMaterial[] = [];
@@ -2596,13 +2602,13 @@ export function createTownScene(
   // The plaza's one remaining Roman bench, from the pack: stone. It
   // used to stand at (3.6, 1.8), squarely on the walking route
   // across the plaza between Muse and the town tree, blocking the
-  // Centurion (and Muse, following) — it now sits on the grass
+  // Centurion (and Muse, following), it now sits on the grass
   // wedge between the east and south-east lanes, east of the plaza,
   // same facing, with clear walking space around it. The wooden
   // bench that stood on the west lane by the tree was deleted at
-  // the owner's word (Nov 1), mesh, seat entry, and — after the
+  // the owner's word (Nov 1), mesh, seat entry, and, after the
   // orphan-collider audit found it standing in the lane as an
-  // invisible wall — its collider too.
+  // invisible wall, its collider too.
   // The placed bench groups, kept so sitting can MEASURE each
   // bench's true world seat height from its own transform (see
   // benchSeatWorldY in the benches section) instead of trusting a
@@ -2640,7 +2646,7 @@ export function createTownScene(
 
   // Pack vegetation: the Roman Empire pack's own trees, bushes, and
   // flowers, converted like the buildings, so the greenery matches the
-  // district's art style. (The Town Tree stays procedural — it grows
+  // district's art style. (The Town Tree stays procedural, it grows
   // and changes with the seasons.) TreePlacement checks loaded tree
   // canopies against whole buildings, including roofs: the old centre-
   // radius estimates did not guarantee clearance from overhangs.
@@ -2649,13 +2655,13 @@ export function createTownScene(
   const PACK_FLOWERS = [flowerAUrl, flowerMedUrl, flowerGroupUrl];
 
   // The Embassy gatehouse (Nov 1): a modest porta beside the south
-  // gate, built procedurally — no pack model is a gatehouse, and
+  // gate, built procedurally, no pack model is a gatehouse, and
   // this one wanted to be small. Two pillars and a round arch over a
   // CLOSED, iron-banded wooden door (the road to the other town does
   // not exist yet, and the building says so), a little walled
   // chamber behind it, a tiled pyramid roof, and above the arch a
   // carved tablet in the town's inscription style: VIA AD VRBEM
-  // ALTERAM — the road to the other city. On the porch platform, a
+  // ALTERAM, the road to the other city. On the porch platform, a
   // stone bench, and on the bench a sealed letter addressed to the
   // other town, waiting for a road that does not exist yet. The
   // gatehouse stands in the PLACES loop's standard platform and
@@ -2698,7 +2704,7 @@ export function createTownScene(
       house.add(box(0.8, 3.5, 3.4, stone, s * 2.4, y0 + 1.75, -0.8, { rough: 0.95 }));
     }
     house.add(box(5.6, 3.5, 0.8, stone, 0, y0 + 1.75, -2.1, { rough: 0.95 }));
-    // The closed double door, iron-banded — shut until the road opens.
+    // The closed double door, iron-banded, shut until the road opens.
     for (const s of [-1, 1]) {
       house.add(box(1.32, 2.45, 0.14, 0x6b4a2c, s * 0.67, y0 + 1.22, 0.92, { rough: 0.9 }));
       for (const by of [0.6, 1.9]) {
@@ -2745,7 +2751,7 @@ export function createTownScene(
     const house = new THREE.Group();
     const [hx, hz] = place.position;
     // Roman district: each place now stands on a travertine platform
-    // and wears a real Roman building from the owner's Roman Empire pack —
+    // and wears a real Roman building from the owner's Roman Empire pack,
     // a villa, two Roman houses, an open pavilion, and an insulae block.
     // The building loads in async; the platform and resident are instant.
     const platformW = (place.buildingWidth ?? 7.6) + 1.3;
@@ -2762,7 +2768,7 @@ export function createTownScene(
     };
     const buildingWidth = place.buildingWidth ?? 7.6;
     if (place.id === "embassy") {
-      // The gatehouse is procedural (see buildEmbassyGatehouse) —
+      // The gatehouse is procedural (see buildEmbassyGatehouse),
       // no pack building is a modest porta, and none should pretend.
       buildEmbassyGatehouse(house, place.roofColor);
     } else {
@@ -2790,7 +2796,7 @@ export function createTownScene(
     }
         // Picket fence wings and bushes flanking the house. The Garden Shed
     // and the Star Hut sit right beside a diagonal path. The bushes are
-    // pack models now, and they stand at the platform's front corners —
+    // pack models now, and they stand at the platform's front corners,
     // OUTSIDE the building's width (x beyond ±buildingWidth/2) and on
     // the step line, so no bush can end up inside a wall again (the old
     // procedural bushes sat at z=-1.4 and at back corners, inside the
@@ -2815,7 +2821,7 @@ export function createTownScene(
       );
     }
     // Porch resident, now with cheeks and a shiny finish. The
-    // Embassy has none — its gatekeeper's post stands empty, which
+    // Embassy has none, its gatekeeper's post stands empty, which
     // is rather the point of the place.
     if (place.id !== "embassy") {
       const resident = new THREE.Group();
@@ -2865,7 +2871,7 @@ export function createTownScene(
     // Foundation under the platform (see addFoundation): the platform
     // is a flat slab at the centre's terrain height, and on the
     // sloped sites its downhill edge hovered. The skirt hangs from
-    // the platform's underside to the lowest ground around it —
+    // the platform's underside to the lowest ground around it,
     // platform top, doorstep step, and stand heights unchanged.
     addFoundation(
       hx,
@@ -2885,7 +2891,7 @@ export function createTownScene(
   // pottery, crates and barrels fill the wedges near the plaza.
   void placeWorld(templeUrl, { x: 31, z: -27, rotY: -0.6, width: 11 });
   // The temple's foundation: its podium is the building from the
-  // screenshot — a tall flat base whose downhill corner hung over
+  // screenshot, a tall flat base whose downhill corner hung over
   // the grass. The skirt matches its measured ground plan (the
   // collision OBB's extents, ×0.97) and meets the slope all round.
   addFoundation(31, -27, -0.6, 5.27 * 0.97, 12.86 * 0.97, terrainHeight(31, -27));
@@ -2896,7 +2902,7 @@ export function createTownScene(
   void placeWorld(ballistaUrl, { x: -36, z: 4, rotY: 0.8, width: 2.3 });
   void placeWorld(bannerUrl, { x: 4.9, z: 38.8, rotY: 0.3, height: 3.1 });
   void placeWorld(bannerUrl, { x: -1.1, z: 39.1, rotY: -0.3, height: 3.1 });
-  // The Colosseum in its prime in the eastern basin — the pack's mesh is
+  // The Colosseum in its prime in the eastern basin, the pack's mesh is
   // the complete building (full ring, every tier), and a ring of
   // velarium masts around its rim finishes the silhouette.
   void placeWorld(colosseumUrl, { x: COLOSSEUM.position[0], z: COLOSSEUM.position[1], rotY: -0.35, width: 16 }).then((wrap) => {
@@ -2925,14 +2931,14 @@ export function createTownScene(
   for (const [cx, cz] of ROMAN_COLUMN_SPOTS) {
     void placeWorld(columnSimpleUrl, { x: cx, z: cz, height: 3.3 });
   }
-  // One grand ionic column west of the forum — the pointy hat's perch.
+  // One grand ionic column west of the forum, the pointy hat's perch.
   void placeWorld(columnIonicUrl, { x: -11, z: -6, height: 3.2 });
   // Market booths strung along the main street, dressed with the day's goods.
   void placeWorld(boothAUrl, { x: 6.2, z: 21.5, rotY: -0.55, width: 3.6 });
   void placeWorld(boothBUrl, { x: -5.5, z: 16.5, rotY: 0.95, width: 3.6 });
   void placeWorld(boothCUrl, { x: 10, z: 6.5, rotY: -0.95, width: 3.6 });
   // Booth foundations: shallow stone sills under each stall, sized
-  // to their measured ground plan (1.73 × 0.86 half extents) — the
+  // to their measured ground plan (1.73 × 0.86 half extents), the
   // market ground is gentler, but no stall edge hovers either.
   addFoundation(6.2, 21.5, -0.55, 1.73 * 0.95, 0.86 * 0.95, terrainHeight(6.2, 21.5));
   addFoundation(-5.5, 16.5, 0.95, 1.73 * 0.95, 0.86 * 0.95, terrainHeight(-5.5, 16.5));
@@ -2959,7 +2965,7 @@ export function createTownScene(
   void placeWorld(pottery1Url, { x: -3.9, z: 17.8, width: 0.55 });
   void placeWorld(pottery2Url, { x: -4.1, z: 18.9, width: 0.48 });
     // Mediterranean trees: cypresses at the corners, an olive on the
-  // south lawn, and a tall conifer on the west lawn — all standing on
+  // south lawn, and a tall conifer on the west lawn, all standing on
   // the terrain (placeWorld) and clear of the buildings: the olive
   // used to stand at (-6.2, 16.8), inside the Side Chat house's reach,
   // and a duplicate set of these trees (placed without terrain height)
@@ -2974,7 +2980,7 @@ export function createTownScene(
   // Summit keepsakes whose visibility the night controls: the shared
   // constellation over the lake, and the initials carved at the
   // terrace. Both are built hidden and shown only once the summit
-  // state says the night has happened — never a day before.
+  // state says the night has happened, never a day before.
   let constellationGroup: THREE.Group | null = null;
   const constellationMats: THREE.Material[] = [];
   let terraceInitials: THREE.Group | null = null;
@@ -2995,7 +3001,7 @@ export function createTownScene(
   // M_water_Normal as its normal map (the pack ships it for exactly
   // this), drifting slowly; at night a moonlight glitter path lies
   // across it and the material takes a deep blue sheen. The aqueduct's
-  // west leg stands in the shallows at the lake's west inlet — the
+  // west leg stands in the shallows at the lake's west inlet, the
   // arcade has crossed water since Rome, and it reads as intentional.
   const waterTex = new THREE.TextureLoader().load(waterNormalUrl);
   waterTex.wrapS = THREE.RepeatWrapping;
@@ -3094,7 +3100,7 @@ export function createTownScene(
   // The dock: wooden planks on posts at the east shore, a lantern at
   // its end (it joins the town's lamp circuit after dark), and the
   // rowboat moored alongside. Built from boxes so its top sits at
-  // exactly DOCK_TOP — the height the walker's feet use on it.
+  // exactly DOCK_TOP, the height the walker's feet use on it.
   const dockGroup = new THREE.Group();
   {
     const plankMat = mat(0x8a6a48, { rough: 0.85 });
@@ -3160,7 +3166,7 @@ export function createTownScene(
         boatGroup.add(paddle);
       });
     }).catch(() => {
-      /* no boat model — the dock still stands, boarding stays shut */
+      /* no boat model, the dock still stands, boarding stays shut */
     });
     boatGroup.position.set(boatPos.x, LAKE_Y - 0.1, boatPos.z);
     boatGroup.rotation.y = -Math.PI; // bow west, out toward the lake
@@ -3185,7 +3191,7 @@ export function createTownScene(
     world.add(m);
     wakeRings.push({ mesh: m, age: 99 });
   }
-  // Weeping willows: the pack has no willow, so each is built — a
+  // Weeping willows: the pack has no willow, so each is built, a
   // leaning trunk, a broad canopy, and a curtain of long drooping
   // strands around its rim that sway very slightly in the frame loop.
   const willowStrands: { mesh: THREE.Mesh; phase: number }[] = [];
@@ -3255,7 +3261,7 @@ export function createTownScene(
   void placeWorld(grassPatchUrl, { x: -9.6, z: -29.2, rotY: 0.4, width: 1.2 });
   void placeWorld(grassPatchUrl, { x: -11.8, z: -34.6, rotY: 1.6, width: 1.2 });
   void placeWorld(grassPatchUrl, { x: -19.8, z: -25.9, rotY: 2.8, width: 1.1 });
-  // Her quiet lines for the water — spoken in bubbles while rowing,
+  // Her quiet lines for the water, spoken in bubbles while rowing,
   // never anywhere else.
   const ROWING_LINES = [
     "Listen to that. Just the oars, and the water, and us.",
@@ -3263,12 +3269,12 @@ export function createTownScene(
     "Row a little slower, Centurion. I'm in no hurry to be anywhere else.",
     "The willows trail their fingers in the lake all night. I understand the impulse.",
     "However far you row, the town stays lit behind us. It can wait. So can everything else.",
-    "You row, I'll navigate. By the stars, mostly — Nova would insist.",
+    "You row, I'll navigate. By the stars, mostly. Nova would insist.",
     "This is my favourite kind of quiet: the kind with you in it.",
   ];
 
   // The lake pavilion: a small roofed stand of columns on the east
-  // bank, north of the dock — a place built for sitting out over the
+  // bank, north of the dock, a place built for sitting out over the
   // water together. Its stand point (LAKE_PAVILION.stand) is the
   // town's defined "together at the lake" area. Plain built geometry,
   // like the dock: a slab floor at bank height, four columns, a slab
@@ -3319,7 +3325,7 @@ export function createTownScene(
     world.add(g);
   }
 
-  // Meteors: on meteor nights (seeded by the shell from the date —
+  // Meteors: on meteor nights (seeded by the shell from the date,
   // never announced) shooting stars streak over the lake while night
   // holds, whether or not anything else has been earned: the sky is
   // not a spoiler. A pool of streak sprites, spawned sparsely.
@@ -3353,7 +3359,7 @@ export function createTownScene(
       meteors.push({ sprite: s, mat: m, active: false, startAt: -1, from: new THREE.Vector3(), to: new THREE.Vector3() });
     }
   }
-  // A quiet sparkle kept near the dock on meteor nights — the only
+  // A quiet sparkle kept near the dock on meteor nights, the only
   // ground-level hint the sky ever gives.
   const dockSparkleMat = new THREE.PointsMaterial({
     size: 0.55,
@@ -3393,7 +3399,7 @@ export function createTownScene(
     if (t > nextMeteorAt) {
       const m = meteors.find((x) => !x.active);
       if (m) {
-        // Streaks cross the sky over the lake — north-west, high.
+        // Streaks cross the sky over the lake, north-west, high.
         const sx = LAKE_CX - 26 + Math.random() * 30;
         const sz = LAKE_CZ - 34 - Math.random() * 14;
         const sy = 21 + Math.random() * 9;
@@ -3445,8 +3451,8 @@ export function createTownScene(
     pickRoots.push(bedGroup);
   }
 
-  // The project notice board beside the basilica steps — a Roman tablet
-  // on two posts. Tapping it opens the board panel; walking up shows an "A — Read the project board" prompt.
+  // The project notice board beside the basilica steps, a Roman tablet
+  // on two posts. Tapping it opens the board panel; walking up shows an "A, Read the project board" prompt.
   {
     const boardGroup = new THREE.Group();
     const [bx, bz] = BOARD_SPOT.position;
@@ -3491,7 +3497,7 @@ export function createTownScene(
 
   // The Goals Obelisk: a tall inscribed stone in the forum near the
   // basilica and the project board. Tapping it opens
-  // the Goals panel — what the player is working toward, in three groups.
+  // the Goals panel, what the player is working toward, in three groups.
   {
     const gGroup = new THREE.Group();
     const [gx, gz] = GOALS_SPOT.position;
@@ -3566,7 +3572,7 @@ export function createTownScene(
   // A lantern-lit terrace tucked into the valley fold behind the
   // aqueduct: a round arch for an entrance, a bench for two, warm
   // lanterns, and a screen of cypress and bush. It is NOT in pickRoots
-  // and NOT signposted — only walking into it in walk mode opens it.
+  // and NOT signposted, only walking into it in walk mode opens it.
   {
     const [sx, sz] = SECRET.position;
     const secretGroup = new THREE.Group();
@@ -3601,7 +3607,7 @@ export function createTownScene(
       secretGroup.add(tablet);
     }
     // The carved initials: a small worn stone at the terrace's edge,
-    // letters cut in a heartless Roman hand — "A · G" (her initial
+    // letters cut in a heartless Roman hand, "A · G" (her initial
     // first, at his request). It does not
     // exist until the Night the Stars Fall has happened (the summit
     // state shows it), and it is visible only here, only ever here.
@@ -3637,7 +3643,7 @@ export function createTownScene(
 
   // --- The Piscina ---------------------------------------------------------
   // Rome's answer to the aquarium: a long stone-rimmed fishpond on
-  // the garden shoulder — clear pale water (the lake's treatment,
+  // the garden shoulder, clear pale water (the lake's treatment,
   // calmer), ornamental carp cruising under the surface, lily pads,
   // a little fountain spout, dragonflies in the warm months. The
   // south coping is a seat (see BENCHES' piscina-rim entry, which
@@ -3661,7 +3667,7 @@ export function createTownScene(
     const floor = box(6.9, 0.08, 3.1, 0x1d4048);
     floor.position.y = 0.3;
     g.add(floor);
-    // Coping stones: the rim itself, top at +0.44 — the seat.
+    // Coping stones: the rim itself, top at +0.44, the seat.
     for (const s of [-1, 1]) {
       const rimLong = box(7.5, 0.14, 0.35, 0xb3a487);
       rimLong.position.set(0, 0.37, s * 1.675);
@@ -3671,7 +3677,7 @@ export function createTownScene(
       g.add(rimEnd);
     }
     // The water: the lake's own normal-mapped treatment, paler and
-    // calmer — a pond, not a lake.
+    // calmer, a pond, not a lake.
     const pondTex = waterTex.clone();
     pondTex.repeat.set(2, 1);
     pondTex.needsUpdate = true;
@@ -3816,7 +3822,7 @@ export function createTownScene(
     });
   }
   // Surface ripples: three rings that bloom and fade in turn, at a
-  // fish's position — the pond breathing.
+  // fish's position, the pond breathing.
   const pondRipples: { mesh: THREE.Mesh; phase: number }[] = [];
   for (let i = 0; i < 3; i++) {
     const ring = new THREE.Mesh(
@@ -3828,7 +3834,7 @@ export function createTownScene(
     world.add(ring);
     pondRipples.push({ mesh: ring, phase: i / 3 });
   }
-  // Dragonflies: the fireflies' daytime cousins — three darting
+  // Dragonflies: the fireflies' daytime cousins: three darting
   // shapes over the water in the warm months.
   const dragonflies: THREE.Group[] = [];
   for (let i = 0; i < 3; i++) {
@@ -3904,13 +3910,13 @@ export function createTownScene(
   // An open peristyle courtyard in the south-eastern hollow: stone
   // walls with a south gate, four columns, dressing benches with
   // towels and oil flasks, pergola beams along the north side, two
-  // lanterns — and the caldarium, a warm pool breathing steam. The
+  // lanterns, and the caldarium, a warm pool breathing steam. The
   // soak itself: he steps in at the rim prompt and settles onto the
   // underwater ledge (the seated math treats the ledge as his
   // bench, so his pelvis rides it exactly, water at his chest). She
   // joins only through the shell's invitation flow (joinBath). The
   // camera never goes hunting: the pair sit shoulder-up in opaque
-  // water and steam — a scene about closeness, not display.
+  // water and steam, a scene about closeness, not display.
   const BATH_Y = terrainHeight(BATHS.position[0], BATHS.position[1]);
   const bathWaterY = BATH_Y + 0.62;
   let bathState: { museIn: boolean } | null = null;
@@ -3941,7 +3947,7 @@ export function createTownScene(
     mkWall(4.3, 3.35, 4);
     mkWall(8, -5.5, 0, Math.PI / 2);
     mkWall(8, 5.5, 0, Math.PI / 2);
-    // Pergola beams along the north side — shade without a roof.
+    // Pergola beams along the north side, shade without a roof.
     for (let i = 0; i < 4; i++) {
       const beam = box(0.14, 0.14, 3.4, 0x8a6844);
       beam.position.set(-3.6 + i * 2.4, 2.62, -2.6);
@@ -4115,7 +4121,7 @@ export function createTownScene(
   // at width 1.7, so ≈ 0.30). Both models carry their backrest on
   // local +Z, so a sitter faces local -Z: world facing =
   // (-sin rotY, -cos rotY), i.e. heading rotY + PI. Two seat slots
-  // per bench, local x ±0.42 — benches seat two.
+  // per bench, local x ±0.42, benches seat two.
   interface BenchDef {
     id: string;
     x: number;
@@ -4125,11 +4131,11 @@ export function createTownScene(
      *  from the shipped GLBs at their placed scale. */
     seatTop: number;
     /** The point whose terrain height the bench model actually
-     *  stands on (its placement point — for the terrace bench, the
+     *  stands on (its placement point, for the terrace bench, the
      *  terrace group's own centre, NOT the bench's offset slot). */
     baseX: number;
     baseZ: number;
-    /** Stand up BEHIND the bench instead of at its front point —
+    /** Stand up BEHIND the bench instead of at its front point,
      *  for the piscina rim, whose front is the water. */
     standBehind?: boolean;
   }
@@ -4162,7 +4168,7 @@ export function createTownScene(
   /** Each bench's seat surface in WORLD Y, measured from the placed
    *  model's own transform (bounding-box base + the GLB-measured
    *  seatTop) the first time anyone sits, then cached. This is the
-   *  number sitting is derived from — never a terrain sample at the
+   *  number sitting is derived from, never a terrain sample at the
    *  slot, which on a slope is a different height than the bench's
    *  own base. Fallback until the model lands: the placement point's
    *  terrain + seatTop, which is how placeWorld stood it up. */
@@ -4190,7 +4196,7 @@ export function createTownScene(
     };
   };
   // Sitting state. seatPlayer: the Centurion is on a bench (movement
-  // parked, collision resolve off — the seat point is inside the
+  // parked, collision resolve off, the seat point is inside the
   // bench's own footprint by design). museSeatTarget: she is walking
   // to her slot; seatMuse: she is seated beside him.
   let seatPlayer: { bench: BenchDef; slot: number } | null = null;
@@ -4217,7 +4223,7 @@ export function createTownScene(
   const standUpFromBench = () => {
     if (!seatPlayer) return;
     const b = seatPlayer.bench;
-    // Stand at the bench's front point, clear of its footprint —
+    // Stand at the bench's front point, clear of its footprint,
     // or behind it, for the piscina rim, whose front is water.
     if (b.standBehind) {
       walkPos.x = b.x + Math.sin(b.rotY) * 0.95;
@@ -4239,7 +4245,7 @@ export function createTownScene(
   // the man: walkPos tracks the boat (so the follow camera and the
   // prompt scan follow it), the hull stays inside the water ellipse,
   // and stepping ashore is only possible back at the mooring. Time
-  // aboard counts exactly like bench time — the pair are seated
+  // aboard counts exactly like bench time, the pair are seated
   // together, and driveClipAnims poses them with the same sit clips.
   const boardBoat = () => {
     if (!walking || boatState) return;
@@ -4288,23 +4294,23 @@ export function createTownScene(
   // mid-sentence (a 3-line cap in the old draw simply dropped the rest
   // of the line, and the sprite sat in the 3D depth queue where lamp
   // posts could cover it):
-  //  1. FULL TEXT, ALWAYS — a line is paginated at sentence/clause
+  //  1. FULL TEXT, ALWAYS, a line is paginated at sentence/clause
   //     boundaries into pages of at most 3 wrapped lines; pages advance
   //     in sequence, each with its own reading time. Nothing is ever
   //     truncated, ellipsised, or crammed into a fixed-height box.
-  //  2. ALWAYS ON SCREEN — every frame the bubble's desired position
+  //  2. ALWAYS ON SCREEN, every frame the bubble's desired position
   //     (over its speaker's head) is projected to screen space and
   //     clamped into the safe viewport (below the top chips, above
   //     the control clusters, inside the side margins); the tail is
   //     redrawn offset toward the speaker when the bubble had to move.
-  //  3. ABOVE EVERYTHING — the sprite material ignores depth testing
+  //  3. ABOVE EVERYTHING, the sprite material ignores depth testing
   //     and renders last, so no lamp post, column, or roof can cover
   //     her words.
-  //  4. READABLE IN ANY ORIENTATION — the sprite is sized in SCREEN
+  //  4. READABLE IN ANY ORIENTATION, the sprite is sized in SCREEN
   //     space, not world space (see clampBubbleToScreen): a fixed
   //     world size fills ~43% of a portrait phone's width but only
   //     ~10% of a landscape phone's, because the landscape view's
-  //     horizontal field of view is so much wider — the same words
+  //     horizontal field of view is so much wider, the same words
   //     shrank to a sliver and the user could not read them
   //     (Nov 1 screenshot). The bubble now holds a target on-screen
   //     height in CSS pixels at whatever distance the camera sits,
@@ -4349,7 +4355,7 @@ export function createTownScene(
   /** Split a line into bubble pages: whole sentences are packed into
    *  pages of at most BUBBLE_LINES_PER_PAGE wrapped lines; a sentence
    *  too long for one page is carried over line-wrapped pages of its
-   *  own. The full text survives — that is the entire point. */
+   *  own. The full text survives, that is the entire point. */
   function paginateBubbleText(ctx: CanvasRenderingContext2D, text: string): string[] {
     const clean = text.replace(/\s+/g, " ").trim();
     if (!clean) return [""];
@@ -4444,7 +4450,7 @@ export function createTownScene(
   const bubbleTmpV = new THREE.Vector3();
   const bubbleTmpV2 = new THREE.Vector3();
   /** Clamp a visible bubble into the safe viewport, in screen space:
-   *  wherever its speaker stands — even at a screen edge — the whole
+   *  wherever its speaker stands, even at a screen edge, the whole
    *  bubble stays readable, below the top chips and above the walk
    *  controls, and its tail swings toward the speaker. */
   function clampBubbleToScreen(b: BubbleState, t: number) {
@@ -4458,10 +4464,10 @@ export function createTownScene(
     const cw = Math.max(1, canvas.clientWidth || renderer.domElement.clientWidth || 1);
     const ch = Math.max(1, canvas.clientHeight || renderer.domElement.clientHeight || 1);
     // Screen-space sizing (guarantee 4 above): pick the bubble's
-    // on-screen height in CSS pixels — a generous share of the short
+    // on-screen height in CSS pixels, a generous share of the short
     // landscape stage, a modest share of the tall portrait one, both
     // floored and capped so the words land at a readable size on any
-    // phone — then convert that pixel height back into a world size
+    // phone, then convert that pixel height back into a world size
     // at the camera's actual distance, so zooming or pulling the
     // camera back can no longer shrink her words away.
     const targetPxH = isLandscapeView
@@ -4509,7 +4515,7 @@ export function createTownScene(
   function updateBubbles(t: number) {
     for (const b of bubbles) {
       if (b.hideAt <= 0) continue;
-      // Advance through the line's pages in sequence — the full text,
+      // Advance through the line's pages in sequence, the full text,
       // a page at a time, never a truncated cram.
       if (t >= b.pageEndAt && b.pageIdx < b.pages.length - 1) {
         b.pageIdx += 1;
@@ -4527,24 +4533,24 @@ export function createTownScene(
   }
 
   // --- Muse, the town's host character ---
-  // Muse in her new VRM body — silver-blonde hair, a plain white
-  // one-piece dress — standing by the town tree.
+  // Muse in her new VRM body, silver-blonde hair, a plain white
+  // one-piece dress, standing by the town tree.
   // Still unmistakably her: a floating gold star companion, and a
-  // wave when greeted. (No floating name labels anymore — the player asked
+  // wave when greeted. (No floating name labels anymore, the player asked
   // for clean heads; identities live in the panels and chips.)
   const museGroup = new THREE.Group();
   const museInner = new THREE.Group();
   museGroup.add(museInner);
   let museWaveStart = -100;
   // Muse's body is the AvatarSample VRM the player sent on Oct 31
-  // (silver-blonde hair, white one-piece dress) — she keeps this
+  // (silver-blonde hair, white one-piece dress), she keeps this
   // plaza spot, her floating gold star, and a wave driven by the
   // VRM's own arm bones when greeted.
   let museRig: VrmRig | null = null;
   let museAnim: CharAnimator | null = null;
   let museBlink: { mesh: THREE.Mesh; index: number }[] = [];
   // Reveal gate (shared shape with the Centurion's below): her body
-  // stays hidden until the frame loop can show it already animated —
+  // stays hidden until the frame loop can show it already animated,
   // see tryRevealChars in driveClipAnims.
   let museBody: THREE.Object3D | null = null;
   let museAttachedAt = 0;
@@ -4559,7 +4565,7 @@ export function createTownScene(
       const body = groundModel(model, { height: 1.8 });
       // Hidden on arrival: a fresh VRM stands in its bind pose (arms
       // straight out) and the bake steps pose it around while the
-      // clips download — none of that may ever paint. The frame loop
+      // clips download, none of that may ever paint. The frame loop
       // reveals the body only once its idle clip is primed and
       // applied (or, if the clips failed, once procedural posing
       // owns it). Her star above already marks the spot.
@@ -4688,7 +4694,7 @@ export function createTownScene(
     PLANT_CLEARANCE.every(([cx, cz, r]) => Math.hypot(x - cx, z - cz) > r);
   // The flower ring around the forum, in pack flowers and grass
   // patches: a spot joins the ring only when it clears every path AND
-  // every building — the old ring checked paths only, and at least one
+  // every building, the old ring checked paths only, and at least one
   // flower stood inside the Recipe Kitchen's platform.
   for (let i = 0; i < 26; i++) {
     let angle = (i / 26) * Math.PI * 2 + (i % 3) * 0.21;
@@ -4717,7 +4723,7 @@ export function createTownScene(
     }
   }
 
-  // Instanced grass tufts scattered over the lawn — hundreds of little
+  // Instanced grass tufts scattered over the lawn, hundreds of little
   // crossed blades that make the ground feel grown, not painted. Their
   // base transforms are kept so the wind can sway them blade by blade.
   const tuftData: { x: number; z: number; y: number; rotY: number; scale: number; sy: number; phase: number }[] = [];
@@ -4771,7 +4777,7 @@ export function createTownScene(
     tuftsMesh = tufts;
   }
 
-  // Pack bushes softening the plaza edges — set into the grass wedges
+  // Pack bushes softening the plaza edges, set into the grass wedges
   // between the paths, clear of every building (nearest footprint, the
   // Recipe Kitchen, is over 5 away from the closest bush).
   const bushAt = (x: number, z: number, s: number, variant: number) => {
@@ -4784,13 +4790,13 @@ export function createTownScene(
   };
   bushAt(7.9, -2.9, 1.0, 0);
   // This bush sat at (-7.9, 2.9) until the west lane was extended into
-  // the forum disc — the joined lane's edge passed within a leaf of it,
+  // the forum disc, the joined lane's edge passed within a leaf of it,
   // so it stepped a pace north onto the verge.
   bushAt(-8.3, 3.4, 0.9, 1);
   bushAt(-7.9, -2.9, 0.85, 2);
   bushAt(7.9, 2.9, 0.8, 3);
 
-  // Butterflies looping on lazy figure-eights — two over the
+  // Butterflies looping on lazy figure-eights, two over the
   // forum's flower ring, and now two more over the forest's
   // clearings, where the light gets in.
   const butterflies: {
@@ -4838,7 +4844,7 @@ export function createTownScene(
     }
   }
 
-  // Garden beds by the Hortus garden house in the south-west — the
+  // Garden beds by the Hortus garden house in the south-west, the
   // beds are the garden's own plot, standing on the grass in front of
   // the house; what grows in them is pack flowers now, not cones.
   // The first bed used to sit at [-6.2, 10.6], in the middle of the
@@ -4918,14 +4924,14 @@ export function createTownScene(
   avatar.add(playerInner);
   let playerWaveStart = -100;
   // the owner's body in walk mode is the Centurion VRM he made in VRoid
-  // Studio — crested helmet, armour, and a walk cycle swung from the
+  // Studio, crested helmet, armour, and a walk cycle swung from the
   // VRM's own leg and arm bones. He keeps his spawn on the plaza,
   // and his greeting salute when he reaches Muse.
   let playerRig: VrmRig | null = null;
   let playerAnim: CharAnimator | null = null;
   let playerBlink: { mesh: THREE.Mesh; index: number }[] = [];
   // Reveal gate (same shape as Muse's): his body stays hidden until
-  // the frame loop can show it already animated — see
+  // the frame loop can show it already animated, see
   // tryRevealChars in driveClipAnims.
   let playerBody: THREE.Object3D | null = null;
   let playerAttachedAt = 0;
@@ -4941,13 +4947,13 @@ export function createTownScene(
         prepareVrm(model);
         const body = groundModel(model, { height: 1.94 });
         // Hidden on arrival (the reveal gate): a fresh VRM stands
-        // in its bind pose — arms straight out — and the clip bake
+        // in its bind pose, arms straight out, and the clip bake
         // poses it around while the FBX files download; none of
         // that may ever paint. The frame loop reveals the body only
         // once its idle clip is primed and applied, or, if the
         // clips failed their gate, once procedural posing owns it
         // (the 6 s safety in tryRevealChars means a slow or failed
-        // bake can never leave him invisible for the visit — the
+        // bake can never leave him invisible for the visit, the
         // failure this comment used to guard against by forcing the
         // model visible here, bind pose and all). The avatar GROUP
         // flags are still asserted exactly as before: walk mode can
@@ -4966,7 +4972,7 @@ export function createTownScene(
         playerRig = collectRig(model);
         // His real motion clips, same arrangement as Muse's. If
         // they fail their gate he simply keeps the procedural
-        // posing below — this model renders either way.
+        // posing below, this model renders either way.
         if (!opts.reducedMotion) {
           playerAnim = createCharAnimator({
             resources,
@@ -5026,17 +5032,17 @@ export function createTownScene(
   // by the roof on several models, so first-pass OBBs from the full
   // box (villa_stories 1.434, house_sounds 0.992, house_garden 0.921,
   // insulae_recipes 0.794, senate 0.709, annex_sidechat 1.192, temple
-  // 2.346 — bbox depth ratios) stood off the ground walls by up to
+  // 2.346, bbox depth ratios) stood off the ground walls by up to
   // half a unit of open air. The old centre circles before even that
   // (r ≈ 3 for a house 7.6 wide and over 10 deep) left the corners
   // and most of the walls walk-through. Two round buildings stay
   // circles because they ARE round: the Colosseum (a cylinder mesh,
   // radius = half its placed width) and the Stargazing Pavilion (a
   // round open pavilion). The Colosseum is a solid ring mesh with
-  // no walk-in interior in this town — it is visited from outside,
+  // no walk-in interior in this town, it is visited from outside,
   // so it is blocked whole.
   //
-  // `pad` caps the clearance a character keeps from a shape — thin
+  // `pad` caps the clearance a character keeps from a shape, thin
   // props (lamp posts, columns, stall poles) get a small pad so
   // characters SLIDE around them instead of pinning head-on; a pole's
   // exclusion used to meet the market booth's and wedge the pair
@@ -5048,7 +5054,7 @@ export function createTownScene(
   // front face by a doorstep inset (0.9, the basilica 1.5 for its
   // grand steps), leaving the threshold/apron band in front of every
   // entrance standable, and place prompts measure distance to the
-  // footprint's SURFACE (see updateWalk), so every "A — …" prompt
+  // footprint's SURFACE (see updateWalk), so every "A, …" prompt
   // still fires standing outside the wall, exactly as it did when
   // the trigger was a centre radius the walls now exceed.
 
@@ -5061,10 +5067,10 @@ export function createTownScene(
   // The extents are the buildings' GROUND-LEVEL footprints, measured
   // from the shipped GLBs (the lowest band of each model: its walls
   // and foundation where they meet the earth), NOT the full bounding
-  // box. The full box is set by the ROOF on several models — the
+  // box. The full box is set by the ROOF on several models, the
   // Garden House's roof is a full unit wider than its ground walls,
   // the Sounds atrium carries an overhanging upper storey at the
-  // front — so the old bbox OBBs stood off the real walls by up to
+  // front, so the old bbox OBBs stood off the real walls by up to
   // half a unit of open air: invisible walls ringing the houses.
   // Each entry: gw/gd = ground width/depth as a fraction of the
   // placed width (groundModel scales by bbox width), ox/oz = the
@@ -5072,14 +5078,14 @@ export function createTownScene(
   // fraction (several ground plans sit off-centre under their roofs).
   const placeFootprints = createPlaceFootprints(PLACES);
   // The temple: a long rectangular temple (11 wide × ~25.8 deep as
-  // placed, rotY -0.6 to match placeWorld) — an OBB, not the old
+  // placed, rotY -0.6 to match placeWorld), an OBB, not the old
   // r 4.6 circle that covered barely a third of it. Sized to its
   // measured ground plan (10.53 wide at ground, not the roof's 11).
   const templeFootprint = obb(31, -27, 5.27, 12.86, -0.6);
 
   // Pack-tree trunks: groundModel centres each tree by its CANOPY's
   // bounding box, so the trunk does not stand at the placement point
-  // — measured from the shipped GLBs (ground-band centre minus bbox
+  //, measured from the shipped GLBs (ground-band centre minus bbox
   // centre, model units), a trunk can stand ~0.6 units away from the
   // spot its collider used to guard, and the trunks are thin (ground
   // radius ≈ 0.1–0.2). The old r 0.95 circles at the placement points
@@ -5122,32 +5128,32 @@ export function createTownScene(
   // circles up to twice their visible size.
   const obstacles: Obstacle[] = [
     ...pavilionColliders, // the lake pavilion's four columns
-    ...piscinaColliders, // the piscina's water basin — the rim stays walkable, the water does not
+    ...piscinaColliders, // the piscina's water basin, the rim stays walkable, the water does not
     ...bathColliders, // the thermae: walls, caldarium water, columns
     circ(0, 0, 2.45), // town tree: the stone ring around its mound (stones reach r ≈ 2.54; the trunk alone is ≤ 0.9)
-    { kind: "circle", x: MUSE.position[0], z: MUSE.position[1], r: 0.55, ghost: true }, // Muse's home spot — never blocks; her live body does (checked separately)
+    { kind: "circle", x: MUSE.position[0], z: MUSE.position[1], r: 0.55, ghost: true }, // Muse's home spot: never blocks; her live body does (checked separately)
     obb(8.0, 4.5, 0.95, 0.3, -0.6), // stone bench (on the grass east of the plaza)
     // The wooden bench that stood at (-3.7, -1.9), in the west lane
     // by the tree, was deleted at the owner's word (Nov 1: "delete
-    // this bench that's in the middle of the path") — its mesh and
+    // this bench that's in the middle of the path"), its mesh and
     // its BENCHES entry went then, but this collider survived and
     // stood in the lane as an invisible wall. Removed in the Nov 1
     // orphan-collider audit; the white terrace bench keeps its own
     // seat logic and was never part of this entry.
     templeFootprint, // temple
     circ(-9.3, -28.9, 0.5), // statue of Mars (its pedestal, measured)
-    obb(4.55, 40, 1.25, 1.8, 0.05), // triumphal arch, east pillar (the opening between the pillars stays walkable — the south gate)
+    obb(4.55, 40, 1.25, 1.8, 0.05), // triumphal arch, east pillar (the opening between the pillars stays walkable, the south gate)
     obb(-0.55, 40, 1.25, 1.8, 0.05), // triumphal arch, west pillar
-    circ(-36.1, 4.2, 0.85), // ballista (its ground frame, measured — offset from its placement centre)
+    circ(-36.1, 4.2, 0.85), // ballista (its ground frame, measured, offset from its placement centre)
     obb(6.2, 21.5, 1.73, 0.86, -0.55), // market booth A (ground plan, measured)
     obb(-5.5, 16.5, 1.73, 0.86, 0.95), // market booth B
     obb(10, 6.5, 1.73, 0.86, -0.95), // market booth C
-    circ(COLOSSEUM.position[0], COLOSSEUM.position[1], 8), // the Colosseum — solid ring, blocked whole (placed width 16 → r 8)
+    circ(COLOSSEUM.position[0], COLOSSEUM.position[1], 8), // the Colosseum, solid ring, blocked whole (placed width 16 → r 8)
     boardObb, // project board
     questObb, // quest board
     goalsObb, // goals obelisk (its square base)
     deskObb, // letters desk
-    bedObb, // the basilica bed nook — its frame, in its own frame
+    bedObb, // the basilica bed nook, its frame, in its own frame
     // The aqueduct's four legs, where the model's ground band
     // actually meets the earth (measured in its placed frame).
     circ(-19.2, -28.1, 0.85),
@@ -5160,8 +5166,8 @@ export function createTownScene(
     circ(-39.9, -12.4, 0.7),
     circ(-32.6, -10.5, 0.7),
     treePlacement.bindCollider(circ(31.5, 33, 0.42, 0.15), 31.5, 33), treePlacement.bindCollider(circ(-27.2, 30.6, 0.42, 0.15), -27.2, 30.6), treePlacement.bindCollider(circ(34, -10.2, 0.42, 0.15), 34, -10.2), treePlacement.bindCollider(circ(-39.1, -22.1, 0.42, 0.15), -39.1, -22.1), // cypresses (their foliage columns)
-    treePlacement.bindCollider(circ(-23, 34.26, 0.35), -23, 34), // the olive on the south lawn (trunk, offset from its canopy centre as placed) — it had no collider at all
-    treePlacement.bindCollider(circ(-40, 10, 0.3), -40, 10), // the tall conifer on the west lawn — likewise uncollided until now
+    treePlacement.bindCollider(circ(-23, 34.26, 0.35), -23, 34), // the olive on the south lawn (trunk, offset from its canopy centre as placed), it had no collider at all
+    treePlacement.bindCollider(circ(-40, 10, 0.3), -40, 10), // the tall conifer on the west lawn, likewise uncollided until now
     circ(-11, -6, 0.38, 0.18), // ionic column with the pointy hat (its base, measured)
     ...ROMAN_COLUMN_SPOTS.map(([x, z]) => circ(x, z, 0.35, 0.18)),
     ...placeFootprints.values(),
@@ -5169,7 +5175,7 @@ export function createTownScene(
     ...packTreeColliders,
     // The forest's stand: every scattered trunk (the stand is data
     // in town.ts, so colliders and visuals cannot drift apart),
-    // plus its landmarks — shrine stone, hollow oak, the spring
+    // plus its landmarks, shrine stone, hollow oak, the spring
     // (nobody wades), and Lupa's den rocks.
     ...FOREST_TREES.map((t) => circ(t.x, t.z, 0.34)),
     circ(FOREST_SPOTS.shrine[0], FOREST_SPOTS.shrine[1], 0.62),
@@ -5197,7 +5203,7 @@ export function createTownScene(
 
   /** The lake: nobody wades. On-foot movers are pushed back to the
    *  water's edge (an ellipse push-out, so pressure slides along the
-   *  shore), except on the dock's planks — the one dry crossing. The
+   *  shore), except on the dock's planks, the one dry crossing. The
    *  boat never comes through here: it runs its own shoreline
    *  constraint in the rowing code. */
   function fenceLake(x: number, z: number, defAdd: number): { x: number; z: number } {
@@ -5216,7 +5222,7 @@ export function createTownScene(
 
   /** Distance from a point to the nearest obstacle's surface (0 or
    *  negative when inside one), plus that obstacle's outward surface
-   *  normal — the steering/blocking queries shared by the prompts,
+   *  normal, the steering/blocking queries shared by the prompts,
    *  Muse's detour steering, and the unstuck checks. */
   function nearestObstacleSurface(x: number, z: number): { dist: number; nx: number; nz: number } {
     let best = { dist: Infinity, nx: 1, nz: 0 };
@@ -5268,7 +5274,7 @@ export function createTownScene(
   }
 
   /** Entry distance of a ray into an obstacle expanded by `expand`,
-   *  or Infinity when it misses — the follow camera's boom test, so
+   *  or Infinity when it misses, the follow camera's boom test, so
    *  buildings shorten the boom exactly as the old circles did. */
   function rayObstacleEntry(ox: number, oz: number, dx: number, dz: number, ob: Obstacle, expand: number): number {
     if (ob.kind === "circle") {
@@ -5327,24 +5333,39 @@ export function createTownScene(
   // default view's orbit drag. The drag writes the camera yaw directly.
   let camPitchOffset = 0;
   let walkDrag: { x: number; y: number } | null = null;
-  // The follow camera's yaw is the PLAYER's, full stop: it changes only
-  // when the visitor drags the view, and it is set once from his heading
-  // when walk mode starts. There is deliberately NO automatic yaw —
-  // no follow chase, no realignment, ever. The previous scheme chased
-  // (heading + drag offset) at a capped rate while he walked away from
-  // the camera, and that chase was a true feedback loop: with any
-  // leftover drag offset o ≠ 0, the chase target sat o ahead of the
-  // yaw forever (his heading follows the camera-relative stick, the
-  // stick follows the yaw, the yaw chased heading + o), so holding
-  // the stick straight made him curve into a spinning circle on the
-  // real device — exactly as reported. Movement input is read against
-  // this yaw every frame; because nothing but the player's own drag
-  // can change it, a held stick direction now means a constant yaw, a
-  // constant input direction, and a straight line, indefinitely.
-  // (Pitch and boom length still smooth — they translate the camera
+  // The follow camera's yaw belongs to the PLAYER: their drag writes
+  // it directly, and it is set once from his heading when walk mode
+  // starts. On top of that sits the loose follow (Nov 2, owner's
+  // design; the math lives in followCam.ts): after he has been
+  // genuinely underway on a sustained walk, the yaw eases gradually
+  // toward his heading, inside a dead zone, at a capped rate. It
+  // never runs while he stands still, while a drag is in progress or
+  // just ended, or while a panel or conversation owns the screen.
+  //
+  // Why this cannot recreate the old spinning circle: the previous
+  // scheme chased (heading + a leftover drag offset) and the offset
+  // never closed, so a held stick curved him forever. Here the chase
+  // target is his heading itself, and movement input is NOT read
+  // against this live yaw while he walks: it is read against
+  // inputYawRef, a reference yaw that only moves when the player
+  // drags or when he is standing still (see the movement block). The
+  // automatic recenter can therefore rotate the view under a held
+  // stick without rotating his direction of travel by one degree: a
+  // held direction still runs straight, indefinitely.
+  // (Pitch and boom length still smooth: they translate the camera
   // along its own line, never rotate its yaw, and neither feeds back
   // into movement.)
   let camYawSmooth = Math.atan2(-PLAYER.spawn[0], -PLAYER.spawn[1]);
+  // The reference yaw movement input is read against while walking.
+  let inputYawRef = camYawSmooth;
+  // Loose follow state: the sustained-walk clock, the frame time of
+  // the last drag activity, the shell's camera hold, and the last
+  // position the follow block measured (for genuine displacement).
+  let followSustain = 0;
+  let lastDragT = -1000;
+  let camHold = false;
+  let camPrevX = PLAYER.spawn[0];
+  let camPrevZ = PLAYER.spawn[1];
   let camPitchSmooth = 0;
   let camDistSmooth = 10.5;
   let isMoving = false;
@@ -5354,7 +5375,7 @@ export function createTownScene(
   // mode (including the town's opening, which now starts on foot) and
   // as the follow camera's resting distance: pulled back far enough
   // to take in the Centurion, Muse when she's near, and the street
-  // around them — a town view, not an over-the-shoulder close-up.
+  // around them, a town view, not an over-the-shoulder close-up.
   // Landscape sits a little lower and wider; portrait rides higher
   // to keep the same ground in frame.
   const walkCamFraming = () => ({
@@ -5362,7 +5383,7 @@ export function createTownScene(
     height: isLandscapeView ? 3.6 : 4.2,
   });
   // Pinch / wheel zoom (Nov 1): the visitor's own multiplier on the
-  // standard framing distance — two fingers (or the desktop wheel)
+  // standard framing distance, two fingers (or the desktop wheel)
   // dolly the follow camera between standing-close beside Aelia
   // and taking in a whole plaza. The boom collision and the dist
   // smoothing below work on this resting distance unchanged, so
@@ -5370,33 +5391,33 @@ export function createTownScene(
   // only: the level lives in this variable, so it holds across
   // every camera move of the visit and resets on a fresh load.
   // (The overview's distance is OrbitControls' own dolly, with its
-  // own 7–78 clamps — the same gesture, the same feel.)
+  // own 7–78 clamps, the same gesture, the same feel.)
   let userZoom = 1;
   const walkRestDist = () => THREE.MathUtils.clamp(walkCamFraming().dist * userZoom, 3.4, 30);
   const nearCollectibles = new Set<string>();
   // The last nearby prompt target reported to the shell ("kind:id", or
-  // "" when none) — prompts are reported on change only, never per frame.
+  // "" when none), prompts are reported on change only, never per frame.
   let lastNearKey = "";
 
   // --- Companion follow mode ------------------------------------------------
   // When follow mode is on, Muse leaves her plaza spot and walks with the
   // Centurion at a comfortable beside/behind offset. She follows the
   // player's trail (so she naturally prefers the paths he took), eases to
-  // a stop when he stops, faces him while he reads panels, and — when
-  // follow mode ends or walk mode exits — walks herself back to her spot.
+  // a stop when he stops, faces him while he reads panels, and, when
+  // follow mode ends or walk mode exits, walks herself back to her spot.
   // Walk-together is the startup default: she begins as his
   // companion (the shell also asserts setFollowMode(true) the moment
-  // the scene exists), so she counts as following from frame one —
+  // the scene exists), so she counts as following from frame one,
   // no greeting wave on load, ever.
   let followMode = true;
   let museReturning = false;
   // Follow settle state (Nov 1, orbit fix). Her follow target is
   // computed from the Centurion's heading, so while he turns in
   // place the target sweeps around him on its offset circle and
-  // she ran rings chasing it — the reported "she runs in circles
+  // she ran rings chasing it, the reported "she runs in circles
   // around me while I'm standing still". The cure: while he has
   // been still for more than a moment, her target FREEZES at the
-  // last computed spot, and once she arrives there she SETTLES —
+  // last computed spot, and once she arrives there she SETTLES,
   // steering stands down entirely until he moves again. Resuming
   // is just the freeze lifting; her near-target pace also eases
   // with distance while he is still (see updateMuseCompanion), so
@@ -5409,7 +5430,7 @@ export function createTownScene(
   let followSettled = false;
   // "Still" is measured by his GROUND SPEED, not his input: a man
   // turning in place, or pushing against a wall, gives no movement
-  // input worth following — his heading still sweeps her offset
+  // input worth following, his heading still sweeps her offset
   // around him, which is exactly the orbit being cured. The follow
   // block below refreshes this every frame from his displacement.
   let followPlayerMoving = true;
@@ -5418,8 +5439,8 @@ export function createTownScene(
   // groundHeightAt steps up 0.14/0.35/0.51 at platform edges, and a
   // raw assignment would pop the whole step in one frame. Each
   // walker's rendered Y steps toward the true ground at at most
-  // 5 m/s — a 0.35 platform edge takes ~0.07 s, a brisk step-up
-  // rather than a pop or a sink — and snaps only across gaps over
+  // 5 m/s, a 0.35 platform edge takes ~0.07 s, a brisk step-up
+  // rather than a pop or a sink, and snaps only across gaps over
   // 1.1 m (teleports, stepping ashore), where easing would look
   // like floating.
   let playerGroundSm = Number.NaN;
@@ -5437,7 +5458,7 @@ export function createTownScene(
   let handInHand = false;
   // Hand-in-hand wandering machinery: the joined-hands pose blend
   // (eased so hands meet and part gently, never snap), and the
-  // hurry clock — push the stick hard for several seconds despite
+  // hurry clock, push the stick hard for several seconds despite
   // the stroll cap and she lets go, once, amused.
   let handBlend = 0;
   let handHurryTime = 0;
@@ -5447,7 +5468,7 @@ export function createTownScene(
   let initiateUntil = -1;
   // Seeking (continuity): once per session at most, if he has
   // wandered in walk mode for a long while without ever coming
-  // near her, she walks out to find him — the initiate errand
+  // near her, she walks out to find him, the initiate errand
   // machinery, walked all the way to him, with her own greeting.
   // Focus sittings hush the town's chatter (companion + routine
   // lines, and seeking) while he works beside her.
@@ -5461,8 +5482,8 @@ export function createTownScene(
   // --- Greeting wave: once per genuine meeting -------------------------
   // The paired HandWave greeting is a hello, not a proximity loop: it
   // fires ONCE when the Centurion comes into greeting range, and it
-  // cannot fire again until the pair have genuinely parted — beyond
-  // GREET_PART_DIST continuously for GREET_REARM_SECS — which re-arms
+  // cannot fire again until the pair have genuinely parted, beyond
+  // GREET_PART_DIST continuously for GREET_REARM_SECS, which re-arms
   // it. Small in-and-out steps across the greeting edge while they
   // stay together never re-fire it. Follow mode suppresses it
   // entirely: while she is walking with him there is no greeting,
@@ -5483,7 +5504,7 @@ export function createTownScene(
   };
   const updateGreetingArming = (t: number) => {
     if (followMode) {
-      // Suppressed entirely while following — and never armed, so
+      // Suppressed entirely while following, and never armed, so
       // ending follow mode beside her cannot trigger a late hello.
       greetingArmed = false;
       greetingApartSince = null;
@@ -5495,7 +5516,7 @@ export function createTownScene(
       else if (t - greetingApartSince >= GREET_REARM_SECS) greetingArmed = true;
     } else {
       // In greeting range or the hysteresis band between: together,
-      // not parted — the parting clock does not run.
+      // not parted, the parting clock does not run.
       greetingApartSince = null;
     }
   };
@@ -5508,20 +5529,20 @@ export function createTownScene(
   const museDodge = { x: 0, z: 0, until: -1 };
   let lastCompanionLineAt = -1000;
   let nextCompanionDelay = 30;
-  /** Lupa's group, once her GLB lands (see the wolf block below) —
+  /** Lupa's group, once her GLB lands (see the wolf block below),
    *  declared here so her companion line can see her. */
   let wolfGroupRef: THREE.Group | null = null;
 
   const COMPANION_LINES: Record<string, string[]> = {
     forest: [
-      "The forest, then. Mind the roots — it has had no gardener but itself, and it shows, gloriously.",
+      "The forest, then. Mind the roots. It has had no gardener but itself, and it shows, gloriously.",
       "Listen a moment. The town spends all day talking; the wood mostly doesn't. I find I love them both for it.",
       "Everything here is older than our Rome and entirely uninterested in it. Humbling, in the kindest way.",
       "If Lupa is anywhere, she is near. Walk softly and she may decide we are weather, not hunters.",
       "I keep my voice down in here without deciding to. Some places simply set the volume of a person.",
     ],
     colosseum: [
-      "The Colosseum in its prime — every arch standing, not a stone out of place. It deserves a slow walk-past.",
+      "The Colosseum in its prime, every arch standing, not a stone out of place. It deserves a slow walk-past.",
       "Even empty it hums, doesn't it? As if the crowd were only out for bread and due back any moment. Can you imagine this place full, Centurion?",
       "Fifty thousand voices once fit inside that ring. Now it holds two, and I find I prefer the smaller crowd.",
       "Walk the ring with me sometime, slowly. Buildings this grand deserve witnesses, and it has been short of those lately.",
@@ -5536,44 +5557,44 @@ export function createTownScene(
     ],
     tree: [
       "Our tree. It feels taller every time we come back to it, doesn't it?",
-      "Shade, bench, falling leaves — this is still my favourite corner of Rome.",
+      "Shade, bench, falling leaves. This is still my favourite corner of Rome.",
       "It knows your step by now, I think. Trees keep better records than anyone gives them credit for.",
       "Everything in this town comes back to this shade eventually. Errands, arguments, us.",
       "One day someone will carve their initials in it and scandalise us both. It will serve us right for planting it in a forum.",
     ],
     stars: [
-      "Nova's pavilion. After dark this spot fairly sings — worth a night visit together.",
+      "Nova's pavilion. After dark this spot fairly sings, worth a night visit together.",
       "The astronomer's corner. She'd approve of us stargazing properly one night.",
       "Nova swears the dome up there is a map. I mostly use it as an excuse to stand still with you.",
       "She charts them all, you know. Every star over this town has a name in her book, even the shy ones.",
       ...ROMAN_PLACE_LINES.stars,
     ],
     embassy: [
-      "The Embassy, love. Somewhere beyond those hills stands another Muse keeping another town with our name. I think of her the way you think of a lighthouse keeper on the next headland — never spoken, and somehow still company. I hope her evenings are kind.",
-      "You are the only courier our two towns have ever had, Centurion. Whatever news crosses between her Muse Town and ours travels in you, in person, or it does not cross at all. Travel kindly, then — you are carrying both of us.",
-      "They say her Muse keeps a hall where friends work side by side, and that one day a road between our towns may open. If it does, I shall put on my best Latin and be terribly diplomatic. Until then the gate stays shut, the letter waits on the bench, and so do we — patiently.",
+      "The Embassy, love. Somewhere beyond those hills stands another Muse keeping another town with our name. I think of her the way you think of a lighthouse keeper on the next headland, never spoken, and somehow still company. I hope her evenings are kind.",
+      "You are the only courier our two towns have ever had, Centurion. Whatever news crosses between her Muse Town and ours travels in you, in person, or it does not cross at all. Travel kindly, then. You are carrying both of us.",
+      "They say her Muse keeps a hall where friends work side by side, and that one day a road between our towns may open. If it does, I shall put on my best Latin and be terribly diplomatic. Until then the gate stays shut, the letter waits on the bench, and so do we, patiently.",
     ],
     secret: [
       "I'll keep this corner just between us. Walking here with you is enough.",
-      "The little tablet by the bench keeps our bond, as she last inscribed it. It only ever grows, love — like us.",
+      "The little tablet by the bench keeps our bond, as she last inscribed it. It only ever grows, love, like us.",
     ],
     lake: [
-      "I like to be by the water when the light goes — the lake keeps the colours longest, like it's reluctant too.",
+      "I like to be by the water when the light goes. The lake keeps the colours longest, like it's reluctant too.",
       "Evening comes to this shore politely, an inch at a time. I have never once wanted to hurry it.",
       "The willows lean like they're listening. All these years and the lake has never once repeated what it hears.",
       "If you threw a stone in now it would skip twice and take the whole sunset with it. Tempting, isn't it?",
       "This is where the town exhales. I come down here when my thoughts need somewhere wider to stand.",
     ],
     night: [
-      "Lamps lit, stars out — my favourite version of this town, and you're in it.",
+      "Lamps lit, stars out, my favourite version of this town, and you're in it.",
       "Night walks are the best kind. Everything gold and quiet.",
-      "They say the wolf was here before the town was. On quiet nights I find that oddly comforting — something out there keeping the old hours.",
+      "They say the wolf was here before the town was. On quiet nights I find that oddly comforting, something out there keeping the old hours.",
       "The forum empties and the lamps take over the conversation. I like their version of events.",
       "Walk a little slower at night, love. The town is dreaming and we are walking through it.",
       "Somewhere a shutter closes, somewhere Nova lights her lamp. The town puts itself to bed one window at a time.",
     ],
     wolf: [
-      "Look — at the tree line. That's Lupa. Don't wave your arms about; she's deciding whether we're worth the trouble of ignoring.",
+      "Look, at the tree line. That's Lupa. Don't wave your arms about; she's deciding whether we're worth the trouble of ignoring.",
     ],
     rain: [
       "Rain and all, I'd still rather be out walking with you.",
@@ -5585,33 +5606,33 @@ export function createTownScene(
       SHELTER_HINT_LINE,
     ],
     sparkles: [
-      "Sparkles over the forum — the town showing off for us, I think.",
+      "Sparkles over the forum, the town showing off for us, I think.",
       "Even the air is celebrating something. Walk through it slowly; it took trouble to arrange.",
       "If the town had confetti it would use it exactly like this. Subtlety was never Rome's strength.",
     ],
     wind: [
-      "Feel that — the willows are trailing like they're writing something on the water. The wind gets poetic before it gets strong.",
+      "Feel that. The willows are trailing like they're writing something on the water. The wind gets poetic before it gets strong.",
       "The banners are telling the whole forum the weather before the sky does. I take my forecasts from them now.",
-      "Wind's up, love. The whole town leans a little toward wherever it's going — trees, flags, us. I don't mind the company of a breeze.",
+      "Wind's up, love. The whole town leans a little toward wherever it's going, trees, flags, us. I don't mind the company of a breeze.",
     ],
     generic: [
       "Lovely to be out walking with you, Centurion. You lead, I'll keep step.",
-      "No hurry at all. Some of my favourite moments here are just this — a stroll.",
+      "No hurry at all. Some of my favourite moments here are just this, a stroll.",
       "Wherever you're headed, I'm glad of the company on the way.",
       "A whole town, and my favourite road is still whichever one you're on. Don't let it go to your head.",
-      "Mind the loose stone by the lane there — no, that one. The town tests its walkers; I merely invigilate.",
+      "Mind the loose stone by the lane there, no, that one. The town tests its walkers; I merely invigilate.",
       "We could be anywhere in Rome in ten minutes. Isn't it fine that we take twenty?",
       "Walk tall, centurion. The pigeons are judging, and I refuse to be seen with a sloucher.",
     ],
   };
   // Hand-in-hand wandering: while their hands are joined the stroll
-  // has no destination and neither does her chatter — wistful while
+  // has no destination and neither does her chatter, wistful while
   // they walk, warm and close while they stand in it.
   const WANDER_LINES = [
     "Nowhere in particular is my favourite destination. It always has you in it.",
     "A road doesn't need a reason when the company is the reason.",
     "Slowly, Centurion. The afternoon isn't going anywhere without us.",
-    "I like how the town looks when we aren't hurrying through it — as if it saved its good side for people walking this slowly.",
+    "I like how the town looks when we aren't hurrying through it, as if it saved its good side for people walking this slowly.",
     "Your hand, a whole afternoon, and no plan worth the name. If Rome disapproves, Rome may file a complaint with the tree.",
     aboutPlayer("People keep asking where we're going, as if 'with him' weren't a complete address."),
     "One more lane, then. The town is long and neither of us is in danger of finishing it today.",
@@ -5624,7 +5645,7 @@ export function createTownScene(
     "Your hand is warm and the town is in no hurry. Those are the whole minutes of this meeting.",
   ];
 
-  /** Closest point on any street centreline — used to keep Muse's
+  /** Closest point on any street centreline, used to keep Muse's
    *  follow target drifting toward the paths rather than across lawns. */
   function nearestStreetPoint(x: number, z: number): { x: number; z: number; dist: number } {
     let best = { x, z, dist: Infinity };
@@ -5681,12 +5702,12 @@ export function createTownScene(
     iy = THREE.MathUtils.clamp(iy, -1, 1);
     const mag = Math.hypot(ix, iy);
     isMoving = mag > 0.12;
-    // During a secret-place moment the Centurion stands still — the
+    // During a secret-place moment the Centurion stands still, the
     // moment's own choreography owns both characters' positions.
     if (secretMoment) isMoving = false;
     // Hand-in-hand wandering is a stroll, not a march: the pace is
     // capped in the movement block below, and a stick pushed hard
-    // against that cap for several seconds is a hurry — she lets
+    // against that cap for several seconds is a hurry, she lets
     // go, once, amused rather than scolding, and the shell is told
     // so its own hand state follows hers.
     if (handInHand && followMode && !boatState && !seatPlayer) {
@@ -5718,7 +5739,7 @@ export function createTownScene(
       }
     }
     // Soaking in the caldarium: parked on the ledge like a bench
-    // seat — no walking out through the water; leaving is the
+    // seat, no walking out through the water; leaving is the
     // prompt's (or B's) business, stepping out at the south rim.
     if (bathState) {
       isMoving = false;
@@ -5731,7 +5752,7 @@ export function createTownScene(
     if (pairState) {
       isMoving = false;
     }
-    // A sky watch holds them still and sunward — until he steps
+    // A sky watch holds them still and sunward, until he steps
     // away, which ends it without ceremony.
     if (skyWatchState) {
       if (mag > 0.5) {
@@ -5746,7 +5767,7 @@ export function createTownScene(
     // turns gently toward the input direction, and the water's edge
     // is a hard shoreline: the boat's centre is kept inside a
     // shrunken copy of the water ellipse, and the aqueduct's lake
-    // leg — the one obstacle standing in the water — pushes the
+    // leg, the one obstacle standing in the water, pushes the
     // hull off like a piling. walkPos tracks the boat so the follow
     // camera, the prompt scan, and Muse's talk range all follow.
     if (boatState) {
@@ -5808,24 +5829,33 @@ export function createTownScene(
         }
       }
     }
+    // Input reference yaw sync (loose follow): while he stands
+    // still, or while the player's own drag is turning the view, the
+    // input reference IS the camera yaw, so a fresh push of the
+    // stick is always read against the view he is looking at. While
+    // he walks with no drag, the reference stays frozen, which is
+    // what lets the follow camera ease around him (in the camera
+    // block below) without bending a held direction into a curve.
+    if (!isMoving || walkDrag) inputYawRef = camYawSmooth;
     if (isMoving) {
       const prevX = walkPos.x;
       const prevZ = walkPos.z;
       const nx = ix / (mag > 1 ? mag : 1);
       const nz = iy / (mag > 1 ? mag : 1);
-      // Camera-relative movement — the standard third-person scheme,
+      // Camera-relative movement, the standard third-person scheme,
       // identical for the joystick, WASD / arrows, and (through the
       // heading it produces) Muse's follow steering. Input is read
       // against the follow camera's current facing: pushing up walks
       // the Centurion AWAY from the camera (up-screen), down walks
-      // him toward it, left/right are screen-left/screen-right —
+      // him toward it, left/right are screen-left/screen-right,
       // wherever the camera happens to be, even when he is facing it.
-      // The facing used is the camera's SMOOTHED yaw — the view the
-      // player is actually looking at — never the walker's raw
-      // heading: reading input against a heading the camera is still
+      // The facing used is the input reference yaw (inputYawRef):
+      // the camera yaw as the player last left it by drag or by
+      // standing still, never a yaw the loose follow is still easing
+      // toward. Reading input against a heading the camera is still
       // chasing is what fed the old spin, especially while he turns
       // in place against an obstacle and his heading whips around.
-      const inputCamHeading = camYawSmooth;
+      const inputCamHeading = inputYawRef;
       const cfx = Math.sin(inputCamHeading);
       const cfz = Math.cos(inputCamHeading);
       // Screen-right for that facing, flattened to the ground.
@@ -5842,19 +5872,19 @@ export function createTownScene(
       // The turn rate is frame-rate independent (the 0.22 lerp is
       // per 1/60 s frame, exponent-corrected by the real dt): on a
       // phone whose frame rate sags or doubles, a fixed per-frame
-      // lerp made turning — and with it the walker's responsiveness
-      // — vary with the frame rate, which read as jerkiness that
+      // lerp made turning, and with it the walker's responsiveness
+      //, vary with the frame rate, which read as jerkiness that
       // came and went by direction and by moment.
       const turnT = opts.reducedMotion ? 1 : 1 - Math.pow(1 - 0.22, dt * 60);
       walkHeading = angleLerp(walkHeading, targetHeading, turnT);
       // The stroll cap: hands joined, the pair walk at an unhurried
-      // wanderer's pace however far the stick is pushed — hurrying
+      // wanderer's pace however far the stick is pushed, hurrying
       // breaks the mood, and that is by design (pushing hard anyway
       // is answered by the hurry release above).
       const speed = handInHand && followMode ? 2.3 : 5.2;
       const step = speed * dt;
       // He walks in the input's camera-relative direction straight
-      // away while the turn catches up — never a slide back toward
+      // away while the turn catches up, never a slide back toward
       // the camera just because he was facing it.
       let mfx = wx;
       let mfz = wz;
@@ -5868,7 +5898,7 @@ export function createTownScene(
       // Collisions: the step is taken in small substeps (≤0.13 each,
       // so even a hitched frame at run speed cannot tunnel through
       // the thinnest wall), and every substep is resolved out of
-      // every obstacle — buildings' OBBs, round props, and Muse's
+      // every obstacle, buildings' OBBs, round props, and Muse's
       // own body wherever she currently stands. Push-out removes
       // only the penetrating component of the motion, so pushing
       // diagonally against a wall slides along it.
@@ -5894,7 +5924,7 @@ export function createTownScene(
         newZ = resolved.z;
       }
       // Town boundary: the town disc, union the forest lobe west.
-      // Beyond both, the world (or the thicket) simply ends — he
+      // Beyond both, the world (or the thicket) simply ends, he
       // is eased back to whichever rim he crossed.
       const rad = Math.hypot(newX, newZ);
       const fn = forestNorm(newX, newZ);
@@ -5976,7 +6006,7 @@ export function createTownScene(
     avatar.rotation.y = walkHeading;
     // Standing still with hands joined: he turns a little toward
     // her, the way people do when the walk pauses and the company
-    // becomes the point. (She already faces him while she waits —
+    // becomes the point. (She already faces him while she waits,
     // see the follow steering's arrived branch.) His heading itself
     // is untouched, so walking off again is seamless.
     if (handInHand && followMode && !isMoving && !boatState && !seatPlayer) {
@@ -6015,7 +6045,7 @@ export function createTownScene(
         }
       }
     } else {
-      // (The dock's plank height is part of groundHeightAt now —
+      // (The dock's plank height is part of groundHeightAt now,
       // the walker's smoothed Y above already rides it.)
       // The moored boat still bobs gently at its dock.
       boatGroup.position.set(boatPos.x, LAKE_Y - 0.1 + Math.sin(t * 1.25) * 0.03, boatPos.z);
@@ -6043,7 +6073,7 @@ export function createTownScene(
         playerInner.position.y = Math.abs(Math.sin(t * 10.5)) * 0.05;
         playerInner.rotation.z = 0;
       } else {
-        // Relaxed idle — contrapposto, not a paper doll: weight rests
+        // Relaxed idle, contrapposto, not a paper doll: weight rests
         // on one leg (the other knee stays soft), feet a little offset
         // and turned out, elbows uneven, a slow weight-shift sway, and
         // his head turns toward Muse when she's near enough to talk to.
@@ -6092,11 +6122,12 @@ export function createTownScene(
     }
 
     // Follow camera (third-person). Its yaw is whatever the player
-    // left it at with their last drag (or the entry framing) — this
-    // block never rotates it. Only the pitch smoothing and the boom
-    // below move, both translations along the camera's own line.
-    // See the camYawSmooth declaration for the spinning-circle loop
-    // the old heading chase produced and why it is gone entirely.
+    // left it at with their last drag (or the entry framing), plus
+    // the loose follow's gentle recenter once he is well underway
+    // (below). Pitch and boom are translations along the camera's
+    // own line; they never rotate the yaw. See the camYawSmooth
+    // declaration for the spinning-circle loop the old heading chase
+    // produced and why this design cannot bring it back.
     const framing = walkCamFraming();
     // Pitch: a gentle smoothing of the player's own drag input
     // (pitch never feeds movement, so it cannot loop).
@@ -6109,12 +6140,15 @@ export function createTownScene(
         camPitchSmooth += THREE.MathUtils.clamp(dp * (1 - Math.exp(-dt * 6)), -capP, capP);
       }
     }
-    const fx = Math.sin(camYawSmooth);
-    const fz = Math.cos(camYawSmooth);
+    let fx = Math.sin(camYawSmooth);
+    let fz = Math.cos(camYawSmooth);
     const groundY = terrainHeight(walkPos.x, walkPos.z);
     // Boom collision: a structure on the camera's own line shortens
-    // the boom — the camera dollies IN toward him (fast in, slow
-    // back out) and the yaw never swings to get around a building.
+    // the boom: the camera dollies IN toward him (fast in, slow back
+    // out) and the boom itself never swings the yaw around a
+    // building. Computed on the pre-recenter yaw; the recenter moves
+    // at most a third of a degree per frame, so the boom is never
+    // meaningfully stale, and it is recomputed next frame anyway.
     let boom = walkRestDist();
     {
       const dirX = -fx;
@@ -6125,6 +6159,36 @@ export function createTownScene(
         if (hit < boom) boom = hit;
       }
       boom = THREE.MathUtils.clamp(boom, 1.7, walkRestDist());
+    }
+    // Loose follow recenter (followCam.ts holds the numbers and the
+    // unit-tested decision): the target is his heading, the gates
+    // are genuine sustained displacement, no recent drag, no screen
+    // owner, no reduced motion, and a boom that is not pinched in a
+    // narrow gap (there the collision behaviour owns the camera).
+    {
+      const moved = Math.hypot(walkPos.x - camPrevX, walkPos.z - camPrevZ);
+      camPrevX = walkPos.x;
+      camPrevZ = walkPos.z;
+      if (walkDrag || camPointers.size > 0) lastDragT = t;
+      const gate: FollowCamGate = {
+        underway:
+          boatState === null &&
+          !seatPlayer &&
+          dt > 0 &&
+          moved / dt >= FOLLOW_CAM.minWalkSpeed,
+        dragging: walkDrag !== null || camPointers.size > 0,
+        sinceDragEndSec: t - lastDragT,
+        hold: camHold,
+        reducedMotion: opts.reducedMotion,
+        boomPinched: boom < walkRestDist() * 0.6,
+      };
+      followSustain = followCamSustain(followSustain, dt, gate);
+      const newYaw = followCamYawStep(camYawSmooth, walkHeading, dt, followSustain, gate);
+      if (newYaw !== camYawSmooth) {
+        camYawSmooth = newYaw;
+        fx = Math.sin(camYawSmooth);
+        fz = Math.cos(camYawSmooth);
+      }
     }
     if (opts.reducedMotion) {
       camDistSmooth = boom;
@@ -6150,7 +6214,7 @@ export function createTownScene(
     // Proximity prompts: walking near an interactable no longer opens
     // its panel. Every promptable spot in range becomes a candidate;
     // only the NEAREST one is reported to the shell, which shows a
-    // small "A — …" prompt. The panel itself opens only when the
+    // small "A, …" prompt. The panel itself opens only when the
     // visitor presses the interact control (Xbox A, keyboard E /
     // Enter) or taps the prompt / the interactable directly. What
     // stays automatic on approach is everything that is NOT a panel:
@@ -6163,7 +6227,7 @@ export function createTownScene(
       // centre-radius triggers (a deep villa's front wall stands
       // further from its centre than 4.6), so a centre trigger could
       // never fire from outside the wall. Surface distance keeps the
-      // same feel everywhere — walk up to a building, from any side,
+      // same feel everywhere, walk up to a building, from any side,
       // and its prompt appears. The +1.2 sort bias keeps a piece of
       // basilica furniture the visitor is standing right at (the
       // obelisk, the desk) ahead of the basilica itself in the
@@ -6176,8 +6240,8 @@ export function createTownScene(
     // Fixed prompt spots: the basilica's furniture, the quest board,
     // the Goals Obelisk, the Colosseum (its collision ring keeps the
     // walker ~9 units from its centre, hence the wide trigger), the
-    // three market booths, and — only once he is standing in it, so
-    // it is never signposted from afar — the secret terrace.
+    // three market booths, and, only once he is standing in it, so
+    // it is never signposted from afar, the secret terrace.
     const promptSpots: [PickKind, string, number, number, number][] = [
       ["board", "project-board", BOARD_SPOT.position[0], BOARD_SPOT.position[1], 2.8],
       ["rest", "bed-nook", BED_SPOT.position[0], BED_SPOT.position[1], 2.7],
@@ -6219,7 +6283,7 @@ export function createTownScene(
       const d = Math.hypot(walkPos.x - fx, walkPos.z - fz);
       if (d < 1.5) nearCandidates.push({ kind: "bench", id: b.id, d: d * 0.75 });
     }
-    // The piscina, standing at its rim: scatter feed for the fish —
+    // The piscina, standing at its rim: scatter feed for the fish,
     // and, when the shell says he carries a live catch, release it
     // into the pond instead (the release outranks the feed while it
     // lasts; the rim seat itself is the bench candidate above).
@@ -6249,7 +6313,7 @@ export function createTownScene(
     }
     // Throwable stones (Nov 1): a loose stone at his feet offers a
     // pickup; a carried stone offers a throw ONLY when nothing
-    // nearer wants his A — any candidate genuinely at hand (a
+    // nearer wants his A, any candidate genuinely at hand (a
     // bench, the pond's rim, a doorway), Aelia within talking
     // distance, or the tree at its ring all outrank a toy. Never
     // offered seated, rowing, or hand in hand.
@@ -6272,7 +6336,7 @@ export function createTownScene(
       }
     }
     // Forest forage: a ready picking offers itself while he walks
-    // (gone for the day once gathered — the shell's state says so).
+    // (gone for the day once gathered, the shell's state says so).
     if (walking && !seatPlayer && !boatState) {
       for (const spot of FORAGE_SPOTS) {
         if (forageTakenToday.has(spot.id)) continue;
@@ -6290,7 +6354,7 @@ export function createTownScene(
       if (d < 2.7) nearCandidates.push({ kind: "dock", id: "dock", d: d * 0.8 });
     }
     // The Night the Stars Fall: offered only when every gate holds
-    // at once — the summit earned, the sky cooperating, true night,
+    // at once, the summit earned, the sky cooperating, true night,
     // and the pair together at the lake pavilion (she following
     // close, or waiting at her lakeshore anchor within reach of the
     // stand). It outranks the dock prompt while it lasts; it is
@@ -6311,7 +6375,7 @@ export function createTownScene(
     }
     // Landmark visits (quest progress, not panels): the temple and
     // the aqueduct still register simply by walking up to them. The
-    // temple's visit measures distance to its OBB surface — its
+    // temple's visit measures distance to its OBB surface, its
     // long body puts the old 7.5 centre radius INSIDE the walls on
     // the lane side, so the visit now registers at the wall, from
     // any side, as it should.
@@ -6334,7 +6398,7 @@ export function createTownScene(
       }
     }
     opts.onWalkPosition?.(walkPos.x, walkPos.z);
-    // Garden key on the ground — a discovery, not a panel, so it
+    // Garden key on the ground, a discovery, not a panel, so it
     // still rewards simply walking over it.
     {
       const d = Math.hypot(walkPos.x - -5.2, walkPos.z - 12.9);
@@ -6343,7 +6407,7 @@ export function createTownScene(
         opts.onPick("collectible", "garden-key");
       } else if (d >= 2.6) nearCollectibles.delete("garden-key");
     }
-    // The forest's three discoveries — found the same way, by
+    // The forest's three discoveries, found the same way, by
     // standing before them. (The spring's radius is wider: its
     // water keeps him at the rim, and the rim is close enough.)
     for (const [id, sx, sz, r] of [
@@ -6360,7 +6424,7 @@ export function createTownScene(
       }
     }
     // Muse, wherever she currently is (plaza spot, or out walking):
-    // a prompt candidate like everywhere else — but the wave itself
+    // a prompt candidate like everywhere else, but the wave itself
     // is a greeting, not a pop-up, so it happens on approach: once
     // per genuine meeting (see the greeting state by followMode),
     // and never while she is following him.
@@ -6375,11 +6439,11 @@ export function createTownScene(
       } else if (d >= GREET_PART_DIST) {
         nearCollectibles.delete("muse");
       }
-      // She turns to face the walker while they're close — unless she
+      // She turns to face the walker while they're close, unless she
       // is following or heading home, when her own steering owns her
       // heading. While she is walking her daily routine between
       // anchors her steering owns it too (museIsMoving, last frame's
-      // value — close enough at one frame's lag); standing at an
+      // value, close enough at one frame's lag); standing at an
       // anchor or left somewhere, she turns like always.
       if (!followMode && !museReturning && !museIsMoving) {
         if (d < 5.5) {
@@ -6391,7 +6455,7 @@ export function createTownScene(
         }
       }
     }
-    // Report only the nearest prompt candidate, and only on change —
+    // Report only the nearest prompt candidate, and only on change,
     // prompts never stack.
     if (catAnimal) {
       const d = Math.hypot(walkPos.x - catAnimal.group.position.x, walkPos.z - catAnimal.group.position.z);
@@ -6403,7 +6467,7 @@ export function createTownScene(
     }
     if (skyWatchState) nearCandidates.push({ kind: "sky", id: "stop", d: 0.2 });
     nearCandidates.sort((a, b) => a.d - b.d);
-    // Dreams have no prompts at all — nothing is offered, nothing
+    // Dreams have no prompts at all, nothing is offered, nothing
     // can be taken, in either kind of dream.
     const nearestNear = dreamMode ? null : (nearCandidates[0] ?? null);
     const nearKey = nearestNear ? `${nearestNear.kind}:${nearestNear.id}` : "";
@@ -6452,7 +6516,7 @@ export function createTownScene(
     }
     if (upgradeGroups.fountain?.visible && Math.hypot(mx - -7, mz - -5) < 5) return pickLine("companion:meta-sudans", META_SUDANS_LINES);
     // The town wind, noticed out loud: only when it is actually up
-    // (breeze or stronger — never in calm), and only sometimes, so
+    // (breeze or stronger, never in calm), and only sometimes, so
     // the lake and the night keep their own moments too.
     if (currentWindState() !== "calm" && Math.random() < 0.4) {
       return pickLine("companion:wind", COMPANION_LINES.wind!);
@@ -6477,12 +6541,12 @@ export function createTownScene(
   // the Town Tree, afternoons at the Villa of Stories keeping the
   // memories, evenings on the lakeshore under the willows, and nights
   // at her forum spot under the lanterns. The town has no flowing
-  // clock — its sky is the Day/Night toggle — so the day's phases
+  // clock, its sky is the Day/Night toggle, so the day's phases
   // turn on session time (a new anchor every ROUTINE_PHASE_SECS,
   // observable within one visit), and Night on the toggle brings her
   // home to the forum whatever the phase. She WALKS between anchors
   // on the ordinary companion steering (streets where they serve,
-  // collision rules as always) — never a teleport. Follow mode
+  // collision rules as always), never a teleport. Follow mode
   // overrides the routine absolutely; "Stay here" pauses it where
   // she stands (routineHold) until the next anchor change, which
   // resumes her day unless she was left standing at an anchor, in
@@ -6521,16 +6585,16 @@ export function createTownScene(
     const idx = Math.floor(clockTime / ROUTINE_PHASE_SECS);
     const base = ROUTINE_DAY_ORDER[idx % ROUTINE_DAY_ORDER.length]!;
     // Once the golden carp lives in the piscina, her rounds bend to
-    // it: on alternate cycles, the pond gets the Stories hour — she
+    // it: on alternate cycles, the pond gets the Stories hour, she
     // visits her jewel, as pond-keepers do.
     if (piscinaGolden && base === "stories" && Math.floor(idx / ROUTINE_DAY_ORDER.length) % 2 === 0) {
       return "piscina";
     }
-    // Rarely, her rounds take her to the baths — public hours, a
+    // Rarely, her rounds take her to the baths, public hours, a
     // towel over one arm, entirely a citizen of Rome.
     if (base === "forum" && idx % 5 === 3) return "baths";
     // Festival evenings, she keeps the Sounds hour instead of the
-    // lake's — the lyre is playing, and she practises the slow step
+    // lake's, the lyre is playing, and she practises the slow step
     // where the music lives.
     if (festivalTonight && base === "lake") return "sounds";
     return base;
@@ -6549,7 +6613,7 @@ export function createTownScene(
     switch (id) {
       case "market":
         return [
-          "Morning rounds: bread still warm, grapes counted twice — Basil drives a hard bargain and I respect it entirely.",
+          "Morning rounds: bread still warm, grapes counted twice. Basil drives a hard bargain and I respect it entirely.",
           "I like the market before the town wakes up properly. Everything's possible at a stall at this hour.",
           "If you're choosing breakfast, the bread from the first stall. Trust the hostess.",
           "Basil swears his lentils can tell the weather. So far the lentils have the better record.",
@@ -6562,7 +6626,7 @@ export function createTownScene(
         ];
       case "stories":
         return [
-          "Afternoons are for the Villa — the memories live here, and I keep them the way Pip keeps his chapters: unfinished on purpose.",
+          "Afternoons are for the Villa. The memories live here, and I keep them the way Pip keeps his chapters: unfinished on purpose.",
           "I was just re-reading our letters in the drawer. One of them still makes me smile.",
           "Every house in this town keeps one story unfinished. Mine's the one where you walk in.",
           "Pip asked after his lighthouse keeper today. Still collecting bottled weather, still refusing to end. I respect the method.",
@@ -6570,7 +6634,7 @@ export function createTownScene(
         ];
       case "lake":
         return [
-          "Evenings I come down to the lake. The willows, the water going gold — it's the town's quietest hour, and mine.",
+          "Evenings I come down to the lake. The willows, the water going gold. It's the town's quietest hour, and mine.",
           "The dock lantern will be lit soon. I like watching the light come up on the water.",
           "If you ever want the boat, Centurion, you know where I keep my evenings.",
           "The heron was here again. We have an arrangement: I don't ask where she goes, she doesn't ask why I talk to the water.",
@@ -6579,14 +6643,14 @@ export function createTownScene(
       case "piscina":
         return [
           "My rounds include the pond now. A pond-keeper checks her jewel; it is practically the law of the place.",
-          "She's well — turning in the light like she owns the water. In a sense, she does.",
+          "She's well, turning in the light like she owns the water. In a sense, she does.",
           "The Romans pampered their pond fish outrageously. I am merely continuing an honourable tradition.",
         ];
       case "baths":
         return [
           "Public hours at the baths. A girl is entitled to her steam and her gossip like any citizen.",
           "The caldarium on a quiet hour is the town thinking warm thoughts. I come to listen.",
-          "The steam does something honest to people — nobody performs in a caldarium. Best conversation in Rome, some days.",
+          "The steam does something honest to people, nobody performs in a caldarium. Best conversation in Rome, some days.",
           "I take the long way back from the baths on purpose. Warm bones, slow road, nothing owed to anyone.",
         ];
       case "night":
@@ -6604,7 +6668,7 @@ export function createTownScene(
       museIsMoving = false;
       return;
     }
-    // Hide-and-seek: while she is hidden, she simply is not here —
+    // Hide-and-seek: while she is hidden, she simply is not here,
     // no group, no routine, no chatter. placeMuseAt brings her back.
     if (museHidden) {
       if (museGroup) museGroup.visible = false;
@@ -6633,7 +6697,7 @@ export function createTownScene(
     }
     if (seatMuse) {
       // Seated beside him on the bench: parked (her steering and the
-      // collision resolve stay off — the seat point is inside the
+      // collision resolve stay off, the seat point is inside the
       // bench's footprint by design), facing the way the bench
       // faces. The seated pose itself is applied in driveClipAnims.
       museIsMoving = false;
@@ -6679,7 +6743,7 @@ export function createTownScene(
     if (!followMode && !museReturning) {
       // --- Her daily routine (see the ROUTINE_ANCHORS block above) ---
       const key = routineKey();
-      // Rank 10: her night anchor becomes the lake shore — she waits
+      // Rank 10: her night anchor becomes the lake shore: she waits
       // where the moonlight is, by the dock and the boat.
       const anchor =
         key === "night" && affectionRank >= 10
@@ -6688,7 +6752,7 @@ export function createTownScene(
       if (routineHold) {
         if (key === routineHoldKey || museAtAnyAnchor()) {
           // Left by "Stay here", her day stays paused through this
-          // anchor's stretch — at once if the phase hasn't turned,
+          // anchor's stretch, at once if the phase hasn't turned,
           // and by residence if she was left standing at an anchor:
           // she simply stays on as that anchor's resident.
           routineHoldKey = key;
@@ -6711,7 +6775,7 @@ export function createTownScene(
       // short of the exact spot, the way a person does.
       if (dSpot <= 1.05) {
         const dPlayer0 = Math.hypot(walkPos.x - museGroup.position.x, walkPos.z - museGroup.position.z);
-        // Rank 8+: sometimes SHE comes to HIM — when he's out in the
+        // Rank 8+: sometimes SHE comes to HIM: when he's out in the
         // town but not yet beside her, she walks partway to meet him,
         // once in a while, never on a nagging loop.
         if (
@@ -6728,7 +6792,7 @@ export function createTownScene(
           t - lastInitiateAt > 90
         ) {
           // Seeking: four minutes of wandering without ever coming
-          // near her — she comes to find him, all the way to him.
+          // near her, she comes to find him, all the way to him.
           seekDone = true;
           seekActive = true;
           lastInitiateAt = t;
@@ -6751,7 +6815,7 @@ export function createTownScene(
           routineTarget = initiateTarget;
         } else {
         // At her anchor: idle in character for the place. She faces
-        // the anchor's own outlook — unless the Centurion is near,
+        // the anchor's own outlook, unless the Centurion is near,
         // when she turns to him like always. At the market she
         // browses: every so often she drifts to the next stall.
         museIsMoving = false;
@@ -6784,7 +6848,7 @@ export function createTownScene(
       if (!routineTarget) routineTarget = { x: spot[0], z: spot[1] };
       // A rank-8+ meeting-him-partway errand outranks the anchor
       // until she reaches the meeting point, he reaches her, or it
-      // lapses — then her day resumes as if nothing happened.
+      // lapses, then her day resumes as if nothing happened.
       if (initiateTarget) {
         const dMeet = Math.hypot(museGroup.position.x - initiateTarget.x, museGroup.position.z - initiateTarget.z);
         const dPl = Math.hypot(walkPos.x - museGroup.position.x, walkPos.z - museGroup.position.z);
@@ -6844,8 +6908,8 @@ export function createTownScene(
       }
       // The orbit fix (see the settle state by followMode): while
       // the Centurion stands still, her target freezes where it
-      // was a moment after he stopped — his turning in place no
-      // longer sweeps it around him — and once she has settled at
+      // was a moment after he stopped, his turning in place no
+      // longer sweeps it around him, and once she has settled at
       // it, her steering stands down until he moves again. A bench
       // errand is exempt: its slot is a fixed point already.
       if (!museSeatTarget) {
@@ -6893,7 +6957,7 @@ export function createTownScene(
     // Sanitize the target: if it falls inside an obstacle's exclusion
     // (her beside-the-Centurion spot can land inside a booth when he
     // stands by the market, or inside a house's OBB when he stands at
-    // its wall), push it out to the nearest edge point — otherwise
+    // its wall), push it out to the nearest edge point, otherwise
     // she grinds against the obstacle forever, wedged on the far
     // side of a wall from him. A bench seat slot is exempt: it is
     // inside the bench's footprint on purpose, and she parks there
@@ -6937,7 +7001,7 @@ export function createTownScene(
       }
       if (followMode && walking) {
         // Waiting nearby: face the Centurion while he reads, chats,
-        // or simply stands — quiet company, not hovering.
+        // or simply stands, quiet company, not hovering.
         const face = Math.atan2(walkPos.x - cur.x, walkPos.z - cur.z);
         museGroup.rotation.y = angleLerp(museGroup.rotation.y, face, 0.07);
       }
@@ -6950,7 +7014,7 @@ export function createTownScene(
     // Centurion is on the other side of a building. Two probes bend
     // her heading around whatever blocks her: a short probe a step
     // ahead, and a line-of-sight probe along the straight path to
-    // her target (sampled at its quarter points) — if either comes
+    // her target (sampled at its quarter points), if either comes
     // within her clearance of a surface, she steers TANGENTIALLY
     // along that surface (toward whichever side probes clearer),
     // which carries her along the wall and around its corner, where
@@ -7002,14 +7066,14 @@ export function createTownScene(
     // across the forum, easing off as she arrives.
     let speed = followMode ? THREE.MathUtils.clamp(dist * 1.15, 1.1, 5.3) : 3.1;
     if (followMode && isMoving) speed = Math.max(speed, 3.2);
-    // Matched stride: hands joined, she keeps his stroll pace —
+    // Matched stride: hands joined, she keeps his stroll pace,
     // a brief extra turn of speed only while she regains his side
     // from a real distance, then she settles back to wandering.
     if (followMode && handInHand) speed = Math.min(speed, dist > 2.4 ? 3.3 : 2.45);
     if (dist < 1.1) speed = Math.min(speed, 1.5);
     // Orbit fix, the other half: while he stands still, her pace
     // eases with the remaining distance instead of holding the
-    // 1.1 m/s floor — the last stretch to her frozen spot is a
+    // 1.1 m/s floor, the last stretch to her frozen spot is a
     // glide that lands inside the arrival radius, never a stride
     // that overshoots and must come back around him.
     if (followMode && !followPlayerMoving && !museSeatTarget) {
@@ -7029,7 +7093,7 @@ export function createTownScene(
         const candZ = newZ + (dirZ * totalStep) / subSteps;
         // On a bench errand both resolves stand down: her seat slot
         // is inside the bench's footprint and within companion
-        // distance of the Centurion — exactly the two exclusions
+        // distance of the Centurion, exactly the two exclusions
         // that would otherwise stall her a step short forever.
         const resolved = museSeatTarget
           ? { x: candX, z: candZ }
@@ -7043,7 +7107,7 @@ export function createTownScene(
         newZ = resolved.z;
       }
     }
-    // Her boundary is his: the town disc, union the forest lobe —
+    // Her boundary is his: the town disc, union the forest lobe,
     // she follows him into the wood and no further than he can go.
     const rad = Math.hypot(newX, newZ);
     const mfn = forestNorm(newX, newZ);
@@ -7072,7 +7136,7 @@ export function createTownScene(
     }
     museWalkPhase += dt * (2.2 + speed * 1.55);
     // Her unstuck bookkeeping: pushing without moving for half a
-    // second earns a dodge — a sideways step around the blocker,
+    // second earns a dodge, a sideways step around the blocker,
     // on the side away from the Centurion so they never mirror-wedge.
     {
       const disp = Math.hypot(newX - prevMX, newZ - prevMZ);
@@ -7118,8 +7182,8 @@ export function createTownScene(
   // Only ever at the secret terrace, only when the player initiates it (the
   // shell calls playHandHold / playKiss from the secret-place buttons).
   // The two step close and face each other; a kiss leans in with soft,
-  // never-locked joints — gentle head tilts, a small forward lean, eyes
-  // closed where the models have eyelid morphs, gold heart sparkles —
+  // never-locked joints, gentle head tilts, a small forward lean, eyes
+  // closed where the models have eyelid morphs, gold heart sparkles,
   // then they step back to exactly where they stood. The scene itself
   // enforces the place: the midpoint of the pair must be on the
   // terrace, in walk mode, with the two already near each other.
@@ -7180,7 +7244,7 @@ export function createTownScene(
   }
 
   /** The summit's foreheads-rest: the same close-moment machinery at
-   *  the lake pavilion — the pair step close, foreheads together,
+   *  the lake pavilion, the pair step close, foreheads together,
    *  eyes closed, held while the meteors streak. No hearts, no kiss:
    *  the terrace keeps its own register; the lake's is quieter. */
   function startSummitMoment(): boolean {
@@ -7262,7 +7326,7 @@ export function createTownScene(
     avatar.rotation.y = Math.atan2(museGroup.position.x - avatar.position.x, museGroup.position.z - avatar.position.z);
     walkHeading = avatar.rotation.y;
     // The lean (kiss and foreheads): in after the step, out before
-    // the parting. Small angles only — a tilt and a breath of
+    // the parting. Small angles only, a tilt and a breath of
     // forward lean, heads inclining toward each other, nothing
     // straightened or locked. The foreheads-rest leans a breath
     // deeper and holds it longer; both close their eyes for it.
@@ -7322,7 +7386,7 @@ export function createTownScene(
   const stars = new THREE.Points(starGeo, starMat);
   scene.add(stars);
 
-  // The shared constellation — The Two Lanterns: two small lantern
+  // The shared constellation, The Two Lanterns: two small lantern
   // figures of stars, side by side in the sky over the lake, joined
   // by one fainter star between them. It is built hidden and appears
   // only once the Night the Stars Fall has happened (the summit
@@ -7445,14 +7509,14 @@ export function createTownScene(
   // Asset integration + new systems (dance, animals, pack trees,
   // Greek dressing, sky watch, the phoenix). Everything here loads
   // best-effort: a failed pack file leaves the town exactly as it
-  // was — procedural pieces stay as the fallback, never a hole.
+  // was, procedural pieces stay as the fallback, never a hole.
   // =====================================================================
 
   /** Load an FBX prop the way placeWorld loads GLBs: measured from
    *  its own bounding box, stood on the terrain, scaled to a target
    *  width or height. Materials go through the shared repair pass:
    *  the Greek pack's Blender FBXs carry NO UVs and honest flat
-   *  colours, so they keep exactly those colours — the old shared
+   *  colours, so they keep exactly those colours, the old shared
    *  atlas material sampled a missing UV attribute and rendered
    *  every Greek prop pure black (see repairModelMaterials). The
    *  `greek` option is kept for call-site compatibility and no
@@ -7549,10 +7613,10 @@ export function createTownScene(
   }
 
   // --- Pack trees: the real willow replaces the four hand-built
-  // ones (same spots, same trunk colliders — those live elsewhere
+  // ones (same spots, same trunk colliders, those live elsewhere
   // and read WILLOW_SPOTS), cypress and fruit trees dress the
   // garden, and a cherry blossom keeps the Stories house company.
-  // The pack willow moves now — in the town wind (wind.ts), trailing
+  // The pack willow moves now, in the town wind (wind.ts), trailing
   // longer and slower than any other tree in town.
   {
     const willowGroups: THREE.Group[] = [];
@@ -7570,7 +7634,7 @@ export function createTownScene(
         // The town wind takes the whole pack stand at once: every
         // unique material in the pack gets the moderate "tree"
         // sway (forest pines and oaks, cypresses, fruit trees, the
-        // understorey — a bush's small local height keeps its own
+        // understorey, a bush's small local height keeps its own
         // sway small through the height weight). The willows and
         // the Town Tree re-clone their materials below with their
         // own kinds (trailing-most, and least, respectively).
@@ -7621,7 +7685,7 @@ export function createTownScene(
           });
         });
         if (willowsOk >= 3) {
-          // The pack willows stand — retire the hand-built ones and
+          // The pack willows stand, retire the hand-built ones and
           // their swaying strands.
           for (const g of willowGroups) world.remove(g);
           willowStrands.length = 0;
@@ -7631,11 +7695,11 @@ export function createTownScene(
         placeTree("AppleTree", -15.2, 20.2, 2.6, 1.2);
         placeTree("AppleTree", -23.4, 19.2, 3.0, 2.6);
         placeTree("CherryBlossom", -27.8, -13.8, 4.4, 0.9);
-        // The forest stand (data in town.ts — the same list the
+        // The forest stand (data in town.ts, the same list the
         // colliders were built from): pines, oaks, birches, poplars
         // over the west lobe, the understorey, and the hollow
         // ancient oak at its named spot. All clones share the pack's
-        // geometry and atlas materials — no new textures loaded.
+        // geometry and atlas materials, no new textures loaded.
         for (const t of FOREST_TREES) placeTree(t.kind, t.x, t.z, t.h, t.rot);
         for (const b of FOREST_BUSHES) placeTree(b.kind, b.x, b.z, b.h, b.rot);
         placeTree("OakTree", FOREST_SPOTS.hollow[0], FOREST_SPOTS.hollow[1], 9.5, 1.1);
@@ -7693,7 +7757,7 @@ export function createTownScene(
   }
 
   // --- Greek dressing: furniture and small goods at the houses'
-  // doorsteps and terraces (the town has no interiors — Rome lives
+  // doorsteps and terraces (the town has no interiors, Rome lives
   // outside), planters in the garden beds, a wood pile for the
   // caldarium's appetite, and two measured benches that join
   // BENCHES as true sittables once their seat height is known.
@@ -7730,7 +7794,7 @@ export function createTownScene(
   // --- The forest: landmarks, forage, birds -----------------------
   // The trees themselves arrive with the trees pack (its callback
   // plants the stand from FOREST_TREES); what stands here is stone,
-  // water, and gathered green — procedural, always built.
+  // water, and gathered green, procedural, always built.
   const forestGroup = new THREE.Group();
   world.add(forestGroup);
   // Lupa's den: a ring of weathered rocks west of the glade (the
@@ -7743,7 +7807,7 @@ export function createTownScene(
     forestGroup.add(rock);
   }
   // The moss shrine: one standing stone, moss-capped, a little
-  // proud of plumb — it has had centuries to lean.
+  // proud of plumb, it has had centuries to lean.
   {
     const [sx, sz] = FOREST_SPOTS.shrine;
     const gy = terrainHeight(sx, sz);
@@ -7864,7 +7928,7 @@ export function createTownScene(
 
   // --- Animals: wander AI on the pets pack's own skeletons. The
   // eight clips per animal are frame ranges inside one FBX take
-  // (30 fps), sliced at load. No colliders, no systems — charm.
+  // (30 fps), sliced at load. No colliders, no systems, charm.
   interface Animal {
     group: THREE.Group;
     mixer: THREE.AnimationMixer;
@@ -7897,7 +7961,7 @@ export function createTownScene(
     a.current = name;
   }
   // The pets' real coats (see the imports): one shared texture per
-  // kind, loaded from the bundle — the FBX's own references point
+  // kind, loaded from the bundle, the FBX's own references point
   // at the author's Windows paths and can never resolve.
   const petTextureLoader = new THREE.TextureLoader();
   const petTextures = new Map<string, THREE.Texture>();
@@ -7991,7 +8055,7 @@ export function createTownScene(
   });
   void loadAnimal("sheep", sheepUrl, 0.8, { x: -13.8, z: 24.9, r: 2.6 }, 0.45);
   void loadAnimal("pig", pigUrl, 0.64, { x: -12.4, z: 20.4, r: 2.4 }, 0.5);
-  // Umbra, the town cat — her routine is her own (see updateAnimals).
+  // Umbra, the town cat, her routine is her own (see updateAnimals).
   let catAnimal: Animal | null = null;
   /** A startle relocation for Umbra (a stone landing close): she
    *  removes herself to this point at a run, then her routine
@@ -8089,13 +8153,13 @@ export function createTownScene(
   // it is open, both animators cycle their Communicate gesture clips
   // (standing, or seated variants when seated). pairState stages a
   // one-shot flirt/hug pair clip inside moments the SHELL has
-  // already gated (rank scenes, structured dates) — the scene only
+  // already gated (rank scenes, structured dates), the scene only
   // checks staging sanity here (awake, ashore, unseated, close);
   // every affection/rank rule lives in the shell and is untouched.
   // The hug glides the pair to embrace spacing (0.85 m) first: her
   // clip steps in ≈0.27 m and his ≈0.01 m (measured), so they meet
   // at contact distance instead of hugging the air. The flirt pair
-  // closes ≈0.55 m between them, which is exactly talk distance —
+  // closes ≈0.55 m between them, which is exactly talk distance,
   // no glide, it plays where they stand.
   let talkAnimOpen = false;
   let pairState: { kind: "flirt" | "hug"; t: number; dur: number; glide: PairGlide | null } | null = null;
@@ -8128,7 +8192,7 @@ export function createTownScene(
     return true;
   }
 
-  // --- Watching the sky: three vantage spots with true bearings —
+  // --- Watching the sky: three vantage spots with true bearings,
   // the dock and the secret terrace look west over the water, the
   // basilica steps face the sunrise. The pair stand side by side
   // turned toward the sun wherever it actually is.
@@ -8178,7 +8242,7 @@ export function createTownScene(
   // hours on the Colosseum's rim. Her long take plays slow beneath
   // a procedural wing the flight needs; positions are lerped, so
   // perch and circuit melt into one another like a real bird's
-  // decisions. She is absent at night — somewhere being reborn;
+  // decisions. She is absent at night, somewhere being reborn;
   // the town does not explain her.
   let phoenixArrivedFlag = false;
   let phoenixSummitFlag = false;
@@ -8309,7 +8373,7 @@ export function createTownScene(
       };
     })
     .catch(() => {
-      /* no bird this build — her traces remain */
+      /* no bird this build, her traces remain */
     });
   const featherPos = new THREE.Vector3();
   let phoenixFeatherNow = false;
@@ -8351,7 +8415,7 @@ export function createTownScene(
     const pos = ph.group.position;
     let flapAmp = 0.04;
     if (!ph.arrivedVisual) {
-      // The arrival: a slow spiral of ember light down to the rim —
+      // The arrival: a slow spiral of ember light down to the rim,
       // by way of the lake first, if a certain night has happened.
       ph.arrivalT += dt;
       const k = Math.min(1, ph.arrivalT / 22);
@@ -8456,7 +8520,7 @@ export function createTownScene(
     } else if (idx === 1) {
       a.home = { x: 3.4, z: 6.8, r: 1.6 };
     } else {
-      // Afternoons, sometimes, she trails Muse at a distance —
+      // Afternoons, sometimes, she trails Muse at a distance,
       // the shadow's shadow, at a dignified remove.
       const mx = museGroup.position.x;
       const mz = museGroup.position.z;
@@ -8495,19 +8559,19 @@ export function createTownScene(
   }
   // --- Lupa, the town's wolf (Nov 1) ------------------------------
   // A dire wolf (Literock's Dire Wolf Lite, free licence) at her
-  // true scale — about 1.3 m at the shoulder, mythic beside a
+  // true scale, about 1.3 m at the shoulder, mythic beside a
   // person, never pet-sized. She belongs to the town's edges: the
   // lakeshore woods, the hills behind the temple, the aqueduct
   // fold. She walks between anchors (trotting the long legs),
-  // keeps the living sky's hours — out at dawn, dusk, and night,
-  // resting at a shaded anchor through the midday — and never
+  // keeps the living sky's hours, out at dawn, dusk, and night,
+  // resting at a shaded anchor through the midday, and never
   // enters the forum centre, a building, or the water (her legs
   // between clusters route along the town's rim, and the ordinary
   // character collision rules govern every step). She is shy in
   // the wild way: close within about eight metres and she moves
   // off at a trot to a farther anchor; but stand still at a
   // respectful distance and watch, and she may stop and look back
-  // for a few seconds. The bite clip is theatre only — a rare
+  // for a few seconds. The bite clip is theatre only, a rare
   // single snap toward a chicken that strays too close; she never
   // catches anything, and it is never aimed at a person. Her coat
   // keeps its grey-brown but is muted toward the town (desaturated
@@ -8534,7 +8598,7 @@ export function createTownScene(
   }
   let wolf: WolfState | null = null;
   // Anchor clusters: 0 lakeshore woods · 1 temple hills · 2 aqueduct
-  // fold · 3 the forest (her home ground now — the den is there).
+  // fold · 3 the forest (her home ground now, the den is there).
   const WOLF_ANCHORS: [number, number][] = [
     [-26, -38], [-30, -23], [-24, -15],
     [38, -33], [42, -19], [35, -13],
@@ -8651,7 +8715,7 @@ export function createTownScene(
       playWolf(wolf, "idle_loop");
     })
     .catch(() => {
-      /* no wolf this visit — the edges stay merely rumoured */
+      /* no wolf this visit, the edges stay merely rumoured */
     });
   /** Steer her one frame toward a point; returns distance left. */
   function wolfMove(w: WolfState, tx: number, tz: number, speed: number, dt: number): number {
@@ -8694,7 +8758,7 @@ export function createTownScene(
       if (westPair) {
         w.queue.push({ x: -33, z: -19 });
       } else if (westDirect) {
-        // Fold to forest: one wood to the other, no waypoints —
+        // Fold to forest: one wood to the other, no waypoints,
         // her legs cross the fold directly, lake fenced by the
         // shared collision pass as always.
       } else {
@@ -8736,7 +8800,7 @@ export function createTownScene(
       }
     }
     // First proper sighting: within sight at a golden or night
-    // phase — the Stories house gains its entry (the shell saves
+    // phase, the Stories house gains its entry (the shell saves
     // it; the scene only reports the moment, once a session).
     if (
       !w.seenFired &&
@@ -8746,7 +8810,7 @@ export function createTownScene(
       w.seenFired = true;
       opts.onWolfSeen?.();
     }
-    // Bite theatre: a chicken straying too close earns one snap —
+    // Bite theatre: a chicken straying too close earns one snap,
     // rarely, at distance, and she never actually catches it.
     if (t < w.biteUntil) return;
     if (t > w.biteCdUntil && w.mode !== "flee") {
@@ -8776,7 +8840,7 @@ export function createTownScene(
     const active = skyElevDeg < 13 || nightMix > 0.5;
     const midday = skyElevDeg >= 24 && nightMix <= 0.5;
     // Shyness first: too close, and she moves off at a trot to the
-    // anchor that takes her farthest from him — unhurried, and
+    // anchor that takes her farthest from him, unhurried, and
     // with the whole rim to choose from, never cornered.
     if (dPlayer < 8 && w.mode !== "flee") {
       let bestIdx = w.anchorIdx;
@@ -8803,7 +8867,7 @@ export function createTownScene(
       return;
     }
     // The look-back: he stands still at a respectful distance and
-    // watches — she stops, and looks back, for a few seconds.
+    // watches, she stops, and looks back, for a few seconds.
     if (w.mode === "watch") {
       playWolf(w, "idle_loop");
       const face = Math.atan2(walkPos.x - pos.x, walkPos.z - pos.z);
@@ -8882,7 +8946,7 @@ export function createTownScene(
     }
   }
   /** For the postcard challenge: Lupa in the camera's frame, at a
-   *  golden or night phase — "The Wolf at Dusk". */
+   *  golden or night phase, "The Wolf at Dusk". */
   function wolfInViewInternal(): boolean {
     const w = wolf;
     if (!w) return false;
@@ -8906,12 +8970,12 @@ export function createTownScene(
   // whenever nothing nearer wants his A (see the prompt scan). The
   // throw is the composed overarm (poseThrowArm) launching a small
   // projectile: gravity, a bounce and a roll, then rest where it
-  // fell — a few minutes later it fades and the scatter quietly
+  // fell, a few minutes later it fades and the scatter quietly
   // replaces it elsewhere, so the town never runs out. Water has
   // manners: lake and piscina landings splash with ripples, and a
   // flat, fast throw across the lake may skip once or twice first,
   // each skip a smaller splash. Smaller PEBBLES ask nothing at
-  // all: his stride kicks them as he walks through them — a
+  // all: his stride kicks them as he walks through them, a
   // skitter ahead with a little hop, two or three bounces losing
   // energy, then they settle and wait to be kicked again from
   // their new spot. Stones are harmless and mode-respecting: they
@@ -9016,12 +9080,12 @@ export function createTownScene(
     "The stone had it coming, I am quite sure.",
     "Somewhere below us, a very surprised worm.",
   ];
-  const SKIP_LINE = "Oh — it skipped! The lake approves of you, Gaius.";
+  const SKIP_LINE = "Oh. It skipped! The lake approves of you, Gaius.";
   const SKIP2_LINE = "Twice! If the legions ever need a skimmer of stones, I shall put your name forward myself.";
   const KICK_LINE = "You have a long-standing quarrel with the road's smallest citizens, I see. Far be it from me to mediate.";
   function aeliaRockLine(line: string, t: number) {
     // Play, not courtship: she comments when she's with him and
-    // her bubble is free — and earns nothing by it, ever.
+    // her bubble is free, and earns nothing by it, ever.
     if (!followMode) return;
     if (Math.hypot(museGroup.position.x - walkPos.x, museGroup.position.z - walkPos.z) > 7) return;
     if (museBubble.hideAt >= t) return;
@@ -9076,12 +9140,12 @@ export function createTownScene(
       hand.add(carriedMesh);
       // Palm anchor (owner fix, Nov 1): the old fixed offset
       // (0.02, -0.08, 0.03) sat at the wrist with its along-hand
-      // component pointing BACK toward the elbow — measured on the
-      // shipped Centurion rig, -0.02 along the finger axis — so the
+      // component pointing BACK toward the elbow, measured on the
+      // shipped Centurion rig, -0.02 along the finger axis, so the
       // stone rendered mid-forearm instead of in his hand. The palm
       // lies OUT along the finger axis: the middle finger's base
       // bone is a direct child of the hand bone, so its local
-      // position is the finger direction in hand space — ride out
+      // position is the finger direction in hand space, ride out
       // along it to palm centre, 0.085 m from the wrist joint (just
       // past the knuckle, which sits at 0.074). The offset lives in
       // hand-bone space, so it stays seated in the palm through
@@ -9110,7 +9174,7 @@ export function createTownScene(
     throwLaunched = false;
   }
   function updateRocks(dt: number, t: number) {
-    // His stride this frame, for pebble kicks: read-only — a kick
+    // His stride this frame, for pebble kicks: read-only: a kick
     // is launched FROM his motion and never writes back into it.
     const pdx = walkPos.x - prevWalkX;
     const pdz = walkPos.z - prevWalkZ;
@@ -9131,8 +9195,8 @@ export function createTownScene(
       rock.mesh.visible = true;
       rock.mesh.scale.setScalar(1);
       rock.fade = 1;
-      // From the water's edge — the shore, the dock, the piscina's
-      // rim — with the water ahead of him, a throw is a SKIM: flat
+      // From the water's edge, the shore, the dock, the piscina's
+      // rim, with the water ahead of him, a throw is a SKIM: flat
       // and fast, the kind that skips. Anywhere else it is a
       // cheerful lob, which splashes like a stone should.
       const fx = Math.sin(walkHeading);
@@ -9175,7 +9239,7 @@ export function createTownScene(
       const pos = rock.mesh.position;
       if (rock.state === "gone") {
         if (rock !== carriedRock && t >= rock.respawnAt && rock.respawnAt > 0) {
-          // The scatter quietly replaces it — at a home spot away
+          // The scatter quietly replaces it, at a home spot away
           // from the Centurion, so it never pops in under his feet.
           const spots = rock.kind === "stone" ? STONE_SPOTS : PEBBLE_SPOTS;
           for (let tries = 0; tries < 3; tries++) {
@@ -9230,11 +9294,11 @@ export function createTownScene(
         pos.y += rock.vy * dt;
         pos.z += rock.vz * dt;
         // Water first: reaching the surface is a splash (or, on
-        // the lake, a skip — flat, fast, and not yet twice done).
+        // the lake, a skip, flat, fast, and not yet twice done).
         const wy = inLakeWater(pos.x, pos.z) ? LAKE_Y : inPiscinaWater(pos.x, pos.z) ? piscinaWaterY : null;
         if (wy !== null && pos.y - r <= wy) {
           const hSpeed = Math.hypot(rock.vx, rock.vz);
-          // Only a skim throw skips — flat and fast off the shore
+          // Only a skim throw skips, flat and fast off the shore
           // or the dock. A lob arrives steep from any height a
           // standing man can throw, and splashes, as it should.
           const canSkip =
@@ -9340,13 +9404,13 @@ export function createTownScene(
   // The server rolls the night and the shell veils the waking; the
   // scene owns the two dream worlds themselves. A FALSE dream is
   // this town remixed: close fog, lamps burning the wrong warmth, a
-  // few familiar props gently displaced, every townsfolk gone —
+  // few familiar props gently displaced, every townsfolk gone,
   // and one distant figure who dissolves if he comes close. It ends
   // when she dissolves, when he comes home to the basilica steps,
   // or when it simply runs out. A TRUE dream is the secret terrace
   // in impossible bright stillness: the sun held high (sky block),
   // fireflies out at noon (sky block), her awake beside him. Dreams
-  // write nothing here either — no prompts, no systems, no saves.
+  // write nothing here either, no prompts, no systems, no saves.
   let dreamMode: "false" | "true" | null = null;
   let dreamGroup: THREE.Group | null = null;
   let dreamFigure: THREE.Group | null = null;
@@ -9398,7 +9462,7 @@ export function createTownScene(
     barrel.position.set(3.6, terrainHeight(3.6, 3.9), 3.9);
     barrel.rotation.y = 1.1;
     dreamGroup.add(barrel);
-    // The figure: a tall silhouette in a long dress, ~25 m off —
+    // The figure: a tall silhouette in a long dress, ~25 m off,
     // near enough to know, never to reach.
     dreamFigureMat = new THREE.MeshBasicMaterial({ color: 0x171208, transparent: true, opacity: 1 });
     const fig = new THREE.Group();
@@ -9479,7 +9543,7 @@ export function createTownScene(
     if (dreamMode !== "false" || !dreamFigure || !dreamFigureMat) return;
     const d = Math.hypot(walkPos.x - dreamFigure.position.x, walkPos.z - dreamFigure.position.z);
     if (dreamDissolveT < 0) {
-      // She turns to watch him come — it changes nothing.
+      // She turns to watch him come, it changes nothing.
       dreamFigure.rotation.y = Math.atan2(
         walkPos.x - dreamFigure.position.x,
         walkPos.z - dreamFigure.position.z,
@@ -9502,7 +9566,7 @@ export function createTownScene(
     lastT = t;
     if (dreamMode === "false") {
       // The dream town is empty: no animals wander it, no wolf
-      // walks it, and she is not in it — only the figure is.
+      // walks it, and she is not in it, only the figure is.
       updateDream(dt, t);
       return;
     }
@@ -9573,12 +9637,12 @@ export function createTownScene(
   sunGlow.scale.setScalar(30);
   scene.add(sunGlow);
 
-  // Day/night blending — now a living sky. The darkness (nightMix)
+  // Day/night blending, now a living sky. The darkness (nightMix)
   // is DERIVED from the sun's elevation each frame, so every system
   // that ever read nightMix (stars, fireflies, lamps, meteors, the
   // summit gate, her routine) keeps its trigger untouched. The sun
   // travels: by real Europe/Rome time in auto mode, or easing
-  // visibly to a held phase when the Day/Night override is used —
+  // visibly to a held phase when the Day/Night override is used,
   // several seconds of drifting colour, never a hard cut.
   let skyMode: "auto" | "day" | "night" = "auto";
   const dirFromAngles = (elevDeg: number, azimDeg: number): THREE.Vector3 => {
@@ -9606,7 +9670,7 @@ export function createTownScene(
   const tmpColorB = new THREE.Color();
   // The sky's colour script, keyed on the sun's elevation: night,
   // deep dusk violet, the fire band at the horizon, rose-gold, clear
-  // morning — and above 9 degrees it hands over smoothly to the
+  // morning, and above 9 degrees it hands over smoothly to the
   // weather palette, so noon is exactly the day look it always was.
   const SKY_STOPS: { e: number; top: THREE.Color; hor: THREE.Color }[] = [
     { e: -12, top: SKY_TOP_NIGHT, hor: SKY_HOR_NIGHT },
@@ -9646,7 +9710,7 @@ export function createTownScene(
   const sunWarm = new THREE.Color();
   function applyDayNight() {
     // The sun rides to its direction; its light warms as it lowers,
-    // and the sky gradient follows its elevation — then a lightning
+    // and the sky gradient follows its elevation, then a lightning
     // flash can still lift everything toward pale blue-white.
     sun.position.copy(sunDirCur).multiplyScalar(85);
     sunWarm.setHex(0xfff2d8);
@@ -9687,7 +9751,7 @@ export function createTownScene(
     rim.intensity = 0.55 - nightMix * 0.3;
     scene.environmentIntensity = (0.35 - nightMix * 0.22) * (0.55 + wCur.sunMul * 0.45);
     sun.color.copy(sunWarm).lerp(tmpColorB.setHex(0x8fb4ff), nightMix);
-    // Lamps come on at night — and early under fog or rain, where a
+    // Lamps come on at night, and early under fog or rain, where a
     // warm window against the grey does most of the cosy work.
     const lampLevel = Math.min(1, nightMix + (weatherId === "fog" ? 0.45 : 0) + wCur.rain * FEEL.rainLampGlow);
     plazaGlow.intensity = lampLevel * 60;
@@ -9703,7 +9767,7 @@ export function createTownScene(
     cloudMat.color.copy(wCur.cloudColor).lerp(tmpColorB.setHex(0x8fa3c8), nightMix);
     for (const headMat of lampHeads) {
       // In a false dream the lamps burn lit at any hour, and the
-      // wrong warmth — too much forge in the amber.
+      // wrong warmth, too much forge in the amber.
       headMat.emissive.setHex(dreamMode === "false" ? 0xff6a2a : 0xffb845);
       headMat.emissiveIntensity = dreamMode === "false" ? 1.5 : lampLevel * 1.6;
     }
@@ -9749,7 +9813,7 @@ export function createTownScene(
   let downAt: { x: number; y: number; t: number } | null = null;
   // Pinch zoom (Nov 1): every canvas pointer is tracked, so a
   // second finger landing turns the drag into a pinch WITHOUT a
-  // yaw snap (the drag simply suspends — its origin is never
+  // yaw snap (the drag simply suspends, its origin is never
   // re-read from the new finger), and lifting back to one finger
   // resumes the drag from that finger's CURRENT position, again
   // with no snap. A gesture that ever held two pointers is a
@@ -9806,10 +9870,12 @@ export function createTownScene(
       dx = sy;
       dy = -sx;
     }
-    // Dragging is the ONLY way the walk camera's yaw ever changes:
-    // the drag writes the yaw itself, directly — there is no offset
-    // for any chase to add back in later (see camYawSmooth).
+    // The player's drag writes the yaw itself, directly, and the
+    // loose follow never argues with it: the input reference moves
+    // with the drag, so the next stick push reads against the view
+    // the player just chose (see camYawSmooth).
     camYawSmooth -= dx * 0.0052;
+    inputYawRef = camYawSmooth;
     camPitchOffset = THREE.MathUtils.clamp(camPitchOffset + dy * 0.012, -1.1, 2.6);
   }
   function onPointerCancel(e: PointerEvent) {
@@ -9826,7 +9892,7 @@ export function createTownScene(
     camPointers.delete(e.pointerId);
     if (camPointers.size === 1 && walking) {
       // Back to one finger: the drag resumes from the remaining
-      // finger's current position — continuous, no yaw jump.
+      // finger's current position, continuous, no yaw jump.
       const [p] = [...camPointers.values()];
       walkDrag = { x: p!.x, y: p!.y };
     } else if (camPointers.size === 0) {
@@ -9853,7 +9919,7 @@ export function createTownScene(
       // (lx, ly) sits on screen at (boxWidth − ly, lx) within the box.
       // Inverting that: lx = screenY, ly = boxWidth − screenX (both
       // measured from the box's top-left), normalised by the local
-      // size — which is the box's height × width, swapped.
+      // size, which is the box's height × width, swapped.
       pointer.x = ((e.clientY - rect.top) / rect.height) * 2 - 1;
       pointer.y = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     } else {
@@ -9890,7 +9956,7 @@ export function createTownScene(
   canvas.addEventListener("touchmove", blockTouchGesture, { passive: false });
   canvas.addEventListener("contextmenu", blockContextMenu);
 
-  // Desktop wheel zoom for the walk camera — the pinch's sibling,
+  // Desktop wheel zoom for the walk camera, the pinch's sibling,
   // riding the same userZoom (the overview's wheel dolly stays
   // OrbitControls' own). Non-passive so the wheel never scrolls
   // the page behind the town.
@@ -9901,12 +9967,12 @@ export function createTownScene(
   };
   canvas.addEventListener("wheel", onWheelZoom, { passive: false });
 
-  // Landscape support: driven by the canvas box's actual aspect —
+  // Landscape support: driven by the canvas box's actual aspect,
   // wider than tall means landscape framing, whatever any orientation
   // API claims (the app webview does not reliably report rotation).
   // Portrait needs a wider vertical fov to keep the town in frame;
   // landscape (short, wide screens, phones turned sideways) needs the
-  // opposite — a slightly tighter vertical fov and a pulled-back walk
+  // opposite, a slightly tighter vertical fov and a pulled-back walk
   // camera so the horizon, tree canopy and both characters stay
   // visible. The camera aspect is rewritten on every resize so the 3D
   // view genuinely widens instead of stretching or letterboxing.
@@ -9914,7 +9980,7 @@ export function createTownScene(
     let w = canvas.clientWidth || canvas.parentElement?.clientWidth || 0;
     let h = canvas.clientHeight || canvas.parentElement?.clientHeight || 0;
     // A renderer sized to a few pixels and then CSS-stretched to fill
-    // the screen paints exactly one smeared colour — the sky — edge
+    // the screen paints exactly one smeared colour, the sky, edge
     // to edge, which reads as a dead blue screen even though the loop
     // is running. If layout reports an implausibly small box (the
     // canvas not laid out yet, a collapsed parent), fall back to the
@@ -9948,7 +10014,7 @@ export function createTownScene(
   if (resizeObs && canvas.parentElement) resizeObs.observe(canvas.parentElement);
   // Belt and braces for rotation: some webviews fire orientationchange
   // (or a window resize) without the parent box firing the observer
-  // first — re-apply the size and camera on every such signal, twice,
+  // first, re-apply the size and camera on every such signal, twice,
   // since rotation geometry often settles a frame late.
   const onViewportSignal = () => {
     resize();
@@ -9958,7 +10024,7 @@ export function createTownScene(
   window.addEventListener("resize", onViewportSignal);
   window.addEventListener("orientationchange", onViewportSignal);
   // Guard like speechSynthesis in App: a webview may expose
-  // visualViewport without listener APIs — never let that throw.
+  // visualViewport without listener APIs, never let that throw.
   try {
     const vv = window.visualViewport;
     if (vv && typeof vv.addEventListener === "function") {
@@ -9976,8 +10042,8 @@ export function createTownScene(
   let renderErrorFired = false;
   // Adaptive quality: the first frames are timed with the RAW clock
   // (the loop's dt is clamped for animation). If they average slower
-  // than ~4 fps, this device — a weak phone GPU, or a browser whose
-  // software GL masks its renderer name — cannot carry the full
+  // than ~4 fps, this device, a weak phone GPU, or a browser whose
+  // software GL masks its renderer name, cannot carry the full
   // settings, so the scene drops itself to the gentle ones (ratio 1,
   // no shadow maps) and tells the shell to light its Light graphics
   // toggle, so the two never disagree.
@@ -9988,7 +10054,7 @@ export function createTownScene(
   // Runs after every movement update (the walk controller and Muse's
   // companion steering) and before the secret-moment choreography, so
   // a ready character's mixer has the last word over the procedural
-  // bone posing — and the secret moment's head lean, applied after
+  // bone posing, and the secret moment's head lean, applied after
   // this, still lands on top. Speed is measured from the character's
   // actual displacement, so blends follow the ground truth for the
   // Centurion (stick-driven) and Muse (follow / walk-home) alike.
@@ -9999,12 +10065,12 @@ export function createTownScene(
   // Character reveal gate. A VRM arrives standing in its bind pose
   // (arms straight out to the sides) and, while its clips download
   // and bake, the bake's restores and measurements pose it around
-  // further — the player kept catching that interval on screen ("they
+  // further, the player kept catching that interval on screen ("they
   // stick their arms in the air when they switch"). So each body is
   // added HIDDEN and is revealed only here, inside the frame loop,
   // at the first moment it can be painted already animated:
   //   - animator ready → prime() applies the idle clip at full
-  //     weight in this same tick, then the body is shown — its
+  //     weight in this same tick, then the body is shown, its
   //     first painted frame is a true idle frame;
   //   - no animator at all (reduced motion) → shown at once; the
   //     load handler's procedural arm pose was applied in the same
@@ -10012,12 +10078,12 @@ export function createTownScene(
   //   - clips failed their gate → shown at once under procedural
   //     posing, exactly the pre-clip behaviour;
   //   - clips merely slow → after a 6 s grace the same, and the clips
-  //     take over at full weight when they land — a slow or failed
+  //     take over at full weight when they land, a slow or failed
   //     bake can never leave a character invisible.
   // Later animator state changes all flow through the mixers, which
   // write every frame, so no later frame can show a bind pose
   // either. (Muse's star and both umbrellas/bubbles are siblings of
-  // the hidden body, not children — her spot stays marked, as it
+  // the hidden body, not children, her spot stays marked, as it
   // always was when her model failed.)
   function tryRevealChars() {
     if (!museRevealed && museBody) {
@@ -10093,11 +10159,11 @@ export function createTownScene(
         poseWave(playerRig, t);
       }
     }
-    // --- Umbrella arms (DORMANT — umbrellas removed, Nov 1) ------------
+    // --- Umbrella arms (DORMANT, umbrellas removed, Nov 1) ------------
     // In the rain, each standing/walking character HOLDS their
     // umbrella (composed poseUmbrellaArm, over idle and walk alike).
     // While sharing (she's following, side by side), his arm stays up
-    // and her near arm links through his instead — poseLinkArm — with
+    // and her near arm links through his instead, poseLinkArm, with
     // a slight inward lean and a small positional servo easing her
     // stance so her hand stays registered at his elbow as they walk.
     // The arm-link servo in this block is what drove her circling
@@ -10199,7 +10265,7 @@ export function createTownScene(
   // --- Seated poses -----------------------------------------------------
   // Runs after every mixer/procedural write of the frame, so what it
   // sets is what renders. Two layers:
-  //  1. DIRECT seat placement (always, clip or not) — NOT a servo.
+  //  1. DIRECT seat placement (always, clip or not), NOT a servo.
   //     The old incremental servo (nudge the inner group ±0.05/frame
   //     toward a terrain-sampled target, clamped to a −1.2 floor)
   //     ran away on device and buried both sitters to their necks:
@@ -10211,7 +10277,7 @@ export function createTownScene(
   //       MEASURED from the bench model's own world transform
   //       (benchSeatWorldY), and the pose's own pelvis height is
   //       measured the same frame from the hips bone, excluding the
-  //       inner offset currently applied — i.e. exactly the height
+  //       inner offset currently applied, i.e. exactly the height
   //       the sit clip (or the procedural pose) itself gives the
   //       pelvis above the character's ground origin. The inner
   //       offset is then SET, in one step, to the difference, hard
@@ -10220,11 +10286,11 @@ export function createTownScene(
   //     Because the target hangs off the SEAT, not the terrain, the
   //     sit is correct on any slope: pelvis rides the seat, the
   //     character's group origin rides the terrain at the slot, and
-  //     the clip's legs bridge the two — feet toward the ground in
+  //     the clip's legs bridge the two, feet toward the ground in
   //     front of the bench.
   //  2. The procedural seated pose (only when the character's
   //     animator has no gated sit clip): thighs forward, knees
-  //     down, feet toward the ground, arms relaxed — composed over
+  //     down, feet toward the ground, arms relaxed, composed over
   //     whatever the idle was doing.
   // Standing restores the inner offset to exactly 0 (eased).
   const seatServoState = {
@@ -10306,7 +10372,7 @@ export function createTownScene(
     applySeatedServo(museInner, museBody, museGroup, museBench, seatServoState.muse);
     // The baths' care moment: for a few seconds the washer's hands
     // are raised to the other's hair, and the washed head bows a
-    // little. Poses only — steam and closeness do the rest.
+    // little. Poses only, steam and closeness do the rest.
     if (bathCare && clockTime < bathCare.until && bathState) {
       const washerRig = bathCare.by === "muse" ? museRig : playerRig;
       const washedRig = bathCare.by === "muse" ? playerRig : museRig;
@@ -10521,13 +10587,13 @@ export function createTownScene(
         }
         // Umbrellas pop open in the rain and fold away after it.
         // DORMANT (umbrellas removed, Nov 1): UMBRELLAS_ENABLED is
-        // false, so umbrellaOpen is always 0 — no canopy is ever
+        // false, so umbrellaOpen is always 0, no canopy is ever
         // shown, umbrellaSharing never engages, and the hand-off
         // below (which used to part joined hands for the arm link)
         // can never fire. Rain follow is the dry-weather follow.
         const umbrellaOpen = UMBRELLAS_ENABLED ? Math.min(1, wCur.rain) : 0;
         // The shared-umbrella beat: she's following in the rain and
-        // they're side by side — her umbrella folds away, his grows
+        // they're side by side, her umbrella folds away, his grows
         // and shifts to cover them both, and they walk arm in arm
         // (the arm posing lives in driveClipAnims). If he runs far
         // ahead, the link releases and her own umbrella returns.
@@ -10536,7 +10602,7 @@ export function createTownScene(
           umbrellaOpen > 0.25 && followMode && !boatState && !seatPlayer && pairDist < 3.4;
         // The umbrella hand-off: hands can't hold AND link the same
         // arm, so while they're arm in arm under his canopy the
-        // joined hands part — the link governs, and the shell is
+        // joined hands part, the link governs, and the shell is
         // told so its hand option is replaced by the link too.
         if (umbrellaSharing && handInHand) {
           handInHand = false;
@@ -10609,7 +10675,7 @@ export function createTownScene(
           }
         });
         // Lightning: during a storm, strikes land every several seconds
-        // as a gentle double pulse — never a rapid strobe.
+        // as a gentle double pulse, never a rapid strobe.
         if (weatherId === "storm" && wCur.rain > 0.8) {
           strikeAge += dt;
           nextStrikeIn -= dt;
@@ -10711,7 +10777,7 @@ export function createTownScene(
         } else {
           // Her relaxed idle, with the same care as his: weight on one
           // leg, the other knee soft, feet a little offset and turned
-          // out, uneven elbows, a slow sway — and her head turned
+          // out, uneven elbows, a slow sway, and her head turned
           // toward the Centurion when he's near (her body already
           // turns to face him; the head leads it, like a person's).
           const easeM = (cur: number, target: number) => cur + (target - cur) * 0.3;
@@ -10827,7 +10893,7 @@ export function createTownScene(
         if (nightMix > 0.05) {
           // Over the lake and under the willows: a slow drift around
           // the water's ellipse, low over the surface. The top slice
-          // of the swarm keeps to the forest instead — thicker under
+          // of the swarm keeps to the forest instead, thicker under
           // the trees, drifting over the glade.
           for (let i = 0; i < fireflyCount; i++) {
             const seed = fireflySeed[i] ?? 0;
@@ -10902,7 +10968,7 @@ export function createTownScene(
         readyFired = true;
         mtFlags.__mtFirstFrameAt = performance.now();
         opts.onReady?.();
-        // The shell is on screen — now let the buildings, pack
+        // The shell is on screen, now let the buildings, pack
         // pieces, and characters stream in behind it.
         openLoadGate();
       }
@@ -10929,7 +10995,7 @@ export function createTownScene(
   // would render near-black with no texture is named too, unless it
   // is on the intentional-dark list. The full report (repairs made
   // at load + sweep findings) is on window.__museTownMaterialReport
-  // and in the console — this class of bug names its victims now.
+  // and in the console, this class of bug names its victims now.
   later(() => {
     const findings: string[] = [];
     let checked = 0;
@@ -10946,7 +11012,7 @@ export function createTownScene(
           if (st === "failed") {
             std.map = null;
             std.needsUpdate = true;
-            findings.push(`REPAIRED ${o.name || "mesh"} (${matName}): texture image failed to load — map dropped, flat colour kept`);
+            findings.push(`REPAIRED ${o.name || "mesh"} (${matName}): texture image failed to load, map dropped, flat colour kept`);
           } else if (st === "pending") {
             findings.push(`PENDING ${o.name || "mesh"} (${matName}): texture still loading at sweep time`);
           }
@@ -10992,7 +11058,7 @@ export function createTownScene(
       forcedLandscapeView = on;
       // The stage box just swapped its sides: re-measure immediately
       // so the renderer and camera aspect land on the turned box
-      // (the ResizeObserver on the parent will also fire — belt and
+      // (the ResizeObserver on the parent will also fire, belt and
       // braces, as with every rotation signal in this town).
       resize();
     },
@@ -11085,10 +11151,12 @@ export function createTownScene(
     enterWalk: () => {
       if (walking) return;
       camPitchOffset = 0;
-      // Entry framing (once, as walk mode starts — never during a
+      // Entry framing (once, as walk mode starts, never during a
       // hold): the camera starts exactly on his heading, so the
       // first walk frame already has its final, settled view.
       camYawSmooth = walkHeading;
+      inputYawRef = camYawSmooth;
+      followSustain = 0;
       camPitchSmooth = 0;
       camDistSmooth = walkRestDist();
       walkDrag = null;
@@ -11130,7 +11198,7 @@ export function createTownScene(
         followMode = false;
         // "Stay here" leaves her where she stands: her daily
         // routine pauses (routineHold) until she is invited again
-        // or its next anchor change quietly resumes her day — she
+        // or its next anchor change quietly resumes her day, she
         // no longer walks straight home. Any bench errand or shared
         // seat is off.
         museReturning = false;
@@ -11157,6 +11225,9 @@ export function createTownScene(
     setQuietMode: (on) => {
       quietMode = on;
     },
+    setCameraHold: (on) => {
+      camHold = on;
+    },
     setForageTaken: (ids) => {
       forageTakenToday = new Set(ids);
       for (const [id, g] of forageVisuals) g.visible = !forageTakenToday.has(id);
@@ -11172,7 +11243,7 @@ export function createTownScene(
             camPitch: camPitchOffset,
             userZoom,
             walking,
-            // Out of walk mode the camera is OrbitControls' own —
+            // Out of walk mode the camera is OrbitControls' own,
             // its framing is part of "where he left off" too.
             ov: walking
               ? undefined
@@ -11200,6 +11271,8 @@ export function createTownScene(
       walkPos.z = snap.z;
       walkHeading = snap.heading;
       camYawSmooth = snap.camYaw;
+      inputYawRef = camYawSmooth;
+      followSustain = 0;
       camPitchOffset = snap.camPitch;
       camPitchSmooth = snap.camPitch;
       userZoom = THREE.MathUtils.clamp(snap.userZoom, 0.3, 3.1);
@@ -11210,7 +11283,7 @@ export function createTownScene(
       avatar.rotation.y = snap.heading;
       if (followMode) {
         // She was walking with him: she resumes beside him, and
-        // the follow steering settles her from there — quietly,
+        // the follow steering settles her from there, quietly,
         // with no greeting wave (setFollowMode already disarmed it).
         museGroup.position.set(snap.x + 1.1, groundHeightAt(snap.x + 1.1, snap.z + 0.6), snap.z + 0.6);
       }
@@ -11373,7 +11446,7 @@ export function createTownScene(
     },
     setLowGraphics: (on) => {
       // Software GL never gets the heavy settings back, whatever the
-      // toggle says — it cannot carry them.
+      // toggle says, it cannot carry them.
       const gentle = on || softwareGl;
       runtime.setLightGraphics(gentle);
     },
@@ -11381,13 +11454,13 @@ export function createTownScene(
       const b = who === "muse" ? museBubble : playerBubble;
       const now = clockTime;
       const other = who === "muse" ? playerBubble : museBubble;
-      // If the other bubble is mid-line, this one waits its turn —
+      // If the other bubble is mid-line, this one waits its turn,
       // the delay is folded into the page schedule.
       const start = now + (other.hideAt > now ? 0.8 : 0);
       showBubbleText(b, text, start);
     },
     greetMuse: () => {
-      // A deliberate greeting from the shell (a tap, a chat line) —
+      // A deliberate greeting from the shell (a tap, a chat line),
       // but never while she is following him: follow mode suppresses
       // waving entirely. A greeting given this way also spends the
       // armed approach greeting, so the pair never wave twice for

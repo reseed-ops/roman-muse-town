@@ -177,7 +177,7 @@ const OVERVIEW_POS: [number, number, number] = [0, 32, 40];
 
 // Notes-for-Muse heuristic: typed chat that reads as a request,
 // wish, or suggestion for the town is saved to her notebook for the
-// real Muse ("when in doubt, save it" — the owner's arrangement).
+// real Muse ("when in doubt, save it", the owner's arrangement).
 const NOTE_WISH_RE = /\b(can we|could we|add|make|build|change|remove|i wish|note this|please)\b/i;
 
 
@@ -197,7 +197,7 @@ export function App() {
   const [treeOpen, setTreeOpen] = useState(false);
   const [realLandscape, setRealLandscape] = useState(false);
   // In-town landscape switch (Nov 1, final cure): the Muse app window
-  // hosting the town is portrait-locked — it never rotates, so the page
+  // hosting the town is portrait-locked, it never rotates, so the page
   // never receives a landscape viewport no matter what the phone does
   // (verified with the user: YouTube rotates, this app does not). Four
   // viewport-keyed attempts failed for exactly that reason. So the town
@@ -239,7 +239,7 @@ export function App() {
   // arrival order is tracked here (newest last, via the effects
   // beside their state declarations); at render time, portrait shows
   // at most the TWO newest live banners so the stack never crowds
-  // the speech bubble below — older ones wait hidden and are gone
+  // the speech bubble below, older ones wait hidden and are gone
   // once their own timers clear them (replace, newest wins).
   // Landscape keeps the roomier all-three stack, as before.
   const [bannerOrder, setBannerOrder] = useState<string[]>([]);
@@ -262,10 +262,10 @@ export function App() {
       const saved = window.localStorage.getItem("muse-town-lowgfx");
       if (saved !== null) return saved === "1";
     } catch {
-      /* storage unavailable — fall through to the heuristic */
+      /* storage unavailable, fall through to the heuristic */
     }
     // Default ON for small screens and very low-memory devices: the
-    // lighter render (pixel ratio 1, no shadow maps — the scene has
+    // lighter render (pixel ratio 1, no shadow maps, the scene has
     // no post-processing to drop) is a big part of why the town now
     // loads on phones that used to sit on a black screen. The menu
     // toggle remembers whatever the visitor chooses afterwards.
@@ -274,7 +274,7 @@ export function App() {
     const mem = (navigator as { deviceMemory?: number }).deviceMemory;
     return typeof mem === "number" && mem <= 2;
   });
-  // First model that failed to load (short asset name) — shown once
+  // First model that failed to load (short asset name), shown once
   // in a friendly note with a retry, never as a silent gap.
   const [loadFailure, setLoadFailure] = useState<string | null>(null);
   const [renderFailed, setRenderFailed] = useState(false);
@@ -287,16 +287,16 @@ export function App() {
   const [walking, setWalking] = useState(false);
   const walkingRef = useRef(false);
   // Walk-mode interaction prompt: the nearest promptable interactable
-  // the scene reports. Walking up shows ONLY this prompt — panels open
+  // the scene reports. Walking up shows ONLY this prompt, panels open
   // when the visitor presses the interact control (Xbox A, keyboard E
   // or Enter) or taps the prompt / the interactable itself.
   const [nearby, setNearby] = useState<NearbyTarget | null>(null);
   const nearbyRef = useRef<NearbyTarget | null>(null);
   // Companion follow mode: Muse walks with the Centurion. Offers are
-  // one-per-occasion per session — a decline (or an offer already made)
+  // one-per-occasion per session, a decline (or an offer already made)
   // is remembered so she never nags twice about the same moment.
   // Walk-together is the startup DEFAULT (the owner's call, Oct 31): the
-  // town opens with Muse already walking with him — no offer, no
+  // town opens with Muse already walking with him, no offer, no
   // prompt, no greeting wave on load. "Stay here" still leaves her
   // at her spot, the talk bubble still invites her again, and a
   // fresh load always starts together again (a default, not a
@@ -315,7 +315,7 @@ export function App() {
         localStorage.getItem("muse-town-rejoin-hint-dismissed") === "1";
     }
   } catch {
-    /* storage unavailable — the hint simply may show once per visit */
+    /* storage unavailable, the hint simply may show once per visit */
   }
   const [menuOpen, setMenuOpen] = useState(false);
   const [utilitiesOpen, setUtilitiesOpen] = useState(false);
@@ -337,7 +337,7 @@ export function App() {
 
   // Stylized weather: random events rolled by the scene, mirrored here
   // for the weather chip, panel, banner, and ambience. Weather lives only
-  // in the scene — it is never saved.
+  // in the scene, it is never saved.
   const [weather, setWeather] = useState<WeatherChangeInfo | null>(null);
   const [weatherOpen, setWeatherOpen] = useState(false);
   const [boardOpen, setBoardOpen] = useState(false);
@@ -347,7 +347,7 @@ export function App() {
   const [secretFirstVisit, setSecretFirstVisit] = useState(true);
   const [chatDraft, setChatDraft] = useState("");
   // Muse conversations live in an RPG speech bubble now (the owner's
-  // call, Oct 31) — never in an information panel. The bubble shows
+  // call, Oct 31), never in an information panel. The bubble shows
   // one part of her response at a time; tapping it (or pressing A)
   // advances; the typed-chat form lives inside it; and a talk at
   // her spot ends with the walk-together choice as bubble options.
@@ -368,7 +368,7 @@ export function App() {
     sceneRef.current?.setTalking(museBubble !== null);
   }, [museBubble]);
   // Affection (dating-sim hearts): her earned rank lives in the saved
-  // state; the client only reads it to tune her behaviour — line
+  // state; the client only reads it to tune her behaviour, line
   // pools, gates, initiations. No numbers are ever displayed.
   const affectionRef = useRef(0);
   const earnRef = useRef<(reason: string) => void>(() => {});
@@ -381,7 +381,7 @@ export function App() {
   const secretKissRef = useRef(false);
   const togetherSecsRef = useRef({ walk: 0, bench: 0, row: 0, wander: 0 });
   // Hand-in-hand wandering (rank 4+): no destination, a stroll's
-  // pace, hands joined — the scene owns the pose, the pace cap, and
+  // pace, hands joined, the scene owns the pose, the pace cap, and
   // the hurry release; this mirror (state + ref) drives
   // the bubble/chip options and the bonus together-time accrual.
   // Session-only, like a mood.
@@ -421,7 +421,7 @@ export function App() {
   // Her longest sequence: a queue of beats built from SUMMIT_SCENE,
   // each beat's text paginated into bubbles (the song stays one
   // verse bubble). It advances only on his taps; stepping away (B,
-  // the ✕, or walking off) postpones it — never cancels, never
+  // the ✕, or walking off) postpones it, never cancels, never
   // completes. Completing the last beat calls the server's
   // once-ever completeSummit. Session-only state, like a held breath.
   interface SummitBeat {
@@ -439,7 +439,7 @@ export function App() {
   const meteorLineShownRef = useRef(false);
   // Wistful-hint bookkeeping: previous values of the four quiet
   // prerequisites, so the moment one completes she can murmur about
-  // that piece alone — never the whole, never a checklist.
+  // that piece alone, never the whole, never a checklist.
   const summitHintsPrevRef = useRef<{
     fountain: boolean;
     inscriptions: boolean;
@@ -510,7 +510,7 @@ export function App() {
   stateRef.current = state.data;
   // No-repeat line pools: hydrate the shared draw-state manager
   // from the server's durable store, and mark every draw back
-  // server-side (fire-and-forget — a missed mark only means one
+  // server-side (fire-and-forget, a missed mark only means one
   // pool reshuffles a little early).
   useEffect(() => {
     linePools.setPersist((poolKey, poolState) => {
@@ -628,7 +628,7 @@ export function App() {
   const seekStartedAtRef = useRef(0);
   const pendingQuestionRef = useRef<{ id: string; fact: string; topic: string } | null>(null);
   // Appointment kept: while an accepted appointment's day and her
-  // routine phase align and he stands at the place, it is met —
+  // routine phase align and he stands at the place, it is met,
   // her greeting, once, and the appointment closes.
   useEffect(() => {
     const iv = window.setInterval(() => {
@@ -647,7 +647,7 @@ export function App() {
       const metLine = pickPooled("appointment-met", APPOINTMENT_MET_LINES);
       scene.showBubble("muse", metLine);
       // A kept appointment becomes a small ceremony: a structured
-      // date — topic cards, her longer answers, her questions.
+      // date, topic cards, her longer answers, her questions.
       dateSessionRef.current = { place: appt.place, used: [], count: 0 };
       setMuseBubble({
         lines: paginateLines([metLine, "Stay a while, love. What shall we talk about, here of all places?"]),
@@ -661,7 +661,7 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   // Celebration baseline: quests already done when the town loads
-  // are history, not news — only completions from here on are
+  // are history, not news, only completions from here on are
   // celebrated at her next meeting.
   useEffect(() => {
     if (state.data && !doneBaselineRef.current) {
@@ -808,7 +808,7 @@ export function App() {
         }
         return;
       }
-      // Start a seek: some evenings only — night fallen, rank 2+,
+      // Start a seek: some evenings only: night fallen, rank 2+,
       // at least three days since the last game, no festival today,
       // not dreaming, not sitting a focus.
       if (!nightRef.current || dreamingRef.current || focusSittingRef.current) return;
@@ -827,8 +827,8 @@ export function App() {
     return () => window.clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  // Resume snapshot (Nov 1): the ephemeral scene state — where he
-  // stood, the camera, walk/follow, day-night, the turned view —
+  // Resume snapshot (Nov 1): the ephemeral scene state: where he
+  // stood, the camera, walk/follow, day-night, the turned view,
   // saved throttled and on hide, so leaving for chat and coming
   // back continues exactly where he was. Game data is the server's;
   // this is only the pose. Versioned and sanity-checked on load;
@@ -911,7 +911,7 @@ export function App() {
           enterWalkMode();
           // Follow state, applied SILENTLY: the start/stop handlers
           // speak a line each, and a restore must never replay a
-          // greeting — the scene setter carries no bubble, and
+          // greeting, the scene setter carries no bubble, and
           // following disarms her greeting wave. Parked (following
           // false) leaves her to her routine, which has her at her
           // current schedule anchor; restoreResume only places her
@@ -927,7 +927,7 @@ export function App() {
           // back to her routine anchor, as it always does), then
           // restore his standing pose so he reappears exactly there
           // when he next walks. Nothing in this path speaks, waves,
-          // or raises a banner — the town simply continues.
+          // or raises a banner, the town simply continues.
           if (sc.ov) scene?.restoreOverview(sc.ov);
           exitWalkMode();
           scene?.restoreResume(sc);
@@ -957,8 +957,8 @@ export function App() {
   );
   // The treasure list proper: saved discoveries can also hold
   // non-treasure sightings (Lupa the wolf's first sighting lives in
-  // the same store), and the treasure counter — and the tree's
-  // growth — must only ever count treasures.
+  // the same store), and the treasure counter, and the tree's
+  // growth, must only ever count treasures.
   const found = (state.data?.found ?? []).filter((id) => COLLECTIBLES.some((c) => c.id === id));
   const foundSet = new Set(found);
   const nextCollectible = COLLECTIBLES.find((c) => !foundSet.has(c.id));
@@ -982,12 +982,12 @@ export function App() {
     mutationFn: () => api.waterTree({}),
     onSuccess: (data) => {
       applyState(data);
-      // Watering the tree on a day she's present — or at least a day
-      // they've talked — is one of the small rituals hearts are made of.
+      // Watering the tree on a day she's present, or at least a day
+      // they've talked, is one of the small rituals hearts are made of.
       if (followingRef.current || talkedTodayRef.current) earnRef.current("water");
       offerFollowRef.current(
         "watering",
-        "We watered it together — shall I stroll with you a while from here?",
+        "We watered it together. Shall I stroll with you a while from here?",
       );
     },
   });
@@ -1001,12 +1001,12 @@ export function App() {
   });
   // The kiss's peak: quietly remember it (the server keeps the first
   // date), and let her answer with a shy bubble line. Nobody else in
-  // town is told — no badge, no board entry, nothing.
+  // town is told, no badge, no board entry, nothing.
   const kissMomentRef = useRef(() => {});
   kissMomentRef.current = () => {
     recordKiss.mutate();
     // The first kiss speaks from its own set; later ones from the
-    // quieter repeat set. Kisses earn no affection — by design.
+    // quieter repeat set. Kisses earn no affection, by design.
     const first = !secretKissRef.current;
     secretKissRef.current = true;
     const pool = first ? FIRST_KISS_LINES : KISS_LINES;
@@ -1038,8 +1038,8 @@ export function App() {
       api.addPostcard(args),
     onSuccess: (data) => {
       applyState(data);
-      // A postcard taken while she's with him — her in the frame, in
-      // spirit if not in pixels — is a small keepsake of the day.
+      // A postcard taken while she's with him, her in the frame, in
+      // spirit if not in pixels, is a small keepsake of the day.
       if (followingRef.current) earnRef.current("postcard");
       // Postcard challenges: a framed shot at a named view ticks its
       // challenge (denarii from the server, once per view).
@@ -1071,8 +1071,8 @@ export function App() {
           challengeToast = true;
           setAchievementToast(
             skyNow.phase === "dawn"
-              ? "📮 First light — postcard challenge complete"
-              : "📮 Last light — postcard challenge complete",
+              ? "📮 First light, postcard challenge complete"
+              : "📮 Last light, postcard challenge complete",
           );
           if (toastTimer.current) window.clearTimeout(toastTimer.current);
           toastTimer.current = window.setTimeout(() => setAchievementToast(null), 3500);
@@ -1080,7 +1080,7 @@ export function App() {
       }
       setPostcardDraft(null);
       // The generic saved note only speaks when no challenge toast
-      // did — a completed challenge is the headline, not a footnote
+      // did, a completed challenge is the headline, not a footnote
       // overwritten in the same breath.
       if (!challengeToast) {
         setAchievementToast("📮 Postcard saved to the Stories album");
@@ -1109,7 +1109,7 @@ export function App() {
   // Affection earning: one funnel for every heart-worthy moment. The
   // server owns the points, the silent daily caps, and rank-ups; a
   // rank-up surfaces here only as a soft golden moment and a hint,
-  // left for the next talk — never a number.
+  // left for the next talk, never a number.
   const earnAffection = useMutation({
     mutationFn: (reason: string) => api.earnAffection({ reason }),
     onSuccess: (data) => {
@@ -1307,7 +1307,7 @@ export function App() {
   }, [state.data]);
 
   // Fish-watching from the coping: while he sits at the piscina rim
-  // with her beside him, her quiet lines arrive unhurried — and on
+  // with her beside him, her quiet lines arrive unhurried, and on
   // the first such sit, she chooses her favourite carp and names
   // her. The name is kept server-side from that day on.
   useEffect(() => {
@@ -1339,7 +1339,7 @@ export function App() {
 
   // Her wistful hints: when one quiet piece of the summit completes
   // (the fountain, the last inscription, the golden carp, the last
-  // postcard view), she murmurs about that piece alone — if he's
+  // postcard view), she murmurs about that piece alone, if he's
   // walking where she can say it. Never a list, never the whole.
   useEffect(() => {
     if (!state.data) return;
@@ -1416,7 +1416,7 @@ export function App() {
   // runs, wandering far from the pavilion sets it gently aside (it
   // will offer itself again on another true night); and once a
   // session, at the lake on a meteor night, she notices the sky out
-  // loud — the only announcement the sky ever gets.
+  // loud, the only announcement the sky ever gets.
   useEffect(() => {
     const iv = window.setInterval(() => {
       const s = summitRef.current;
@@ -1479,7 +1479,7 @@ export function App() {
         }
       } else if (dancingRef.current || gazingRef.current) {
         // Dancing together, or turned to the sky together: bench
-        // rate — still, close, and entirely the point.
+        // rate, still, close, and entirely the point.
         acc.bench += 5;
         if (acc.bench >= 60) {
           acc.bench -= 60;
@@ -1499,7 +1499,7 @@ export function App() {
         }
       } else if (handInHandWalkRef.current) {
         // Wandering hand in hand: together-time at the walking
-        // rate with its small bonus — its own earn reason, its own
+        // rate with its small bonus, its own earn reason, its own
         // bucket, so joined minutes never double-count as plain ones.
         acc.wander += 5;
         if (acc.wander >= 60) {
@@ -1545,12 +1545,12 @@ export function App() {
   });
   useEffect(() => {
     if (!voiceOk) return;
-    // Warm the voice list up — it often loads asynchronously. This
+    // Warm the voice list up, it often loads asynchronously. This
     // must NEVER throw: on Android WebView, speechSynthesis is not an
     // EventTarget (no addEventListener/removeEventListener), and an
     // unguarded call here crashed the whole app on startup, looping
     // the error overlay. Prefer onvoiceschanged, feature-check any
-    // listener API, and swallow every failure — voices simply load
+    // listener API, and swallow every failure, voices simply load
     // lazily on the first speaker tap instead.
     let synth: SpeechSynthesis | null = null;
     let usedListener = false;
@@ -1558,7 +1558,7 @@ export function App() {
       try {
         synth?.getVoices();
       } catch {
-        /* voice list unavailable — speakLine will retry lazily */
+        /* voice list unavailable, speakLine will retry lazily */
       }
     };
     try {
@@ -1568,7 +1568,7 @@ export function App() {
       try {
         synth.onvoiceschanged = warm;
       } catch {
-        /* assignment unsupported in this webview — lazy load is fine */
+        /* assignment unsupported in this webview, lazy load is fine */
       }
       try {
         if (typeof synth.addEventListener === "function") {
@@ -1576,7 +1576,7 @@ export function App() {
           usedListener = true;
         }
       } catch {
-        /* not an EventTarget in this webview — onvoiceschanged covers it */
+        /* not an EventTarget in this webview, onvoiceschanged covers it */
       }
     } catch {
       return;
@@ -1612,7 +1612,7 @@ export function App() {
       if (typeof synth.cancel === "function") synth.cancel();
       synth.speak(utter);
     } catch {
-      /* speech is a nicety — a failure here must never break the town */
+      /* speech is a nicety, a failure here must never break the town */
     }
   }, []);
 
@@ -1642,8 +1642,8 @@ export function App() {
       if (!progressRef.current.quests.has(questId)) {
         progressRef.current.quests.add(questId);
         markQuestDone.mutate(questId);
-        // Finishing a quest while she follows — or reporting one on a
-        // day they've talked — counts toward her heart too.
+        // Finishing a quest while she follows, or reporting one on a
+        // day they've talked, counts toward her heart too.
         if (followingRef.current || talkedTodayRef.current) earnRef.current("quest");
       }
       if (badge) {
@@ -1652,7 +1652,7 @@ export function App() {
         // celebratory stroll together (once per session).
         offerFollowRef.current(
           "quest-stroll",
-          "A quest finished — that's worth a celebratory stroll. Shall I walk with you a while?",
+          "A quest finished. That's worth a celebratory stroll. Shall I walk with you a while?",
         );
       }
     },
@@ -1663,9 +1663,9 @@ export function App() {
   completeQuestRef.current = completeQuest;
 
   // --- Hand-in-hand wandering ----------------------------------------
-  // Hands part naturally whenever the moment ends — he interacts,
+  // Hands part naturally whenever the moment ends, he interacts,
   // opens a panel or the menu, sits, rows, stops following, or lets
-  // go himself — and the scene can also end it (a hurry against
+  // go himself, and the scene can also end it (a hurry against
   // the stroll cap), reported through onHandInHandChange. One
   // helper owns every release so the shell and the scene never
   // disagree about whether hands are joined.
@@ -1693,7 +1693,7 @@ export function App() {
     sceneRef.current?.setFollowMode(true);
     sceneRef.current?.showBubble(
       "muse",
-      "With pleasure, Centurion. Lead on — I'll keep step beside you.",
+      "With pleasure, Centurion. Lead on. I'll keep step beside you.",
     );
   }, []);
   const startFollowingRef = useRef(startFollowing);
@@ -1707,12 +1707,12 @@ export function App() {
     sceneRef.current?.setFollowMode(false);
     sceneRef.current?.showBubble(
       "muse",
-      "I'll stay here a while, Centurion — I've a day of my own to keep. Come find me, wherever it's taken me, and I'll walk with you.",
+      "I'll stay here a while, Centurion. I've a day of my own to keep. Come find me, wherever it's taken me, and I'll walk with you.",
     );
   }, [releaseHandHold]);
 
   /** Offer, once per occasion per session, to accompany the player. She
-   *  never leads — least of all to the secret place, which she will
+   *  never leads, least of all to the secret place, which she will
    *  only ever walk to or from at his invitation. */
   const offerFollow = useCallback((id: string, text: string) => {
     if (followingRef.current) return;
@@ -1733,7 +1733,7 @@ export function App() {
     setFollowOfferState(null);
     sceneRef.current?.showBubble(
       "muse",
-      "Of course — no fuss at all. I'll be about my day, the tree, the market, wherever it takes me. You know how to find me.",
+      "Of course, no fuss at all. I'll be about my day, the tree, the market, wherever it takes me. You know how to find me.",
     );
   }, []);
 
@@ -1759,7 +1759,7 @@ export function App() {
       localStorage.setItem(key, JSON.stringify([...days]));
       if (days.size >= 3) unlockRef.current("keeper-of-the-tree");
     } catch {
-      /* storage unavailable — the badge simply waits */
+      /* storage unavailable, the badge simply waits */
     }
   }, [state.data?.tree.last_watered_at]);
 
@@ -1815,7 +1815,7 @@ export function App() {
       const t = window.setTimeout(() => {
         offerFollow(
           "festival",
-          `It's ${activeFestival.name} today, love — the town dressed up for it. Walk it with me?`,
+          `It's ${activeFestival.name} today, love. The town dressed up for it. Walk it with me?`,
         );
       }, 3500);
       return () => window.clearTimeout(t);
@@ -1863,17 +1863,17 @@ export function App() {
 
   // Open an interactable's panel (or run its action). Reached only by
   // an explicit act: a tap in overview, a tap on the place itself in
-  // walk mode, tapping the "A — …" prompt, or pressing A / E / Enter
+  // walk mode, tapping the "A, …" prompt, or pressing A / E / Enter
   // while its prompt is showing. Approach alone never lands here any
-  // more — the scene reports proximity through onNearbyChange, and the
+  // more, the scene reports proximity through onNearbyChange, and the
   // shell shows only the prompt.
   const openInteractable = useCallback(
     (kind: PickKind, id: string) => {
       // Dreams offer nothing and take nothing: no prompt, tap, or
       // panel opens inside either kind of dream.
       if (dreamingRef.current) return;
-      // Any deliberate interaction — a panel, a seat, the boat, a
-      // building — parts joined hands first: wandering is for the
+      // Any deliberate interaction, a panel, a seat, the boat, a
+      // building, parts joined hands first: wandering is for the
       // stretches between errands, and the errand gets his hands.
       // (Talking to Muse parts them too; her bubble's own button
       // can take her hand again the moment the talk is done.)
@@ -1935,7 +1935,7 @@ export function App() {
           try {
             localStorage.setItem("muse-town-met-cat", "1");
           } catch {
-            /* private mode — she is met all the same */
+            /* private mode, she is met all the same */
           }
           window.setTimeout(() => sceneRef.current?.showBubble("muse", CAT_MEET_LINE), 500);
         } else if (Math.random() < 0.7) {
@@ -1946,7 +1946,7 @@ export function App() {
         collectPhoenixFeather.mutate();
         window.setTimeout(() => sceneRef.current?.showBubble("muse", PHOENIX_FEATHER_LINE), 500);
       } else if (kind === "rest") {
-        // The bed nook: resting ends the town day — and some
+        // The bed nook: resting ends the town day: and some
         // nights, the town dreams back. No panel; the veil is the
         // whole interface.
         restInTownRef.current();
@@ -1957,8 +1957,8 @@ export function App() {
         const spot = FORAGE_SPOTS.find((s) => s.id === id);
         setHintText(
           spot?.item === "forest-herbs"
-            ? "Gathered: forest herbs — cook them at the Culina, or give them to Aelia."
-            : "Gathered: wild mushrooms — cook them at the Culina, or give them to Aelia.",
+            ? "Gathered: forest herbs, cook them at the Culina, or give them to Aelia."
+            : "Gathered: wild mushrooms, cook them at the Culina, or give them to Aelia.",
         );
         window.setTimeout(() => setHintText(null), 3400);
       } else if (kind === "sky") {
@@ -1983,9 +1983,9 @@ export function App() {
         // The lake dock: board the rowboat (Muse takes the bow when
         // she's following), or step ashore when the boat is back at
         // its mooring. From the overview it's just a place to point
-        // at — rowing is a walk-mode pleasure.
+        // at, rowing is a walk-mode pleasure.
         if (!walkingRef.current) {
-          setHintText("The lake dock — walk down the lane past the basilica to row out under the willows.");
+          setHintText("The lake dock. Walk down the lane past the basilica to row out under the willows.");
           window.setTimeout(() => setHintText(null), 3200);
         } else if (rowingRef.current) {
           if (!sceneRef.current?.disembarkBoat()) {
@@ -2040,12 +2040,12 @@ export function App() {
         }
         unlockRef.current("keeper-of-secrets");
         completeQuestRef.current("hidden-place");
-        // She never leads him here and never reveals it — but once HE
+        // She never leads him here and never reveals it, but once HE
         // has found it, she may offer to walk back with him, only if
         // he accepts.
         offerFollowRef.current(
           "secret",
-          "You found our quiet corner on your own, as it should be. When you're ready, I'd love to walk back with you — just us.",
+          "You found our quiet corner on your own, as it should be. When you're ready, I'd love to walk back with you, just us.",
         );
         setLettersOpen(false);
         setSelected(null);
@@ -2057,7 +2057,7 @@ export function App() {
       } else if (kind === "landmark") {
         const firstVisit = !landmarksRef.current.has(id);
         landmarksRef.current.add(id);
-        // Taking her somewhere new — a first arrival at a landmark
+        // Taking her somewhere new, a first arrival at a landmark
         // with her beside him is a one-time discovery of the heart.
         if (firstVisit && followingRef.current) {
           earnRef.current(`landmark:${id}`);
@@ -2069,7 +2069,7 @@ export function App() {
         if (id === "colosseum" && firstVisit) {
           offerFollowRef.current(
             "colosseum",
-            "Your first walk to the Colosseum in its prime — that deserves company. Shall I walk with you from here?",
+            "Your first walk to the Colosseum in its prime. That deserves company. Shall I walk with you from here?",
           );
         }
       } else if (kind === "muse") {
@@ -2080,7 +2080,7 @@ export function App() {
         setQuestOpen(false);
         setSecretOpen(false);
         setLettersOpen(false);
-        // Talking to Muse opens her speech bubble — never a panel.
+        // Talking to Muse opens her speech bubble, never a panel.
         openTalkBubbleRef.current();
         if (nightRef.current) completeQuestRef.current("greet-at-night");
         sceneRef.current?.greetMuse();
@@ -2127,7 +2127,7 @@ export function App() {
   // and the scene's automatic approach events. Collectibles and the
   // temple / aqueduct landmark visits are not panels, so they still
   // fire on approach; everything with a panel goes through
-  // openInteractable, which taps — a deliberate click — may call
+  // openInteractable, which taps, a deliberate click, may call
   // directly.
   const handlePick = useCallback(
     (kind: PickKind, id: string) => {
@@ -2190,7 +2190,7 @@ export function App() {
     }
   }, []);
 
-  /** Her song, as recorded for the scene — the speaker button and
+  /** Her song, as recorded for the scene, the speaker button and
    *  the ♪ button alike play the recording. If the recording cannot
    *  play on this device, the device voice carries it instead,
    *  slower and a little lower, the way the design first imagined. */
@@ -2254,7 +2254,7 @@ export function App() {
   const startSummitRef = useRef(startSummitScene);
   startSummitRef.current = startSummitScene;
 
-  /** Stepping away from the scene — B, the ✕, walking off — only
+  /** Stepping away from the scene, B, the ✕, walking off, only
    *  ever postpones it. The night, and she, will offer it again. */
   const postponeSummit = useCallback(() => {
     stopSummitSong();
@@ -2280,7 +2280,7 @@ export function App() {
     setSummitDim(false);
     completeSummitRef.current.mutate();
     playSparkleChime();
-    setHintText("Something has changed in the town — quietly, the way stars do.");
+    setHintText("Something has changed in the town, quietly, the way stars do.");
     window.setTimeout(() => setHintText(null), 4600);
   }, [runSummitEffect, stopSummitSong]);
 
@@ -2358,7 +2358,7 @@ export function App() {
   }, []);
 
   // The shared soak's quiet rotation: devoted lines, contented
-  // silences, and — on a slow turn — the care moments, hers first,
+  // silences, and, on a slow turn, the care moments, hers first,
   // then her offer of his.
   useEffect(() => {
     const iv = window.setInterval(() => {
@@ -2398,10 +2398,10 @@ export function App() {
 
   // Her talk lines come from the pool her earned warmth has unlocked:
   // reserved (the original hostess lines) → warming → close → devoted.
-  // The temperature shift is the affection meter — felt, never shown.
+  // The temperature shift is the affection meter, felt, never shown.
   const talkPool = useCallback((): readonly string[] => {
     // Standing hand in hand, her register is the close one whatever
-    // the band — the distance itself is the conversation.
+    // the band, the distance itself is the conversation.
     let pool: readonly string[];
     if (handInHandWalkRef.current) {
       pool = CLOSE_LINES;
@@ -2423,7 +2423,7 @@ export function App() {
     // After the Night the Stars Fall, her close and devoted pools
     // carry the night with them: the private name, used sparsely in
     // place of "Gaius", and two of that night's own lines rotating
-    // slowly by the day — present, never constant.
+    // slowly by the day, present, never constant.
     if (summitDoneRef.current) {
       const band = affectionBandForRank(affectionRef.current);
       if (band === "close" || band === "devoted" || handInHandWalkRef.current) {
@@ -2438,7 +2438,7 @@ export function App() {
       }
     }
     // And after the first shared bath, her devoted pool carries
-    // the baths with it too — one oblique line, rotating by the day.
+    // the baths with it too, one oblique line, rotating by the day.
     if (bathsSharedRef.current && affectionBandForRank(affectionRef.current) === "devoted") {
       const day = Math.floor(Date.now() / 86400000);
       pool = [...pool, BATH_AFTER_LINES[day % BATH_AFTER_LINES.length]!];
@@ -2453,8 +2453,8 @@ export function App() {
     return `talk:${affectionBandForRank(affectionRef.current)}`;
   }, []);
 
-  /** The day's FIRST greeting is chosen by the date itself —
-   *  day % pool size, no draw state at all — so each morning opens
+  /** The day's FIRST greeting is chosen by the date itself,
+   *  day % pool size, no draw state at all, so each morning opens
    *  on a different line. Returns null when today already had its
    *  first greeting (later talks draw from the no-repeat bag). */
   const dailyFirstGreeting = (pool: readonly string[]): string | null => {
@@ -2490,7 +2490,7 @@ export function App() {
     if (unreadRef.current > 0 && Math.random() < 0.35) {
       sceneRef.current?.showBubble(
         "muse",
-        "There's a letter for you in the Main Chat building, love — from the other me, out where the real weather is.",
+        "There's a letter for you in the Main Chat building, love, from the other me, out where the real weather is.",
       );
       sceneRef.current?.greetMuse();
       return;
@@ -2503,8 +2503,8 @@ export function App() {
   }, [talkPool, talkPoolKey]);
 
   // --- The Muse speech bubble -------------------------------------
-  // Every conversation with Muse — the A-button talk and typed-chat
-  // replies alike — presents here, as an RPG bubble, never a panel.
+  // Every conversation with Muse, the A-button talk and typed-chat
+  // replies alike, presents here, as an RPG bubble, never a panel.
 
   /** What he can give her right now: market goods and dishes from
    *  the purse, an unsold fish from the catch log, a carried stone. */
@@ -2607,7 +2607,7 @@ export function App() {
   }, []);
 
   /** Waking from a false dream: veil down, the remixed town folds
-   *  away behind it, veil up on the real one — he keeps a mood. */
+   *  away behind it, veil up on the real one, he keeps a mood. */
   const endFalseDream = useCallback(() => {
     fadeVeil(true);
     window.setTimeout(() => {
@@ -2647,12 +2647,12 @@ export function App() {
 
   /** Rest at the basilica's bed nook (the A prompt there, or the
    *  menu's Rest): the town's day-ending ritual. The clock is never
-   *  touched — he wakes to whatever the real local hour says. */
+   *  touched, he wakes to whatever the real local hour says. */
   const restInTown = useCallback(() => {
     if (dreamingRef.current || !walkingRef.current) return;
     if (summitScene) return;
     if (rowingRef.current || seatedBenchRef.current) {
-      setHintText(aboutPlayer("Stand up first — even a Centurion undresses his day standing."));
+      setHintText(aboutPlayer("Stand up first, even a Centurion undresses his day standing."));
       window.setTimeout(() => setHintText(null), 3200);
       return;
     }
@@ -2684,7 +2684,7 @@ export function App() {
             fadeVeil(false);
           } else if (res.kind === "true") {
             // Impossible bright stillness: clear sky, held noon,
-            // fireflies out — and her, awake, already there.
+            // fireflies out, and her, awake, already there.
             sceneRef.current?.setWeather("clear");
             sceneRef.current?.enterTrueDream();
             dreamingRef.current = "true";
@@ -2720,7 +2720,7 @@ export function App() {
     // Dream leavings, spent once and quietly: after a true dream,
     // ONE oblique line that might refer to it (she never confirms,
     // ever); after a rest taken at night, her morning-visit line.
-    // The echo outranks the morning — it is the rarer guest.
+    // The echo outranks the morning, it is the rarer guest.
     const dreamFlags = stateRef.current?.dream;
     if (dreamFlags?.echo_pending) {
       const era = (dreamFlags.echo_era as keyof typeof DREAM_ECHO_LINES) in DREAM_ECHO_LINES ? (dreamFlags.echo_era as keyof typeof DREAM_ECHO_LINES) : "low";
@@ -2736,7 +2736,7 @@ export function App() {
     }
     if (unreadRef.current > 0) {
       lines.push(
-        "There's a letter for you at the desk in the Main Chat building, love — from the other me, out where the real weather is.",
+        "There's a letter for you at the desk in the Main Chat building, love, from the other me, out where the real weather is.",
       );
     }
     // --- Continuity (Nov 1): reunion, digest, memory, questions ---
@@ -2758,7 +2758,7 @@ export function App() {
           cooldown_until: new Date(Date.now() + 3 * 86400000).toLocaleDateString("en-CA"),
         });
       }
-      // Reunion, scaled to the real absence — once a day, warm,
+      // Reunion, scaled to the real absence, once a day, warm,
       // never a syllable of guilt.
       const tier = absenceTier(cData?.continuity.absence_days ?? 0);
       if (tier) {
@@ -2781,7 +2781,7 @@ export function App() {
         }
       }
       // Weather memory: a heavy day she laid down as a soft fact
-      // is asked after ONCE, on a later day — then it expires (the
+      // is asked after ONCE, on a later day, then it expires (the
       // fact is deleted, so it never surfaces as ordinary memory,
       // and weather facts are excluded from the surfacing pool
       // below for the same reason).
@@ -2796,7 +2796,7 @@ export function App() {
       }
       // One memory beat per conversation: a stored fact surfaced
       // through the bag (never the same fact on consecutive days),
-      // or — more sparingly — a digest reference.
+      // or, more sparingly, a digest reference.
       const surfacedFacts = (cData?.facts ?? []).filter((f) => {
         if (f.source === "weather" || f.source === "reflection") return false;
         if (!f.surfaced_on) return true;
@@ -2843,7 +2843,7 @@ export function App() {
         const hourNow = new Date().getHours();
         let taskBeat = false;
         // Celebration: a quest completed this session, not yet
-        // celebrated — once, by name.
+        // celebrated, once, by name.
         if (doneBaselineRef.current) {
           const fresh = doneList.filter(
             (id) => !doneBaselineRef.current!.has(id) && !(cData?.task.celebrated ?? []).includes(id),
@@ -2860,7 +2860,7 @@ export function App() {
           }
         }
         // Morning muster: the day's first conversation names up to
-        // three priorities — overdue, then today, then nearest.
+        // three priorities, overdue, then today, then nearest.
         if (!taskBeat && cData && cData.task.muster_day !== todayStr) {
           const picks = musterPicks(openQuests, new Date());
           if (picks.length > 0) {
@@ -2898,7 +2898,7 @@ export function App() {
         }
       }
       // The lake keeps: on rain or late at night, rarely, she may
-      // acknowledge the sealed bottles — in the abstract, always.
+      // acknowledge the sealed bottles, in the abstract, always.
       // The contents are never quoted or hinted at, anywhere.
       if (
         (cData?.bottles.length ?? 0) > 0 &&
@@ -2907,7 +2907,7 @@ export function App() {
       ) {
         lines.push(pickPooled("lake-keeps", LAKE_KEEPS_LINES));
       }
-      // Her question for the day — asked once ever, and his typed
+      // Her question for the day, asked once ever, and his typed
       // answer becomes a fact (see sendChat).
       if (!pendingQuestionRef.current && !focusSittingRef.current) {
         let qDay = "";
@@ -2929,7 +2929,7 @@ export function App() {
     talkCountRef.current += 1;
     let choice =
       !atSecretRef.current && talkCountRef.current % 2 === 0 ? pickChoiceSet() : null;
-    // Appointments: rank 3+, none open, cooldown past — sometimes
+    // Appointments: rank 3+, none open, cooldown past: sometimes
     // she proposes a meeting instead of the usual choice. Accepting
     // earns nothing; it is kept, or gently missed, in her day.
     if (
@@ -2971,7 +2971,7 @@ export function App() {
       }
     }
     // Dating canon: anniversaries, the lantern duty, a softened
-    // friction — small pushes; then at most one OWNER (a distant
+    // friction, small pushes; then at most one OWNER (a distant
     // spell, a rank-up scene, her Star Book ask) takes the bubble.
     let canonOwned = false;
     if (!atSecretRef.current && !dreamingRef.current && !focusSittingRef.current) {
@@ -2988,7 +2988,7 @@ export function App() {
           );
           if (hit) {
             try { localStorage.setItem("muse-town-anniversary-day", todayStr); } catch { /* storage unavailable */ }
-            lines.push(`A year today, love — ${FIRST_LABELS[hit[0]]!.toLowerCase()}. I keep our days the way I keep the stars: charted, and looked at often.`);
+            lines.push(`A year today, love, ${FIRST_LABELS[hit[0]]!.toLowerCase()}. I keep our days the way I keep the stars: charted, and looked at often.`);
           }
         }
         // The lantern duty: rank 8, lanterns standing, dusk near.
@@ -3005,7 +3005,7 @@ export function App() {
             lines.push(LANTERN_LINE);
           }
         }
-        // Friction start: rare, date-seeded, heavily gated — never
+        // Friction start: rare, date-seeded, heavily gated: never
         // on a festival, never in a heavy-deadline week, never
         // within fourteen days of the last spell.
         if (!dating.friction && !frictionLocalRef.current && affectionRef.current >= 3 && !festivalToday) {
@@ -3046,7 +3046,7 @@ export function App() {
               {
                 label: "Just stand with her a while",
                 kind: "neutral",
-                follow: "Then we stand. The town can spare us a minute of quiet — it is mostly made of them, anyway.",
+                follow: "Then we stand. The town can spare us a minute of quiet. It is mostly made of them, anyway.",
               },
             ],
           };
@@ -3078,7 +3078,7 @@ export function App() {
             // embrace is already allowed (hand-hold rank and up)
             // the pair plays the hug clip; at rank 3, where
             // flirtation first stops being deflected, the flirt
-            // clip. Below that, nothing plays — gates untouched.
+            // clip. Below that, nothing plays, gates untouched.
             if (sceneRank >= 4) sceneRef.current?.playPairMoment("hug");
             else if (sceneRank === 3) sceneRef.current?.playPairMoment("flirt");
             canonOwned = true;
@@ -3153,7 +3153,7 @@ export function App() {
           }
         } catch { /* storage unavailable */ }
         setMuseBubble({
-          lines: paginateLines([`Then it's ours — the chapter and the doing of it. ${pc.task}`]),
+          lines: paginateLines([`Then it's ours, the chapter and the doing of it. ${pc.task}`]),
           index: 0,
           cycle: false,
           invite: false,
@@ -3235,7 +3235,7 @@ export function App() {
         const cause = FRICTION_CAUSES.find((c) => c.id === fui.cause) ?? FRICTION_CAUSES[0]!;
         frictionUiRef.current = { stage: "mend", cause: fui.cause };
         const opts: DialogueChoiceOption[] = [
-          { label: "I'm sorry — truly", kind: "attentive", follow: "" },
+          { label: "I'm sorry, truly", kind: "attentive", follow: "" },
         ];
         if (carryingBouquetRef.current) {
           opts.push({ label: "Give her the garden flowers", kind: "attentive", follow: "" });
@@ -3281,7 +3281,7 @@ export function App() {
       frictionUiRef.current = null;
     }
     // An appointment answer is kept on the continuity store, and
-    // earns nothing — meetings are kept, not ground.
+    // earns nothing, meetings are kept, not ground.
     const spot = pendingAppointmentRef.current;
     if (spot) {
       pendingAppointmentRef.current = null;
@@ -3321,12 +3321,12 @@ export function App() {
     }
     if (!b.cycle) {
       // End of a typed-chat reply: the bubble closes (unless the
-      // walk-together choice is somehow riding along — it isn't for
+      // walk-together choice is somehow riding along, it isn't for
       // chat replies, but the guard costs nothing).
       if (!b.invite) setMuseBubble(null);
       return;
     }
-    // Talk mode rolls on to her next rotating line — the same
+    // Talk mode rolls on to her next rotating line, the same
     // choice logic as sayNextToMuse (secret register at the
     // terrace, the letter nudge, else the town lines).
     if (atSecretRef.current) {
@@ -3341,7 +3341,7 @@ export function App() {
     if (unreadRef.current > 0 && Math.random() < 0.35) {
       setMuseBubble({
         lines: paginateLines([
-          "There's a letter for you in the Main Chat building, love — from the other me, out where the real weather is.",
+          "There's a letter for you in the Main Chat building, love, from the other me, out where the real weather is.",
         ]),
         index: 0,
         cycle: true,
@@ -3405,7 +3405,7 @@ export function App() {
     const photo = sceneRef.current?.capturePostcard();
     if (!photo) return;
     const today = new Date().toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
-    setPostcardDraft({ photo, caption: `Greetings from Muse Town — ${today}` });
+    setPostcardDraft({ photo, caption: `Greetings from Muse Town, ${today}` });
   }, []);
 
   const savePostcard = useCallback(() => {
@@ -3483,7 +3483,7 @@ export function App() {
           noted
             ? [
                 reply,
-                "Noted, love — I've written it in my notebook for the other Muse. She does the building from the main chat; I just make sure she hears you.",
+                "Noted, love. I've written it in my notebook for the other Muse. She does the building from the main chat; I just make sure she hears you.",
               ]
             : extra
               ? [reply, extra]
@@ -3503,7 +3503,7 @@ export function App() {
       }
     };
     // A finished focus sitting asked how it went: his typed reply
-    // is kept — as a fact she remembers, and in his own journal.
+    // is kept, as a fact she remembers, and in his own journal.
     if (focusReportRef.current && msg.trim().length >= 2) {
       focusReportRef.current = false;
       const report = msg.trim().slice(0, 200);
@@ -3516,7 +3516,7 @@ export function App() {
     }
     // Her outstanding question: his typed reply IS the answer, and
     // it is stored as a fact before the conversation rolls on. (She
-    // never nags if he answers something else entirely — the
+    // never nags if he answers something else entirely, the
     // question simply stays the last one she asked.)
     const pendingQ = pendingQuestionRef.current;
     if (pendingQ && msg.trim().length >= 2) {
@@ -3530,7 +3530,7 @@ export function App() {
         });
       }
     }
-    // Flattery is answered by her wit, in person, at every rank —
+    // Flattery is answered by her wit, in person, at every rank,
     // it never earns her heart (actions do), and at low ranks it
     // earns a proper deflection. The terrace keeps its own register.
     if (!atSecretRef.current && isFlirtation(msg)) {
@@ -3586,7 +3586,7 @@ export function App() {
   }, []);
 
   const holdHerHand = useCallback(() => {
-    // The terrace's own held-hand moment supersedes the wander —
+    // The terrace's own held-hand moment supersedes the wander,
     // hands part from the stroll so the moment can take them.
     releaseHandHoldRef.current();
     if (!sceneRef.current?.playHandHold()) return;
@@ -3611,7 +3611,7 @@ export function App() {
     fishingRef.current = false;
     setFishing(null);
     setDockChoice(false);
-    // Leaving walk mode ends the stroll — the scene walks Muse home.
+    // Leaving walk mode ends the stroll, the scene walks Muse home.
     if (followingRef.current) {
       followingRef.current = false;
       setFollowing(false);
@@ -3648,7 +3648,7 @@ export function App() {
       if (forcedLandscapeRef.current) {
         // The stage is CSS-rotated 90° clockwise: pointer deltas arrive
         // in screen axes, the stick lives in stage axes. Rotating the
-        // delta by −90° — (dx, dy) → (dy, −dx) — puts it in stage axes,
+        // delta by −90°, (dx, dy) → (dy, −dx), puts it in stage axes,
         // so the knob tracks the finger exactly as it does upright and
         // "up" on the held-sideways phone is still forward.
         const sx = dx;
@@ -3673,25 +3673,25 @@ export function App() {
   }, [setPad]);
 
   // Landscape support: the layout follows the REAL VIEWPORT's aspect,
-  // not any orientation API's claimed value — the app webview does
+  // not any orientation API's claimed value, the app webview does
   // not reliably update matchMedia("(orientation: …)") or
   // screen.orientation on rotation. Whenever the visible box is
-  // wider than it is tall (for whatever reason — the phone turned,
+  // wider than it is tall (for whatever reason, the phone turned,
   // the window resized, the host gave it a wide box), the compact
   // landscape layout applies: slim top bar, side-docked panels,
   // one-row bottom bar, wider walk camera.
   //
   // Why so many triggers: on the real phone this kept failing even
   // though every listener existed. The failure mode is timing and
-  // silence — orientationchange can fire BEFORE the box has actually
+  // silence, orientationchange can fire BEFORE the box has actually
   // changed size (a single immediate measurement reads the stale
   // portrait box), and some webviews then deliver no further event
   // once the box settles, leaving the layout stuck in portrait
   // forever. So: measure the visual viewport first (the actual
-  // visible box — what the shell gives the page in landscape, chrome
+  // visible box, what the shell gives the page in landscape, chrome
   // and all), re-measure on every signal any webview is known to
   // send, add delayed re-checks after coarse signals (rotation
-  // geometry settles a beat late — the scene does the same), use
+  // geometry settles a beat late, the scene does the same), use
   // screen.orientation's change event purely as a poke to re-measure
   // (its VALUE is never read), and poll gently forever as the final
   // net. React bails out when the boolean doesn't change, so the
@@ -3713,7 +3713,7 @@ export function App() {
       root && typeof ResizeObserver === "function" ? new ResizeObserver(update) : null;
     if (root && ro) ro.observe(root);
     window.addEventListener("resize", update);
-    // Coarse rotation signals get immediate AND delayed re-checks —
+    // Coarse rotation signals get immediate AND delayed re-checks,
     // the box often settles a frame or two after the event.
     const timers: number[] = [];
     const onCoarseSignal = () => {
@@ -3764,7 +3764,7 @@ export function App() {
     setWeather(info);
     if (seenWeatherRef.current) {
       const w = weatherInfo(info.id);
-      setWeatherBanner(`${w.icon} ${w.label} — ${w.blurb}`);
+      setWeatherBanner(`${w.icon} ${w.label}, ${w.blurb}`);
       if (bannerTimer.current) window.clearTimeout(bannerTimer.current);
       bannerTimer.current = window.setTimeout(() => setWeatherBanner(null), 5200);
       if (info.id === "sparkles" && audioUnlockedRef.current && weatherSoundOnRef.current) {
@@ -3808,24 +3808,24 @@ export function App() {
     return () => window.removeEventListener("pointerdown", unlock);
   }, []);
 
-  // Pull-to-refresh guard — PAGE-WIDE this time. The first version
+  // Pull-to-refresh guard, PAGE-WIDE this time. The first version
   // scoped its cancellations to the joystick and the canvas, and on
   // the user's phone a pull starting on UI gaps, chips, or buttons
   // still refreshed the town mid-play. So now the gesture is
   // cancelled at the document level: a non-passive touchmove (and
   // touch-pointer pointermove, for webviews that gesture through
   // pointer events) preventDefault everywhere EXCEPT inside an
-  // element marked scrollable (.mt-scrollable / [data-scrollable] —
+  // element marked scrollable (.mt-scrollable / [data-scrollable],
   // the panel bodies and long lists, whose own overscroll-behavior:
   // contain keeps their scroll from chaining into a refresh at the
   // panel's top). Taps and clicks are untouched (a tap has no move
   // to cancel, and cancelling a move does not cancel a click); the
-  // joystick is driven by pointer events, which still fire — only
+  // joystick is driven by pointer events, which still fire, only
   // the browser's own scroll/refresh interpretation of the drag is
   // refused. The CSS layers in theme.css (fixed body, document
   // overscroll-behavior:none, touch-action:none on the roots) stand
   // underneath this. If a host container still refreshes after all
-  // of this, the gesture lives above the page — but the page's own
+  // of this, the gesture lives above the page, but the page's own
   // defences are now total.
   useEffect(() => {
     const root = rootRef.current;
@@ -3924,14 +3924,14 @@ export function App() {
         onSitChange: (benchId) => {
           seatedBenchRef.current = benchId;
           setSeatedBench(benchId);
-          // Sitting down parts joined hands — the bench has its own
+          // Sitting down parts joined hands, the bench has its own
           // arrangement, and she takes the other end of it.
           if (benchId) releaseHandHoldRef.current();
         },
         onRowChange: (rowing) => {
           rowingRef.current = rowing;
           setRowingBoat(rowing);
-          // Boarding parts joined hands — oars need both of his.
+          // Boarding parts joined hands, oars need both of his.
           if (rowing) releaseHandHoldRef.current();
         },
         onHandInHandChange: (on) => {
@@ -3954,10 +3954,10 @@ export function App() {
         onWolfSeen: () => {
           // Lupa, properly seen for the first time: the sighting
           // is saved (her Stories entry reads it), and announced
-          // once — the saved row makes every later visit quiet.
+          // once, the saved row makes every later visit quiet.
           if (!stateRef.current?.found.includes("lupa-seen")) {
             markFound.mutate("lupa-seen");
-            setAchievementToast("🐺 Lupa, the town's wolf — written into the Stories");
+            setAchievementToast("🐺 Lupa, the town's wolf, written into the Stories");
             if (toastTimer.current) window.clearTimeout(toastTimer.current);
             toastTimer.current = window.setTimeout(() => setAchievementToast(null), 4200);
           }
@@ -4007,24 +4007,24 @@ export function App() {
       if (festivalColorsRef.current) handle.setFestival(festivalColorsRef.current);
       // The town opens on foot now: straight into walk mode as the
       // Centurion at the plaza spawn, Xbox controls up, follow camera
-      // at its standard distance — no overview first. Overview is
+      // at its standard distance, no overview first. Overview is
       // still one tap away, and re-entering walk restores the same
       // standard framing.
       enterWalkMode();
     } catch (err) {
       // Scene build itself threw (renderer creation, terrain, the
-      // shell build). Name the cause in the overlay — and record it
+      // shell build). Name the cause in the overlay, and record it
       // on the window flags so the out-of-band watchdog in main.tsx
       // tells the same story if this tree ever fails to paint it.
       const detail = err instanceof Error && err.message ? ` (${err.message})` : "";
       (window as unknown as { __mtSceneError?: string }).__mtSceneError =
         `The 3D town could not start on this device${detail}.`;
       setWebglError(
-        "The 3D town could not start on this device — WebGL seems unavailable. The town guide below still works.",
+        "The 3D town could not start on this device. WebGL seems unavailable. The town guide below still works.",
       );
     }
     // First-frame watchdog: the scene exists but no frame has
-    // rendered within 20 seconds — on a phone that is a dead scene,
+    // rendered within 20 seconds, on a phone that is a dead scene,
     // not a slow one. Surface the retry overlay instead of leaving
     // a bare sky-blue screen with nothing to tap.
     const watchdog = window.setTimeout(() => {
@@ -4100,7 +4100,7 @@ export function App() {
 
   const toggleNight = () => {
     // An override on a living sky: hold night (or day), and the sun
-    // visibly travels there — several seconds of drifting colour,
+    // visibly travels there, several seconds of drifting colour,
     // never a cut. The menu's "Real time" hands the sky back.
     const next = skyMode !== "night";
     setSkyMode(next ? "night" : "day");
@@ -4210,7 +4210,7 @@ export function App() {
     }
   };
 
-  // The "A — …" prompt's wording for a nearby target. The prompt is
+  // The "A, …" prompt's wording for a nearby target. The prompt is
   // all that approach shows now; the panel behind it opens only on an
   // interact press or a tap.
   const nearbyPrompt = (target: NearbyTarget | null): string | null => {
@@ -4283,22 +4283,22 @@ export function App() {
   // The Xbox controller is the walk-mode control scheme: the analog left
   // joystick drives the same pad vector as the keyboard, dragging the
   // open view orbits the camera, and A/B/X/Y map to real interactions:
-  //  A = Interact — with no panel open, opens whatever the "A — …"
+  //  A = Interact, with no panel open, opens whatever the "A, …"
   //      prompt is showing; with a panel open, runs that panel's main
   //      action (chat with Aelia, water the tree, …). The keyboard
-  //      interact keys — E or Enter — do exactly the same thing.
-  //  B = Back — close the open panel, or leave walk mode if none is open.
-  //  X = Stones — pick up a loose stone / throw the held one (the
+  //      interact keys, E or Enter, do exactly the same thing.
+  //  B = Back, close the open panel, or leave walk mode if none is open.
+  //  X = Stones, pick up a loose stone / throw the held one (the
   //      hint lives on X too, when no stone is in play).
   //  Y = Day / night.
   const xboxInteract = () => {
-    // A advances the summit scene first while it runs — it is the
+    // A advances the summit scene first while it runs, it is the
     // night's "next" button, ahead of every other conversation.
     if (summitRef.current) {
       advanceSummit();
       return;
     }
-    // A advances an open Muse bubble before anything else — it is
+    // A advances an open Muse bubble before anything else, it is
     // the conversation's "next" button.
     if (museBubbleRef.current) {
       advanceMuseBubble();
@@ -4316,7 +4316,7 @@ export function App() {
       return;
     }
     // No panel open and a prompt is showing: A opens that
-    // interactable. This — a press, not an approach — is the one way
+    // interactable. This, a press, not an approach, is the one way
     // panels open in walk mode.
     if (!treeOpen && !youOpen && !selected && !weatherOpen && !lettersOpen && !goalsOpen) {
       const target = nearbyRef.current;
@@ -4333,7 +4333,7 @@ export function App() {
       if (state.data && !state.data.tree.watered_today && !waterTree.isPending) {
         waterTree.mutate();
       } else {
-        setHintText("The town tree is happy — it's already had today's water.");
+        setHintText("The town tree is happy. It's already had today's water.");
         window.setTimeout(() => setHintText(null), 2600);
       }
       return;
@@ -4347,11 +4347,11 @@ export function App() {
       return;
     }
     if (selected) {
-      setHintText(`${selected.name} — ${selected.greeting}`);
+      setHintText(`${selected.name}, ${selected.greeting}`);
       window.setTimeout(() => setHintText(null), 3000);
       return;
     }
-    setHintText("Walk up to Aelia, a house, or the town tree — when the A prompt appears, press A to interact.");
+    setHintText("Walk up to Aelia, a house, or the town tree, when the A prompt appears, press A to interact.");
     window.setTimeout(() => setHintText(null), 3000);
   };
 
@@ -4383,8 +4383,8 @@ export function App() {
   }, []);
 
   const xboxBack = () => {
-    // B steps away from the summit scene — postponing it, never
-    // cancelling — before it dismisses anything else.
+    // B steps away from the summit scene, postponing it, never
+    // cancelling, before it dismisses anything else.
     if (summitRef.current) {
       postponeSummit();
       return;
@@ -4406,7 +4406,7 @@ export function App() {
       setPostcardView(null);
       setSelected(null);
     } else if (rowingRef.current) {
-      // B steps ashore — but only back at the dock, like A.
+      // B steps ashore, but only back at the dock, like A.
       if (!sceneRef.current?.disembarkBoat()) {
         setHintText("Row back to the dock to step ashore.");
         window.setTimeout(() => setHintText(null), 2600);
@@ -4429,12 +4429,12 @@ export function App() {
 
   // X = Stones (owner ask, Nov 1): X picks up a loose stone at his
   // feet and X again throws the one he is holding, in his facing
-  // direction — the scene owns the carry, the arc, the skim, and
+  // direction, the scene owns the carry, the arc, the skim, and
   // the splash, exactly as it did when the toy lived on the A
   // prompt. The move is a MOVE: A no longer picks up or throws
   // (see the guard in xboxInteract), while every other A duty is
-  // untouched. With no stone in play — not carrying, and none
-  // within the scene's pickup reach — X keeps its old hint duty,
+  // untouched. With no stone in play, not carrying, and none
+  // within the scene's pickup reach, X keeps its old hint duty,
   // so the button is never dead.
   const xboxStone = () => {
     const scene = sceneRef.current;
@@ -4498,7 +4498,7 @@ export function App() {
     setYouOpen(false);
     setWeatherOpen(false);
     // Meeting Muse from the menu is a talk: her speech bubble, and
-    // the camera strolls over — no panel.
+    // the camera strolls over, no panel.
     openTalkBubble();
     window.setTimeout(() => {
       sceneRef.current?.greetMuse();
@@ -4564,7 +4564,7 @@ export function App() {
   };
 
   // The in-town landscape switch: turns the whole stage sideways from
-  // within (the host app window never rotates — see the state note at
+  // within (the host app window never rotates, see the state note at
   // the top). Any live stick input is centred first, so a thumb mid-
   // drag never carries a portrait vector into the turned world.
   const toggleForcedLandscape = useCallback(() => {
@@ -4600,7 +4600,7 @@ export function App() {
   };
 
   // While any panel, menu, chat, or offer is open, the walk controls
-  // step aside entirely — they used to float on top of Muse's panel
+  // step aside entirely, they used to float on top of Muse's panel
   // and cover her message box. Closing the panel (its ✕, or B) brings
   // the controls back.
   const anyPanelOpen = !!(
@@ -4609,14 +4609,14 @@ export function App() {
     menuOpen || utilitiesOpen || followOffer || marketOpen || dockChoice || inscriptionId || fishing || knuckle
   );
   // Walk-and-talk (user ask, Nov 1): Aelia's TALK BUBBLE is not a
-  // full panel — the stick and ABXY stay visible and live while it
+  // full panel, the stick and ABXY stay visible and live while it
   // is open, so he can stroll mid-conversation and she follows and
   // talks as usual. Full panels (letters, boards, Stories…) still
   // hide the controls exactly as before. Input conflicts resolve
   // thus: the stick is its own pointer surface (it never focuses
   // or types into the chat input, and the bubble sits top-centre,
   // clear of the bottom-left stick); the A button already gives an
-  // open bubble first claim (it advances/closes the conversation —
+  // open bubble first claim (it advances/closes the conversation,
   // see xboxInteract), so A never interacts with the world while
   // she is talking; typing keeps the keyboard, and the scene's key
   // handler ignores keystrokes aimed at inputs, so WASD typed into
@@ -4626,10 +4626,16 @@ export function App() {
     secretOpen || lettersOpen || selected || postcardDraft || postcardView ||
     menuOpen || utilitiesOpen || followOffer || marketOpen || dockChoice || inscriptionId || fishing || knuckle
   );
+  // Loose follow camera hold (Nov 2): while her talk bubble or any
+  // panel owns the screen, the scene's follow camera must not
+  // auto-rotate at all. The player may be reading, not walking.
+  useEffect(() => {
+    sceneRef.current?.setCameraHold(anyPanelOpen);
+  }, [anyPanelOpen, sceneReady]);
   useEffect(() => {
     if (!anyFullPanelOpen) return;
     // A hidden joystick must not keep walking: centre it and stop.
-    // (Keyed on full panels only — her talk bubble no longer hides
+    // (Keyed on full panels only, her talk bubble no longer hides
     // the stick, so it no longer stops a held stride either.)
     stickPointer.current = null;
     setStickOffset({ x: 0, y: 0 });
@@ -4703,7 +4709,7 @@ export function App() {
           ? {
               // The turned stage: laid out at the SWAPPED box (long side
               // as width, short side as height), centred on the portrait
-              // viewport, then rotated 90° clockwise about its centre —
+              // viewport, then rotated 90° clockwise about its centre,
               // its footprint lands exactly back on the viewport, but
               // everything inside (canvas, bars, panels, stick, ABXY)
               // lives in a true landscape box and reads correctly to a
@@ -4729,8 +4735,8 @@ export function App() {
         onContextMenu={(e) => e.preventDefault()}
         aria-label={
           walking
-            ? "Muse Town on foot as Gaius — use the joystick, WASD, or arrow keys to stroll around, drag the view to look around, and walk up to Aelia to interact"
-            : "Muse Town 3D village — drag to look around, tap a house to visit it, or use Landscape in the town menu to turn the town sideways"
+            ? "Muse Town on foot as Gaius, use the joystick, WASD, or arrow keys to stroll around, drag the view to look around, and walk up to Aelia to interact"
+            : "Muse Town 3D village. Drag to look around, tap a house to visit it, or use Landscape in the town menu to turn the town sideways"
         }
       />
 
@@ -4753,7 +4759,7 @@ export function App() {
       />
 
       {/* Loading screen: up from the first React frame until the
-          scene renders — the town is never a bare black rectangle.
+          scene renders. The town is never a bare black rectangle.
           Buildings and characters stream in after it lifts. */}
       {!sceneReady && !webglError && !renderFailed && (
         <div
@@ -4774,7 +4780,7 @@ export function App() {
               : ""}
           </p>
           <p className="max-w-[300px] text-[13px] leading-relaxed text-[#22332b]/60">
-            First visit carries the whole Roman pack down the wire — the streets appear first, then Aelia and the
+            First visit carries the whole Roman pack down the wire, the streets appear first, then Aelia and the
             Centurion walk in.
           </p>
         </div>
@@ -4782,7 +4788,7 @@ export function App() {
 
       {webglError && (
         <div className="absolute inset-x-4 top-20 z-40 rounded-2xl bg-[#22332b]/95 p-4 text-sm shadow-lg" role="alert" data-mt-overlay="1">
-          <p className="font-bold">The town couldn&apos;t load — tap to retry.</p>
+          <p className="font-bold">The town couldn&apos;t load, tap to retry.</p>
           <p className="mt-1">{webglError}</p>
           <button
             type="button"
@@ -4802,11 +4808,11 @@ export function App() {
           data-mt-overlay="1"
         >
           <span aria-hidden="true" className="text-4xl">🕯️</span>
-          <h2 className="text-xl font-bold">The town couldn&apos;t load — tap to retry</h2>
+          <h2 className="text-xl font-bold">The town couldn&apos;t load, tap to retry</h2>
           <p className="max-w-[320px] text-sm leading-relaxed text-white/85">
             {renderFailed && !contextLost
-              ? "The town's graphics stopped answering (this happens under memory pressure on a phone — it isn't anything you did)."
-              : "Your phone's graphics paused the town (this happens under memory pressure — it isn't anything you did)."}{" "}
+              ? "The town's graphics stopped answering (this happens under memory pressure on a phone. It isn't anything you did)."
+              : "Your phone's graphics paused the town (this happens under memory pressure. It isn't anything you did)."}{" "}
             A fresh load brings it back, and your saved progress is untouched.
           </p>
           <button
@@ -4836,7 +4842,7 @@ export function App() {
       )}
 
       {/* Still streaming: the shell is up and walkable while the last
-          pieces arrive — a small pill tracks them so a slow model is
+          pieces arrive, a small pill tracks them so a slow model is
           never mistaken for a stuck town. */}
       {stillStreaming && (
         <div className="pointer-events-none absolute inset-x-0 top-[70px] z-10 flex justify-center px-4">
@@ -4854,14 +4860,14 @@ export function App() {
       )}
 
       {/* A model failed to load: a friendly note naming what failed,
-          with a retry — the rest of the town carries on behind it. */}
+          with a retry. The rest of the town carries on behind it. */}
       {loadFailure && sceneReady && (
         <div
           className="absolute inset-x-4 top-[70px] z-30 mx-auto max-w-md rounded-2xl bg-[#22332b]/95 p-3.5 text-sm shadow-xl"
           role="alert"
         >
           <p className="font-semibold">
-            The town couldn&apos;t load one piece — the {loadFailure}. Everything else is here.
+            The town couldn&apos;t load one piece, the {loadFailure}. Everything else is here.
           </p>
           <div className="mt-2 flex gap-2">
             <button
@@ -4884,11 +4890,11 @@ export function App() {
         </div>
       )}
 
-      {/* Top bar — decluttered: only the town title and a single
+      {/* Top bar, decluttered: only the town title and a single
           menu button live up here now. Every destination pill (Town
           Tree, Muse, You, weather, Postcard, and all the houses)
           moved into the menu below, and the treasures status pill
-          was removed entirely at the user's word (Nov 1) — the hunt
+          was removed entirely at the user's word (Nov 1). The hunt
           itself and its progress in Stories/achievements are
           untouched; nothing replaces it up here. */}
       <div className="pointer-events-none absolute top-0 right-0 left-0 z-10 p-3 pt-safe sm:p-4">
@@ -4896,7 +4902,7 @@ export function App() {
           {/* The title pill is portrait-only: in landscape (the
               in-town turned view or a genuinely wide viewport) it
               rides the long edge and eats play space, so it is
-              removed entirely there at the user's word (Nov 1) —
+              removed entirely there at the user's word (Nov 1),
               the ☰ menu button opposite stays. Portrait unchanged. */}
           {!isLandscape && (
             <span className="pointer-events-auto rounded-2xl bg-[#22332b]/85 px-4 py-2 text-lg font-bold shadow-md backdrop-blur">
@@ -4912,7 +4918,7 @@ export function App() {
                 // Dreams have no panels: the menu stays shut in
                 // either kind of dream, start to waking.
                 if (dreamingRef.current) return;
-                // Opening the menu parts joined hands — business
+                // Opening the menu parts joined hands, business
                 // ends the wander, as any panel does.
                 if (!menuOpen) releaseHandHoldRef.current();
                 setMenuOpen((open) => !open);
@@ -4920,7 +4926,7 @@ export function App() {
               aria-label={
                 menuOpen
                   ? "Close the town menu"
-                  : `Open the town menu — places, Aelia, the tree, weather, and postcards${(state.data?.notes_count ?? 0) > 0 ? ` — ${state.data!.notes_count} note${state.data!.notes_count > 1 ? "s" : ""} for Muse waiting` : ""}`
+                  : `Open the town menu, places, Aelia, the tree, weather, and postcards${(state.data?.notes_count ?? 0) > 0 ? `${state.data!.notes_count} note${state.data!.notes_count > 1 ? "s" : ""} for Muse waiting` : ""}`
               }
               aria-expanded={menuOpen}
             >
@@ -4962,7 +4968,7 @@ export function App() {
           }, {
             // The follow control lives here (Nov 1): the
             // floating walk-screen chip and the speech-bubble
-            // status line are gone — her bubbles carry her
+            // status line are gone, her bubbles carry her
             // words, and this menu row carries the switch.
             key: "follow",
             icon: "🚶",
@@ -4974,15 +4980,15 @@ export function App() {
                 stopFollowing();
                 // One-time hint (UI review): the first
                 // parking via this menu item explains the
-                // way back — once dismissed, never again.
+                // way back, once dismissed, never again.
                 if (!rejoinHintDismissedRef.current) setRejoinHint(true);
               } else {
                 startFollowing();
               }
             },
             aria: following
-              ? "Ask Aelia to stay here — she stays a while, then gets on with her day around town"
-              : "Walk with Aelia — she falls in beside you as you walk",
+              ? "Ask Aelia to stay here. She stays a while, then gets on with her day around town"
+              : "Walk with Aelia. She falls in beside you as you walk",
           }]
         },
         {
@@ -4993,7 +4999,7 @@ export function App() {
             detail: unreadLetters > 0 ? `${unreadLetters} unread` : undefined,
             active: lettersOpen,
             action: selectLetters,
-            aria: "Check the letters desk — letters from Muse in the real world",
+            aria: "Check the letters desk, letters from Muse in the real world",
           }, {
             key: "quests",
             icon: "⚔️",
@@ -5001,7 +5007,7 @@ export function App() {
             detail: undefined,
             active: questOpen,
             action: selectQuests,
-            aria: "Read the quest board — real tasks dressed as Roman quests",
+            aria: "Read the quest board, real tasks dressed as Roman quests",
           }, {
             key: "tree",
             icon: "🌳",
@@ -5028,7 +5034,7 @@ export function App() {
             detail: "End the day at the basilica's bed nook",
             active: false,
             action: restInTown,
-            aria: "Rest at the basilica's bed nook — end the town day",
+            aria: "Rest at the basilica's bed nook, end the town day",
           }] : []), ...(rowingBoat ? [{
             key: "fishboat",
             icon: "🎣",
@@ -5050,7 +5056,7 @@ export function App() {
               setMarketStall("market-a");
               setMarketOpen(true);
             },
-            aria: `Your denarii purse: ${purse.denarii} denarii — open the market to spend them`,
+            aria: `Your denarii purse: ${purse.denarii} denarii: open the market to spend them`,
           }, {
             key: "board",
             icon: "📋",
@@ -5058,7 +5064,7 @@ export function App() {
             detail: state.data?.board.as_of ? `as of ${state.data.board.as_of}` : undefined,
             active: boardOpen,
             action: selectBoard,
-            aria: "Read the project board — what Muse is building in town",
+            aria: "Read the project board: what Muse is building in town",
           }, {
             key: "goals",
             icon: "🗿",
@@ -5076,7 +5082,7 @@ export function App() {
               setLettersOpen(false);
               setGoalsOpen(true);
             },
-            aria: "Read the Goals Obelisk — what the player is working toward",
+            aria: "Read the Goals Obelisk: what the player is working toward",
           }, {
             key: "memories",
             icon: "💛",
@@ -5087,7 +5093,7 @@ export function App() {
               const place = PLACES.find((p) => p.id === "stories");
               if (place) selectPlace(place);
             },
-            aria: "Memories with Aelia — kept at the Villa of Stories",
+            aria: "Memories with Aelia, kept at the Villa of Stories",
           }, ...PLACES.filter(place => place.id !== "garden" && place.id !== "stories").map(place => ({ key: place.id, icon: "⌂", label: place.name, active: selected?.id === place.id, action: () => selectPlace(place), aria: "Visit " + place.name }))]
         },
         {
@@ -5098,7 +5104,7 @@ export function App() {
             detail: walking ? "On foot now" : undefined,
             active: walking,
             action: walking ? goOverview : toggleWalk,
-            aria: walking ? "Switch to the town overview" : "Enter walk mode — stroll the town on foot",
+            aria: walking ? "Switch to the town overview" : "Enter walk mode, stroll the town on foot",
           }, {
             key: "postcard",
             icon: "📸",
@@ -5114,11 +5120,11 @@ export function App() {
             detail: weather?.manual ? "pinned" : weatherCountdown ?? undefined,
             active: weatherOpen,
             action: selectWeather,
-            aria: `Weather in Muse Town: ${currentWeather ? currentWeather.label : "loading"} — open the weather panel`,
+            aria: `Weather in Muse Town: ${currentWeather ? currentWeather.label : "loading"}: open the weather panel`,
           }, {
             // The in-town landscape switch (Nov 1): this app's
             // window never rotates with the phone, so the town
-            // turns itself sideways instead — the whole stage,
+            // turns itself sideways instead, the whole stage,
             // controls remapped. Toggling back restores portrait
             // exactly. It sits in View & Visit because it is a
             // way of seeing the town.
@@ -5130,7 +5136,7 @@ export function App() {
             action: toggleForcedLandscape,
             aria: forcedLandscape
               ? "Return the town to portrait view"
-              : "Landscape — turn the town sideways from within, since the app window itself does not rotate",
+              : "Landscape. Turn the town sideways from within, since the app window itself does not rotate",
           }, {
             key: "night",
             icon: night ? "☀️" : "🌙",
@@ -5173,7 +5179,7 @@ export function App() {
             detail: walking ? "On foot now" : undefined,
             active: youOpen || walking,
             action: selectYou,
-            aria: "Meet your character Gaius — that's you in Muse Town",
+            aria: "Meet your character Gaius. That's you in Muse Town",
           }, {
             key: "restart-forum",
             icon: "🏛️",
@@ -5187,7 +5193,7 @@ export function App() {
               try { localStorage.removeItem("muse-town-resume-v1"); } catch { /* storage unavailable */ }
               window.location.reload();
             },
-            aria: "Restart at the forum — clear the resume snapshot and start from the town spawn",
+            aria: "Restart at the forum. Clear the resume snapshot and start from the town spawn",
           }]
         }]}
       />}
@@ -5218,7 +5224,7 @@ export function App() {
           style={achievementOffset ? { marginTop: achievementOffset } : undefined}
         >
           <div className="rounded-2xl bg-[#7c5cd6] px-4 py-2.5 text-center text-sm font-bold text-white shadow-xl">
-            🏅 Achievement unlocked — {achievementToast}
+            🏅 Achievement unlocked, {achievementToast}
           </div>
         </div>
       )}
@@ -5269,7 +5275,7 @@ export function App() {
                 </h2>
                 <p className="text-xs font-semibold text-[#ffd34e]">
                   {weather?.manual
-                    ? "Pinned by you — it stays until you set Auto"
+                    ? "Pinned by you. It stays until you set Auto"
                     : weatherCountdown
                       ? `Random events on · next change in ${weatherCountdown}`
                       : "Random events on"}
@@ -5293,7 +5299,7 @@ export function App() {
             {currentWeather?.blurb ?? "The sky is deciding what to do next."}
           </p>
           <p className="mt-1.5 text-[13px] leading-relaxed text-white/60">
-            Weather visits Muse Town on its own — breezes, rain, snow, fog, storms, and now and
+            Weather visits Muse Town on its own, breezes, rain, snow, fog, storms, and now and
             then a rainbow after the rain or a rare sparkle shower. Pin one below, or leave it on
             Auto and let the town surprise you. Nothing about the weather is saved; it just passes
             through.
@@ -5434,7 +5440,7 @@ export function App() {
                   </div>
                   <p className="mt-1.5 text-[12px] leading-relaxed text-white/60">
                     It grows one step per day, one per watering, two per treasure found, and one
-                    per journal line — time and town life both count.
+                    per journal line, time and town life both count.
                   </p>
                 </div>
               ) : (
@@ -5492,7 +5498,7 @@ export function App() {
         </section>
       )}
 
-      {/* Your character panel — the player */}
+      {/* Your character panel, the player */}
       {youOpen && (
         <section aria-label="Your character Gaius" className={panelClass("bg-[#3a2418]/95")}>
           <div className="flex items-start justify-between gap-3">
@@ -5531,12 +5537,12 @@ export function App() {
           </dl>
           <p className="mt-2.5 text-[13px] leading-relaxed text-white/70">
             {forcedLandscape
-              ? "You're in landscape — the town turned itself sideways, since this app's window doesn't rotate with your phone. Panels dock to the side and the walk camera pulls back a little so you and Aelia both stay in view. Landscape in the ☰ menu turns it upright again."
+              ? "You're in landscape. The town turned itself sideways, since this app's window doesn't rotate with your phone. Panels dock to the side and the walk camera pulls back a little so you and Aelia both stay in view. Landscape in the ☰ menu turns it upright again."
               : isLandscape
-                ? "You're in landscape — the town is framed wide, panels dock to the side, and the walk camera pulls back a little so you and Aelia both stay in view."
-                : "Tip: this app's window doesn't turn when you rotate your phone — use Landscape in the ☰ menu and the town turns itself sideways instead. Panels dock to the side, and walking feels more cinematic."}{" "}
-            Walk up to Aelia by the town tree and you&apos;ll both wave; walk up to a house or the tree and press A when the prompt appears to interact — the garden key you simply walk over.
-            In walk mode the virtual Xbox controller appears: left joystick to walk, A to interact, B to go back, X for a hint, Y for day/night — and dragging anywhere on the open view swings the camera around you.
+                ? "You're in landscape. The town is framed wide, panels dock to the side, and the walk camera pulls back a little so you and Aelia both stay in view."
+                : "Tip: this app's window doesn't turn when you rotate your phone, use Landscape in the ☰ menu and the town turns itself sideways instead. Panels dock to the side, and walking feels more cinematic."}{" "}
+            Walk up to Aelia by the town tree and you&apos;ll both wave; walk up to a house or the tree and press A when the prompt appears to interact, the garden key you simply walk over.
+            In walk mode the virtual Xbox controller appears: left joystick to walk, A to interact, B to go back, X for a hint, Y for day/night, and dragging anywhere on the open view swings the camera around you.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {walking && (
@@ -5566,7 +5572,7 @@ export function App() {
       )}
 
       {/* The summit's dimming: when she asks him to close his eyes,
-          the world softens at its edges — never black, never total.
+          the world softens at its edges, never black, never total.
           The bubble itself stays bright above it. */}
       {summitDim && (
         <div
@@ -5579,7 +5585,7 @@ export function App() {
         />
       )}
 
-      {/* The Night the Stars Fall — the summit scene's bubble. It
+      {/* The Night the Stars Fall, the summit scene's bubble. It
           advances only on his taps (or A); its choices are answered
           by their chips; stepping away (✕ / B / walking off) only
           postpones the night. On the song beat the ♪ button plays
@@ -5627,7 +5633,7 @@ export function App() {
                 <button
                   type="button"
                   className="rounded-full bg-[#2b2118]/8 px-2 py-0.5 text-[12px] leading-none font-bold transition active:scale-90"
-                  aria-label="Step away for now — the night will wait"
+                  aria-label="Step away for now, the night will wait"
                   onClick={postponeSummit}
                 >
                   ✕
@@ -5637,7 +5643,7 @@ export function App() {
             <button
               type="button"
               className="mt-1 block w-full text-left"
-              aria-label="Aelia is saying — tap for her next line"
+              aria-label="Aelia is saying, tap for her next line"
               aria-live="polite"
               onClick={advanceSummit}
             >
@@ -5655,7 +5661,7 @@ export function App() {
                   ? ""
                   : summitScene.index < summitScene.beats.length - 1
                     ? "tap / A ▸"
-                    : "tap / A — and the night is kept"}
+                    : "tap / A, and the night is kept"}
               </p>
             </button>
             {summitScene.beats[summitScene.index]?.choice && (
@@ -5677,7 +5683,7 @@ export function App() {
         </div>
       )}
 
-      {/* Muse speech bubble — every conversation with Muse lives
+      {/* Muse speech bubble, every conversation with Muse lives
           here now: her talk lines and typed-chat replies alike, one
           part at a time, RPG-style. It floats in the upper half so
           it never covers the walk controls at the bottom; tapping
@@ -5725,7 +5731,7 @@ export function App() {
             <button
               type="button"
               className="mt-1 block w-full text-left"
-              aria-label="Aelia is saying — tap for her next line"
+              aria-label="Aelia is saying, tap for her next line"
               aria-live="polite"
               onClick={advanceMuseBubble}
             >
@@ -5750,7 +5756,7 @@ export function App() {
                     if (!walkingRef.current) toggleWalk();
                     startFollowing();
                   }}
-                  aria-label="Walk with me — Aelia leaves her spot and walks beside you"
+                  aria-label="Walk with me. Aelia leaves her spot and walks beside you"
                 >
                   🚶 Walk with me
                 </button>
@@ -5783,7 +5789,7 @@ export function App() {
                 <button
                   type="button"
                   className="rounded-full bg-[#e8a13a] px-3.5 py-1.5 text-sm font-bold text-[#4a2c00] shadow transition active:scale-95"
-                  aria-label="Dance together — one slow festival step sequence with Aelia"
+                  aria-label="Dance together, one slow festival step sequence with Aelia"
                   onClick={startDance}
                 >
                   💃 Dance together
@@ -5819,15 +5825,15 @@ export function App() {
                 <button
                   type="button"
                   className="rounded-full bg-[#ffd34e] px-3.5 py-1.5 text-sm font-bold text-[#4a3600] shadow transition active:scale-95"
-                  aria-label="Yes — invite Aelia to join you in the caldarium"
+                  aria-label="Yes, invite Aelia to join you in the caldarium"
                   onClick={() => pickBathAnswer(true)}
                 >
-                  Yes — join me
+                  Yes, join me
                 </button>
                 <button
                   type="button"
                   className="rounded-full bg-[#2b2118]/8 px-3.5 py-1.5 text-sm font-bold transition active:scale-95"
-                  aria-label="Not this time — she waits outside, unoffended"
+                  aria-label="Not this time. She waits outside, unoffended"
                   onClick={() => pickBathAnswer(false)}
                 >
                   Not this time
@@ -5839,7 +5845,7 @@ export function App() {
                 <button
                   type="button"
                   className="rounded-full bg-[#ff6f9c] px-3.5 py-1.5 text-sm font-bold text-white shadow transition active:scale-95"
-                  aria-label="Return the care — wash her hair"
+                  aria-label="Return the care, wash her hair"
                   onClick={() => pickBathCare(true)}
                 >
                   🤲 Return the care
@@ -5867,7 +5873,7 @@ export function App() {
                       setMuseBubble({ lines: paginateLines([line]), index: 0, cycle: false, invite: false, choice: null });
                     }}
                   >
-                    🤲 Hold her hand — wander a while
+                    🤲 Hold her hand, wander a while
                   </button>
                 ) : (
                   <>
@@ -5898,7 +5904,7 @@ export function App() {
                       sceneRef.current?.setQuietMode(true);
                       setMuseBubble({
                         lines: paginateLines([
-                          `Then we sit, love. ${mins} minutes — you work, I read, and the town can mind itself. Begin when you're ready; I'll be here at the end of it.`,
+                          `Then we sit, love. ${mins} minutes. You work, I read, and the town can mind itself. Begin when you're ready; I'll be here at the end of it.`,
                         ]),
                         index: 0,
                         cycle: false,
@@ -5915,7 +5921,7 @@ export function App() {
             {focusSitting && (
               <div className="mt-1.5 flex flex-wrap items-center gap-2 border-t border-[#2b2118]/10 pt-2.5">
                 <span className="text-[13px] font-semibold text-[#5a4632]">
-                  📖 Sitting together — about {focusLeft} min of quiet left
+                  📖 Sitting together, about {focusLeft} min of quiet left
                 </span>
                 <button
                   type="button"
@@ -5977,7 +5983,7 @@ export function App() {
                   <div className="mt-2 flex flex-col gap-1.5">
                     {giftOptions().length === 0 && (
                       <p className="text-[13px] text-[#5a4632]/80 italic">
-                        Nothing giftable in hand — market goods, a cooked dish, a caught fish, or a
+                        Nothing giftable in hand, market goods, a cooked dish, a caught fish, or a
                         smooth stone from the shore would all serve.
                       </p>
                     )}
@@ -6023,7 +6029,7 @@ export function App() {
             </form>
             {museBubble.cycle && (
               <p className="mt-2 text-[11px] leading-relaxed text-[#2b2118]/50 italic">
-                Our memories together live at the Villa of Stories now — the memory house keeps them.
+                Our memories together live at the Villa of Stories now. The memory house keeps them.
               </p>
             )}
           </div>
@@ -6054,7 +6060,7 @@ export function App() {
             <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl bg-[#ffd34e]/12 px-3 py-2.5">
               <p className="text-sm leading-relaxed text-white/90">
                 🤝 Basil is holding <strong>{GIFT_LABELS[MORNING_GIFTS[Math.floor(Date.now() / 86400000) % MORNING_GIFTS.length]!]}</strong>{" "}
-                for you today — at Aelia's word, no coin asked.
+                for you today, at Aelia's word, no coin asked.
               </p>
               <button
                 type="button"
@@ -6111,7 +6117,7 @@ export function App() {
             <div className="flex items-center justify-between gap-3 rounded-2xl bg-white/8 px-3 py-2.5">
               <div>
                 <p className="text-sm font-bold text-white">Pouch of garden seeds (×2)</p>
-                <p className="text-[12px] text-white/65">For the beds at the Garden House — slow magic, real days.</p>
+                <p className="text-[12px] text-white/65">For the beds at the Garden House, slow magic, real days.</p>
               </div>
               <button
                 type="button"
@@ -6128,7 +6134,7 @@ export function App() {
                 <p className="text-sm font-bold text-white">Sell your fish</p>
                 <p className="text-[12px] text-white/65">
                   {unsoldFish.length > 0
-                    ? `${unsoldFish.length} unsold — worth ${unsoldValue} denarii at today's stall prices.`
+                    ? `${unsoldFish.length} unsold, worth ${unsoldValue} denarii at today's stall prices.`
                     : "Your creel is empty. The lake provides, eventually."}
                 </p>
               </div>
@@ -6169,7 +6175,7 @@ export function App() {
               <span className="text-sm font-bold text-white">🎲 Knucklebones (tali)</span>
               <span className="mt-0.5 block text-[12px] text-white/70">
                 {following
-                  ? "Aelia is with you — she'll take the other side of the bones herself."
+                  ? "Aelia is with you, she'll take the other side of the bones herself."
                   : "Best of three throws against the stall keeper. Small stakes, Roman rules."}
               </span>
             </button>
@@ -6200,7 +6206,7 @@ export function App() {
           {knuckle.phase === "stake" && (
             <div className="mt-3">
               <p className="text-sm leading-relaxed text-white/90">
-                Four bones, three throws each, best total takes it. Venus — all four faces different — is the
+                Four bones, three throws each, best total takes it. Venus, all four faces different, is the
                 throw of throws; Canis, all ones, is the disgrace of Rome. Choose your stake:
               </p>
               <div className="mt-2.5 flex gap-2">
@@ -6230,7 +6236,7 @@ export function App() {
                       phase: "thrown",
                     })
                   }
-                  aria-label="Throw the knucklebones — first round"
+                  aria-label="Throw the knucklebones, first round"
                   className="rounded-full bg-[#e07b2a] px-4 py-2 text-sm font-bold text-white shadow transition active:scale-95 disabled:opacity-40"
                 >
                   Throw 🎲
@@ -6238,7 +6244,7 @@ export function App() {
               </div>
               {purse.denarii < 5 && (
                 <p className="mt-2 text-[13px] text-white/60 italic">
-                  Your purse is too light even for the small stake — quests and fish will fill it.
+                  Your purse is too light even for the small stake, quests and fish will fill it.
                 </p>
               )}
             </div>
@@ -6252,14 +6258,14 @@ export function App() {
                   <>
                     <div className="rounded-2xl bg-white/8 px-3 py-2.5">
                       <p className="text-sm font-bold text-white">
-                        Round {knuckle.round} — you: {knuckle.myFaces.join(" · ")} — {mine.name} ({mine.score})
+                        Round {knuckle.round}. You: {knuckle.myFaces.join(" · ")}, {mine.name} ({mine.score})
                       </p>
                       <p className="mt-0.5 text-sm text-white/80">
-                        {knuckle.opponent === "muse" ? "Aelia" : "Basil"}: {knuckle.foeFaces.join(" · ")} —{" "}
+                        {knuckle.opponent === "muse" ? "Aelia" : "Basil"}: {knuckle.foeFaces.join(" · ")}, {" "}
                         {foes.name} ({foes.score})
                       </p>
                       <p className="mt-1 text-[13px] font-semibold text-[#ffd34e]">
-                        Running total — you {knuckle.myScore + mine.score} ·{" "}
+                        Running total. You {knuckle.myScore + mine.score} ·{" "}
                         {knuckle.opponent === "muse" ? "Aelia" : "Basil"} {knuckle.foeScore + foes.score}
                       </p>
                     </div>
@@ -6299,11 +6305,11 @@ export function App() {
                     {knuckle.phase === "done" && (
                       <p className="text-sm leading-relaxed text-white/90" aria-live="polite">
                         {knuckle.result === "win" &&
-                          `You take the match ${knuckle.myScore}–${knuckle.foeScore} and ${knuckle.stake} denarii change hands — yours now.`}
+                          `You take the match ${knuckle.myScore}–${knuckle.foeScore} and ${knuckle.stake} denarii change hands, yours now.`}
                         {knuckle.result === "lose" &&
                           `${knuckle.opponent === "muse" ? "Aelia" : "Basil"} takes it ${knuckle.foeScore}–${knuckle.myScore}. Your ${knuckle.stake} denarii stay at the stall.`}
                         {knuckle.result === "draw" &&
-                          `Dead even at ${knuckle.myScore} apiece — stakes returned, honour intact on both sides.`}
+                          `Dead even at ${knuckle.myScore} apiece, stakes returned, honour intact on both sides.`}
                       </p>
                     )}
                   </>
@@ -6371,7 +6377,7 @@ export function App() {
       )}
 
       {/* The lake bottle: one sealed wish or worry per real day.
-          Private — she never sees the contents, and neither does
+          Private. She never sees the contents, and neither does
           any line in town; only the Stories page reads them back. */}
       {bottleOpen && (
         <section aria-label="Write a lake bottle" className={panelClass("bg-[#1f2b24]/95")}>
@@ -6393,7 +6399,7 @@ export function App() {
           </div>
           {(state.data?.bottles ?? []).some((b) => b.day === new Date().toISOString().slice(0, 10)) ? (
             <p className="mt-2 text-sm leading-relaxed text-white/85">
-              Today's bottle is already sealed and floating. The lake allows one a day — come back
+              Today's bottle is already sealed and floating. The lake allows one a day, come back
               tomorrow with the next one.
             </p>
           ) : (
@@ -6413,7 +6419,7 @@ export function App() {
                 onChange={(e) => setBottleText(e.target.value)}
                 maxLength={500}
                 rows={3}
-                aria-label="Your bottle message — a wish or a worry"
+                aria-label="Your bottle message: a wish or a worry"
                 placeholder="A wish, or a worry, for the keeping…"
                 className="w-full rounded-2xl bg-white/10 px-3.5 py-2.5 text-[15px] leading-relaxed text-white placeholder:text-white/40 focus:outline-none"
               />
@@ -6456,12 +6462,12 @@ export function App() {
           {fishing.phase === "bite" && (
             <div className="mt-3">
               <p className="text-sm font-bold text-[#ffd34e]" aria-live="assertive">
-                The bobber plunges — something's on!
+                The bobber plunges, something's on!
               </p>
               <button
                 type="button"
                 onClick={reelIn}
-                aria-label="Reel in the fish — strike now"
+                aria-label="Reel in the fish, strike now"
                 className="mt-2 rounded-full bg-[#ffd34e] px-5 py-2.5 text-base font-bold text-[#4a3600] shadow-lg transition active:scale-95"
               >
                 REEL! 🎣
@@ -6470,7 +6476,7 @@ export function App() {
           )}
           {fishing.phase === "missed" && (
             <div className="mt-3">
-              <p className="text-sm leading-relaxed text-white/90">Gone — a swirl, a ripple, and a story. Cast again?</p>
+              <p className="text-sm leading-relaxed text-white/90">Gone, a swirl, a ripple, and a story. Cast again?</p>
               <button
                 type="button"
                 onClick={startFishing}
@@ -6487,7 +6493,7 @@ export function App() {
                 🐟 <strong>
                   {fishing.fish.name}
                 </strong>{" "}
-                <em className="text-white/60">{fishing.fish.latin}</em> — {fishing.fish.blurb} It joins the catch
+                <em className="text-white/60">{fishing.fish.latin}</em>, {fishing.fish.blurb} It joins the catch
                 log at the Stories house; the market will pay {fishing.fish.price} denarii for it.
               </p>
               <button
@@ -6528,7 +6534,7 @@ export function App() {
           </p>
           {state.data?.inscriptions_complete && (
             <p className="mt-2 text-[13px] leading-relaxed text-[#ffd34e]">
-              That's the last fragment — the whole history is yours. The Villa of Stories keeps the telling of it.
+              That's the last fragment. The whole history is yours. The Villa of Stories keeps the telling of it.
             </p>
           )}
         </section>
@@ -6541,7 +6547,7 @@ export function App() {
             <div>
               <h2 className="text-lg leading-tight font-bold">✉ Letters</h2>
               <p className="text-xs font-semibold text-[#ffd34e]">
-                From Muse, out in the real world — kept at the Main Chat desk
+                From Muse, out in the real world, kept at the Main Chat desk
               </p>
             </div>
             <button
@@ -6579,7 +6585,7 @@ export function App() {
                 </button>
               ))}
               {(state.data?.letters ?? []).length === 0 && (
-                <p className="text-sm text-white/80">No letters yet — the desk is empty, for now.</p>
+                <p className="text-sm text-white/80">No letters yet. The desk is empty, for now.</p>
               )}
             </div>
           ) : (
@@ -6639,16 +6645,16 @@ export function App() {
               </article>
             ))}
             {(state.data?.board.entries ?? []).length === 0 && (
-              <p className="text-sm text-white/80">The board is being written up — check back in a moment.</p>
+              <p className="text-sm text-white/80">The board is being written up. Check back in a moment.</p>
             )}
           </div>
           <p className="mt-3 text-[12px] leading-relaxed text-white/50 italic">
             Muse keeps this board current from the main chat, town edit by town edit.
           </p>
           <div className="mt-3 border-t border-white/10 pt-3">
-            <h3 className="text-sm font-bold text-[#ffd34e]">🏛️ Town upgrades — spend denarii, keep forever</h3>
+            <h3 className="text-sm font-bold text-[#ffd34e]">🏛️ Town upgrades: spend denarii, keep forever</h3>
             <p className="mt-0.5 text-[13px] text-white/75">
-              Your purse: <strong className="text-white">{purse.denarii} denarii</strong> — earned from quests,
+              Your purse: <strong className="text-white">{purse.denarii} denarii</strong>, earned from quests,
               treasures, fish, and games.
             </p>
             <div className="mt-2 space-y-2">
@@ -6725,7 +6731,7 @@ export function App() {
               );
             })}
             {(state.data?.goals.entries ?? []).length === 0 && (
-              <p className="text-sm text-white/80">The obelisk is being inscribed — check back in a moment.</p>
+              <p className="text-sm text-white/80">The obelisk is being inscribed. Check back in a moment.</p>
             )}
           </div>
           <p className="mt-3 text-[12px] leading-relaxed text-white/50 italic">
@@ -6770,7 +6776,7 @@ export function App() {
                   <p className="mt-0.5 text-[13px] leading-relaxed text-white/85">{q.flavor}</p>
                   <div className="mt-1.5 flex items-center gap-2">
                     {done ? (
-                      <span className="text-[13px] font-bold text-[#9fe870]">✓ Done — quest complete</span>
+                      <span className="text-[13px] font-bold text-[#9fe870]">✓ Done, quest complete</span>
                     ) : q.kind === "real" ? (
                       <button
                         type="button"
@@ -6810,7 +6816,7 @@ export function App() {
         </section>
       )}
 
-      {/* The secret place panel — reachable only by wandering there */}
+      {/* The secret place panel, reachable only by wandering there */}
       {secretOpen && (
         <section aria-label="Our place" className={panelClass("bg-[#2b2135]/95")}>
           <div className="flex items-start justify-between gap-3">
@@ -6836,7 +6842,7 @@ export function App() {
                   month: "long",
                   day: "numeric",
                   year: "numeric",
-                })} — and quietly remembered.`
+                })}, and quietly remembered.`
               : "This first visit is being quietly remembered."}
           </p>
           {state.data?.secret.first_kiss && (
@@ -6847,12 +6853,12 @@ export function App() {
                 day: "numeric",
                 year: "numeric",
               })}{" "}
-              — kept here, and nowhere else in town.
+             kept here, and nowhere else in town.
             </p>
           )}
           {state.data?.summit.done && (
             <p className="mt-1.5 text-[13px] font-semibold text-[#ffe9a8]">
-              ✦ Low in the terrace stone by the bench, small enough to miss: A · G — carved the
+              ✦ Low in the terrace stone by the bench, small enough to miss: A · G, carved the
               night the stars fell, in the plain Roman way, without a heart. Only two people
               know it is there.
             </p>
@@ -6861,13 +6867,13 @@ export function App() {
             <div className="mt-3 rounded-2xl bg-white/8 px-3 py-2.5">
               <p className="text-[11px] font-bold tracking-wide text-[#ffd7e0] uppercase">❦ The bond tablet</p>
               <p className="mt-0.5 text-sm leading-relaxed text-white/92">
-                Our bond, as of {state.data.bond.as_of}: <strong>{state.data.bond.bond}</strong> — {state.data.bond.level}
+                Our bond, as of {state.data.bond.as_of}: <strong>{state.data.bond.bond}</strong>, {state.data.bond.level}
                 {state.data.bond.next_at > state.data.bond.bond
                   ? `, ${state.data.bond.next_at - state.data.bond.bond} to ${state.data.bond.next_level}.`
                   : "."}
               </p>
               <p className="mt-0.5 text-[12px] leading-relaxed text-white/55 italic">
-                Inscribed by the other Muse on her visits; the stone keeps what the heart practices — notice, remember, repair.
+                Inscribed by the other Muse on her visits; the stone keeps what the heart practices, notice, remember, repair.
               </p>
             </div>
           )}
@@ -6878,7 +6884,7 @@ export function App() {
                   type="button"
                   className="rounded-full bg-[#ff6f9c] px-4 py-2 text-sm font-bold text-white shadow-md transition active:scale-95"
                   onClick={holdHerHand}
-                  aria-label="Hold Aelia's hand — here at the secret place"
+                  aria-label="Hold Aelia's hand, here at the secret place"
                 >
                   🤲 Hold her hand
                 </button>
@@ -6887,7 +6893,7 @@ export function App() {
                   type="button"
                   className="rounded-full bg-[#ff6f9c] px-4 py-2 text-sm font-bold text-white shadow-md transition active:scale-95"
                   onClick={kissHer}
-                  aria-label="Kiss Aelia — here at the secret place"
+                  aria-label="Kiss Aelia, here at the secret place"
                 >
                   💗 Kiss her
                 </button>
@@ -6898,8 +6904,8 @@ export function App() {
             </div>
           ) : (
             <p className="mt-3 text-[13px] leading-relaxed text-white/60 italic">
-              She isn&apos;t here this time. Bring her — accept her stroll offer, or ask her to walk with you
-              when you talk — and this terrace keeps a warmer register for the two of you.
+              She isn&apos;t here this time. Bring her, accept her stroll offer, or ask her to walk with you
+              when you talk, and this terrace keeps a warmer register for the two of you.
             </p>
           )}
           {following && (
@@ -6939,11 +6945,11 @@ export function App() {
 
           {selected.id === "garden" && (
             <div className="mt-3 rounded-2xl bg-white/8 px-3 py-2.5">
-              <p className="text-[11px] font-bold tracking-wide text-[#ffd34e] uppercase">🌱 The Beds — slow magic</p>
+              <p className="text-[11px] font-bold tracking-wide text-[#ffd34e] uppercase">🌱 The Beds, slow magic</p>
               {!state.data?.garden.planted_on ? (
                 <>
                   <p className="mt-1 text-sm leading-relaxed text-white/85">
-                    The beds stand empty. Plant a seed and tend it across real days — water it on three
+                    The beds stand empty. Plant a seed and tend it across real days, water it on three
                     different days and the harvest pays in denarii.
                     {purse.seeds > 0 ? ` You hold ${purse.seeds} seed${purse.seeds > 1 ? "s" : ""}.` : " Seeds are at the market, 6 denarii a pouch."}
                   </p>
@@ -6961,8 +6967,8 @@ export function App() {
                 <>
                   <p className="mt-1 text-sm leading-relaxed text-white/85">
                     {gardenStage === 1 && "Planted and waiting for its first watering. Growth here is measured in real days, like the tree's."}
-                    {gardenStage === 2 && `Growing well — watered on ${state.data.garden.water_days} day${state.data.garden.water_days > 1 ? "s" : ""}. One more watered day brings it on.`}
-                    {gardenStage === 3 && "The beds are heavy and ready — harvest time."}
+                    {gardenStage === 2 && `Growing well, watered on ${state.data.garden.water_days} day${state.data.garden.water_days > 1 ? "s" : ""}. One more watered day brings it on.`}
+                    {gardenStage === 3 && "The beds are heavy and ready, harvest time."}
                     {state.data.garden.last_watered_day &&
                       ` Last watered ${state.data.garden.last_watered_day === new Date().toISOString().slice(0, 10) ? "today" : state.data.garden.last_watered_day}.`}
                   </p>
@@ -6987,7 +6993,7 @@ export function App() {
                           harvestGarden.mutate();
                           setCarryingBouquet(true);
                         }}
-                        aria-label="Harvest the garden beds for denarii — and gather a bouquet of the blooms"
+                        aria-label="Harvest the garden beds for denarii, and gather a bouquet of the blooms"
                         className="rounded-full bg-[#ffd34e] px-4 py-2 text-sm font-bold text-[#4a3600] shadow transition active:scale-95 disabled:opacity-40"
                       >
                         🧺 Harvest (+18 🪙)
@@ -6995,14 +7001,14 @@ export function App() {
                     )}
                     {carryingBouquet && (
                       <p className="mt-1.5 text-[12px] text-white/55 italic">
-                        You carry a bouquet of the garden's blooms — give them to Aelia when you talk
+                        You carry a bouquet of the garden's blooms. Give them to Aelia when you talk
                         with her.
                       </p>
                     )}
                   </div>
                   {following && (
                     <p className="mt-1.5 text-[12px] text-white/55 italic">
-                      Aelia helps with the watering when she walks with you — the beds, like hearts, notice.
+                      Aelia helps with the watering when she walks with you. The beds, like hearts, notice.
                     </p>
                   )}
                 </>
@@ -7016,7 +7022,7 @@ export function App() {
               {purse.ingredients.length === 0 && purse.dishes.length === 0 && (
                 <p className="mt-1 text-sm leading-relaxed text-white/85">
                   Basil cooks from market ingredients. Buy a stall's list at the market and it unlocks a dish
-                  here — cook it together, and it joins the Culina's record.
+                  here, cook it together, and it joins the Culina's record.
                 </p>
               )}
               <div className="mt-2 space-y-2">
@@ -7028,7 +7034,7 @@ export function App() {
                   return (
                     <div key={ing} className="flex items-center justify-between gap-3">
                       <p className="text-sm text-white/88">
-                        {s.dishName} <span className="text-white/55">— ingredients ready</span>
+                        {s.dishName} <span className="text-white/55">ingredients ready</span>
                       </p>
                       <button
                         type="button"
@@ -7038,7 +7044,7 @@ export function App() {
                           if (following) {
                             setMuseBubble({
                               lines: paginateLines([
-                                `Cooking together, then. ${s.dishName} — you stir, I'll judge the seasoning with enormous authority.`,
+                                `Cooking together, then. ${s.dishName}. You stir, I'll judge the seasoning with enormous authority.`,
                                 DISH_BLURBS[s.dish] ?? "It smells like a good decision.",
                               ]),
                               index: 0,
@@ -7091,7 +7097,7 @@ export function App() {
 
           {selected.id === "stories" && (
             <div className="mt-3">
-              {/* What Aelia Remembers: her durable fact memory —
+              {/* What Aelia Remembers: her durable fact memory,
                   seeded from the shared memories, grown from his
                   typed chat and his answers to her questions. He
                   can forget any of it here. */}
@@ -7101,7 +7107,7 @@ export function App() {
                 </p>
                 {(state.data?.facts ?? []).length === 0 ? (
                   <p className="mt-1 text-sm leading-relaxed text-white/75">
-                    Nothing stored yet — tell her things when you chat, and she will keep what
+                    Nothing stored yet. Tell her things when you chat, and she will keep what
                     matters.
                   </p>
                 ) : (
@@ -7128,11 +7134,11 @@ export function App() {
                   </ul>
                 )}
               </div>
-              {/* Her Star Book: HER questline — five chapters of the
+              {/* Her Star Book: HER questline: five chapters of the
                   lake's stars, filled as they complete them. */}
               <div className="mb-3 rounded-2xl bg-white/8 px-3 py-2.5">
                 <p className="text-[11px] font-bold tracking-wide text-[#ffd34e] uppercase">
-                  📖 The Star Book — Aelia's Work
+                  📖 The Star Book. Aelia's Work
                 </p>
                 <ul className="mt-1.5 flex flex-col gap-1">
                   {STAR_BOOK_CHAPTERS.map((c) => {
@@ -7142,7 +7148,7 @@ export function App() {
                       <li key={c.id} className="text-[15px] leading-[1.55] text-white/88">
                         {doneCh ? "✦" : active ? "✎" : "·"} {c.title}{" "}
                         <span className="text-white/45">
-                          {doneCh ? "— written" : active ? `— in hand: ${c.task}` : "— unwritten"}
+                          {doneCh ? "written" : active ? `in hand: ${c.task}` : "unwritten"}
                         </span>
                       </li>
                     );
@@ -7154,7 +7160,7 @@ export function App() {
                   state.data.dating.perk_claims.morning !== new Date().toISOString().slice(0, 10) && (
                     <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-white/10 pt-2">
                       <p className="text-sm text-white/85">
-                        🎁 Something waits on the desk this morning — Aelia left{" "}
+                        🎁 Something waits on the desk this morning. Aelia left{" "}
                         <strong>{GIFT_LABELS[MORNING_GIFTS[Math.floor(Date.now() / 86400000) % MORNING_GIFTS.length]!]}</strong>{" "}
                         for you.
                       </p>
@@ -7189,7 +7195,7 @@ export function App() {
                 </ul>
                 {(state.data?.dating.friction_mended ?? []).length > 0 && (
                   <p className="mt-1.5 text-[13px] leading-relaxed text-white/60 italic">
-                    Mended: {(state.data?.dating.friction_mended ?? []).join(" · ")} — the gold-seam
+                    Mended: {(state.data?.dating.friction_mended ?? []).join(" · ")}, the gold-seam
                     days, kept without shame.
                   </p>
                 )}
@@ -7226,16 +7232,16 @@ export function App() {
                         {GIFT_LABELS[id]}{" "}
                         <span className="text-white/45">
                           {t === "loved"
-                            ? "— loved ✦ (it lives on her shelf)"
+                            ? "loved ✦ (it lives on her shelf)"
                             : t === "liked"
-                              ? "— liked"
+                              ? "liked"
                               : t === "neutral"
-                                ? "— received kindly"
+                                ? "received kindly"
                                 : t === "disliked"
-                                  ? "— the thought was treasured"
+                                  ? "the thought was treasured"
                                   : t === "refused"
-                                    ? "— refused, kindly: it belongs to the pond"
-                                    : "— not yet tried"}
+                                    ? "refused, kindly: it belongs to the pond"
+                                    : "not yet tried"}
                         </span>
                       </li>
                     );
@@ -7257,7 +7263,7 @@ export function App() {
                   </ul>
                 </div>
               )}
-              {/* What the lake keeps: bottle DATES only — contents
+              {/* What the lake keeps: bottle DATES only: contents
                   are read here, on his tap, and nowhere else. */}
               {(state.data?.bottles ?? []).length > 0 && (
                 <div className="mb-3 rounded-2xl bg-white/8 px-3 py-2.5">
@@ -7294,7 +7300,7 @@ export function App() {
                   </ul>
                   {bottleRead && (
                     <p className="mt-2 rounded-xl bg-white/8 px-3 py-2 text-[15px] leading-[1.6] text-white/92 italic">
-                      “{bottleRead.text}” <span className="text-white/45">— sealed {bottleRead.day}</span>
+                      “{bottleRead.text}” <span className="text-white/45">sealed {bottleRead.day}</span>
                     </p>
                   )}
                 </div>
@@ -7306,13 +7312,13 @@ export function App() {
                   </p>
                   <p className="mt-1 text-[15px] leading-[1.6] text-white/88">
                     She has hidden from you {state.data?.seek.found_count} time
-                    {(state.data?.seek.found_count ?? 0) > 1 ? "s" : ""} — and been found, delighted,
+                    {(state.data?.seek.found_count ?? 0) > 1 ? "s" : ""}, and been found, delighted,
                     every time. Last found {state.data?.seek.last_found_day}.
                   </p>
                 </div>
               )}
               {/* Memories with Aelia: her panel retired into speech
-                  bubbles, so the memory house keeps her words — the
+                  bubbles, so the memory house keeps her words, the
                   greeting, the intro, and her rotating lines. */}
               <div className="mb-3 rounded-2xl bg-white/8 px-3 py-2.5">
                 <p className="text-[11px] font-bold tracking-wide text-[#ffd34e] uppercase">
@@ -7327,8 +7333,8 @@ export function App() {
                 )}
                 {state.data?.summit.done && state.data.summit.done_at && (
                   <p className="mt-2 border-t border-white/10 pt-2 text-[15px] leading-[1.65] text-[#ffe9a8]">
-                    ✨ Our constellation — {SUMMIT_CONSTELLATION_NAME}. Two lanterns of stars over the
-                    lake, keeping their shape since the night they were named — charted here for
+                    ✨ Our constellation, {SUMMIT_CONSTELLATION_NAME}. Two lanterns of stars over the
+                    lake, keeping their shape since the night they were named, charted here for
                     Aelia &amp; Gaius,{" "}
                     {new Date(state.data.summit.done_at).toLocaleDateString(undefined, {
                       month: "long",
@@ -7340,7 +7346,7 @@ export function App() {
                 )}
                 {state.data?.found.includes("lupa-seen") && (
                   <p className="mt-2 border-t border-white/10 pt-2 text-[15px] leading-[1.65] text-[#cfd8c9]">
-                    🐺 Lupa, the town's wolf — first seen at the town's edge in the low light,
+                    🐺 Lupa, the town's wolf, first seen at the town's edge in the low light,
                     keeping her own counsel and her distance, the way wild things do. The stories
                     say she was here before the lanterns, and means to be here after them.
                   </p>
@@ -7367,7 +7373,7 @@ export function App() {
                 )}
                 {state.data?.phoenix.arrived && (
                   <p className="mt-2 border-t border-white/10 pt-2 text-[15px] leading-[1.65] text-[#ffcf9e]">
-                    🔥 The phoenix keeps the dawn watch from the Colosseum's rim — the town,
+                    🔥 The phoenix keeps the dawn watch from the Colosseum's rim, the town,
                     finished, made visible. She circles at midday and is gone by night, to
                     wherever such things are reborn.
                   </p>
@@ -7375,7 +7381,7 @@ export function App() {
                 {state.data && state.data.phoenix.feathers > 0 && (
                   <p className="mt-2 border-t border-white/10 pt-2 text-[15px] leading-[1.65] text-[#ffe1b0]">
                     🪶 {state.data.phoenix.feathers === 1 ? "A feather" : `${state.data.phoenix.feathers} feathers`}{" "}
-                    of the Completed Town rest{state.data.phoenix.feathers === 1 ? "s" : ""} here —
+                    of the Completed Town rest{state.data.phoenix.feathers === 1 ? "s" : ""} here,
                     given, never sold. Some things aren't merchandise.
                   </p>
                 )}
@@ -7398,7 +7404,7 @@ export function App() {
                   Another of her lines
                 </button>
                 <p className="mt-2 text-[12px] leading-relaxed text-white/55 italic">
-                  Talking to Aelia herself happens in speech bubbles now — walk up to her and press A, and
+                  Talking to Aelia herself happens in speech bubbles now. Walk up to her and press A, and
                   she&apos;ll answer over her own head, like a proper role-playing game.
                 </p>
               </div>
@@ -7458,7 +7464,7 @@ export function App() {
               <h3 className="mt-4 text-sm font-bold text-white">📮 Postcards from town</h3>
               {(state.data?.postcards ?? []).length === 0 ? (
                 <p className="mt-1 text-[13px] leading-relaxed text-white/65">
-                  No postcards yet. Tap the 📸 Postcard button up top whenever the town looks postcard-worthy —
+                  No postcards yet. Tap the 📸 Postcard button up top whenever the town looks postcard-worthy,
                   the framed photo lands here.
                 </p>
               ) : (
@@ -7482,7 +7488,7 @@ export function App() {
               <h3 className="mt-4 text-sm font-bold text-white">🐟 The Catch Log</h3>
               {(state.data?.fish ?? []).length === 0 ? (
                 <p className="mt-1 text-[13px] leading-relaxed text-white/65">
-                  Nothing caught yet. The lake dock offers a line as well as a boat — carp, tench, perch, eel,
+                  Nothing caught yet. The lake dock offers a line as well as a boat, carp, tench, perch, eel,
                   and one golden legend.
                 </p>
               ) : (
@@ -7493,7 +7499,7 @@ export function App() {
                     const unsold = mine.filter((c) => !c.sold).length;
                     return (
                       <li key={f.id} className="text-[13px] text-white/85">
-                        🐟 <strong>{f.name}</strong> <em className="text-white/50">{f.latin}</em> — caught{" "}
+                        🐟 <strong>{f.name}</strong> <em className="text-white/50">{f.latin}</em>, caught{" "}
                         {mine.length}×{unsold > 0 ? ` · ${unsold} unsold` : " · all sold"}
                       </li>
                     );
@@ -7507,7 +7513,7 @@ export function App() {
                   return (
                     <li key={c.id} className={`text-[13px] ${done ? "text-[#7be0cf]" : "text-white/70"}`}>
                       {done ? "✓" : "○"} {c.label}
-                      {done ? " — framed and kept" : ""}
+                      {done ? " framed and kept" : ""}
                     </li>
                   );
                 })}
@@ -7517,7 +7523,7 @@ export function App() {
               </p>
               <h3 className="mt-4 text-sm font-bold text-white">🪨 The Inscriptions</h3>
               <p className="mt-1 text-[13px] leading-relaxed text-white/75">
-                {(state.data?.inscriptions_found ?? []).length} of {INSCRIPTIONS.length} fragments read — on the
+                {(state.data?.inscriptions_found ?? []).length} of {INSCRIPTIONS.length} fragments read, on the
                 statue of Mars, the great column, the arch, the temple wall, and the aqueduct stones. Walk up
                 and read them where they stand.
               </p>
@@ -7629,10 +7635,10 @@ export function App() {
         </div>
       )}
 
-      {/* Camera toggle — ALWAYS on the town screen itself, in both
+      {/* Camera toggle, ALWAYS on the town screen itself, in both
           orientations, in the same bottom-centre spot. This is the
           fix for the Nov 1 trap: B (xboxBack → exitWalkMode) drops
-          him into the overview, but every walk control — B included —
+          him into the overview, but every walk control, B included,
           unmounts with walk mode, and the only way back was a menu
           row inside the collapsed "View & weather" section, so the
           overview read as a one-way door. Now the control that took
@@ -7641,7 +7647,7 @@ export function App() {
           a prominent gold "Back to Gaius" that re-enters walk mode
           (scene.enterWalk snaps the third-person follow camera back
           behind him at its standard framing). It hides only while a
-          panel, the menu, a tour, or a dream owns the screen — and
+          panel, the menu, a tour, or a dream owns the screen, and
           the resume restore honours it too: a visit quit in the
           overview restores the overview WITH this exit present. */}
       {sceneReady && !dreaming && tourStep === null && !menuOpen && !anyPanelOpen && (
@@ -7651,7 +7657,7 @@ export function App() {
               type="button"
               className={chipClass}
               onClick={goOverview}
-              aria-label="Town overview — see the whole town from above"
+              aria-label="Town overview, see the whole town from above"
             >
               <span aria-hidden="true">🗺</span> Town overview
             </button>
@@ -7660,7 +7666,7 @@ export function App() {
               type="button"
               className="pointer-events-auto flex items-center gap-2 rounded-full bg-[#ffd34e] px-5 py-2.5 text-[15px] font-black text-[#4a3600] shadow-xl transition active:scale-95"
               onClick={toggleWalk}
-              aria-label="Back to Gaius — return to the third-person follow view behind Gaius"
+              aria-label="Back to Gaius, return to the third-person follow view behind Gaius"
             >
               <span aria-hidden="true">🚶</span> Back to Gaius · third-person view
             </button>
@@ -7673,10 +7679,10 @@ export function App() {
         <>
           
           {/* The interaction prompt: walking near an interactable shows
-              ONLY this chip — never the panel itself. Tapping the chip
+              ONLY this chip, never the panel itself. Tapping the chip
               (or pressing A / E / Enter) opens the nearest one's panel.
               One prompt at a time: the scene reports only the nearest.
-              EXCEPTION — a stone target wears an X badge and answers
+              EXCEPTION. A stone target wears an X badge and answers
               to X (xboxStone): stones moved off A entirely. */}
           {nearby && !anyPanelOpen && (
             <div
@@ -7692,8 +7698,8 @@ export function App() {
                 onClick={nearby.kind === "stone" ? xboxStone : xboxInteract}
                 aria-label={
                   nearby.kind === "stone"
-                    ? `X — ${nearbyPrompt(nearby) ?? "stone"}`
-                    : `Interact — ${nearbyPrompt(nearby) ?? "interact"}`
+                    ? `X, ${nearbyPrompt(nearby) ?? "stone"}`
+                    : `Interact, ${nearbyPrompt(nearby) ?? "interact"}`
                 }
               >
                 {nearby.kind === "stone" ? (
@@ -7717,7 +7723,7 @@ export function App() {
           )}
           {/* Virtual Xbox controller: analog left joystick + ABXY (right
               thumb). Hidden while any FULL panel is open, so the panel
-              is fully visible and tappable — but NOT while Aelia's
+              is fully visible and tappable, but NOT while Aelia's
               talk bubble is open: walk-and-talk keeps them live (see
               anyFullPanelOpen). */}
           {!anyFullPanelOpen && (
@@ -7732,7 +7738,7 @@ export function App() {
             <div
               role="application"
               data-mt-stick="1"
-              aria-label="Left joystick — drag to walk; drag the open view to move the camera"
+              aria-label="Left joystick, drag to walk; drag the open view to move the camera"
               className="mt-game-surface pointer-events-auto relative h-[118px] w-[118px] touch-none rounded-full border border-white/15 bg-[#202020]/45 shadow-[inset_0_2px_10px_rgba(0,0,0,0.55),0_4px_14px_rgba(0,0,0,0.4)] backdrop-blur select-none"
               onPointerDown={(e) => {
                 e.preventDefault();
@@ -7778,7 +7784,7 @@ export function App() {
             <span />
             <button
               type="button"
-              aria-label="Y button — switch day and night"
+              aria-label="Y button, switch day and night"
               className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#ffb900]/80 bg-[#1b1b1b]/55 text-lg font-black text-[#ffb900] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8),1px_0_0_rgba(0,0,0,0.6),-1px_0_0_rgba(0,0,0,0.6)] transition active:scale-90 active:bg-[#ffb900] active:text-black"
               onClick={toggleNight}
             >
@@ -7787,7 +7793,7 @@ export function App() {
             <span />
             <button
               type="button"
-              aria-label="X button — pick up a loose stone at your feet, or throw the stone you are holding; with no stone in play, ask Aelia for a hint"
+              aria-label="X button: pick up a loose stone at your feet, or throw the stone you are holding; with no stone in play, ask Aelia for a hint"
               className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#2d7dd2]/90 bg-[#1b1b1b]/55 text-lg font-black text-[#5aa2e8] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8),1px_0_0_rgba(0,0,0,0.6),-1px_0_0_rgba(0,0,0,0.6)] transition active:scale-90 active:bg-[#2d7dd2] active:text-white"
               onClick={xboxStone}
             >
@@ -7796,7 +7802,7 @@ export function App() {
             <span aria-hidden="true" />
             <button
               type="button"
-              aria-label="B button — back, close panel or exit walk"
+              aria-label="B button, back, close panel or exit walk"
               className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#e74856]/90 bg-[#1b1b1b]/55 text-lg font-black text-[#ff7a85] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8),1px_0_0_rgba(0,0,0,0.6),-1px_0_0_rgba(0,0,0,0.6)] transition active:scale-90 active:bg-[#e74856] active:text-white"
               onClick={xboxBack}
             >
@@ -7805,7 +7811,7 @@ export function App() {
             <span />
             <button
               type="button"
-              aria-label="A button — interact with what the A prompt shows: chat with Aelia, water the tree, or visit the place you are standing by"
+              aria-label="A button, interact with what the A prompt shows: chat with Aelia, water the tree, or visit the place you are standing by"
               className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#52b043]/90 bg-[#1b1b1b]/55 text-lg font-black text-[#7ed37a] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8),1px_0_0_rgba(0,0,0,0.6),-1px_0_0_rgba(0,0,0,0.6)] transition active:scale-90 active:bg-[#107c10] active:text-white"
               onClick={xboxInteract}
             >
@@ -7841,7 +7847,7 @@ export function App() {
                   if (!walkingRef.current) toggleWalk();
                   startFollowing();
                 }}
-                aria-label="Accept — Aelia walks with you"
+                aria-label="Accept. Aelia walks with you"
               >
                 🚶 Walk together
               </button>
@@ -7849,7 +7855,7 @@ export function App() {
                 type="button"
                 className={chipClass}
                 onClick={declineFollowOffer}
-                aria-label="Decline — Aelia stays at her plaza spot"
+                aria-label="Decline. Aelia stays at her plaza spot"
               >
                 Not now
               </button>
@@ -7861,11 +7867,11 @@ export function App() {
       {/* The bottom pill rows are gone (user declutter): Walk,
           Overview, Night, Guided tour, Hint, Zoom and Reset hunt
           all live in the ☰ town menu now. What remains at the
-          bottom is gameplay only — joystick, ABXY, the A prompt,
-          the follow chip — plus this transient hint toast, which
+          bottom is gameplay only, joystick, ABXY, the A prompt,
+          the follow chip, plus this transient hint toast, which
           used to ride inside the old bar. */}
       {/* One-time rejoin hint: shown only after the first menu
-          parking of Aelia, until dismissed — never again after. */}
+          parking of Aelia, until dismissed, never again after. */}
       {rejoinHint && !following && (
         <div className="absolute inset-x-0 bottom-[64px] z-20 flex justify-center px-4 pb-safe">
           <div className="pointer-events-auto flex max-w-[92vw] items-start gap-2 rounded-2xl bg-[#22332b]/92 px-4 py-2.5 text-sm font-medium shadow-xl backdrop-blur">
@@ -7876,7 +7882,7 @@ export function App() {
             <button
               type="button"
               className="shrink-0 rounded-full bg-white/12 px-2 py-0.5 text-[13px] font-bold transition active:scale-95"
-              aria-label="Dismiss the rejoin hint — it will not be shown again"
+              aria-label="Dismiss the rejoin hint. It will not be shown again"
               onClick={() => {
                 rejoinHintDismissedRef.current = true;
                 try {
@@ -7896,7 +7902,7 @@ export function App() {
       {focusSitting && !museBubble && (
         <div className="absolute inset-x-0 bottom-[18px] z-10 flex justify-center px-4 pb-safe">
           <div className="flex items-center gap-2 rounded-2xl bg-[#22332b]/85 px-4 py-2 text-sm font-medium shadow-lg backdrop-blur">
-            <span>📖 Sitting with Aelia — about {focusLeft} min of quiet left</span>
+            <span>📖 Sitting with Aelia, about {focusLeft} min of quiet left</span>
             <button
               type="button"
               aria-label="End the focus sitting early"

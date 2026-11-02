@@ -116,10 +116,10 @@ export function poseUmbrellaArm(rig: VrmRig, amt: number, fromRest: boolean) {
 }
 
 /** The stone throw (Nov 1): a composed overarm over the idle/walk
- *  base, in the umbrella tradition — no pack ships us a throwing
+ *  base, in the umbrella tradition, no pack ships us a throwing
  *  clip, so the gesture is built: the arm cocks back with a bent
  *  elbow, sweeps over the top (the stone leaves the hand at the
- *  sweep's front, phase ≈ 0.39 — updateRocks times the launch to
+ *  sweep's front, phase ≈ 0.39, updateRocks times the launch to
  *  it), and follows through into a settle. Phase is 0..1 across
  *  the gesture's 0.62 s; the envelope keeps the ends soft so the
  *  arm never snaps into or out of the throw. */
@@ -145,7 +145,7 @@ export function poseThrowArm(rig: VrmRig, phase: number, fromRest: boolean) {
   umbrellaBone(rig, rig.rHand, 0, 0, -0.2 * env, fromRest);
 }
 
-/** Arm in arm (the shared-umbrella arrangement): her near — left —
+/** Arm in arm (the shared-umbrella arrangement): her near: left,
  *  arm bends so her hand tucks into the crook of his umbrella arm,
  *  resting at his elbow. Mirror-signed to the right arm's poses. */
 export function poseLinkArm(rig: VrmRig, amt: number, fromRest: boolean) {
@@ -159,7 +159,7 @@ export function poseLinkArm(rig: VrmRig, amt: number, fromRest: boolean) {
 // COMPOSED the same way as the umbrella hold: his inner (right) arm
 // and her inner (left) arm ease down and slightly toward each other,
 // elbows softly bent, so the hands meet at the seam between them and
-// stay met — a hand-contact servo in driveClipAnims (the same light
+// stay met, a hand-contact servo in driveClipAnims (the same light
 // touch as the arm-in-arm one) eases her stance so the hands stay
 // registered while they walk. She walks on his right, so right/left
 // are the inner arms; signs mirror, as in poseLinkArm.
@@ -172,7 +172,7 @@ export function poseHoldHandPlayer(rig: VrmRig, amt: number, fromRest: boolean) 
   umbrellaBone(rig, rig.rHand, 0, 0, -0.12 * amt, fromRest);
 }
 
-/** Her half: the mirror — left arm down and toward him. */
+/** Her half: the mirror: left arm down and toward him. */
 export function poseHoldHandMuse(rig: VrmRig, amt: number, fromRest: boolean) {
   umbrellaBone(rig, rig.lUpperArm, -0.04 * amt, 0, 0.17 * amt, fromRest);
   umbrellaBone(rig, rig.lLowerArm, -0.06 * amt, 0, 0.34 * amt, fromRest);
@@ -253,7 +253,7 @@ const IGLESIAS_RIG: AnimRigSpec = {
 };
 /** The Outdoor library's rig: the same humanoid shape under plain
  *  names (Hips, Left_UpperArm, ...). One skeleton serves both the
- *  He and She files — gender lives in the motion, not the bones —
+ *  He and She files, gender lives in the motion, not the bones,
  *  verified by dumping the bind pose of sampled files (all 21
  *  mapped bones present, hip height 98.1 in source units). */
 const OUTDOOR_RIG: AnimRigSpec = {
@@ -494,9 +494,9 @@ function bakeRetargetedClip(
  *  world-space Y of each limb's direction (-1 = pointing straight
  *  down, +1 = straight up), the head's height above the hips, and
  *  whether every measured position was finite. A missing or
- *  degenerate limb reports NaN — callers must treat ANY non-finite
+ *  degenerate limb reports NaN, callers must treat ANY non-finite
  *  measurement as a failure, never as a pass. (The old gate compared
- *  with `v > -0.35`, which NaN silently slips past — and a single
+ *  with `v > -0.35`, which NaN silently slips past, and a single
  *  NaN track in a blended mixer collapses the whole skinned body,
  *  which is how a character can end up invisible.) */
 interface ClipMeasure {
@@ -505,7 +505,7 @@ interface ClipMeasure {
   armL: number;
   armR: number;
   headAboveHips: number;
-  /** Upper-arm joint height above the chest joint (world units) —
+  /** Upper-arm joint height above the chest joint (world units),
    *  the shoulder-pivot check: at bind this is ≈ +0.23 for both
    *  bodies (the arm pivots from the clavicle, top of the torso).
    *  A pivot that has slipped to the ribs measures ≈ 0 or less. */
@@ -513,8 +513,8 @@ interface ClipMeasure {
   pivotHeightR: number;
   /** Shoulder -> upper-arm joint distance (world units). Nothing
    *  in a baked clip animates joint offsets, so this must stay at
-   *  its bind value; a drift means the arm chain's positions — not
-   *  just its rotations — were baked from a wrong skeleton state. */
+   *  its bind value; a drift means the arm chain's positions, not
+   *  just its rotations, were baked from a wrong skeleton state. */
   pivotDistL: number;
   pivotDistR: number;
   finite: boolean;
@@ -602,19 +602,19 @@ function measureRetargetedClip(
 /** Numeric sanity check on a baked idle clip before it is trusted.
  *  Legs and arms are judged SEPARATELY: a clip whose legs are right
  *  but whose arms are wrong must not take the whole animator down
- *  with it — the caller strips just the arm tracks and lets the
+ *  with it, the caller strips just the arm tracks and lets the
  *  procedural arm posing (which runs earlier every frame) own the
  *  arms instead. Thresholds from measuring the real models: a clean
  *  bake puts both upper arms at dirY -0.78..-0.93 in idle, while the
  *  old capture-pose bake (arms already procedurally lowered when the
- *  "bind" was read) landed at -0.59..-0.66 — arms splayed, hands
+ *  "bind" was read) landed at -0.59..-0.66, arms splayed, hands
  *  sticking out. -0.7 sits between those two populations. */
 function checkRetargetedClip(
   model: THREE.Object3D,
   clip: THREE.AnimationClip,
 ): { finite: boolean; legsOk: boolean; armsOk: boolean; bodyOk: boolean; pivotOk: boolean } {
   // Bind reference for the pivot check, read from the model as it
-  // stands NOW — the caller restores the true bind pose before
+  // stands NOW, the caller restores the true bind pose before
   // gating, so these distances are the skeleton's own truth.
   model.updateWorldMatrix(true, true);
   const jointDist = (a: string, b: string): number => {
@@ -638,7 +638,7 @@ function checkRetargetedClip(
     bodyOk: finite && ms.every((m) => m.headAboveHips > 0.3),
     // The arms must pivot FROM THE SHOULDER: the upper-arm joint
     // stays at clavicle height (well above the chest joint, where
-    // bind puts it at ≈ +0.23 world units for both bodies — rib
+    // bind puts it at ≈ +0.23 world units for both bodies, rib
     // height would be ≈ 0) and at its bind distance from the
     // shoulder joint. A failed pivot retires the whole animator,
     // because the procedural fallback never touches the chest or
@@ -660,7 +660,7 @@ function checkRetargetedClip(
 /** True when every keyframed value in the clip is a finite number.
  *  A blended mixer samples even weight-0 actions, so one NaN frame
  *  in ANY clip (a run or wave clip the idle gate never sees) can
- *  poison every bone it touches — such clips are dropped whole. */
+ *  poison every bone it touches, such clips are dropped whole. */
 function clipHasFiniteValues(clip: THREE.AnimationClip): boolean {
   for (const track of clip.tracks) {
     const values = track.values as ArrayLike<number>;
@@ -722,8 +722,8 @@ export interface CharAnimator {
   hasSit: boolean;
   /** Festival dance + Sounds-house pose loops (Kevin Iglesias dance
    *  pack, retargeted like the basic motions). The dance gate is
-   *  deliberately looser than idle's — a dance legitimately lifts
-   *  arms and leaves the ground plane of an idle's thresholds — it
+   *  deliberately looser than idle's, a dance legitimately lifts
+   *  arms and leaves the ground plane of an idle's thresholds, it
    *  still demands finite values, an upright body, and a sane pivot. */
   hasDance: boolean;
   danceDuration: number;
@@ -734,7 +734,7 @@ export interface CharAnimator {
   pairDuration: (kind: "flirt" | "hug") => number;
   update: (dt: number, speed: number, waving: boolean, seated?: boolean, mode?: CharMode, benchSeated?: boolean) => void;
   /** Apply the idle clip NOW, so a body revealed in the same tick is
-   *  already standing in its idle pose — never the bind pose, never a
+   *  already standing in its idle pose, never the bind pose, never a
    *  leftover measurement pose from the bake. No-op until the animator
    *  is ready. */
   prime: () => void;
@@ -745,7 +745,7 @@ const animFbxLoader = new FBXLoader();
 /** Load a character's clips, retarget them onto the model, and build
  *  the speed-blended mixer. Everything is failure-silent: if anything
  *  does not check out, `ready` stays false, `failed` goes true, and the
- *  caller keeps the procedural posing — the model itself is rendered
+ *  caller keeps the procedural posing, the model itself is rendered
  *  either way, so a failed gate can never make a character invisible.
  *
  *  It comes in two stages. The core set (idle, walk, run, wave, sit) is
@@ -759,7 +759,7 @@ const animFbxLoader = new FBXLoader();
  *  animator creation, while the model still stands in its true
  *  bind pose. That timing matters: the load handler lowers the arms
  *  procedurally the moment this returns, and the frame loop keeps
- *  posing the whole body while the FBX files download — the old
+ *  posing the whole body while the FBX files download, the old
  *  code read the bind fresh inside each bake, so it baked the
  *  clips on top of an already-posed skeleton (the arms' lowering
  *  delta applied twice, splaying them out sideways, hands forever
@@ -847,7 +847,7 @@ export function createCharAnimator(args: {
           if (!baked) return null;
           if (srcHipMeters === 0) srcHipMeters = baked.srcHipHeight / 100;
           // A clip carrying even one non-finite value can poison the
-          // blended mixer and collapse the body — drop it whole.
+          // blended mixer and collapse the body, drop it whole.
           if (!clipHasFiniteValues(baked.clip)) return null;
           return baked.clip;
         } finally {
@@ -870,7 +870,7 @@ export function createCharAnimator(args: {
       // The gate measures the idle clip on the true bind pose. Legs
       // or body failing (or anything non-finite) retires the whole
       // animator to procedural posing; ARMS failing only retires
-      // the arms (below) — never the character.
+      // the arms (below), never the character.
       const check = onBindPose(() => checkRetargetedClip(model, idle));
       if (!check.finite || !check.legsOk || !check.bodyOk || !check.pivotOk) return;
       let useWave = wave !== null;
@@ -878,7 +878,7 @@ export function createCharAnimator(args: {
         // Per-arm fallback: strip the arm chains from every clip.
         // The mixer then never writes the arm bones, the procedural
         // posing owns them (arms hang at the sides, swing with the
-        // stride), and greetings use the procedural wave — a wave
+        // stride), and greetings use the procedural wave, a wave
         // clip without trustworthy arms is no wave at all.
         stripArmTracks(idle);
         if (walk) stripArmTracks(walk);
@@ -902,7 +902,7 @@ export function createCharAnimator(args: {
       // body: sampled across the loop, both thighs must point
       // mostly FORWARD (direction Y near 0), not down like a
       // standing leg (Y ≈ -1). A failed gate just means sitting
-      // falls back to the procedural seated pose — never a broken
+      // falls back to the procedural seated pose, never a broken
       // or standing-in-the-bench sit.
       let useSit = false;
       if (sit) {
@@ -1029,7 +1029,7 @@ export function createCharAnimator(args: {
         const danceT = mode === "dance" && danceA ? 1 : 0;
         const poseT = (mode === "poseA" || mode === "poseB") && (poseAA || poseBA) ? 1 : 0;
         // Outdoor families. Talk gestures own the body only while
-        // standing (nearly) still — walk-and-talk keeps the walk,
+        // standing (nearly) still, walk-and-talk keeps the walk,
         // and the gestures take over when the pair stops. Seated
         // talk swaps the plain sit for the seated gesture clips;
         // bench idles own bench time when nobody is talking.
@@ -1125,7 +1125,7 @@ export function createCharAnimator(args: {
 
       // Stage two: the character is live; the rest of the library joins
       // the running mixer as it arrives, each behind its own gate.
-      // Dance + pose clips: same bake, a gate fitted to dancing —
+      // Dance + pose clips: same bake, a gate fitted to dancing,
       // finite, upright, sane pivot; arms and legs may go where the
       // music takes them.
       const passes = (clip: THREE.AnimationClip): boolean => {
@@ -1144,7 +1144,7 @@ export function createCharAnimator(args: {
       poseAA = mk(await lenient(urls.poseA));
       poseBA = mk(await lenient(urls.poseB));
       // Outdoor library clips: same lenient gate (finite, upright
-      // body, sane shoulder pivots — a seated clip's head still
+      // body, sane shoulder pivots, a seated clip's head still
       // clears its hips by half a metre), baked through OUTDOOR_RIG.
       // Seated families get their hip XZ pinned (the scene owns
       // seat placement; see pinHipXZInPlace).
@@ -1174,7 +1174,7 @@ export function createCharAnimator(args: {
         hugA = mkOnce(hugClip, true);
       }
     } catch {
-      /* clips unavailable — procedural posing carries on */
+      /* clips unavailable, procedural posing carries on */
     } finally {
       if (!out.ready) out.failed = true;
     }
@@ -1195,7 +1195,7 @@ export function prepareVrm(root: THREE.Object3D) {
 
 /** Best-effort eyelid morphs (VRoid's Fcl_EYE_Close family), used to let
  *  a character close their eyes for the secret-place kiss. Returns an
- *  empty list when the model has none — posture alone then carries the
+ *  empty list when the model has none, posture alone then carries the
  *  moment, exactly as designed. */
 export function collectBlinkMorphs(root: THREE.Object3D): { mesh: THREE.Mesh; index: number }[] {
   const out: { mesh: THREE.Mesh; index: number }[] = [];

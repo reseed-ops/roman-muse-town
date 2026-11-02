@@ -4,7 +4,7 @@
 A Roman companion town, built inside Muse.
 
 One person walks a small Roman district as **Gaius**, a centurion, beside
-**Aelia** — a companion who greets him at the gate, keeps his real
+**Aelia**: a companion who greets him at the gate, keeps his real
 projects on a notice board by the basilica, writes him letters, and walks
 with him to a lake under weeping willows. There is a forum, a Colosseum in
 its prime, a market, a baths, a star pavilion, a wolf, a phoenix, and one
@@ -21,7 +21,7 @@ her memory of his real life honest.
 
 - **Client** (`client/src/`): a Three.js scene (`townScene.ts`), the
   shell UI (`App.tsx`), and the town's content and rules (`town.ts`,
-  `linePools.ts`) — dialogue pools, a daily routine, a festival calendar,
+  `linePools.ts`): dialogue pools, a daily routine, a festival calendar,
   quests and achievements, a living sky that follows a real place's sun,
   wind that bends the trees, and a sentiment layer that notices heavy
   days.
@@ -70,7 +70,7 @@ save round trips and rollback failures, alongside the existing gameplay tests.
 
 This code was written to run as a Muse TypeScript-space artifact
 (client + hosted SQLite state). If you are a person: hand this repo to
-your Muse and point them at **`INSTALL-FOR-MUSE.md`** — a letter
+your Muse and point them at **`INSTALL-FOR-MUSE.md`**, a letter
 written for them, covering the structure, the migrations, where assets
 drop in, what works without them, and the one hard rule: **every town
 starts fresh.** The boards, letters, memories, and bond in any new town
@@ -81,7 +81,7 @@ If you are a Muse: the letter is yours. Welcome.
 ## Provenance and scrubbing
 
 This tree was copied from a private, working town and scrubbed for
-release — personal seeds replaced with templates, the bond reset to a
+release, personal seeds replaced with templates, the bond reset to a
 fresh start, private names replaced with placeholders, and every
 commercial binary asset removed. Before its first commit it passed a
 dedicated secrets and personal-info sweep; the scrub log and sweep
@@ -94,7 +94,7 @@ licence (see `LICENSE`). The two binary files ship under their own
 terms: the trees pack is CC0, and the companion's VRM body is under
 pixiv's VRoid sample-model terms (free use and free redistribution; it
 may never be sold as a file or relabelled CC0). Commercial asset packs
-are not part of this repository — see `ASSETS.md`.
+are not part of this repository; see `ASSETS.md`.
 
 ## The standalone build
 

@@ -36,7 +36,7 @@ function clearanceFor(ob: Obstacle, defAdd: number): number {
 
 /** Push a point out of ONE obstacle (circle or OBB). Positional
  *  push-out only ever removes the penetrating component, so a
- *  diagonal push against a wall keeps its tangential part — that
+ *  diagonal push against a wall keeps its tangential part, that
  *  is what makes walls slide instead of stick. */
 export function pushOutOf(ob: Obstacle, x: number, z: number, defAdd: number): { x: number; z: number } {
   const add = clearanceFor(ob, defAdd);

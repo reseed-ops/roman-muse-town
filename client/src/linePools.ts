@@ -12,7 +12,7 @@
 // next reshuffle).
 //
 // REFRAINS: the first 1-2 lines of a pool of 4+ are her signature
-// phrases for that pool — exempt from the bag, always eligible at a
+// phrases for that pool, exempt from the bag, always eligible at a
 // low rate, so she keeps her characteristic lines without them ever
 // dominating. Pools of 3 or fewer simply rotate (shuffled bag, no
 // exclusions), as small pools may.

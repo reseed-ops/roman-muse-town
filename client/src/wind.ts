@@ -1,4 +1,4 @@
-// The town wind (Nov 1, user-approved native build — no imported
+// The town wind (Nov 1, user-approved native build, no imported
 // shader packs): a vertex-shader sway injected into the town's own
 // foliage materials, driven by ONE town-wide wind state that follows
 // the weather system. The displacement math lives here ONCE, as a
@@ -7,17 +7,17 @@
 // numbers is what blows through the trees.
 //
 // Shape of the sway, in both implementations:
-//   worldPos  — the vertex's world position (phase varies by WORLD
+//   worldPos , the vertex's world position (phase varies by WORLD
 //               position, so merged/instanced trees never sway in
 //               lockstep);
-//   heightW   — pow(clamp((localY - base) / refHeight, 0, 1), 1.4):
+//   heightW  , pow(clamp((localY - base) / refHeight, 0, 1), 1.4):
 //               ZERO at the trunk base / ground, growing toward the
 //               crown, so roots never slide;
-//   gust      — a slow sine over world position and time;
-//   front     — a second sine that TRAVELS along the wind direction
+//   gust     , a slow sine over world position and time;
+//   front    , a second sine that TRAVELS along the wind direction
 //               (gust fronts; weighted in as the weather worsens);
-//   flutter   — a faster, smaller leaf ripple;
-//   disp      — maxAmp(state) × kindAmp(kind) × heightW ×
+//   flutter  , a faster, smaller leaf ripple;
+//   disp     , maxAmp(state) × kindAmp(kind) × heightW ×
 //               (0.85 × gustMix + 0.15 × flutter), applied along the
 //               wind direction. The 0.85/0.15 split makes maxAmp a
 //               true cap: |disp| ≤ maxAmp × kindAmp at the crown.
@@ -161,7 +161,7 @@ export function currentWindState(): WindState {
 /** A new weather spell begins: pick its state and its ONE town-wide
  *  direction (the golden-angle step keeps successive spells from
  *  repeating a heading). Called only from the weather setter, so
- *  the wind changes when the weather changes — and the Day/Night
+ *  the wind changes when the weather changes, and the Day/Night
  *  and weather toggles, which route through that setter, carry the
  *  wind with the weather they show. */
 export function setTownWindSpell(state: WindState): void {
@@ -199,7 +199,7 @@ export function updateTownWind(dt: number, time: number): void {
 // Vertex-only and cheap: a handful of sines per vertex, no textures,
 // no extra draws, no per-frame CPU cost beyond the uniform driver
 // above. Characters, animals, water, and buildings never receive
-// it — only the foliage materials named at the call sites.
+// it, only the foliage materials named at the call sites.
 
 const WIND_BEGIN = /* glsl */ `
 #include <begin_vertex>

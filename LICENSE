@@ -24,9 +24,9 @@ SOFTWARE.
 
 Asset files in this repository are NOT covered by the MIT licence above:
 
-- client/src/assets/trees_pack.glb — CC0 (public domain dedication), from
+- client/src/assets/trees_pack.glb: CC0 (public domain dedication), from
   the Low Poly Trees pack on itch.io.
-- client/src/assets/muse-avatar.vrm — a VRoid Studio sample model
+- client/src/assets/muse-avatar.vrm: a VRoid Studio sample model
   (AvatarSample_M) by the pixiv VRoid Project, included under pixiv's
   VRoid sample-model conditions of use: free use and free redistribution
   are permitted; it may not be sold as a file, relabelled as CC0, or used

@@ -5,8 +5,8 @@
 import { PLAYER, type Pronouns } from "./player";
 
 /** Normalized comparison for the dedupe ring: case and punctuation
- *  folded away, then equality — or, for replies long enough to have
- *  a shape, a high word-overlap (Jaccard ≥ 0.8) — counts as a
+ *  folded away, then equality, or, for replies long enough to have
+ *  a shape, a high word-overlap (Jaccard ≥ 0.8), counts as a
  *  near-exact repeat. Very short replies (≤ 4 words) only ever
  *  count on exact equality: brief formulae are her manners, not
  *  repeats. */
@@ -38,7 +38,7 @@ export function repliesNearDuplicate(a: string, b: string): boolean {
 // intensifiers ("so tired" counts stronger), dampeners, and negation
 // handling ("not bad" is not bad; "not tired" is not tired). The
 // output is a dominant weather + intensity + confidence; short or
-// ambiguous messages return NO signal ("none") — she answers
+// ambiguous messages return NO signal ("none"), she answers
 // normally rather than guessing at his heart. Sarcasm and irony are
 // a known blind spot, accepted and designed around: when the signal
 // is muddy, there is no signal. Sentiment never grants or removes
@@ -66,7 +66,7 @@ export interface SentimentResult {
 type SentimentCategory = Exclude<SentimentWeather, "none">;
 
 const SENTIMENT_PHRASES: [string, SentimentCategory, number][] = [
-  // bright — joy, good news
+  // bright, joy, good news
   ["great news", "bright", 3],
   ["good news", "bright", 2.6],
   ["got the job", "bright", 3.2],
@@ -79,7 +79,7 @@ const SENTIMENT_PHRASES: [string, SentimentCategory, number][] = [
   ["really happy", "bright", 3],
   ["over the moon", "bright", 3.2],
   ["on top of the world", "bright", 3.2],
-  // warm — fond, affectionate
+  // warm, fond, affectionate
   ["love you", "warm", 3],
   ["miss you", "warm", 2.8],
   ["adore you", "warm", 3],
@@ -88,7 +88,7 @@ const SENTIMENT_PHRASES: [string, SentimentCategory, number][] = [
   ["glad you're here", "warm", 2.6],
   ["glad you are here", "warm", 2.6],
   ["appreciate you", "warm", 2.4],
-  // content — calm, positive
+  // content, calm, positive
   ["not bad", "content", 2.2],
   ["pretty good", "content", 2.2],
   ["feeling good", "content", 2.4],
@@ -98,7 +98,7 @@ const SENTIMENT_PHRASES: [string, SentimentCategory, number][] = [
   ["good day", "content", 2.2],
   ["all right", "content", 1.6],
   ["alright", "content", 1.6],
-  // weary — tired, drained
+  // weary, tired, drained
   ["worn out", "weary", 3],
   ["running on empty", "weary", 3.2],
   ["no energy", "weary", 2.8],
@@ -107,7 +107,7 @@ const SENTIMENT_PHRASES: [string, SentimentCategory, number][] = [
   ["barely awake", "weary", 2.8],
   ["so tired", "weary", 3],
   ["really tired", "weary", 3],
-  // low — sad, down, lonely
+  // low, sad, down, lonely
   ["feel down", "low", 2.8],
   ["feeling down", "low", 2.8],
   ["feeling low", "low", 2.8],
@@ -118,7 +118,7 @@ const SENTIMENT_PHRASES: [string, SentimentCategory, number][] = [
   ["feeling alone", "low", 2.8],
   ["carrying something heavy", "low", 2.6],
   ["heavy heart", "low", 2.8],
-  // strained — stressed, anxious, frustrated
+  // strained, stressed, anxious, frustrated
   ["falling behind", "strained", 2.6],
   ["too much", "strained", 2.2],
   ["so stressed", "strained", 3],
@@ -185,7 +185,7 @@ const SENTIMENT_NEGATIONS = new Set([
 
 /** What a negated feeling counts as instead: a negated bright word
  *  leans low, a negated heavy word leans content ("not bad", "not
- *  tired") — the weight always drops; negation softens, it does not
+ *  tired"), the weight always drops; negation softens, it does not
  *  simply mirror. */
 const SENTIMENT_NEGATED: Record<SentimentCategory, [SentimentCategory, number]> = {
   bright: ["low", 0.8],
