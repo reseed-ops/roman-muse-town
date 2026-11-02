@@ -10,6 +10,18 @@ if (!rootEl) {
   throw new Error("missing generated space root element");
 }
 
+// A native app's pull-to-refresh watches the page from outside, where
+// no touch handler can reach it, and only fires while the page reports
+// being at the very top. Sitting one pixel down keeps that answer "no".
+// theme.css makes the document that one pixel taller; nothing else moves,
+// because everything on screen is position: fixed.
+const holdOffPageTop = () => {
+  if (window.scrollY <= 0) window.scrollTo(0, 1);
+};
+holdOffPageTop();
+window.addEventListener("scroll", holdOffPageTop, { passive: true });
+window.addEventListener("resize", holdOffPageTop);
+
 // --- Out-of-band safety net ------------------------------------------------
 // The town's one unforgivable failure is a bare sky-blue screen with
 // no title, no buttons, nothing to tap, which is what a visitor gets

@@ -72,7 +72,9 @@
    3. touch-action:none on the app roots (below), so the browser
       never claims a touch drag for scrolling in the first place;
    4. a document-level non-passive touchmove/pointermove preventer in
-      App.tsx cancels the gesture everywhere else it can start.
+      App.tsx cancels the gesture everywhere else it can start;
+   5. the page holds itself 1px below the top (main.tsx), for a host
+      app's native refresh, which none of the layers above can reach.
    Panels that genuinely scroll opt OUT of layer 3/4 individually via
    .mt-scrollable (touch-action pan-y + overscroll-behavior:contain,
    so their scroll works but can never chain into a page refresh at
@@ -81,6 +83,12 @@ html,
 body {
   overscroll-behavior: none;
   overscroll-behavior-y: none;
+}
+
+/* One pixel of scroll for main.tsx to sit on, for host apps whose own
+   pull-to-refresh only fires at the very top of the page (layer 5). */
+html {
+  height: calc(100% + 1px);
 }
 
 body {
