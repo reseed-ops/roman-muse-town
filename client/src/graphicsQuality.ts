@@ -14,6 +14,16 @@ export class GraphicsQuality {
     return this.setProfile(gentle ? 1 : this.fullPixelRatio, !gentle, recompile);
   }
 
+  /** Ratio only (v44): the swing tuner's steps land here. No shadow
+   *  toggle, no material sweep, so a step costs one resize and can
+   *  never stall on a shader recompile mid-gesture. */
+  setPixelRatioOnly(pixelRatio: number): boolean {
+    if ((this.pixelRatio ?? this.fullPixelRatio) === pixelRatio) return false;
+    this.pixelRatio = pixelRatio;
+    this.renderer.setPixelRatio(pixelRatio);
+    return true;
+  }
+
   setProfile(pixelRatio: number, shadows: boolean, recompile = true): boolean {
     const gentle = !shadows;
     if (gentle === this.gentle && (this.pixelRatio ?? (gentle ? 1 : this.fullPixelRatio)) === pixelRatio) return false;

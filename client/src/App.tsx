@@ -355,6 +355,17 @@ export function App() {
   // of the town menu once both animators have settled, so a stiff
   // town is a thing its owner can read and report.
   const [motionStatus, setMotionStatus] = useState<string | null>(null);
+  // The menu's perf line (v44): polled from the scene's rolling
+  // measurement only while the menu is open, so the closed town
+  // pays nothing for it and the open menu reads live numbers.
+  const [perfLine, setPerfLine] = useState<string | null>(null);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const read = () => setPerfLine(sceneRef.current?.perfLine() ?? null);
+    read();
+    const timer = window.setInterval(read, 1000);
+    return () => window.clearInterval(timer);
+  }, [menuOpen]);
   // The secret place's warmer register: tracked from walk position.
   // At the terrace, her lines turn flirtatious, his quick-picks sweeten,
   // and the hold-hand / kiss buttons appear. Session-only, like a mood.
@@ -5307,6 +5318,7 @@ export function App() {
         onSettings={() => { closeTownPanels(); setUtilitiesOpen(true); }}
         festival={activeFestival}
         footerNote={motionStatus ?? undefined}
+        perfNote={perfLine ?? undefined}
         className={`mt-scrollable absolute right-3 z-30 w-[min(320px,86vw)] overflow-y-auto rounded-3xl bg-[#22332b]/97 p-2 shadow-2xl backdrop-blur ${forcedLandscape ? "top-[60px] max-h-[calc(100%-118px)]" : isLandscape ? "top-[60px] max-h-[calc(100dvh-130px)]" : "top-[76px] max-h-[62vh] sm:right-4"}`}
         groups={[{
           heading: "Aelia", items: [{

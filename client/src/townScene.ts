@@ -431,6 +431,10 @@ export interface TownSceneHandle {
   /** A feather lies below her perch this week (saved state decides). */
   setPhoenixFeather: (lying: boolean) => void;
   performanceSnapshot: () => PerformanceSnapshot;
+  /** The town menu's quiet perf line (v44): rolling fps, p95 frame
+   *  time, and the current quality tier word, from the runtime's
+   *  own rolling measurement. Read-only; polling it changes nothing. */
+  perfLine: () => string;
   setAutomaticGraphics: (on: boolean) => void;
   dispose: () => void;
 }
@@ -1360,6 +1364,20 @@ export function createTownScene(
       if (group && !disposed) {
         if (treeUrls.has(url)) treePlacement.addTree(group, opts.x, opts.z);
         if (buildingUrls.has(url)) treePlacement.addBuilding(group, url);
+        // Static scenery freeze (v44): a placed model that is not a
+        // tree never moves again (TreePlacement may still shift a
+        // tree clear of a late-arriving building, so trees keep
+        // live matrices), yet three.js recomputes every node's
+        // world matrix every frame, and a camera swing re-walks the
+        // whole graph to re-cull it. Freeze the placed subtree's
+        // matrices at their settled values: the picture is identical,
+        // the per-frame graph walk gets cheaper everywhere, swings
+        // included. Vertex wind still sways what it shades; nothing
+        // here animates by matrix.
+        if (!treeUrls.has(url)) {
+          group.updateWorldMatrix(true, true);
+          group.traverse((o) => { o.matrixAutoUpdate = false; });
+        }
       }
       return group;
     });
@@ -4754,6 +4772,13 @@ export function createTownScene(
   const bubbles: BubbleState[] = [];
   const bubbleTmpV = new THREE.Vector3();
   const bubbleTmpV2 = new THREE.Vector3();
+  // Per-frame scratch (v44): the bubble clamp and the shared-umbrella
+  // lean used to allocate fresh vectors every frame; reuse these.
+  const bubbleRight = new THREE.Vector3();
+  const bubbleUp = new THREE.Vector3();
+  const bubblePx = new THREE.Vector3();
+  const bubblePy = new THREE.Vector3();
+  const sharedTmpV = new THREE.Vector3();
   /** Clamp a visible bubble into the safe viewport, in screen space:
    *  wherever its speaker stands, even at a screen edge, the whole
    *  bubble stays readable, below the top chips and above the walk
@@ -4787,10 +4812,10 @@ export function createTownScene(
     b.sprite.scale.set(worldH * 2, worldH, 1);
     // The bubble's half-extents in NDC, from its (possibly resized)
     // real world size.
-    const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
-    const up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
-    const px = bubbleTmpV.clone().addScaledVector(right, worldH).project(camera);
-    const py = bubbleTmpV.clone().addScaledVector(up, worldH / 2).project(camera);
+    const right = bubbleRight.setFromMatrixColumn(camera.matrixWorld, 0);
+    const up = bubbleUp.setFromMatrixColumn(camera.matrixWorld, 1);
+    const px = bubblePx.copy(bubbleTmpV).addScaledVector(right, worldH).project(camera);
+    const py = bubblePy.copy(bubbleTmpV).addScaledVector(up, worldH / 2).project(camera);
     const hx = Math.min(0.92, Math.abs(px.x - bubbleTmpV2.x));
     const hy = Math.min(0.45, Math.abs(py.y - bubbleTmpV2.y));
     const marginX = (10 / cw) * 2;
@@ -11162,7 +11187,7 @@ export function createTownScene(
           if (umbrellaSharing) {
             // His canopy widens and leans toward her side of him.
             playerUmbrellaRef.scale.setScalar(Math.max(0.001, umbrellaOpen) * 1.45);
-            const herLocal = playerInner.worldToLocal(museGroup.position.clone());
+            const herLocal = playerInner.worldToLocal(sharedTmpV.copy(museGroup.position));
             playerUmbrellaRef.position.set(
               0.16 + herLocal.x * 0.3,
               2.42,
@@ -11529,6 +11554,24 @@ export function createTownScene(
       }
     }
   }
+  // --- Load-time pre-warm (v44) ---------------------------------------
+  // The first swing of the camera used to pay, mid-gesture, for every
+  // shader program and GPU upload of whatever district swung into
+  // view for the first time: nothing ever called renderer.compile,
+  // and loads are gated by the walker's distance, not by the view
+  // direction, so a district can be fully loaded and never yet
+  // rendered. Five seconds in, with the opening loads settled,
+  // compile the whole scene once against the live camera while the
+  // visitor is still standing at the gate: the stall lands on a
+  // still moment instead of inside his first swing.
+  later(() => {
+    if (disposed) return;
+    try {
+      renderer.compile(scene, camera);
+    } catch {
+      /* pre-warm is best-effort; first renders compile as before */
+    }
+  }, 5000);
   // --- Load-time material sweep --------------------------------------
   // Twelve seconds in (loads settled), audit every mesh that came
   // from a model file: a material whose texture image definitively
@@ -11583,6 +11626,7 @@ export function createTownScene(
   return {
     flyTo,
     performanceSnapshot: () => runtime.snapshot(),
+    perfLine: () => runtime.perfLine(),
     setAutomaticGraphics: (on) => runtime.setAutomatic(on),
     overview: () =>
       flyTo(

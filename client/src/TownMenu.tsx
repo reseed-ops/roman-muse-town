@@ -12,13 +12,17 @@ export interface TownMenuItem {
 interface MenuGroup { heading: string; collapsed?: boolean; items: TownMenuItem[] }
 
 /** Everyday actions stay visible; destinations and occasional controls expand on demand. */
-export function TownMenu({ groups, className, festival, footerNote, onClose, onSettings }: {
+export function TownMenu({ groups, className, festival, footerNote, perfNote, onClose, onSettings }: {
   groups: MenuGroup[];
   className: string;
   festival?: { name: string; dressing: string } | null;
   /** One quiet status line at the foot of the menu (the scene's
    *  motion verdict), read-only, in the small print. */
   footerNote?: string;
+  /** The perf line (v44), directly under the motion line: rolling
+   *  fps, p95 frame time, and the current quality tier, read from
+   *  the scene's own measurement while the menu is open. */
+  perfNote?: string;
   onClose(): void;
   onSettings(): void;
 }) {
@@ -67,6 +71,7 @@ export function TownMenu({ groups, className, festival, footerNote, onClose, onS
         </button>
       </div>
       {footerNote && <p className="px-3 pb-1 pt-2 text-xs font-normal text-white/55">{footerNote}</p>}
+      {perfNote && <p className="px-3 pb-1 pt-1 text-xs font-normal text-white/55">{perfNote}</p>}
     </nav>
   </>;
 }
