@@ -6,6 +6,7 @@ import { TownUtilities } from "./TownUtilities";
 import { api } from "./api";
 import { linePools, pickPooled } from "./linePools";
 import { aboutPlayer } from "../../server/src/player";
+import { AchievementGate } from "./achievementGate";
 import { BELIEF_LINES } from "./town";
 import {
 ACHIEVEMENTS,
@@ -479,9 +480,9 @@ export function App() {
   const boardSeededRef = useRef(false);
   const streetsWalkedRef = useRef<Set<number>>(new Set());
   const landmarksRef = useRef<Set<string>>(new Set());
-  const progressRef = useRef<{ quests: Set<string>; achievements: Set<string> }>({
+  const achievementGate = useRef(new AchievementGate()).current;
+  const progressRef = useRef<{ quests: Set<string> }>({
     quests: new Set(),
-    achievements: new Set(),
   });
   const nightRef = useRef(false);
   // Sleep and the Dream Door: the shell veils the resting, the
@@ -1270,7 +1271,7 @@ export function App() {
   useEffect(() => {
     if (!state.data) return;
     progressRef.current.quests = new Set(state.data.quests_done);
-    progressRef.current.achievements = new Set(state.data.achievements);
+    for (const id of achievementGate.load(state.data.achievements)) unlockRef.current(id);
     secretVisitedRef.current = state.data.secret.first_visit !== null;
     if (state.data.secret.first_kiss !== null) secretKissRef.current = true;
     affectionRef.current = state.data.affection.rank;
@@ -1642,14 +1643,13 @@ export function App() {
 
   const unlock = useCallback(
     (id: string) => {
-      if (progressRef.current.achievements.has(id)) return;
-      progressRef.current.achievements.add(id);
+      if (!achievementGate.claim(id)) return;
       const a = ACHIEVEMENTS.find((x) => x.id === id);
       if (a) showAchievementToast(a.name);
       unlockAchievement.mutate(id);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [showAchievementToast],
+    [showAchievementToast, achievementGate],
   );
   const unlockRef = useRef(unlock);
   unlockRef.current = unlock;
@@ -3972,7 +3972,7 @@ export function App() {
           // Lupa, properly seen for the first time: the sighting
           // is saved (her Stories entry reads it), and announced
           // once, the saved row makes every later visit quiet.
-          if (!stateRef.current?.found.includes("lupa-seen")) {
+          if (stateRef.current && !stateRef.current.found.includes("lupa-seen")) {
             markFound.mutate("lupa-seen");
             setAchievementToast("🐺 Lupa, the town's wolf, written into the Stories");
             if (toastTimer.current) window.clearTimeout(toastTimer.current);
