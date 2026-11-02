@@ -7,6 +7,7 @@ import { api } from "./api";
 import { linePools, pickPooled } from "./linePools";
 import { aboutPlayer } from "../../server/src/player";
 import { AchievementGate } from "./achievementGate";
+import { downloadAeliaModel, generateLocalAeliaReply, type LocalChatStatus, type AeliaChatTurn, type LocalModelName } from "./aeliaLocalChat";
 import { BELIEF_LINES } from "./town";
 import {
 ACHIEVEMENTS,
@@ -360,6 +361,11 @@ export function App() {
   const [secretOpen, setSecretOpen] = useState(false);
   const [secretFirstVisit, setSecretFirstVisit] = useState(true);
   const [chatDraft, setChatDraft] = useState("");
+  const [localChatPending, setLocalChatPending] = useState(false);
+  const [localModelPreparing, setLocalModelPreparing] = useState<LocalModelName | null>(null);
+  const [preparedLocalModels, setPreparedLocalModels] = useState<Set<LocalModelName>>(() => new Set());
+  const [localChatStatus, setLocalChatStatus] = useState<LocalChatStatus | null>(null);
+  const localChatHistory = useRef<AeliaChatTurn[]>([]);
   // Muse conversations live in an RPG speech bubble now (the owner's
   // call, Oct 31), never in an information panel. The bubble shows
   // one part of her response at a time; tapping it (or pressing A)
@@ -1125,6 +1131,7 @@ export function App() {
   const chatWithMuse = useMutation({
     mutationFn: (args: {
       message: string;
+      local_reply: boolean;
       context: { weather: string; night: boolean; tree_stage: string; found_count: number; board_as_of: string; unread_letters: number; affection_rank: number; private_name: string };
     }) => api.chatWithMuse(args),
   });
@@ -3490,6 +3497,36 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const reportLocalChatStatus = useCallback((status: LocalChatStatus) => {
+    setLocalChatStatus(status);
+    if (status.state === "ready" || status.state === "prepared") {
+      setPreparedLocalModels((previous) => new Set(previous).add(status.model));
+    }
+  }, []);
+
+  const prepareLocalModel = useCallback(async (model: LocalModelName) => {
+    if (localChatPending || localModelPreparing) return;
+    setLocalModelPreparing(model);
+    setLocalChatStatus({ state: "checking", message: "Checking storage and GPU support…" });
+    try {
+      // Persistence is only a request: browsers may decline it or still evict
+      // caches under pressure, but asking reduces surprise on supported hosts.
+      try {
+        if (navigator.storage?.persist) await navigator.storage.persist();
+      } catch {
+        /* the download can still proceed with ordinary browser caching */
+      }
+      await downloadAeliaModel({ model, onStatus: reportLocalChatStatus });
+    } catch (error) {
+      setLocalChatStatus({
+        state: "unavailable",
+        message: `${model} could not be prepared. ${error instanceof Error ? error.message : String(error)}`,
+      });
+    } finally {
+      setLocalModelPreparing(null);
+    }
+  }, [localChatPending, localModelPreparing, reportLocalChatStatus]);
+
   const sendChat = useCallback(() => {
     const msg = chatDraft.trim();
     if (!msg) return;
@@ -3570,33 +3607,57 @@ export function App() {
       deliver(pickPooled(`deflect:${band}`, pool));
       return;
     }
-    chatWithMuse.mutate(
-      {
-        message: msg,
-        context: {
-          weather: ctx.weatherLabel,
-          night: ctx.night,
-          tree_stage: ctx.treeStage,
-          found_count: ctx.foundCount,
-          board_as_of: ctx.boardAsOf,
-          unread_letters: unreadRef.current,
-          affection_rank: affectionRef.current,
-          private_name: summitPrivateNameRef.current,
-        },
+    const history = localChatHistory.current.slice(-8);
+    const localReply = generateLocalAeliaReply({
+      message: msg,
+      context: {
+        ...ctx,
+        affectionRank: ctx.affectionRank ?? 0,
+        unreadLetters: unreadRef.current,
+        knownFacts: (state.data?.facts ?? []).slice(-6).map((fact) => fact.text),
+        privateName: summitPrivateNameRef.current,
       },
-      {
-        onSuccess: (data) =>
-          deliver(
-            // The live reply was already register-tuned server-side
-            // by the sentiment note in her prompt; when the model is
-            // unavailable (empty reply), the scripted voice answers
-            // in kind from the same signal.
-            data.reply.trim() ? data.reply : scriptedMuseReply(msg, ctx, data.sentiment),
-            data.learned_fact ? "I'll remember that, love." : undefined,
-          ),
-        onError: () => deliver(scriptedMuseReply(msg, ctx)),
+      history,
+      onStatus: reportLocalChatStatus,
+    }).catch(() => null);
+    setLocalChatPending(true);
+    const localOrScripted = async (data?: Awaited<ReturnType<typeof chatWithMuse.mutateAsync>>) => {
+      try {
+        const generated = await localReply;
+        const reply = generated?.reply || (data
+          ? scriptedMuseReply(msg, ctx, data.sentiment)
+          : scriptedMuseReply(msg, ctx));
+        const nextHistory: AeliaChatTurn[] = [
+          ...history,
+          { role: "user", content: msg },
+          { role: "assistant", content: reply },
+        ];
+        localChatHistory.current = nextHistory.slice(-12);
+        if (!generated) {
+          setLocalChatStatus({
+            state: "unavailable",
+            message: "Local Gemma is unavailable here; Aelia is using her scripted replies.",
+          });
+        }
+        deliver(reply, data?.learned_fact ? "I'll remember that, love." : undefined);
+      } finally {
+        setLocalChatPending(false);
+      }
+    };
+    void chatWithMuse.mutateAsync({
+      message: msg,
+      local_reply: true,
+      context: {
+        weather: ctx.weatherLabel,
+        night: ctx.night,
+        tree_stage: ctx.treeStage,
+        found_count: ctx.foundCount,
+        board_as_of: ctx.boardAsOf,
+        unread_letters: unreadRef.current,
+        affection_rank: affectionRef.current,
+        private_name: summitPrivateNameRef.current,
       },
-    );
+    }).then(localOrScripted, () => localOrScripted());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatDraft, museChatContext]);
 
@@ -3839,56 +3900,64 @@ export function App() {
     return () => window.removeEventListener("pointerdown", unlock);
   }, []);
 
-  // Pull-to-refresh guard, PAGE-WIDE this time. The first version
-  // scoped its cancellations to the joystick and the canvas, and on
-  // the user's phone a pull starting on UI gaps, chips, or buttons
-  // still refreshed the town mid-play. So now the gesture is
-  // cancelled at the document level: a non-passive touchmove (and
-  // touch-pointer pointermove, for webviews that gesture through
-  // pointer events) preventDefault everywhere EXCEPT inside an
-  // element marked scrollable (.mt-scrollable / [data-scrollable],
-  // the panel bodies and long lists, whose own overscroll-behavior:
-  // contain keeps their scroll from chaining into a refresh at the
-  // panel's top). Taps and clicks are untouched (a tap has no move
-  // to cancel, and cancelling a move does not cancel a click); the
-  // joystick is driven by pointer events, which still fire, only
-  // the browser's own scroll/refresh interpretation of the drag is
-  // refused. The CSS layers in theme.css (fixed body, document
-  // overscroll-behavior:none, touch-action:none on the roots) stand
-  // underneath this. If a host container still refreshes after all
-  // of this, the gesture lives above the page, but the page's own
-  // defences are now total.
+  // Capture touch gestures before descendant handlers. Panels may scroll only
+  // while they have room in the drag direction; their edges must not hand a
+  // downward drag to the browser's refresh gesture.
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
-    const inScrollable = (t: EventTarget | null) =>
-      t instanceof Element && !!t.closest(".mt-scrollable, [data-scrollable]");
-    const onStick = (t: EventTarget | null) =>
-      t instanceof Element && !!t.closest("[data-mt-stick]");
+    const scrollable = (target: EventTarget | null) =>
+      target instanceof Element
+        ? target.closest<HTMLElement>(".mt-scrollable, [data-scrollable]")
+        : null;
     const onControls = (t: EventTarget | null) =>
       t instanceof Element && !!t.closest("[data-mt-stick], [data-mt-controls]");
+    const touchY = new Map<number, number>();
     const blockPullMove = (e: TouchEvent) => {
-      if (!inScrollable(e.target)) e.preventDefault();
+      let block = false;
+      for (const touch of Array.from(e.changedTouches)) {
+        const previous = touchY.get(touch.identifier) ?? touch.clientY;
+        touchY.set(touch.identifier, touch.clientY);
+        const panel = scrollable(touch.target);
+        const dy = touch.clientY - previous;
+        if (!panel || panel.scrollHeight <= panel.clientHeight ||
+            (dy > 0 && panel.scrollTop <= 0) ||
+            (dy < 0 && panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 1)) {
+          block = true;
+        }
+      }
+      if (block && e.cancelable) e.preventDefault();
     };
     const blockPullPointer = (e: PointerEvent) => {
-      // Touch pointers only: mouse drags belong to the orbit camera
-      // and the desktop shell, which have no pull-to-refresh to give.
-      if (e.pointerType === "touch" && !inScrollable(e.target)) e.preventDefault();
+      if (e.pointerType === "touch" && !scrollable(e.target) && e.cancelable) e.preventDefault();
     };
-    const blockStickTouch = (e: TouchEvent) => {
-      if (onStick(e.target)) e.preventDefault();
+    const trackTouchStart = (e: TouchEvent) => {
+      for (const touch of Array.from(e.changedTouches)) touchY.set(touch.identifier, touch.clientY);
+      // These surfaces use pointer events, so cancelling native touch does
+      // not interrupt walking or camera dragging. Keep button taps intact.
+      if (e.target instanceof Element && e.target.closest("[data-mt-stick], canvas") && e.cancelable) {
+        e.preventDefault();
+      }
+    };
+    const endTouch = (e: TouchEvent) => {
+      for (const touch of Array.from(e.changedTouches)) touchY.delete(touch.identifier);
     };
     const blockContextMenu = (e: Event) => {
       if (onControls(e.target)) e.preventDefault();
     };
-    document.addEventListener("touchmove", blockPullMove, { passive: false });
-    document.addEventListener("pointermove", blockPullPointer, { passive: false });
-    root.addEventListener("touchstart", blockStickTouch, { passive: false });
+    const captureTouch = { passive: false, capture: true };
+    document.addEventListener("touchmove", blockPullMove, captureTouch);
+    document.addEventListener("pointermove", blockPullPointer, captureTouch);
+    document.addEventListener("touchstart", trackTouchStart, captureTouch);
+    document.addEventListener("touchend", endTouch, true);
+    document.addEventListener("touchcancel", endTouch, true);
     root.addEventListener("contextmenu", blockContextMenu);
     return () => {
-      document.removeEventListener("touchmove", blockPullMove);
-      document.removeEventListener("pointermove", blockPullPointer);
-      root.removeEventListener("touchstart", blockStickTouch);
+      document.removeEventListener("touchmove", blockPullMove, true);
+      document.removeEventListener("pointermove", blockPullPointer, true);
+      document.removeEventListener("touchstart", trackTouchStart, true);
+      document.removeEventListener("touchend", endTouch, true);
+      document.removeEventListener("touchcancel", endTouch, true);
       root.removeEventListener("contextmenu", blockContextMenu);
     };
   }, []);
@@ -6146,12 +6215,40 @@ export function App() {
               />
               <button
                 type="submit"
-                disabled={!chatDraft.trim() || chatWithMuse.isPending}
+                disabled={!chatDraft.trim() || chatWithMuse.isPending || localChatPending || !!localModelPreparing}
                 className="shrink-0 rounded-full bg-[#ffd34e] px-4 py-2 text-sm font-bold text-[#4a3600] shadow transition active:scale-95 disabled:opacity-50"
               >
-                {chatWithMuse.isPending ? "…" : "Send"}
+                {chatWithMuse.isPending || localChatPending || localModelPreparing ? "…" : "Send"}
               </button>
             </form>
+            <div className="mt-2 flex items-center justify-between gap-2">
+                <p className="min-w-0 text-[10px] leading-relaxed text-[#2b2118]/55">
+                  Optional: prepare a model for offline chat. Large downloads; Wi-Fi recommended.
+                </p>
+                <div className="flex shrink-0 gap-1.5">
+                  {(["Gemma 4 E2B", "Gemma 4 E4B"] as const).map((model) => {
+                    const prepared = preparedLocalModels.has(model);
+                    const busy = localModelPreparing === model;
+                    return (
+                      <button
+                        key={model}
+                        type="button"
+                        disabled={prepared || !!localModelPreparing || localChatPending}
+                        onClick={() => void prepareLocalModel(model)}
+                        aria-label={`${prepared ? "Already prepared" : "Download"} ${model}`}
+                        className="rounded-full border border-[#2b2118]/15 px-2.5 py-1.5 text-[10px] font-bold text-[#4a3600] transition active:scale-95 disabled:opacity-50"
+                      >
+                        {busy ? "Preparing…" : prepared ? `${model.replace("Gemma 4 ", "")} ready` : `Get ${model.replace("Gemma 4 ", "")}`}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            {localChatStatus && (
+              <p className="mt-1.5 text-[10px] leading-relaxed text-[#2b2118]/55" aria-live="polite">
+                {localChatStatus.message}
+              </p>
+            )}
             {museBubble.cycle && (
               <p className="mt-2 text-[11px] leading-relaxed text-[#2b2118]/50 italic">
                 Our memories together live at the Villa of Stories now. The memory house keeps them.

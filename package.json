@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@hatch/space-sdk": "file:/opt/hatch/skills/spaces/ts-runtime/dist/space-sdk.tgz",
+    "@huggingface/transformers": "4.3.0",
     "@tanstack/react-query": "5.100.10",
     "drizzle-orm": "0.45.2",
     "react": "19.2.5",

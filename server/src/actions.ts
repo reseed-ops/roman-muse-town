@@ -2461,9 +2461,10 @@ export const Actions = {
   }),
 
   chatWithMuse: defineAction({
-    description: "Ask town Muse a question in the in-game chat. She answers in character, using the town context and the shared memories she keeps here. Returns an empty reply when the model is unavailable so the client can use its scripted lines.",
+    description: "Record an in-game message for Aelia and update her sentiment and memory. The client can request a local reply, in which case server-side text generation is skipped.",
     request: z.object({
       message: z.string().trim().min(1).max(400),
+      local_reply: z.boolean().default(false),
       context: z.object({
         weather: z.string().max(40),
         night: z.boolean(),
@@ -2571,13 +2572,13 @@ export const Actions = {
           return "";
         }
       };
-      let reply = await generate();
+      let reply = args.local_reply ? "" : await generate();
       // Hard dedupe ring: a fresh reply that near-exactly repeats
       // one of the last ~20 is redrawn once; if the redraw still
       // matches, a scripted line she has NOT recently said is
       // substituted instead. Either way the final reply joins the
       // ring.
-      if (reply && ring.some((r) => repliesNearDuplicate(r, reply))) {
+      if (!args.local_reply && reply && ring.some((r) => repliesNearDuplicate(r, reply))) {
         const retry = await generate(
           "Your previous attempt repeated something you already said recently. Answer again, with entirely fresh wording and a different angle.",
         );
@@ -2590,7 +2591,7 @@ export const Actions = {
             ) ?? reply;
         }
       }
-      if (reply) {
+      if (!args.local_reply && reply) {
         await saveChatRing(ctx, [...ring, reply]);
       }
       return {
