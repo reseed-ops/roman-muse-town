@@ -4695,6 +4695,25 @@ export function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // The way back from the overview to Gaius (owner prescription,
+  // Nov 2): the overview is not B's anymore, it lives in the town
+  // menu both ways, and on screen this helper is what the Back to
+  // Gaius chip under the cluster calls. It is the return the old
+  // B fall-through used to perform: stop the tour, put the panels
+  // away, and re-enter walk mode behind him.
+  const backToGaius = () => {
+    stopTour();
+    setSelected(null);
+    setMuseBubble(null);
+    setYouOpen(false);
+    setTreeOpen(false);
+    setWeatherOpen(false);
+    setBoardOpen(false);
+    setQuestOpen(false);
+    setSecretOpen(false);
+    enterWalkMode();
+  };
+
   const xboxBack = () => {
     // B steps away from the summit scene, postponing it, never
     // cancelling, before it dismisses anything else.
@@ -4731,30 +4750,14 @@ export function App() {
       // B stands him up from a bench before it ever leaves walk mode.
       sceneRef.current?.standUp();
     } else if (sceneRef.current?.slide()) {
-      // On the move, B is the slide; it only means leave when he's still.
-    } else if (walkingRef.current) {
-      // B in walk mode drops him into the town overview. The ABXY
-      // cluster stays mounted while the overview is up (see the
-      // controls render below), so this same B press is still there
-      // to bring him back, the overview is not a one-way door.
-      exitWalkMode();
-    } else {
-      // B in the overview returns to Gaius: re-enter walk mode, and
-      // scene.enterWalk snaps the third-person follow camera back
-      // behind him at its standard framing. The panel branches
-      // above still get first claim, so B closes an open panel or
-      // bubble before it ever leaves the overview.
-      stopTour();
-      setSelected(null);
-      setMuseBubble(null);
-      setYouOpen(false);
-      setTreeOpen(false);
-      setWeatherOpen(false);
-      setBoardOpen(false);
-      setQuestOpen(false);
-      setSecretOpen(false);
-      enterWalkMode();
+      // On the move, B is the slide.
     }
+    // Standing still, B does nothing more (owner prescription,
+    // Nov 2): the overview is not B's anymore. It lives in the
+    // town menu both ways, and the way back on screen is the
+    // Back to Gaius chip under the cluster. A refused slide can
+    // no longer turn this press into a camera move, which is
+    // what kept sending running players into the overview.
   };
 
   const xboxHint = () => {
@@ -4964,13 +4967,15 @@ export function App() {
   );
   panelOpenRef.current = anyFullPanelOpen;
   // The overview keeps its controls (owner ask, Nov 1): entering the
-  // overview does NOT unmount the ABXY cluster, B stays live there
-  // and toggles back to walk mode (see xboxBack). The cluster may
-  // show in the overview only while the town screen itself owns the
-  // view, not while a dream or the guided tour is running; full
-  // panels still hide it via anyFullPanelOpen above, exactly as
-  // they do in walk mode. There is no separate on-screen camera
-  // toggle button anymore, B is the toggle, both ways.
+  // overview does NOT unmount the ABXY cluster; its buttons keep
+  // their ordinary duties there and B still dismisses a panel or
+  // bubble. Since Nov 2 the overview is not B's to toggle, in
+  // either direction: it is entered and left from the town menu,
+  // and the Back to Gaius chip under the cluster is the on-screen
+  // way back. The cluster may show in the overview only while the
+  // town screen itself owns the view, not while a dream or the
+  // guided tour is running; full panels still hide it via
+  // anyFullPanelOpen above, exactly as they do in walk mode.
   const overviewControlsLive = sceneReady && !dreaming && tourStep === null;
   // Loose follow camera hold (Nov 2): while her talk bubble or any
   // panel owns the screen, the scene's follow camera must not
@@ -5446,8 +5451,8 @@ export function App() {
         {
           heading: "View & weather", collapsed: true, items: [{
             key: "walk",
-            icon: "🚶",
-            label: walking ? "See the town from above" : "Walk around town",
+            icon: walking ? "🗺" : "🚶",
+            label: walking ? "Town overview" : "Walk around town",
             detail: walking ? "On foot now" : undefined,
             active: walking,
             action: walking ? goOverview : toggleWalk,
@@ -8113,13 +8118,15 @@ export function App() {
         </div>
       )}
 
-      {/* No on-screen camera toggle button (owner ask, Nov 1): the
-          bottom-centre "Town overview" / gold "Back to Gaius" button
-          from the earlier trap fix is gone. B on the ABXY cluster is
-          the camera toggle, both ways, and the cluster below stays
-          mounted while the overview is up so B can switch back. A
-          visit quit in the overview may still restore the overview,
-          safely, because B is live there. */}
+      {/* No on-screen camera toggle button (owner ask, Nov 1), and
+          since Nov 2 the overview is not on B either: it lives in
+          the town menu (View & weather), both ways. The cluster
+          below stays mounted while the overview is up so A, X and
+          Y keep their handlers and B still dismisses panels there;
+          the Back to Gaius chip under the cluster is the tappable
+          way back. A visit quit in the overview may still restore
+          the overview, safely, because the chip and the menu are
+          both live there. */}
 
       {/* Walk prompt + Xbox controller (joystick + ABXY). The
           fragment renders in walk mode AND in the overview
@@ -8184,8 +8191,10 @@ export function App() {
               keep their ordinary handlers and are harmless there:
               Y still toggles day and night, X and A fall back to
               their hint lines (the scene's stone and interact
-              actions are walk-gated in the scene itself). B is the
-              one with overview meaning: it toggles back to Gaius. */}
+              actions are walk-gated in the scene itself). B keeps
+              only its dismiss, step-out and slide duties there; it
+              no longer leaves the overview, the town menu and the
+              Back to Gaius chip own the way back. */}
           {!anyFullPanelOpen && (
           <>
           {walking && (
@@ -8258,15 +8267,15 @@ export function App() {
               type="button"
               aria-label={
                 walking
-                  ? "B button, slide while moving; otherwise back, close panel or go to the town overview"
-                  : "B button, back to Gaius, return to the third-person view"
+                  ? "B button, slide while moving; otherwise close a panel or step back from what you are doing"
+                  : "B button, close a panel or dismiss what is open"
               }
               className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#e74856]/90 bg-[#1b1b1b]/55 text-lg font-black text-[#ff7a85] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8),1px_0_0_rgba(0,0,0,0.6),-1px_0_0_rgba(0,0,0,0.6)] transition active:scale-90 active:bg-[#e74856] active:text-white"
               onPointerDown={(e) => {
                 // B acts on the press, like A: on release (the old
                 // click) the same gesture had already centred the
                 // stick, so the slide branch saw a standing man and
-                // every touch slide fell through to the overview.
+                // every touch slide was refused.
                 e.preventDefault();
                 xboxBack();
               }}
@@ -8295,10 +8304,12 @@ export function App() {
             </button>
             <span />
           </div>
-          {/* Overview hint: one small caption under the cluster,
-              in the same quiet pill style as the other button
-              hints, naming B's way back. Not a button, it takes
-              no taps; B itself does the work. */}
+          {/* The way back from the overview: one small tappable
+              chip under the cluster, in the same quiet pill style
+              as the other button hints. It used to be a caption
+              naming B's way back; since the overview left B
+              (Nov 2) the chip itself does the work, so the
+              overview is never a dead end. */}
           {!walking && (
             <div
               className={
@@ -8307,9 +8318,14 @@ export function App() {
                   : "pointer-events-none absolute right-3 bottom-[76px] z-20 flex w-[152px] justify-center sm:right-4"
               }
             >
-              <span className="rounded-full bg-[#1b1b1b]/55 px-2.5 py-1 text-[11px] font-bold whitespace-nowrap text-white/85 shadow backdrop-blur">
-                B · Back to Gaius
-              </span>
+              <button
+                type="button"
+                onClick={backToGaius}
+                aria-label="Back to Gaius, return to the third-person view behind him"
+                className="pointer-events-auto rounded-full bg-[#1b1b1b]/55 px-2.5 py-1 text-[11px] font-bold whitespace-nowrap text-white/85 shadow backdrop-blur transition active:scale-95 active:bg-[#ffd34e] active:text-black"
+              >
+                Back to Gaius
+              </button>
             </div>
           )}
           </>
