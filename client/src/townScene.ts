@@ -593,9 +593,8 @@ function makeUmbrella(color: number): THREE.Group {
 }
 
 // --- Imported models -----------------------------------------------------
-// Muse and the player are VRM 1.0 characters (glTF-binary): Muse is the
-// AvatarSample VRM the player sent on Oct 31 (silver-blonde hair, a plain
-// white one-piece dress), the player walks as the Centurion. The Roman
+// Muse and the player are VRM 1.0 characters (glTF-binary): Muse wears the
+// Courtesan outfit, and the player walks as the Centurion. The Roman
 // buildings and props come from the owner's purchased
 // "Roman Empire - Stylized Low Poly" pack (HALBERSTRAM ART), converted
 // from FBX to glTF with Assimp. Everything loads through one GLTFLoader;
@@ -4832,8 +4831,7 @@ export function createTownScene(
   }
 
   // --- Muse, the town's host character ---
-  // Muse in her new VRM body, silver-blonde hair, a plain white
-  // one-piece dress, standing by the town tree.
+  // Muse in her Courtesan outfit, standing by the town tree.
   // Still unmistakably her: a floating gold star companion, and a
   // wave when greeted. (No floating name labels anymore, the player asked
   // for clean heads; identities live in the panels and chips.)
@@ -4841,10 +4839,8 @@ export function createTownScene(
   const museInner = new THREE.Group();
   museGroup.add(museInner);
   let museWaveStart = -100;
-  // Muse's body is the AvatarSample VRM the player sent on Oct 31
-  // (silver-blonde hair, white one-piece dress), she keeps this
-  // plaza spot, her floating gold star, and a wave driven by the
-  // VRM's own arm bones when greeted.
+  // Muse keeps this plaza spot and her floating gold star; her wave is
+  // driven by the VRM's own arm bones when greeted.
   let museRig: VrmRig | null = null;
   let museAnim: CharAnimator | null = null;
   let museBlink: { mesh: THREE.Mesh; index: number }[] = [];
