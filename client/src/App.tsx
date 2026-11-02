@@ -351,6 +351,10 @@ export function App() {
   }
   const [menuOpen, setMenuOpen] = useState(false);
   const [utilitiesOpen, setUtilitiesOpen] = useState(false);
+  // The scene's one-line motion verdict, shown quietly at the foot
+  // of the town menu once both animators have settled, so a stiff
+  // town is a thing its owner can read and report.
+  const [motionStatus, setMotionStatus] = useState<string | null>(null);
   // The secret place's warmer register: tracked from walk position.
   // At the terrace, her lines turn flirtatious, his quick-picks sweeten,
   // and the hold-hand / kiss buttons appear. Session-only, like a mood.
@@ -4144,6 +4148,7 @@ export function App() {
         onLoadError: (asset) => setLoadFailure((prev) => prev ?? asset),
         onRenderError: () => setRenderFailed(true),
         onSoftwareGl: () => setLowGfx(true),
+        onMotionStatus: (status) => setMotionStatus(status),
         reducedMotion:
           typeof window.matchMedia === "function"
             ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -5296,6 +5301,7 @@ export function App() {
         onClose={() => setMenuOpen(false)}
         onSettings={() => { closeTownPanels(); setUtilitiesOpen(true); }}
         festival={activeFestival}
+        footerNote={motionStatus ?? undefined}
         className={`mt-scrollable absolute right-3 z-30 w-[min(320px,86vw)] overflow-y-auto rounded-3xl bg-[#22332b]/97 p-2 shadow-2xl backdrop-blur ${forcedLandscape ? "top-[60px] max-h-[calc(100%-118px)]" : isLandscape ? "top-[60px] max-h-[calc(100dvh-130px)]" : "top-[76px] max-h-[62vh] sm:right-4"}`}
         groups={[{
           heading: "Aelia", items: [{
@@ -8256,7 +8262,18 @@ export function App() {
                   : "B button, back to Gaius, return to the third-person view"
               }
               className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#e74856]/90 bg-[#1b1b1b]/55 text-lg font-black text-[#ff7a85] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8),1px_0_0_rgba(0,0,0,0.6),-1px_0_0_rgba(0,0,0,0.6)] transition active:scale-90 active:bg-[#e74856] active:text-white"
-              onClick={xboxBack}
+              onPointerDown={(e) => {
+                // B acts on the press, like A: on release (the old
+                // click) the same gesture had already centred the
+                // stick, so the slide branch saw a standing man and
+                // every touch slide fell through to the overview.
+                e.preventDefault();
+                xboxBack();
+              }}
+              onClick={(e) => {
+                // Keyboard activation has no pointer press before it.
+                if (e.detail === 0) xboxBack();
+              }}
             >
               B
             </button>

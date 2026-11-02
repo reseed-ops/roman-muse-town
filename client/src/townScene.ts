@@ -24,7 +24,7 @@ import { playFootstep, playLanding, playSlide } from "./audio";
 import { ESTATE_AREAS, weedStands, type EstateArea, type EstateCare } from "./estateCare";
 import { footingAt, strideStep, type Footing } from "./footing";
 import { airborne, newJump, stepJump } from "./jump";
-import { endSlide, newSlide, slideSpeed, sliding, startSlide } from "./slide";
+import { endSlide, newSlide, slideSpeed, sliding, startSlide, wasMovingRecently } from "./slide";
 import { FOLLOW_CAM, followCamSustain, followCamYawStep, type FollowCamGate } from "./followCam";
 import { setRainLevel, setRainShelter } from "./audio";
 import { FEEL } from "./feel";
@@ -1118,6 +1118,12 @@ export function createTownScene(
      *  itself to gentle settings; the shell mirrors that in its
      *  low-graphics toggle so the two never disagree. */
     onSoftwareGl?: () => void;
+    /** Both character animators have settled, one way or the other:
+     *  a short human line for the town menu ("Motion: full (both
+     *  animators ready)" or who fell back), so a stiff town on a
+     *  phone is something its owner can read and report, not a
+     *  silence. Fires once. */
+    onMotionStatus?: (status: string) => void;
     reducedMotion: boolean;
   },
 ): TownSceneHandle {
@@ -4873,24 +4879,26 @@ export function createTownScene(
       museRig = collectRig(model);
       // Her real motion clips (idle / walk / run / wave), retargeted
       // onto this body; until they check out, the procedural posing
-      // below carries her exactly as before.
-      if (!opts.reducedMotion) {
-        museAnim = createCharAnimator({
-          resources,
-          isBusy: () => isMoving,
-          model,
-          urls: {
-            idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceUrl, poseA: fPoseAUrl, poseB: fPoseBUrl,
-            outdoor: {
-              talk: [fTalk1Url, fTalk2Url, fTalk3Url],
-              sitTalk: [fSitTalk1Url, fSitTalk2Url],
-              benchSit: [fBench1Url, fBench2Url],
-              flirt: fFlirtUrl,
-              hug: fHugUrl,
-            },
+      // below carries her exactly as before. They load regardless of
+      // the reduced-motion preference: that flag calms camera
+      // flights, dust and easing, never her body. (It once gated
+      // this call, and on phones with system animations off she
+      // stood frozen for four releases.)
+      museAnim = createCharAnimator({
+        resources,
+        isBusy: () => isMoving,
+        model,
+        urls: {
+          idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceUrl, poseA: fPoseAUrl, poseB: fPoseBUrl,
+          outdoor: {
+            talk: [fTalk1Url, fTalk2Url, fTalk3Url],
+            sitTalk: [fSitTalk1Url, fSitTalk2Url],
+            benchSit: [fBench1Url, fBench2Url],
+            flirt: fFlirtUrl,
+            hug: fHugUrl,
           },
-        });
-      }
+        },
+      });
       poseBone(museRig, museRig.lUpperArm, 0, 0, -1.22);
       poseBone(museRig, museRig.rUpperArm, 0, 0, 1.22);
       poseBone(museRig, museRig.lLowerArm, 0, 0, -0.14);
@@ -5254,26 +5262,26 @@ export function createTownScene(
         playerRig = collectRig(model);
         // His real motion clips, same arrangement as Muse's. If
         // they fail their gate he simply keeps the procedural
-        // posing below, this model renders either way.
-        if (!opts.reducedMotion) {
-          playerAnim = createCharAnimator({
-            resources,
-            isBusy: () => isMoving,
-            model,
-            urls: {
-              idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceUrl,
-              jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },
-              slide: mSlideUrl,
-              outdoor: {
-                talk: [mTalk1Url, mTalk2Url, mTalk3Url],
-                sitTalk: [mSitTalk1Url, mSitTalk2Url],
-                benchSit: [mBench1Url, mBench2Url],
-                flirt: mFlirtUrl,
-                hug: mHugUrl,
-              },
+        // posing below, this model renders either way. Like hers,
+        // his clips load whatever the reduced-motion preference
+        // says (see her note above).
+        playerAnim = createCharAnimator({
+          resources,
+          isBusy: () => isMoving,
+          model,
+          urls: {
+            idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceUrl,
+            jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },
+            slide: mSlideUrl,
+            outdoor: {
+              talk: [mTalk1Url, mTalk2Url, mTalk3Url],
+              sitTalk: [mSitTalk1Url, mSitTalk2Url],
+              benchSit: [mBench1Url, mBench2Url],
+              flirt: mFlirtUrl,
+              hug: mHugUrl,
             },
-          });
-        }
+          },
+        });
         poseBone(playerRig, playerRig.lUpperArm, 0, 0, -1.22);
         poseBone(playerRig, playerRig.rUpperArm, 0, 0, 1.22);
         poseBone(playerRig, playerRig.lLowerArm, 0, 0, -0.18);
@@ -5646,6 +5654,11 @@ export function createTownScene(
   let camPitchSmooth = 0;
   let camDistSmooth = 10.5;
   let isMoving = false;
+  // The last frame he was truly on the move, kept for the slide's
+  // latch (see slide.ts): a B press lands in the same gesture that
+  // lets the stick go, so the press a breath after the stick centres
+  // still has to mean slide.
+  let lastMovingAt = -Infinity;
   const hop = newJump();
   const run = newSlide();
   let stepTally = 0;
@@ -6063,6 +6076,7 @@ export function createTownScene(
     // During a secret-place moment the Centurion stands still, the
     // moment's own choreography owns both characters' positions.
     if (secretMoment) isMoving = false;
+    if (isMoving) lastMovingAt = t;
     // Hand-in-hand wandering is a stroll, not a march: the pace is
     // capped in the movement block below, and a stick pushed hard
     // against that cap for several seconds is a hurry, she lets
@@ -6445,71 +6459,73 @@ export function createTownScene(
     // Walk cycle on the Centurion's bones: legs swing opposite, knees
     // bend as each leg passes, arms swing against the legs, gentle bob.
     // When you reach Muse, the right arm rises in a salute instead.
-    if (!opts.reducedMotion) {
-      const sincePlayerWave = t - playerWaveStart;
-      const waving = sincePlayerWave >= 0 && sincePlayerWave < 2.2;
-      const ease = (cur: number, target: number) => cur + (target - cur) * 0.4;
-      if (isMoving) {
-        const swing = Math.sin(t * 10.5);
-        playerPose.legL = ease(playerPose.legL, swing * 0.58);
-        playerPose.legR = ease(playerPose.legR, -swing * 0.58);
-        playerPose.kneeL = ease(playerPose.kneeL, Math.max(0, -swing) * 0.55);
-        playerPose.kneeR = ease(playerPose.kneeR, Math.max(0, swing) * 0.55);
-        playerPose.armL = ease(playerPose.armL, -swing * 0.42);
-        playerPose.armR = ease(playerPose.armR, waving ? 0 : swing * 0.42);
-        playerPose.footYaw = ease(playerPose.footYaw, 0);
-        playerPose.elbowL = ease(playerPose.elbowL, -0.18);
-        playerPose.elbowR = ease(playerPose.elbowR, 0.18);
-        playerPose.headYaw = ease(playerPose.headYaw, 0);
-        playerPose.sway = ease(playerPose.sway, 0);
-        playerInner.position.y = Math.abs(Math.sin(t * 10.5)) * 0.05;
-        playerInner.rotation.z = 0;
-      } else {
-        // Relaxed idle, contrapposto, not a paper doll: weight rests
-        // on one leg (the other knee stays soft), feet a little offset
-        // and turned out, elbows uneven, a slow weight-shift sway, and
-        // his head turns toward Muse when she's near enough to talk to.
-        playerPose.legL = ease(playerPose.legL, 0.035);
-        playerPose.legR = ease(playerPose.legR, -0.025);
-        playerPose.kneeL = ease(playerPose.kneeL, 0.03);
-        playerPose.kneeR = ease(playerPose.kneeR, 0.11);
-        playerPose.armL = ease(playerPose.armL, Math.sin(t * 1.6) * 0.035);
-        playerPose.armR = ease(playerPose.armR, Math.sin(t * 1.6 + 0.7) * 0.035);
-        playerPose.footYaw = ease(playerPose.footYaw, 0.13);
-        playerPose.elbowL = ease(playerPose.elbowL, -0.13);
-        playerPose.elbowR = ease(playerPose.elbowR, 0.27);
-        playerPose.sway = ease(playerPose.sway, Math.sin(t * 0.45) * 0.028);
-        const toMuse = Math.hypot(museGroup.position.x - walkPos.x, museGroup.position.z - walkPos.z);
-        let headTarget = 0;
-        if (toMuse < 4.5 && toMuse > 0.01) {
-          const worldYaw = Math.atan2(museGroup.position.x - walkPos.x, museGroup.position.z - walkPos.z);
-          let diff = worldYaw - walkHeading;
-          while (diff > Math.PI) diff -= Math.PI * 2;
-          while (diff < -Math.PI) diff += Math.PI * 2;
-          headTarget = THREE.MathUtils.clamp(diff, -0.55, 0.55) * 0.65;
-        }
-        playerPose.headYaw = ease(playerPose.headYaw, headTarget);
-        playerInner.position.y = Math.sin(t * 1.6) * 0.018;
-        playerInner.rotation.z = playerPose.sway;
+    // This posing is his body, not an effect: it runs whatever the
+    // reduced-motion preference says, exactly like the clips above.
+    // The flag once wrapped this whole block, which is why a stiff
+    // near-bind pose was the tell that the animators never ran.
+    const sincePlayerWave = t - playerWaveStart;
+    const waving = sincePlayerWave >= 0 && sincePlayerWave < 2.2;
+    const ease = (cur: number, target: number) => cur + (target - cur) * 0.4;
+    if (isMoving) {
+      const swing = Math.sin(t * 10.5);
+      playerPose.legL = ease(playerPose.legL, swing * 0.58);
+      playerPose.legR = ease(playerPose.legR, -swing * 0.58);
+      playerPose.kneeL = ease(playerPose.kneeL, Math.max(0, -swing) * 0.55);
+      playerPose.kneeR = ease(playerPose.kneeR, Math.max(0, swing) * 0.55);
+      playerPose.armL = ease(playerPose.armL, -swing * 0.42);
+      playerPose.armR = ease(playerPose.armR, waving ? 0 : swing * 0.42);
+      playerPose.footYaw = ease(playerPose.footYaw, 0);
+      playerPose.elbowL = ease(playerPose.elbowL, -0.18);
+      playerPose.elbowR = ease(playerPose.elbowR, 0.18);
+      playerPose.headYaw = ease(playerPose.headYaw, 0);
+      playerPose.sway = ease(playerPose.sway, 0);
+      playerInner.position.y = Math.abs(Math.sin(t * 10.5)) * 0.05;
+      playerInner.rotation.z = 0;
+    } else {
+      // Relaxed idle, contrapposto, not a paper doll: weight rests
+      // on one leg (the other knee stays soft), feet a little offset
+      // and turned out, elbows uneven, a slow weight-shift sway, and
+      // his head turns toward Muse when she's near enough to talk to.
+      playerPose.legL = ease(playerPose.legL, 0.035);
+      playerPose.legR = ease(playerPose.legR, -0.025);
+      playerPose.kneeL = ease(playerPose.kneeL, 0.03);
+      playerPose.kneeR = ease(playerPose.kneeR, 0.11);
+      playerPose.armL = ease(playerPose.armL, Math.sin(t * 1.6) * 0.035);
+      playerPose.armR = ease(playerPose.armR, Math.sin(t * 1.6 + 0.7) * 0.035);
+      playerPose.footYaw = ease(playerPose.footYaw, 0.13);
+      playerPose.elbowL = ease(playerPose.elbowL, -0.13);
+      playerPose.elbowR = ease(playerPose.elbowR, 0.27);
+      playerPose.sway = ease(playerPose.sway, Math.sin(t * 0.45) * 0.028);
+      const toMuse = Math.hypot(museGroup.position.x - walkPos.x, museGroup.position.z - walkPos.z);
+      let headTarget = 0;
+      if (toMuse < 4.5 && toMuse > 0.01) {
+        const worldYaw = Math.atan2(museGroup.position.x - walkPos.x, museGroup.position.z - walkPos.z);
+        let diff = worldYaw - walkHeading;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        headTarget = THREE.MathUtils.clamp(diff, -0.55, 0.55) * 0.65;
       }
-      if (playerRig) {
-        poseBone(playerRig, playerRig.lUpperLeg, playerPose.legL, playerPose.footYaw, 0.015);
-        poseBone(playerRig, playerRig.rUpperLeg, playerPose.legR, -playerPose.footYaw, -0.015);
-        poseBone(playerRig, playerRig.lLowerLeg, playerPose.kneeL, 0, 0);
-        poseBone(playerRig, playerRig.rLowerLeg, playerPose.kneeR, 0, 0);
-        poseBone(playerRig, playerRig.lUpperArm, playerPose.armL, 0, -1.22);
-        poseBone(playerRig, playerRig.lLowerArm, 0, 0, playerPose.elbowL);
-        if (!secretMoment) poseBone(playerRig, playerRig.head, 0, playerPose.headYaw, playerPose.sway * 0.8);
-        if (waving) {
-          // The Centurion waves back with the same softened pose Muse
-          // uses (see poseWave): lowered shoulder peak, an elbow that
-          // never straightens, and a lagging forearm and wrist.
-          poseWave(playerRig, t);
-        } else {
-          poseBone(playerRig, playerRig.rUpperArm, playerPose.armR, 0, 1.22);
-          poseBone(playerRig, playerRig.rLowerArm, 0, 0, playerPose.elbowR);
-          poseBone(playerRig, playerRig.rHand, 0, 0, 0);
-        }
+      playerPose.headYaw = ease(playerPose.headYaw, headTarget);
+      playerInner.position.y = Math.sin(t * 1.6) * 0.018;
+      playerInner.rotation.z = playerPose.sway;
+    }
+    if (playerRig) {
+      poseBone(playerRig, playerRig.lUpperLeg, playerPose.legL, playerPose.footYaw, 0.015);
+      poseBone(playerRig, playerRig.rUpperLeg, playerPose.legR, -playerPose.footYaw, -0.015);
+      poseBone(playerRig, playerRig.lLowerLeg, playerPose.kneeL, 0, 0);
+      poseBone(playerRig, playerRig.rLowerLeg, playerPose.kneeR, 0, 0);
+      poseBone(playerRig, playerRig.lUpperArm, playerPose.armL, 0, -1.22);
+      poseBone(playerRig, playerRig.lLowerArm, 0, 0, playerPose.elbowL);
+      if (!secretMoment) poseBone(playerRig, playerRig.head, 0, playerPose.headYaw, playerPose.sway * 0.8);
+      if (waving) {
+        // The Centurion waves back with the same softened pose Muse
+        // uses (see poseWave): lowered shoulder peak, an elbow that
+        // never straightens, and a lagging forearm and wrist.
+        poseWave(playerRig, t);
+      } else {
+        poseBone(playerRig, playerRig.rUpperArm, playerPose.armR, 0, 1.22);
+        poseBone(playerRig, playerRig.rLowerArm, 0, 0, playerPose.elbowR);
+        poseBone(playerRig, playerRig.rHand, 0, 0, 0);
       }
     }
 
@@ -10545,9 +10561,9 @@ export function createTownScene(
   //   - animator ready → prime() applies the idle clip at full
   //     weight in this same tick, then the body is shown, its
   //     first painted frame is a true idle frame;
-  //   - no animator at all (reduced motion) → shown at once; the
-  //     load handler's procedural arm pose was applied in the same
-  //     tick the body was added, before any paint;
+  //   - no animator at all (the model itself failed) → shown at
+  //     once; the load handler's procedural arm pose was applied in
+  //     the same tick the body was added, before any paint;
   //   - clips failed their gate → shown at once under procedural
   //     posing, exactly the pre-clip behaviour;
   //   - clips merely slow → after a 6 s grace the same, and the clips
@@ -10581,8 +10597,32 @@ export function createTownScene(
     }
   }
 
+  // One line, once both animators have settled, in the same
+  // [muse-town] voice as the material sweep below: a build whose
+  // clips failed says so in the console instead of standing stiff
+  // in silence. (That silence is how the reduced-motion freeze
+  // survived four releases; the next stiff town should arrive
+  // self-diagnosed.)
+  let animSummaryLogged = false;
+  function logAnimSummaryOnce() {
+    if (animSummaryLogged || !museAnim || !playerAnim) return;
+    if (!(museAnim.ready || museAnim.failed) || !(playerAnim.ready || playerAnim.failed)) return;
+    animSummaryLogged = true;
+    console.info(
+      `[muse-town] animators: gaius=${playerAnim.ready ? "ready" : "failed"}, aelia=${museAnim.ready ? "ready" : "failed"}, reducedMotion=${opts.reducedMotion}`,
+    );
+    // The same verdict where a phone's owner can actually read it:
+    // one quiet line in the town menu.
+    opts.onMotionStatus?.(
+      playerAnim.ready && museAnim.ready
+        ? "Motion: full (both animators ready)"
+        : `Motion: fallback posing (gaius ${playerAnim.ready ? "ready" : "failed"}, aelia ${museAnim.ready ? "ready" : "failed"})`,
+    );
+  }
+
   function driveClipAnims(dt: number, t: number) {
     tryRevealChars();
+    logAnimSummaryOnce();
     updateGreetingArming(t);
     const dispM = Math.hypot(museGroup.position.x - drivePrevMuse.x, museGroup.position.z - drivePrevMuse.z);
     const dispP = Math.hypot(avatar.position.x - drivePrevPlayer.x, avatar.position.z - drivePrevPlayer.z);
@@ -11878,8 +11918,14 @@ export function createTownScene(
       if (!sliding(run)) hop.queuedAt = performance.now() / 1000;
     },
     slide: () => {
-      if (!walking || !isMoving || boatState || airborne(hop) || (handInHand && followMode)) return false;
-      if (!sliding(run) && startSlide(run, wishX || Math.sin(walkHeading), wishZ || Math.cos(walkHeading), clock.getElapsedTime())) {
+      // On the move means moving now or a breath ago (the latch in
+      // slide.ts): B fires on the press now, and the pressing gesture
+      // itself centres the stick, so demanding motion at this exact
+      // instant refused every touch slide and let the press fall
+      // through to the overview.
+      const now = clock.getElapsedTime();
+      if (!walking || !(isMoving || wasMovingRecently(lastMovingAt, now)) || boatState || airborne(hop) || (handInHand && followMode)) return false;
+      if (!sliding(run) && startSlide(run, wishX || Math.sin(walkHeading), wishZ || Math.cos(walkHeading), now)) {
         if (stepSounds) playSlide(footingHere());
         puffDust(walkPos.x, playerGroundSm, walkPos.z);
         flourish(clockTime);

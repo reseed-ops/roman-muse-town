@@ -743,10 +743,11 @@ export interface CharAnimator {
 const animFbxLoader = new FBXLoader();
 
 /** Load a character's clips, retarget them onto the model, and build
- *  the speed-blended mixer. Everything is failure-silent: if anything
- *  does not check out, `ready` stays false, `failed` goes true, and the
- *  caller keeps the procedural posing, the model itself is rendered
- *  either way, so a failed gate can never make a character invisible.
+ *  the speed-blended mixer. Everything is failure-tolerant, and the
+ *  failure is logged, never hidden: if anything does not check out,
+ *  `ready` stays false, `failed` goes true, and the caller keeps the
+ *  procedural posing, the model itself is rendered either way, so a
+ *  failed gate can never make a character invisible.
  *
  *  It comes in two stages. The core set (idle, walk, run, wave, sit) is
  *  all a character needs to stand and move, so `ready` goes true as
@@ -1221,8 +1222,11 @@ export function createCharAnimator(args: {
         hugClip = await lenientOutdoor(urls.outdoor.hug, false);
         hugA = mkOnce(hugClip, true);
       }
-    } catch {
-      /* clips unavailable, procedural posing carries on */
+    } catch (err) {
+      // Loud on purpose: this catch used to be silent, and its
+      // silence hid a missing slide clip for one release and a
+      // frozen town for four. Procedural posing still carries on.
+      console.error("[muse-town] character clips failed:", err);
     } finally {
       if (!out.ready) out.failed = true;
     }

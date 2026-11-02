@@ -11,6 +11,16 @@ export const newSlide = (): SlideState => ({ left: 0, dirX: 0, dirZ: 1, readyAt:
 
 export const sliding = (slide: SlideState): boolean => slide.left > 0;
 
+/** B is worked with a finger, and the pressing gesture itself centres
+ *  the stick, so a press still counts as "on the move" if he was moving
+ *  a breath ago. Without the latch every touch slide was refused for
+ *  arriving a frame after the motion it was meant to catch. */
+export const SLIDE_LATCH_SEC = 0.25;
+
+export function wasMovingRecently(lastMovingAt: number, now: number): boolean {
+  return now - lastMovingAt <= SLIDE_LATCH_SEC;
+}
+
 export function startSlide(slide: SlideState, dirX: number, dirZ: number, now: number): boolean {
   if (sliding(slide) || now < slide.readyAt) return false;
   const len = Math.hypot(dirX, dirZ);

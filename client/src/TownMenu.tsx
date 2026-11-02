@@ -12,10 +12,13 @@ export interface TownMenuItem {
 interface MenuGroup { heading: string; collapsed?: boolean; items: TownMenuItem[] }
 
 /** Everyday actions stay visible; destinations and occasional controls expand on demand. */
-export function TownMenu({ groups, className, festival, onClose, onSettings }: {
+export function TownMenu({ groups, className, festival, footerNote, onClose, onSettings }: {
   groups: MenuGroup[];
   className: string;
   festival?: { name: string; dressing: string } | null;
+  /** One quiet status line at the foot of the menu (the scene's
+   *  motion verdict), read-only, in the small print. */
+  footerNote?: string;
   onClose(): void;
   onSettings(): void;
 }) {
@@ -63,6 +66,7 @@ export function TownMenu({ groups, className, festival, onClose, onSettings }: {
           <span className="mt-1 block text-xs font-normal text-white/65">Graphics, daily summary & backups</span>
         </button>
       </div>
+      {footerNote && <p className="px-3 pb-1 pt-2 text-xs font-normal text-white/55">{footerNote}</p>}
     </nav>
   </>;
 }

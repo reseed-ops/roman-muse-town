@@ -69,7 +69,18 @@ test("the ABXY cluster stays mounted while the overview is up", () => {
   expect(fragmentStart).toBeGreaterThan(-1);
   expect(clusterStart).toBeGreaterThan(fragmentStart);
   const cluster = app.slice(clusterStart, app.indexOf("{/* A special-occasion offer", clusterStart));
-  expect(cluster).toContain("onClick={xboxBack}");
+  // B fires on the press (onPointerDown, like A), the click kept
+  // only as the keyboard-activation path (detail === 0): on release
+  // the pressing gesture has already centred the stick, which is
+  // what starved B's slide branch for four releases.
+  const bButton = cluster.slice(
+    cluster.indexOf('"B button, slide while moving'),
+    cluster.indexOf('aria-label="A button, jump"'),
+  );
+  expect(bButton).toContain("onPointerDown");
+  expect(bButton).toContain("xboxBack();");
+  expect(bButton).toContain("if (e.detail === 0) xboxBack();");
+  expect(bButton).not.toContain("onClick={xboxBack}");
   // A small hint names B's way back while the overview is up.
   expect(cluster).toContain("B · Back to Gaius");
   expect(cluster).toContain("{!walking && (");

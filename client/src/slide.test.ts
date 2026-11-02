@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { endSlide, newSlide, SLIDE_SEC, slideSpeed, sliding, startSlide } from "./slide";
+import { endSlide, newSlide, SLIDE_LATCH_SEC, SLIDE_SEC, slideSpeed, sliding, startSlide, wasMovingRecently } from "./slide";
 
 test("it starts faster than a run and ends slower than a walk", () => {
   const slide = newSlide();
@@ -22,4 +22,12 @@ test("it can't be chained, and waits out its cooldown", () => {
 
 test("no direction, no slide", () => {
   expect(startSlide(newSlide(), 0, 0, 0)).toBe(false);
+});
+
+test("the latch forgives a press a breath after the stick centres", () => {
+  expect(SLIDE_LATCH_SEC).toBe(0.25);
+  expect(wasMovingRecently(10, 10.1)).toBe(true);
+  expect(wasMovingRecently(10, 10 + SLIDE_LATCH_SEC)).toBe(true);
+  expect(wasMovingRecently(10, 10.26)).toBe(false);
+  expect(wasMovingRecently(-Infinity, 10)).toBe(false);
 });
