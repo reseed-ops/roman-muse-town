@@ -7,7 +7,12 @@ import { api } from "./api";
 import { linePools, pickPooled } from "./linePools";
 import { aboutPlayer } from "../../server/src/player";
 import { AchievementGate } from "./achievementGate";
-import { BELIEF_LINES } from "./town";
+import { BELIEF_LINES, KITCHEN_MEMORY_LINES, solarAngles } from "./town";
+import { chooseInvite, freshMemory, type Invite, type InviteMemory } from "./aeliaInvite";
+import { dayRhythm, type Rhythm } from "./dayRhythm";
+import { careKey, estateCare } from "./estateCare";
+import { arrivalDue, FIRST_TASK, FIRST_TASK_MS, GATE_GREETINGS, GREETING_MS } from "./firstVisit";
+import { romanDate, romanHour } from "./romanDay";
 import {
 ACHIEVEMENTS,
 CLOSE_LINES,
@@ -180,6 +185,7 @@ startWeatherAmbience,
 stopSounds,
 stopWeatherAmbience,
 type WeatherSoundKind,
+  unlockAudio,
 } from "./audio";
 
 const OVERVIEW_POS: [number, number, number] = [0, 32, 40];
@@ -195,8 +201,24 @@ const OVERVIEW_TARGET: [number, number, number] = [0, 0.8, 0];
 const chipClass =
   "pointer-events-auto flex items-center gap-1.5 rounded-full bg-[#22332b]/85 px-3 py-1.5 text-sm font-semibold text-white shadow-md backdrop-blur transition active:scale-95";
 
+const INVITE_MEMORY_KEY = "muse-town-invites-v1";
+
+function readInviteMemory(): InviteMemory {
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const saved = JSON.parse(localStorage.getItem(INVITE_MEMORY_KEY) ?? "null") as InviteMemory | null;
+    if (saved?.day === today && Array.isArray(saved.asked)) return saved;
+  } catch { /* a new day's memory will do */ }
+  return freshMemory(today);
+}
+
+function rememberInvite(change: (memory: InviteMemory) => InviteMemory) {
+  try { localStorage.setItem(INVITE_MEMORY_KEY, JSON.stringify(change(readInviteMemory()))); } catch { /* optional */ }
+}
+
 export function App() {
   const rootRef = useRef<HTMLDivElement>(null);
+  const guideEndRef = useRef<(arrived: boolean) => void>(() => {});
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<TownSceneHandle | null>(null);
   const tourTimers = useRef<number[]>([]);
@@ -333,8 +355,8 @@ export function App() {
   // and the hold-hand / kiss buttons appear. Session-only, like a mood.
   const atSecretRef = useRef(false);
   const [handHeld, setHandHeld] = useState(false);
-  const [followOffer, setFollowOfferState] = useState<{ id: string; text: string } | null>(null);
-  const followOfferRef = useRef<{ id: string; text: string } | null>(null);
+  const [followOffer, setFollowOfferState] = useState<{ id: string; text: string; guide?: Invite } | null>(null);
+  const followOfferRef = useRef<{ id: string; text: string; guide?: Invite } | null>(null);
   const declinedOffersRef = useRef<Set<string>>(new Set());
   const offeredOffersRef = useRef<Set<string>>(new Set());
   const padRef = useRef({ x: 0, y: 0 });
@@ -977,6 +999,7 @@ export function App() {
         ? 2
         : 1;
   const unsoldFish = (state.data?.fish ?? []).filter((f) => !f.sold);
+  const kitchenFish = FISH.find((f) => f.id !== "golden-carp" && unsoldFish.some((u) => u.fish_id === f.id && !u.released)) ?? null;
   const unsoldValue = unsoldFish.reduce(
     (sum, f) => sum + (FISH.find((x) => x.id === f.fish_id)?.price ?? 0),
     0,
@@ -1212,6 +1235,10 @@ export function App() {
   });
   const cookDish = useMutation({
     mutationFn: (ingredient: string) => api.cookDish({ ingredient }),
+    onSuccess: applyState,
+  });
+  const pantryCatch = useMutation({
+    mutationFn: (fish_id: string) => api.pantryCatch({ fish_id }),
     onSuccess: applyState,
   });
   const buySeeds = useMutation({ mutationFn: () => api.buySeeds({}), onSuccess: applyState });
@@ -1743,8 +1770,8 @@ export function App() {
   }, [releaseHandHold]);
 
   /** Offer, once per occasion per session, to accompany the player. She
-   *  never leads, least of all to the secret place, which she will
-   *  only ever walk to or from at his invitation. */
+   *  never leads to the secret place, which she will only ever walk to
+   *  or from at his invitation. */
   const offerFollow = useCallback((id: string, text: string) => {
     if (followingRef.current) return;
     if (offeredOffersRef.current.has(id) || declinedOffersRef.current.has(id)) return;
@@ -1760,6 +1787,13 @@ export function App() {
   const declineFollowOffer = useCallback(() => {
     const offer = followOfferRef.current;
     if (offer) declinedOffersRef.current.add(offer.id);
+    if (offer?.guide) {
+      rememberInvite((memory) => ({ ...memory, declined: true }));
+      followOfferRef.current = null;
+      setFollowOfferState(null);
+      sceneRef.current?.showBubble("muse", "Another time, then. I'll be about.");
+      return;
+    }
     followOfferRef.current = null;
     setFollowOfferState(null);
     sceneRef.current?.showBubble(
@@ -2829,7 +2863,7 @@ export function App() {
       // through the bag (never the same fact on consecutive days),
       // or, more sparingly, a digest reference.
       const surfacedFacts = (cData?.facts ?? []).filter((f) => {
-        if (f.source === "weather" || f.source === "reflection") return false;
+        if (f.source === "weather" || f.source === "reflection" || f.source === "kitchen") return false;
         if (!f.surfaced_on) return true;
         return (Date.parse(todayStr) - Date.parse(f.surfaced_on)) / 86400000 >= 2;
       });
@@ -2842,9 +2876,18 @@ export function App() {
           BELIEF_LINES[f.topic] &&
           (!f.surfaced_on || (Date.parse(todayStr) - Date.parse(f.surfaced_on)) / 86400000 >= 4),
       );
+      const kitchenFact = (cData?.facts ?? []).find(
+        (f) =>
+          f.source === "kitchen" &&
+          KITCHEN_MEMORY_LINES[f.topic] &&
+          (!f.surfaced_on || (Date.parse(todayStr) - Date.parse(f.surfaced_on)) / 86400000 >= 3),
+      );
       if (!weatherAsked && beliefFact && Math.random() < 0.2) {
         lines.push(pickPooled("belief-" + beliefFact.topic, BELIEF_LINES[beliefFact.topic]!));
         void api.markFactSurfaced({ id: beliefFact.id }).catch(() => {});
+      } else if (!weatherAsked && kitchenFact && Math.random() < 0.5) {
+        lines.push(pickPooled("kitchen-" + kitchenFact.topic, KITCHEN_MEMORY_LINES[kitchenFact.topic]!));
+        void api.markFactSurfaced({ id: kitchenFact.id }).catch(() => {});
       } else if (!weatherAsked && surfacedFacts.length > 0 && Math.random() < 0.65) {
         const text = pickPooled("facts-surface", surfacedFacts.map((f) => f.text));
         const fact = surfacedFacts.find((f) => f.text === text);
@@ -3834,9 +3877,16 @@ export function App() {
     const unlock = () => {
       audioUnlockedRef.current = true;
       setAudioUnlocked(true);
+      unlockAudio();
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
     };
-    window.addEventListener("pointerdown", unlock, { once: true });
-    return () => window.removeEventListener("pointerdown", unlock);
+    window.addEventListener("pointerdown", unlock);
+    window.addEventListener("keydown", unlock);
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
   }, []);
 
   // Pull-to-refresh guard, PAGE-WIDE this time. The first version
@@ -3927,6 +3977,7 @@ export function App() {
       handle = createTownScene(canvas, {
         onPick: handlePick,
         onNearbyChange: handleNearbyChange,
+        onGuideEnd: (arrived) => guideEndRef.current(arrived),
         onWalkPosition: (x, z) => {
           playerPosRef.current = { x, z };
           // First time he brings her to the lake: a discovery of the heart.
@@ -4310,6 +4361,153 @@ export function App() {
     }
   };
 
+  // --- The living estate -----------------------------------------------
+  // The hour, the state of the place, and the opening minutes. All of it
+  // is read on slow timers or when saved state moves, never by the frame.
+  const [rhythm, setRhythm] = useState<Rhythm | null>(null);
+  const rhythmRef = useRef<Rhythm | null>(null);
+  const [firstTask, setFirstTask] = useState(false);
+  const panelOpenRef = useRef(false);
+  const guidingRef = useRef<Invite | null>(null);
+  const festivalName = activeFestival?.name ?? null;
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      const hour = night ? null : (romanHour(now, (at) => solarAngles(at).elev) ?? 5);
+      const next = dayRhythm(hour, romanDate(now), festivalName);
+      rhythmRef.current = next;
+      setRhythm((was) => (was?.id === next.id && was.title === next.title ? was : next));
+    };
+    update();
+    const iv = window.setInterval(update, 60000);
+    return () => window.clearInterval(iv);
+  }, [night, festivalName]);
+  useEffect(() => {
+    if (rhythm) sceneRef.current?.setRhythm(rhythm);
+  }, [rhythm]);
+
+  const dishesKey = purse.dishes.join(",");
+  useEffect(() => {
+    sceneRef.current?.setDishes(dishesKey ? dishesKey.split(",") : []);
+  }, [dishesKey]);
+
+  const care = state.data
+    ? estateCare({
+        waterings: state.data.tree.waterings,
+        harvests: state.data.garden.harvests,
+        questsDone: state.data.quests_done.length,
+        found: state.data.found.length,
+        inscriptions: state.data.inscriptions_found.length,
+        rank: state.data.affection.rank,
+        dishes: state.data.purse.dishes.length,
+        upgrades: state.data.purse.upgrades,
+        sharedBath: !!state.data.baths.first_shared_at,
+      })
+    : null;
+  const estateKey = care ? careKey(care) : "";
+  const careRef = useRef(care);
+  careRef.current = care;
+  useEffect(() => {
+    if (careRef.current) sceneRef.current?.setEstateCare(careRef.current);
+  }, [estateKey]);
+
+  useEffect(() => {
+    sceneRef.current?.setStepSounds(audioUnlocked && weatherSoundOn);
+  }, [audioUnlocked, weatherSoundOn]);
+
+  // The opening minutes (see firstVisit.ts). The summary waits, and a first
+  // visit gets her greeting and one small thing to do.
+  const [holdArrival, setHoldArrival] = useState(true);
+  useEffect(() => {
+    let firstVisit: boolean | null = null;
+    let startedAt = 0;
+    let greeted = false;
+    let tasked = false;
+    const iv = window.setInterval(() => {
+      const data = stateRef.current;
+      if (!data || !readyRef.current) return;
+      const now = performance.now();
+      if (firstVisit === null) {
+        let seen = true;
+        try { seen = localStorage.getItem("muse-town-arrival-v1") !== null; } catch { /* treat as seen */ }
+        firstVisit = !seen && data.tree.waterings === 0;
+        startedAt = now;
+      }
+      const elapsed = now - startedAt;
+      if (firstVisit && !greeted && elapsed >= GREETING_MS) {
+        greeted = true;
+        sceneRef.current?.showBubble("muse", GATE_GREETINGS[Math.floor(Math.random() * GATE_GREETINGS.length)]!);
+      }
+      if (firstVisit && !tasked && elapsed >= FIRST_TASK_MS) {
+        tasked = true;
+        setFirstTask(true);
+      }
+      const walkZ = playerPosRef.current?.z ?? PLAYER.spawn[1];
+      if (arrivalDue(firstVisit, walkZ, elapsed)) setHoldArrival(false);
+      if (tasked && data.tree.waterings > 0) {
+        setFirstTask(false);
+        window.clearInterval(iv);
+      } else if (!firstVisit && !holdArrivalRef.current) {
+        window.clearInterval(iv);
+      }
+    }, 500);
+    return () => window.clearInterval(iv);
+  }, []);
+  const holdArrivalRef = useRef(holdArrival);
+  const arrivalOpenRef = useRef(false);
+  holdArrivalRef.current = holdArrival;
+
+  // Her invitations: looked for on a slow timer, and only into a clear moment.
+  useEffect(() => {
+    let lastAskAt = performance.now();
+    const iv = window.setInterval(() => {
+      const scene = sceneRef.current;
+      const hour = rhythmRef.current;
+      const data = stateRef.current;
+      if (!scene || !hour || !data || !walkingRef.current || holdArrivalRef.current || arrivalOpenRef.current) return;
+      if (performance.now() - lastAskAt < 90000) return;
+      if (panelOpenRef.current || museBubbleRef.current || followOfferRef.current || summitRef.current || guidingRef.current || !scene.canInvite()) return;
+      const invite = chooseInvite(
+        hour,
+        { unreadLetters: data.letters.filter((l) => !l.read).length, gardenReady: !!data.garden.planted_on && data.garden.water_days >= 3, treeWatered: data.tree.watered_today },
+        readInviteMemory(),
+        Math.random(),
+      );
+      if (!invite) return;
+      lastAskAt = performance.now();
+      rememberInvite((memory) => ({ ...memory, asked: [...memory.asked, hour.part] }));
+      followOfferRef.current = { id: invite.id, text: invite.text, guide: invite };
+      setFollowOfferState(followOfferRef.current);
+      // An unanswered question lapses; she doesn't stand there waiting.
+      window.setTimeout(() => {
+        if (followOfferRef.current?.guide !== invite) return;
+        followOfferRef.current = null;
+        setFollowOfferState(null);
+      }, 30000);
+    }, 15000);
+    return () => window.clearInterval(iv);
+  }, []);
+  const acceptGuide = () => {
+    const invite = followOfferRef.current?.guide;
+    followOfferRef.current = null;
+    setFollowOfferState(null);
+    const scene = sceneRef.current;
+    if (!invite || !scene) return;
+    scene.setFollowMode(false);
+    if (!scene.startGuide(invite.spot[0], invite.spot[1])) {
+      if (followingRef.current) scene.setFollowMode(true);
+      return;
+    }
+    guidingRef.current = invite;
+    scene.showBubble("muse", "Come on, then. This way.");
+  };
+  guideEndRef.current = (arrived) => {
+    const invite = guidingRef.current;
+    guidingRef.current = null;
+    if (followingRef.current) sceneRef.current?.setFollowMode(true);
+    if (arrived && invite) sceneRef.current?.showBubble("muse", invite.arrival);
+  };
+
   // --- Virtual Xbox controller (walk mode, touch) ---
   // The Xbox controller is the walk-mode control scheme: the analog left
   // joystick drives the same pad vector as the keyboard, dragging the
@@ -4684,11 +4882,13 @@ export function App() {
   // she is talking; typing keeps the keyboard, and the scene's key
   // handler ignores keystrokes aimed at inputs, so WASD typed into
   // the chat never walks him.
+  // Her invitations are a word in passing, so he keeps walking through one.
   const anyFullPanelOpen = !!(
     youOpen || treeOpen || weatherOpen || boardOpen || questOpen || goalsOpen ||
     secretOpen || lettersOpen || selected || postcardDraft || postcardView ||
-    menuOpen || utilitiesOpen || followOffer || marketOpen || dockChoice || inscriptionId || fishing || knuckle
+    menuOpen || utilitiesOpen || (followOffer && !followOffer.guide) || marketOpen || dockChoice || inscriptionId || fishing || knuckle
   );
+  panelOpenRef.current = anyFullPanelOpen;
   // The overview keeps its controls (owner ask, Nov 1): entering the
   // overview does NOT unmount the ABXY cluster, B stays live there
   // and toggles back to walk mode (see xboxBack). The cluster may
@@ -4812,7 +5012,7 @@ export function App() {
         }
       />
 
-      <TownUtilities open={utilitiesOpen} onClose={() => setUtilitiesOpen(false)} scene={sceneRef} state={state.data} ready={sceneReady} lowGraphics={lowGfx} onLowGraphicsChange={setLowGfx}
+      <TownUtilities open={utilitiesOpen} onClose={() => setUtilitiesOpen(false)} scene={sceneRef} state={state.data} holdArrival={holdArrival} onArrivalOpen={(open) => { arrivalOpenRef.current = open; }} ready={sceneReady} lowGraphics={lowGfx} onLowGraphicsChange={setLowGfx}
         onNavigate={(destination) => {
           if (destination === "letters") selectLetters();
           else if (destination === "garden") selectGarden();
@@ -6273,6 +6473,23 @@ export function App() {
                 Sell 🪙
               </button>
             </div>
+            {kitchenFish && (
+              <div className="flex items-center justify-between gap-3 rounded-2xl bg-white/8 px-3 py-2.5">
+                <div>
+                  <p className="text-sm font-bold text-white">Keep the {kitchenFish.name.toLowerCase()} for the kitchen</p>
+                  <p className="text-[12px] text-white/65">No coin for it, but it goes to the Culina, and you can cook it yourself.</p>
+                </div>
+                <button
+                  type="button"
+                  disabled={pantryCatch.isPending}
+                  onClick={() => pantryCatch.mutate(kitchenFish.id)}
+                  aria-label={`Send the ${kitchenFish.name} to the kitchen instead of selling it`}
+                  className="shrink-0 rounded-full bg-white/15 px-3.5 py-1.5 text-sm font-bold text-white shadow transition active:scale-95 disabled:opacity-50"
+                >
+                  Keep
+                </button>
+              </div>
+            )}
             {basilRumour && (
               <p className="rounded-2xl bg-white/8 px-3 py-2.5 text-[13px] leading-relaxed text-white/85 italic">
                 Basil, wiping his hands on his apron: “{PHOENIX_RUMOUR_LINE}”
@@ -7987,13 +8204,15 @@ export function App() {
       )}
 
       {/* A special-occasion offer from Muse: walk together? */}
-      {followOffer && !following && (
+      {followOffer && (!following || followOffer.guide) && (
         <section
           aria-label="Aelia offers to walk with you"
           className={
-            isLandscape
-              ? "absolute inset-x-0 bottom-[64px] z-30 flex justify-center px-4"
-              : "absolute inset-x-0 bottom-[118px] z-30 flex justify-center px-4"
+            followOffer.guide
+              ? "absolute inset-x-0 top-[calc(env(safe-area-inset-top,0px)+92px)] z-30 flex justify-center px-4"
+              : isLandscape
+                ? "absolute inset-x-0 bottom-[64px] z-30 flex justify-center px-4"
+                : "absolute inset-x-0 bottom-[118px] z-30 flex justify-center px-4"
           }
         >
           <div className="pointer-events-auto w-full max-w-md rounded-3xl bg-[#232c4a]/97 p-3.5 shadow-2xl backdrop-blur">
@@ -8006,12 +8225,16 @@ export function App() {
                 type="button"
                 className="rounded-full bg-[#ffd34e] px-4 py-2 text-sm font-bold text-[#4a3600] shadow-md transition active:scale-95"
                 onClick={() => {
+                  if (followOffer.guide) {
+                    acceptGuide();
+                    return;
+                  }
                   if (!walkingRef.current) toggleWalk();
                   startFollowing();
                 }}
-                aria-label="Accept. Aelia walks with you"
+                aria-label={followOffer.guide ? "Accept. Aelia leads the way" : "Accept. Aelia walks with you"}
               >
-                🚶 Walk together
+                🚶 {followOffer.guide ? "Show me" : "Walk together"}
               </button>
               <button
                 type="button"
@@ -8084,6 +8307,13 @@ export function App() {
               End
             </button>
           </div>
+        </div>
+      )}
+      {walking && !anyFullPanelOpen && !museBubble && (firstTask || rhythm) && (
+        <div className="pointer-events-none absolute top-[calc(env(safe-area-inset-top,0px)+60px)] right-3 left-3 z-10 flex justify-center">
+          <p aria-live="off" className="max-w-full truncate rounded-full bg-[#22332b]/60 px-3 py-1 text-[12px] font-semibold text-white/90 backdrop-blur">
+            {firstTask ? FIRST_TASK : `${rhythm!.title} · ${rhythm!.where}`}
+          </p>
         </div>
       )}
       {hintText && (

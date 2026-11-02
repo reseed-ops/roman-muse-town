@@ -2,6 +2,7 @@
 // generated with Web Audio on the first user tap, no audio files.
 
 import { FEEL } from "./feel";
+import type { Footing } from "./footing";
 import { dripDelay, dropletDelay, shelterCutoff } from "./rainMood";
 
 let actx: AudioContext | null = null;
@@ -15,6 +16,56 @@ function ctx(): AudioContext {
   }
   if (actx.state === "suspended") void actx.resume();
   return actx;
+}
+
+/** Open the context from a real gesture, so quiet sounds need never ask. */
+export function unlockAudio() {
+  ctx();
+}
+
+let stepNoise: AudioBuffer | null = null;
+
+const STEP_VOICE: Record<Footing, { cutoff: number; q: number; level: number; length: number }> = {
+  stone: { cutoff: 1500, q: 1.1, level: 0.16, length: 0.07 },
+  grass: { cutoff: 620, q: 0.5, level: 0.085, length: 0.1 },
+  gravel: { cutoff: 2300, q: 0.7, level: 0.1, length: 0.11 },
+  wood: { cutoff: 420, q: 2.6, level: 0.22, length: 0.09 },
+  water: { cutoff: 1000, q: 0.6, level: 0.13, length: 0.2 },
+};
+
+/** A short filtered thump. Sounds this small are only worth making while
+ *  the clock runs: on a suspended context they would never finish. */
+function thump(cutoff: number, q: number, level: number, length: number) {
+  const ac = actx;
+  if (!ac || ac.state !== "running") return;
+  stepNoise ??= noiseBuffer(ac);
+  const start = ac.currentTime;
+  const src = ac.createBufferSource();
+  src.buffer = stepNoise;
+  const filter = ac.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.value = cutoff * (0.9 + Math.random() * 0.2);
+  filter.Q.value = q;
+  const gain = ac.createGain();
+  gain.gain.setValueAtTime(level * FEEL.stepVolume, start);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + length);
+  src.connect(filter).connect(gain).connect(ac.destination);
+  src.start(start, Math.random() * 1.5, length + 0.02);
+}
+
+export function playFootstep(footing: Footing) {
+  const v = STEP_VOICE[footing];
+  thump(v.cutoff, v.q, v.level, v.length);
+}
+
+export function playLanding(footing: Footing) {
+  const v = STEP_VOICE[footing];
+  thump(v.cutoff * 0.7, v.q, v.level * 2, v.length * 1.8);
+}
+
+export function playSlide(footing: Footing) {
+  const v = STEP_VOICE[footing];
+  thump(v.cutoff * 1.6, 0.4, v.level * 1.3, 0.55);
 }
 
 export function stopSounds() {

@@ -2,7 +2,7 @@ import type { TownState } from "./useTownState";
 
 export type ArrivalDestination = "letters" | "garden" | "tree" | "quests";
 export interface ArrivalMarker { day: string; lastLetterId: number }
-export interface ArrivalSummary { title: string; lines: string[]; suggestion: string; destination: ArrivalDestination }
+export interface ArrivalSummary { title: string; lines: string[]; suggestion: string; destination: ArrivalDestination; quiet: boolean }
 export function utcDay(now: Date): string { return now.toISOString().slice(0, 10); }
 
 export function buildArrivalSummary(state: TownState, previous: ArrivalMarker | null, now = new Date()): ArrivalSummary {
@@ -24,8 +24,9 @@ export function buildArrivalSummary(state: TownState, previous: ArrivalMarker | 
     return days <= 7 ? [{ name: festival.name, days }] : [];
   }).sort((a, b) => a.days - b.days);
   if (festivals[0]) lines.push(`${festivals[0].name} ${festivals[0].days === 0 ? "is today" : festivals[0].days === 1 ? "is tomorrow" : `is in ${festivals[0].days} days`}.`);
-  if (!lines.length) lines.push("The town is quiet. There is time for one small ritual.");
+  const quiet = !lines.length;
+  if (quiet) lines.push("The town is quiet. There is time for one small ritual.");
   const destination = unread.length ? "letters" : harvest ? "garden" : !state.tree.watered_today ? "tree" : "quests";
   const suggestion = { letters: "Read a letter", garden: "Visit the garden", tree: "Water the Town Tree", quests: "Choose a small quest" }[destination];
-  return { title: previous ? "Since your last visit" : "Welcome to your town", lines, suggestion, destination };
+  return { title: previous ? "Since your last visit" : "Welcome to your town", lines, suggestion, destination, quiet };
 }

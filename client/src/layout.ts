@@ -28,6 +28,9 @@ export const MARKET_BOOTHS: [number, number, number][] = [
   [8.5, 38.4, -Math.PI / 2],
 ];
 
+/** The table where what he cooks is laid out, in the peristyle's east bay. */
+export const DISH_TABLE: [number, number] = [8.8, -5.2];
+
 /** The kitchen garden, mirroring the piscina across the axis. */
 export const GARDEN_BEDS: [number, number][] = [[9, 22.5], [11.5, 22.5], [14, 22.5]];
 

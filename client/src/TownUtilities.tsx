@@ -42,9 +42,9 @@ function PerformanceOverlay({ scene }: { scene: RefObject<TownSceneHandle | null
   </aside>;
 }
 
-export function TownUtilities({ open, onClose, scene, state, ready, onNavigate, lowGraphics, onLowGraphicsChange }: {
+export function TownUtilities({ open, onClose, scene, state, ready, holdArrival, onArrivalOpen, onNavigate, lowGraphics, onLowGraphicsChange }: {
   open: boolean; onClose(): void; scene: RefObject<TownSceneHandle | null>; state: TownState | undefined;
-  ready: boolean; onNavigate(destination: ArrivalDestination): void;
+  ready: boolean; holdArrival: boolean; onArrivalOpen(open: boolean): void; onNavigate(destination: ArrivalDestination): void;
   lowGraphics: boolean; onLowGraphicsChange(on: boolean): void;
 }) {
   const queryClient = useQueryClient();
@@ -67,13 +67,23 @@ export function TownUtilities({ open, onClose, scene, state, ready, onNavigate, 
     const timer = window.setInterval(() => { setDay(utcDay(new Date())); setPendingCount(reliableActions.list().length); }, 30000);
     return () => window.clearInterval(timer);
   }, []);
+  useEffect(() => onArrivalOpen(!!arrival), [arrival, onArrivalOpen]);
   useEffect(() => {
-    if (!state || !ready || shownDay.current === day) return;
-    if (arrivals && marker.current?.day !== day) setArrival(buildArrivalSummary(state, marker.current));
+    if (!state || !ready || holdArrival || shownDay.current === day) return;
+    if (arrivals && marker.current?.day !== day) {
+      // A returning visit only hears about it if there's something to tell.
+      const summary = buildArrivalSummary(state, marker.current);
+      // A first visit is already on its way to the tree; don't send it elsewhere.
+      if (!marker.current && !state.tree.watered_today) {
+        summary.destination = "tree";
+        summary.suggestion = "Water the Town Tree";
+      }
+      if (!marker.current || !summary.quiet) setArrival(summary);
+    }
     shownDay.current = day;
     marker.current = { day, lastLetterId: Math.max(0, ...state.letters.map((letter) => letter.id)) };
     try { localStorage.setItem("muse-town-arrival-v1", JSON.stringify(marker.current)); } catch { /* optional */ }
-  }, [state, ready, day, arrivals]);
+  }, [state, ready, holdArrival, day, arrivals]);
   useEffect(() => {
     if (!open) return;
     const previous = document.activeElement as HTMLElement | null;

@@ -11,4 +11,6 @@ export const FEEL = {
   romanLineChance: 0.25,
   /** How much a roof muffles the rain, 0 (not at all) to 1 (heavily). */
   shelterMuffle: 1,
+  /** Loudness of his footsteps. Lower if they start to nag. */
+  stepVolume: 0.5,
 } as const;

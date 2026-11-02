@@ -579,6 +579,21 @@ export const DISH_FOR_INGREDIENT: Record<string, string> = {
   "bakers-sack": "honey-cakes",
   "forest-herbs": "forest-greens",
   "wild-mushrooms": "forest-mushrooms",
+  "catch-carp": "grilled-carp",
+  "catch-tench": "baked-tench",
+  "catch-perch": "fried-perch",
+  "catch-eel": "stewed-eel",
+  "garden-greens": "garden-salad",
+};
+
+/** What the kitchen remembers of a dish made from his own work, as a fact
+ *  Aelia keeps. Stall dishes aren't here: anyone can buy a basket. */
+const KITCHEN_MEMORIES: Record<string, string> = {
+  "grilled-carp": "He grilled the carp he caught himself at the lake.",
+  "baked-tench": "He baked the tench he caught himself at the lake.",
+  "fried-perch": "He fried the perch he caught himself at the lake.",
+  "stewed-eel": "He stewed the eel he caught himself at the lake.",
+  "garden-salad": "He made a salad from the kitchen garden he watered himself.",
 };
 
 /** Forest forage spots -> what a picking yields. The server owns
@@ -3275,6 +3290,7 @@ export const Actions = {
     request: z.object({ ingredient: z.string().min(1).max(40) }).extend({ request_id: z.string().uuid().optional() }),
     response: economyResponse,
     async handler(ctx, args) {
+      let cooked: string | null = null as string | null;
       withEconomyTransaction(ctx, (ctx) => {
         const dish = own(DISH_FOR_INGREDIENT, args.ingredient);
         if (dish) {
@@ -3288,9 +3304,14 @@ export const Actions = {
             dishes.push(dish);
             purse.dishes = JSON.stringify(dishes);
             savePurse(ctx, purse);
+            cooked = dish;
           }
         }
       }, { requestId: args.request_id, action: "cookDish", payload: args });
+      // Hers to keep, and written here, never by the model. storeFact drops
+      // a repeat, so a favourite dish stays one memory.
+      const memory = cooked && own(KITCHEN_MEMORIES, cooked);
+      if (cooked && memory) await storeFact(ctx, { text: aboutPlayer(memory), topic: cooked }, "kitchen");
       ctx.invalidateQueries();
       return loadEconomyState(ctx);
     },
@@ -3377,6 +3398,10 @@ export const Actions = {
             .set({ plantedOn: null, waterDays: 0, lastWateredDay: null, harvests: garden.harvests + 1 })
             .where(eq(schema.gardenState.id, 1)).run();
           awardDenarii(ctx, GARDEN_HARVEST_DENARII);
+          // The pick of the crop goes to the kitchen; the rest sells as before.
+          const purse = loadPurse(ctx);
+          purse.ingredients = JSON.stringify([...parseList(purse.ingredients), "garden-greens"]);
+          savePurse(ctx, purse);
         }
       }, { requestId: args.request_id, action: "harvestGarden", payload: args });
       ctx.invalidateQueries();
@@ -3420,6 +3445,32 @@ export const Actions = {
           if (total > 0) awardDenarii(ctx, total);
         }
       }, { requestId: args.request_id, action: "sellFish", payload: args });
+      ctx.invalidateQueries();
+      return loadEconomyState(ctx);
+    },
+  }),
+
+  pantryCatch: defineAction({
+    description: "Send one live catch to the Culina instead of the market: the oldest unsold catch of the species leaves the creel and becomes an ingredient. It pays nothing. The golden carp is never food.",
+    request: z.object({ fish_id: z.string().min(1).max(40) }).extend({ request_id: z.string().uuid().optional() }),
+    response: economyResponse,
+    async handler(ctx, args) {
+      withEconomyTransaction(ctx, (ctx) => {
+        const ingredient = `catch-${args.fish_id}`;
+        if (!own(DISH_FOR_INGREDIENT, ingredient)) return;
+        const db = ctx.db<typeof schema>();
+        const row = db
+          .select()
+          .from(schema.catches)
+          .where(and(eq(schema.catches.fishId, args.fish_id), eq(schema.catches.sold, 0), eq(schema.catches.released, 0)))
+          .orderBy(asc(schema.catches.id))
+          .limit(1).all()[0];
+        if (!row) return;
+        db.update(schema.catches).set({ sold: 1 }).where(eq(schema.catches.id, row.id)).run();
+        const purse = loadPurse(ctx);
+        purse.ingredients = JSON.stringify([...parseList(purse.ingredients), ingredient]);
+        savePurse(ctx, purse);
+      }, { requestId: args.request_id, action: "pantryCatch", payload: args });
       ctx.invalidateQueries();
       return loadEconomyState(ctx);
     },

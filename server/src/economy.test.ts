@@ -220,3 +220,68 @@ describe("tables only answer for their own keys", () => {
     expect(result.capped).toBe(false);
   });
 });
+
+describe("from the lake and the garden to the table", () => {
+  const catchFish = (fish_id: string) => call("recordCatch", { fish_id, request_id: crypto.randomUUID() });
+  const fishRow = () => row<{ sold: number }>("SELECT sold FROM catches ORDER BY id LIMIT 1");
+  const facts = () => (sqlite.query("SELECT text, topic, source FROM aelia_facts WHERE source = 'kitchen'").all() as { text: string; topic: string }[]);
+
+  test("a catch becomes an ingredient, pays nothing, and can't also be sold", async () => {
+    seedPurse(10, 0);
+    await catchFish("carp");
+    const state = await call("pantryCatch", { fish_id: "carp", request_id: crypto.randomUUID() });
+    expect(state.purse.ingredients).toContain("catch-carp");
+    expect(state.purse.denarii).toBe(10);
+    expect(fishRow().sold).toBe(1);
+    expect((await call("sellFish", { request_id: crypto.randomUUID() })).purse.denarii).toBe(10);
+  });
+
+  test("the golden carp is never food", async () => {
+    seedPurse(0, 0);
+    await catchFish("golden-carp");
+    const state = await call("pantryCatch", { fish_id: "golden-carp", request_id: crypto.randomUUID() });
+    expect(state.purse.ingredients).toEqual([]);
+    expect(fishRow().sold).toBe(0);
+  });
+
+  test("no fish, no ingredient, and a made-up one does nothing", async () => {
+    seedPurse(0, 0);
+    expect((await call("pantryCatch", { fish_id: "carp", request_id: crypto.randomUUID() })).purse.ingredients).toEqual([]);
+    expect((await call("pantryCatch", { fish_id: "constructor", request_id: crypto.randomUUID() })).purse.ingredients).toEqual([]);
+  });
+
+  test("a replayed request spends one fish", async () => {
+    seedPurse(0, 0);
+    await catchFish("eel");
+    await catchFish("eel");
+    const request_id = crypto.randomUUID();
+    await call("pantryCatch", { fish_id: "eel", request_id });
+    const state = await call("pantryCatch", { fish_id: "eel", request_id });
+    expect(state.purse.ingredients).toEqual(["catch-eel"]);
+  });
+
+  test("cooking his own catch becomes something she remembers, once", async () => {
+    seedPurse(0, 0);
+    for (let i = 0; i < 2; i++) {
+      await catchFish("perch");
+      await call("pantryCatch", { fish_id: "perch", request_id: crypto.randomUUID() });
+      await call("cookDish", { ingredient: "catch-perch", request_id: crypto.randomUUID() });
+    }
+    expect(facts()).toHaveLength(1);
+    expect(facts()[0]!.topic).toBe("fried-perch");
+  });
+
+  test("a stall dish leaves no such memory", async () => {
+    sqlite.run("INSERT INTO purse_state (id, denarii, seeds, ingredients) VALUES (1, 0, 0, '[\"market-basket\"]')");
+    await call("cookDish", { ingredient: "market-basket", request_id: crypto.randomUUID() });
+    expect(facts()).toHaveLength(0);
+  });
+
+  test("a harvest still pays, and sends greens to the kitchen", async () => {
+    seedPurse(0, 0);
+    sqlite.run("INSERT INTO garden_state (id, planted_on, water_days) VALUES (1, '2026-01-01', 3)");
+    const state = await call("harvestGarden", { request_id: crypto.randomUUID() });
+    expect(state.purse.denarii).toBeGreaterThan(0);
+    expect(state.purse.ingredients).toEqual(["garden-greens"]);
+  });
+});

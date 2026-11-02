@@ -3,7 +3,7 @@ export const RETRY_SAFE_ACTIONS = [
   "markFound", "markQuestDone", "recordGift", "claimPerk", "foragePick",
   "awardOnce", "buyUpgrade", "buyIngredient", "cookDish", "buySeeds",
   "plantGarden", "waterGarden", "harvestGarden", "recordCatch", "sellFish",
-  "releaseFish", "settleKnucklebones", "completeChallenge", "markInscription", "earnAffection",
+  "releaseFish", "settleKnucklebones", "completeChallenge", "markInscription", "earnAffection", "pantryCatch",
 ] as const;
 
 export function canonicalJson(value: unknown): string {

@@ -18,8 +18,11 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { BATHS, BED_SPOT, BOARD_SPOT, COLOSSEUM, FOREST, FOREST_BUSHES, FOREST_DEN_ROCKS, FOREST_EDGE_LINES, FOREST_SPOTS, FOREST_TRAILS, FOREST_TREES, FORAGE_SPOTS, GOALS_SPOT, LAKE, LAKE_PAVILION, LETTER_DESK_SPOT, MUSE, PISCINA, PLACES, PLAYER, QUEST_BOARD_SPOT, SECRET, SEEK_LINES, STREETS, forestNorm, groundHeightAt, isGoldenElevation, seasonForDate, solarAngles, streetDistance, terrainHeight, type Season, type WeatherId } from "./town";
+import { BATHS, BED_SPOT, BOARD_SPOT, COLOSSEUM, FOREST, FOREST_BUSHES, FLOURISH_LINES, FOREST_DEN_ROCKS, FOREST_EDGE_LINES, FOREST_SPOTS, FOREST_TRAILS, FOREST_TREES, FORAGE_SPOTS, GOALS_SPOT, LAKE, LAKE_PAVILION, LETTER_DESK_SPOT, MUSE, PISCINA, PLACES, PLAYER, QUEST_BOARD_SPOT, SECRET, SEEK_LINES, STREETS, forestNorm, groundHeightAt, isGoldenElevation, seasonForDate, solarAngles, streetDistance, terrainHeight, type Season, type WeatherId } from "./town";
 import { pickPooled } from "./linePools";
+import { playFootstep, playLanding, playSlide } from "./audio";
+import { ESTATE_AREAS, weedStands, type EstateArea, type EstateCare } from "./estateCare";
+import { footingAt, strideStep, type Footing } from "./footing";
 import { airborne, newJump, stepJump } from "./jump";
 import { endSlide, newSlide, slideSpeed, sliding, startSlide } from "./slide";
 import { FOLLOW_CAM, followCamSustain, followCamYawStep, type FollowCamGate } from "./followCam";
@@ -52,7 +55,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { clone as cloneSkeleton } from "three/addons/utils/SkeletonUtils.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { AVENUE_CYPRESSES, GARDEN_BEDS, MARKET_BOOTHS, VILLA, VILLA_WALLS, resumeSpot, routeBetween, stairHeight } from "./layout";
+import { AVENUE_CYPRESSES, DISH_TABLE, GARDEN_BEDS, MARKET_BOOTHS, VILLA, VILLA_WALLS, resumeSpot, routeBetween, stairHeight } from "./layout";
 import { retainSharedModel, SceneResources } from "./sceneResources";
 import { SceneRuntime } from "./sceneRuntime";
 import type { PerformanceSnapshot } from "./performanceMonitor";
@@ -226,6 +229,17 @@ export interface TownSceneHandle {
   jump: () => void;
   /** Slide, if he is on the move. False if he's standing, so B can mean back. */
   slide: () => boolean;
+  /** The day's rhythm: where she spends the hour, and how the market stands. */
+  setRhythm: (rhythm: { anchor: string; marketOpen: boolean; marketBusy: boolean }) => void;
+  /** Free for her to ask him somewhere: nothing else has the two of them. */
+  canInvite: () => boolean;
+  /** She leads him to a spot; onGuideEnd reports how it went. */
+  startGuide: (x: number, z: number) => boolean;
+  /** What's on the table in the peristyle. */
+  setDishes: (ids: string[]) => void;
+  /** Show how kept each part of the estate is. */
+  setEstateCare: (care: EstateCare) => void;
+  setStepSounds: (on: boolean) => void;
   /** In-town landscape switch: the shell has CSS-rotated the whole
    *  stage 90° clockwise because the host app window never rotates.
    *  While this is on, canvas pointer vectors are remapped from screen
@@ -1058,6 +1072,7 @@ export function createTownScene(
     onHandInHandChange?: (on: boolean, reason?: string) => void;
     /** Fired each frame while walking, for quest progress (street coverage). */
     onWalkPosition?: (x: number, z: number) => void;
+    onGuideEnd?: (arrived: boolean) => void;
     /** Tiny stone sounds (Nov 1): a pebble's tick on the cobbles, a
      *  thrown stone's bounce, a splash (or a skip's smaller splash)
      *  on the lake or the piscina. The shell owns the audio kit. */
@@ -2941,6 +2956,9 @@ export function createTownScene(
   for (const [cx, cz] of ROMAN_COLUMN_SPOTS) {
     void placeWorld(columnSimpleUrl, { x: cx, z: cz, height: VILLA.peristyle.columnHeight });
   }
+  const vineSpots: [number, number, number][] = [];
+  const vineLeafMat = mat(0x5f7f42, { rough: 0.85 });
+  const VINE_KEPT = new THREE.Color(0x6f9a48);
   buildVillaStone();
   /** The villa's stonework and planting, merged by material so the whole
    *  estate costs a handful of draw calls. */
@@ -3013,12 +3031,159 @@ export function createTownScene(
         for (let z = 31.8; z < 38.6; z += 1.4) {
           const y = terrainHeight(x, z);
           leaves.push(block(0.5, 0.72, 1.3, x, y + 0.62, z));
+          vineSpots.push([x, y, z]);
           stakes.push(block(0.08, 1.1, 0.08, x, y + 0.5, z - 0.7));
         }
       }
     }
-    merged(leaves, mat(0x5f7f42, { rough: 0.85 }));
+    merged(leaves, vineLeafMat);
     merged(stakes, mat(0x6e4a2f, { rough: 0.9 }), false);
+  }
+  // --- The living estate ------------------------------------------------
+  // What care looks like. Each is one draw, built once and adjusted when
+  // the saved town moves on, never per frame (see setEstateCare).
+  const estateDummy = new THREE.Object3D();
+  const scatter = (seed: number) => {
+    let n = seed;
+    return () => {
+      n = (n * 16807) % 2147483647;
+      return (n % 10000) / 10000;
+    };
+  };
+  // Weeds and rough growth along the edges of things, one set to an area,
+  // each clearing at its own threshold. Green, so a new estate reads as
+  // unkempt, not ruined.
+  const WEED_PATCHES: Record<EstateArea, [number, number, number, number][]> = {
+    avenue: [[-7.5, -6, 23, 45], [6, 7.5, 23, 31]],
+    forecourt: [[-10, -7.5, 12, 19], [7.5, 10, 12, 19]],
+    peristyle: [[-11, -9.5, -8.5, 8.5], [9.5, 11, -8.5, 8.5]],
+    terrace: [[-6.8, -5.6, -41, -26], [5.6, 6.8, -41, -26]],
+    baths: [[19, 22, 30.5, 33], [26, 29, 30.5, 33]],
+    kitchen: [[7.5, 16, 25.2, 26.8]],
+  };
+  const weedSpots: { area: EstateArea; threshold: number; x: number; y: number; z: number; size: number; turn: number }[] = [];
+  {
+    const roll = scatter(424243);
+    for (const area of ESTATE_AREAS) {
+      const patches = WEED_PATCHES[area];
+      for (let i = 0; i < 14; i++) {
+        const [x0, x1, z0, z1] = patches[i % patches.length]!;
+        const x = x0 + (x1 - x0) * roll();
+        const z = z0 + (z1 - z0) * roll();
+        weedSpots.push({ area, threshold: 0.15 + 0.8 * roll(), x, y: terrainHeight(x, z), z, size: 0.7 + roll() * 0.8, turn: roll() * 6.28 });
+      }
+    }
+  }
+  const weeds = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.26, 0).scale(1, 0.55, 1), mat(0x6c8a4b, { rough: 0.95 }), weedSpots.length);
+  weeds.frustumCulled = false;
+  world.add(weeds);
+  // Grapes on the vines, as many as the avenue has earned.
+  const grapes = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.13, 0), mat(0x5a3a78, { rough: 0.6 }), vineSpots.length);
+  grapes.frustumCulled = false;
+  vineSpots.forEach(([x, y, z], i) => {
+    estateDummy.position.set(x + (i % 2 ? 0.28 : -0.28), y + 0.42, z);
+    estateDummy.rotation.set(0, 0, 0);
+    estateDummy.scale.setScalar(1);
+    estateDummy.updateMatrix();
+    grapes.setMatrixAt(i, estateDummy.matrix);
+  });
+  grapes.count = 0;
+  world.add(grapes);
+  // Flower beds in the peristyle's lawns.
+  const BLOOM_COUNT = 48;
+  const blooms = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.12, 0), mat(0xffffff, { rough: 0.8 }), BLOOM_COUNT);
+  blooms.frustumCulled = false;
+  {
+    const roll = scatter(777773);
+    const tones = [0xe7a3c0, 0xf2d27a, 0xf4f0e6, 0xc98bd9].map((hex) => new THREE.Color(hex));
+    for (let i = 0; i < BLOOM_COUNT; i++) {
+      const x = (i % 2 ? 1 : -1) * (5.6 + roll() * 3.4);
+      const z = (i % 4 < 2 ? 1 : -1) * (5.8 + roll() * 2.6);
+      estateDummy.position.set(x, terrainHeight(x, z) + 0.2, z);
+      estateDummy.scale.setScalar(0.8 + roll() * 0.7);
+      estateDummy.updateMatrix();
+      blooms.setMatrixAt(i, estateDummy.matrix);
+      blooms.setColorAt(i, tones[i % tones.length]!);
+    }
+  }
+  blooms.count = 0;
+  world.add(blooms);
+  // Standards at the head of the stair, once the terrace has earned them.
+  const terraceBanners = new THREE.Group();
+  for (const side of [-1, 1]) {
+    const x = side * 3.7;
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 3.4, 6), mat(0x6e4a2f, { rough: 0.8 }));
+    pole.position.set(x, VILLA.terraceY + 1.7, -24.5);
+    terraceBanners.add(pole);
+    const cloth = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 1.7), new THREE.MeshStandardMaterial({ color: 0x8e2b2b, roughness: 0.9, side: THREE.DoubleSide }));
+    cloth.position.set(x, VILLA.terraceY + 2.35, -24.42);
+    terraceBanners.add(cloth);
+    const stripe = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 0.14), new THREE.MeshStandardMaterial({ color: 0xd9b24a, roughness: 0.7, side: THREE.DoubleSide }));
+    stripe.position.set(x, VILLA.terraceY + 1.68, -24.4);
+    terraceBanners.add(stripe);
+  }
+  terraceBanners.visible = false;
+  world.add(terraceBanners);
+  function applyEstateCare(care: EstateCare) {
+    weedSpots.forEach((spot, i) => {
+      estateDummy.position.set(spot.x, spot.y + 0.04, spot.z);
+      estateDummy.rotation.set(0, spot.turn, 0);
+      estateDummy.scale.setScalar(weedStands(care[spot.area], spot.threshold) ? spot.size : 0);
+      estateDummy.updateMatrix();
+      weeds.setMatrixAt(i, estateDummy.matrix);
+    });
+    weeds.instanceMatrix.needsUpdate = true;
+    grapes.count = Math.floor(vineSpots.length * care.avenue);
+    blooms.count = Math.floor(BLOOM_COUNT * (0.15 + 0.85 * care.peristyle));
+    vineLeafMat.color.setHex(0x5f7f42).lerp(VINE_KEPT, care.avenue);
+    terraceBanners.visible = care.terrace >= 0.45;
+  }
+  // The table in the peristyle's east bay: what he has cooked, laid out.
+  const DISH_TINTS: Record<string, number> = {
+    "grilled-carp": 0xc98a4a, "baked-tench": 0xb9a35a, "fried-perch": 0xd9a441, "stewed-eel": 0x7a5a3a,
+    "garden-salad": 0x6fae4f, "tomato-soup": 0xb5442e, "herb-fish": 0xc7b56a, "honey-cakes": 0xe0b050,
+    "forest-greens": 0x5f8f4a, "forest-mushrooms": 0x8a6a4a,
+  };
+  const TABLE_PLACES = 6;
+  const tablePlates: { food: THREE.Mesh; tint: THREE.MeshStandardMaterial }[] = [];
+  {
+    const [tx, tz] = DISH_TABLE;
+    const ty = terrainHeight(tx, tz);
+    const top = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.09, 1), mat(0x8a6240, { rough: 0.8 }));
+    top.position.set(tx, ty + 0.78, tz);
+    top.castShadow = true;
+    world.add(top);
+    for (const [lx, lz] of [[-0.9, -0.38], [0.9, -0.38], [-0.9, 0.38], [0.9, 0.38]] as [number, number][]) {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.76, 0.09), mat(0x6e4a2f, { rough: 0.85 }));
+      leg.position.set(tx + lx, ty + 0.38, tz + lz);
+      world.add(leg);
+    }
+    const plateGeo = new THREE.CylinderGeometry(0.21, 0.17, 0.035, 12);
+    const foodGeo = new THREE.SphereGeometry(0.14, 8, 6).scale(1, 0.55, 1);
+    const plateMat = mat(0xd7cfc0, { rough: 0.6 });
+    for (let i = 0; i < TABLE_PLACES; i++) {
+      const px = tx - 0.68 + (i % 3) * 0.68;
+      const pz = tz + (i < 3 ? -0.24 : 0.24);
+      const plate = new THREE.Mesh(plateGeo, plateMat);
+      plate.position.set(px, ty + 0.84, pz);
+      const tint = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7 });
+      const food = new THREE.Mesh(foodGeo, tint);
+      food.position.set(px, ty + 0.895, pz);
+      const place = new THREE.Group();
+      place.add(plate, food);
+      place.visible = false;
+      world.add(place);
+      tablePlates.push({ food: food, tint });
+    }
+  }
+  function setTableDishes(ids: string[]) {
+    // The latest cooking, most recent first, on the plates there are.
+    const shown = ids.slice(-TABLE_PLACES).reverse();
+    tablePlates.forEach(({ food, tint }, i) => {
+      const id = shown[i];
+      food.parent!.visible = id !== undefined;
+      if (id !== undefined) tint.color.setHex(DISH_TINTS[id] ?? 0xc9a56a);
+    });
   }
   // The avenue's cypress pairs stand exactly in line, so they skip the
   // relocation the free-standing trees get.
@@ -3043,13 +3208,52 @@ export function createTownScene(
     terrainHeight(COLOSSEUM.position[0], COLOSSEUM.position[1]),
   );
   void placeWorld(bannerTriangleUrl, { x: 6.8, z: 31.2, height: 2.7 });
-  void placeWorld(crateUrl, { x: 6.9, z: 33.6, rotY: 0.4, width: 0.62 });
-  void placeWorld(crateUrl, { x: -6.9, z: 33.6, rotY: -0.5, width: 0.62 });
-  void placeWorld(breadUrl, { x: 6.9, z: 33.6, y: 0.6, rotY: 0.7, width: 0.5 });
-  void placeWorld(grapesUrl, { x: -6.9, z: 33.6, y: 0.6, rotY: 0.2, width: 0.42 });
-  void placeWorld(barrelUrl, { x: 6.9, z: 35.8, width: 0.72 });
-  void placeWorld(pottery1Url, { x: -6.9, z: 35.6, width: 0.55 });
-  void placeWorld(pottery2Url, { x: -7, z: 36.6, width: 0.48 });
+  // The stalls keep hours: goods out by day, boards up by evening, and on a
+  // market day the country people's baskets along the avenue as well.
+  const marketGoods: THREE.Object3D[] = [];
+  let marketOpen = true;
+  const layOutGoods = (placing: Promise<THREE.Group | null>) => {
+    void placing.then((goods) => {
+      if (!goods) return;
+      goods.visible = marketOpen;
+      marketGoods.push(goods);
+    });
+  };
+  const boards = new THREE.Mesh(
+    mergeGeometries(
+      MARKET_BOOTHS.map(([bx, bz]) => {
+        const side = bx > 0 ? -1 : 1;
+        return new THREE.BoxGeometry(0.07, 1.05, 3.2).translate(bx + side * 0.92, terrainHeight(bx, bz) + 0.6, bz);
+      }),
+    ),
+    mat(0x7a5a3e, { rough: 0.9 }),
+  );
+  boards.visible = false;
+  world.add(boards);
+  const countryBaskets = new THREE.Group();
+  {
+    const basketGeo = new THREE.CylinderGeometry(0.3, 0.22, 0.3, 8);
+    const fruitGeo = new THREE.IcosahedronGeometry(0.2, 0).scale(1, 0.6, 1);
+    const wicker = mat(0xa07c4a, { rough: 0.95 });
+    const fruit = [mat(0xc25a3a, { rough: 0.7 }), mat(0x6fa84f, { rough: 0.7 }), mat(0xd9a441, { rough: 0.7 })];
+    [[6.1, 30], [-6.1, 30.8], [6.3, 40.8], [-6.2, 39.6], [-6, 41.8], [6.2, 42.6]].forEach(([bx, bz], i) => {
+      const y = terrainHeight(bx!, bz!);
+      const basket = new THREE.Mesh(basketGeo, wicker);
+      basket.position.set(bx!, y + 0.15, bz!);
+      const heap = new THREE.Mesh(fruitGeo, fruit[i % 3]!);
+      heap.position.set(bx!, y + 0.34, bz!);
+      countryBaskets.add(basket, heap);
+    });
+  }
+  countryBaskets.visible = false;
+  world.add(countryBaskets);
+  layOutGoods(placeWorld(crateUrl, { x: 6.9, z: 33.6, rotY: 0.4, width: 0.62 }));
+  layOutGoods(placeWorld(crateUrl, { x: -6.9, z: 33.6, rotY: -0.5, width: 0.62 }));
+  layOutGoods(placeWorld(breadUrl, { x: 6.9, z: 33.6, y: 0.6, rotY: 0.7, width: 0.5 }));
+  layOutGoods(placeWorld(grapesUrl, { x: -6.9, z: 33.6, y: 0.6, rotY: 0.2, width: 0.42 }));
+  layOutGoods(placeWorld(barrelUrl, { x: 6.9, z: 35.8, width: 0.72 }));
+  layOutGoods(placeWorld(pottery1Url, { x: -6.9, z: 35.6, width: 0.55 }));
+  layOutGoods(placeWorld(pottery2Url, { x: -7, z: 36.6, width: 0.48 }));
   // Mediterranean trees at the estate's corners, all on the terrain
   // (placeWorld) and clear of the buildings.
   void placeWorld(cypressUrl, { x: 31.5, z: 33, height: 4.6 });
@@ -5218,6 +5422,7 @@ export function createTownScene(
     circ(0, 0, 2.45), // town tree: the stone ring around its mound (stones reach r ≈ 2.54; the trunk alone is ≤ 0.9)
     { kind: "circle", x: MUSE.position[0], z: MUSE.position[1], r: 0.55, ghost: true }, // Muse's home spot: never blocks; her live body does (checked separately)
     obb(8.8, 4.6, 0.95, 0.3, -Math.PI / 2), // stone bench, in the peristyle garden
+    obb(8.8, -5.2, 1.05, 0.5, 0), // the table in the peristyle's east bay
     templeFootprint, // temple
     circ(VILLA.statueMars[0], VILLA.statueMars[1], 0.5), // statue of Mars (its pedestal, measured)
     obb(VILLA.gate[0] + 2.55, VILLA.gate[1], 1.25, 1.8, 0), // triumphal arch, east pillar (the opening between the pillars stays walkable)
@@ -5447,6 +5652,11 @@ export function createTownScene(
   let isMoving = false;
   const hop = newJump();
   const run = newSlide();
+  let stepTally = 0;
+  let stepX = Number.NaN;
+  let stepZ = Number.NaN;
+  let stepSounds = true;
+  let lastFlourishAt = -1000;
   let hopLandedAt = -Infinity;
   // The stick's direction and tilt, eased a touch so a fresh push or a
   // flick across builds in about 50 ms instead of arriving in one frame.
@@ -5777,6 +5987,70 @@ export function createTownScene(
   window.addEventListener("keydown", onWalkKeyDown);
   window.addEventListener("keyup", onWalkKeyUp);
 
+  // A pool of dust, made once: a slide or a landing borrows a puff or two.
+  const DUST_PUFFS = 6;
+  const dustPool: { mesh: THREE.Mesh; material: THREE.MeshBasicMaterial; age: number }[] = [];
+  {
+    const puffGeo = new THREE.CircleGeometry(0.3, 10);
+    for (let i = 0; i < DUST_PUFFS; i++) {
+      const material = new THREE.MeshBasicMaterial({ color: 0xd8c8a8, transparent: true, opacity: 0, depthWrite: false });
+      const mesh = new THREE.Mesh(puffGeo, material);
+      mesh.visible = false;
+      world.add(mesh);
+      dustPool.push({ mesh, material, age: 1 });
+    }
+  }
+  let dustLive = 0;
+  let dustNext = 0;
+  function puffDust(x: number, y: number, z: number) {
+    if (opts.reducedMotion) return;
+    for (let i = 0; i < 2; i++) {
+      const puff = dustPool[dustNext]!;
+      dustNext = (dustNext + 1) % DUST_PUFFS;
+      if (puff.age >= 1) dustLive += 1;
+      puff.age = 0;
+      puff.mesh.position.set(x + (i ? 0.26 : -0.26), y + 0.16, z);
+      puff.mesh.visible = true;
+    }
+  }
+  function stepDust(dt: number) {
+    for (const puff of dustPool) {
+      if (puff.age >= 1) continue;
+      puff.age += dt / 0.55;
+      if (puff.age >= 1) {
+        puff.mesh.visible = false;
+        dustLive -= 1;
+        continue;
+      }
+      puff.mesh.quaternion.copy(camera.quaternion);
+      puff.mesh.scale.setScalar(1 + puff.age * 1.8);
+      puff.mesh.position.y += dt * 0.4;
+      puff.material.opacity = 0.42 * (1 - puff.age);
+    }
+  }
+  function footingHere(): Footing {
+    const { x, z } = walkPos;
+    const { terrace, stair } = VILLA;
+    return footingAt({
+      onDock: onDock(x, z),
+      lakeNorm: Math.hypot((x - LAKE_CX) / LAKE.rx, (z - LAKE_CZ) / LAKE.rz),
+      inForest: forestNorm(x, z) < 1,
+      streetDistance: streetDistance(x, z),
+      onPaving:
+        Math.hypot(x, z) < 5.6 ||
+        (Math.abs(x) < terrace.halfX && z > terrace.north && z < terrace.south) ||
+        (Math.abs(x) < stair.halfX && z > stair.top && z < stair.foot),
+    });
+  }
+  /** Her eyebrow, when he leaps about somewhere formal within her sight. */
+  function flourish(t: number) {
+    const { x, z } = walkPos;
+    const formal = (Math.abs(x) < 13 && Math.abs(z) < 11) || (Math.abs(x) < 8 && z < -13 && z > -43);
+    if (!formal || t - lastFlourishAt < 90 || museBubble.hideAt > t || quietMode) return;
+    if (Math.hypot(x - museGroup.position.x, z - museGroup.position.z) > 12 || Math.random() > 0.5) return;
+    lastFlourishAt = t;
+    showMuseBubbleInternal(pickPooled("flourish", FLOURISH_LINES), t);
+  }
   function updateWalk(dt: number, t: number) {
     if (!walking) return;
     let ix = padX;
@@ -6100,8 +6374,30 @@ export function createTownScene(
       if (Math.abs(dy) > 1.1) playerGroundSm = targetGY;
       else playerGroundSm += THREE.MathUtils.clamp(dy, -5 * dt, 5 * dt);
       const hopFree = !seatPlayer && !boatState && !bathState && !danceState && !pairState;
-      if (stepJump(hop, dt, performance.now() / 1000, hopFree)) hopLandedAt = t;
+      const wasUp = airborne(hop);
+      const landed = stepJump(hop, dt, performance.now() / 1000, hopFree);
+      if (landed) {
+        hopLandedAt = t;
+        if (stepSounds) playLanding(footingHere());
+        puffDust(walkPos.x, playerGroundSm, walkPos.z);
+      } else if (!wasUp && airborne(hop)) {
+        flourish(t);
+      }
       avatar.position.set(walkPos.x, playerGroundSm + hop.y, walkPos.z);
+      // A foot falls every stride he actually covers, not every press.
+      if (!Number.isFinite(stepX) || !isMoving || airborne(hop) || sliding(run) || !hopFree) {
+        stepX = walkPos.x;
+        stepZ = walkPos.z;
+      } else {
+        const stride = strideStep(stepTally, Math.hypot(walkPos.x - stepX, walkPos.z - stepZ));
+        stepTally = stride.tally;
+        stepX = walkPos.x;
+        stepZ = walkPos.z;
+        if (stride.fell && stepSounds) {
+          playFootstep(footingHere());
+        }
+      }
+      if (dustLive > 0) stepDust(dt);
     }
     avatar.rotation.y = walkHeading;
     // Standing still with hands joined: he turns a little toward
@@ -6679,6 +6975,7 @@ export function createTownScene(
     sounds: { id: "sounds", spots: [[-14, 2.2]], face: -Math.PI / 2 },
     piscina: { id: "piscina", spots: [[-11.5, 25.6]], face: Math.PI },
     baths: { id: "baths", spots: [[24, 26.6]], face: Math.PI },
+    terrace: { id: "terrace", spots: [[3.6, -27]], face: Math.PI / 8 },
     night: {
       id: "night",
       spots: [[MUSE.position[0], MUSE.position[1]]],
@@ -6697,6 +6994,12 @@ export function createTownScene(
     const [nextX, nextZ] = stops[0] ?? [goalX, goalZ];
     return { x: nextX, z: nextZ };
   }
+  /** Somewhere she's leading him. Follow mode is off while she does. */
+  let guide: { x: number; z: number; until: number } | null = null;
+  function endGuide(arrived: boolean) {
+    guide = null;
+    opts.onGuideEnd?.(arrived);
+  }
   const ROUTINE_PHASE_SECS = 80;
   let routineHold = false;
   let routineHoldKey = "";
@@ -6706,10 +7009,13 @@ export function createTownScene(
   let lastRoutineLineAt = -1000;
   let nextRoutineDelay = 16;
   let piscinaGolden = false;
+  /** Where the hour's rhythm has her, when she isn't off on an errand. */
+  let rhythmAnchor: string | null = null;
   function routineKey(): string {
     if (nightTarget > 0.5) return "night";
     const idx = Math.floor(clockTime / ROUTINE_PHASE_SECS);
-    const base = ROUTINE_DAY_ORDER[idx % ROUTINE_DAY_ORDER.length]!;
+    // Three stretches in four she keeps the hour; the fourth is her own.
+    const base = rhythmAnchor && idx % 4 !== 3 ? rhythmAnchor : ROUTINE_DAY_ORDER[idx % ROUTINE_DAY_ORDER.length]!;
     // Once the golden carp lives in the piscina, her rounds bend to
     // it: on alternate cycles, the pond gets the Stories hour, she
     // visits her jewel, as pond-keepers do.
@@ -6737,6 +7043,13 @@ export function createTownScene(
   }
   function routineLinesFor(id: string): string[] {
     switch (id) {
+      case "terrace":
+        return [
+          "This is the hour to be up here. Look back down the line and you can see the whole day we've had.",
+          "The hall goes gold first, then the tree, then the gate. I've checked. Repeatedly.",
+          "I come up at dusk to count the lamps as they're lit. It's a very small job, and it's mine.",
+          "Everything in this estate points here, and from here everything points home.",
+        ];
       case "market":
         return [
           "Morning rounds: bread still warm, grapes counted twice. Basil drives a hard bargain and I respect it entirely.",
@@ -6866,7 +7179,22 @@ export function createTownScene(
       return;
     }
     let routineTarget: { x: number; z: number } | null = null;
-    if (!followMode && !museReturning) {
+    if (guide) {
+      const here = museGroup.position;
+      const fromHim = Math.hypot(walkPos.x - here.x, walkPos.z - here.z);
+      const hisWay = Math.hypot(walkPos.x - guide.x, walkPos.z - guide.z);
+      const herWay = Math.hypot(here.x - guide.x, here.z - guide.z);
+      if (herWay < 2 && hisWay < 5) endGuide(true);
+      else if (t > guide.until || fromHim > 30) endGuide(false);
+      else if (herWay < 1.3 || fromHim > 9) {
+        // A guide waits: turned back toward him until he catches up.
+        museIsMoving = false;
+        here.y = groundHeightAt(here.x, here.z);
+        museGroup.rotation.y = angleLerp(museGroup.rotation.y, Math.atan2(walkPos.x - here.x, walkPos.z - here.z), 0.08);
+        return;
+      } else routineTarget = { x: guide.x, z: guide.z };
+    }
+    if (!routineTarget && !followMode && !museReturning) {
       // --- Her daily routine (see the ROUTINE_ANCHORS block above) ---
       const key = routineKey();
       // Rank 10: her night anchor becomes the lake shore: she waits
@@ -11555,8 +11883,34 @@ export function createTownScene(
     },
     slide: () => {
       if (!walking || !isMoving || boatState || airborne(hop) || (handInHand && followMode)) return false;
-      if (!sliding(run)) startSlide(run, wishX || Math.sin(walkHeading), wishZ || Math.cos(walkHeading), clock.getElapsedTime());
+      if (!sliding(run) && startSlide(run, wishX || Math.sin(walkHeading), wishZ || Math.cos(walkHeading), clock.getElapsedTime())) {
+        if (stepSounds) playSlide(footingHere());
+        puffDust(walkPos.x, playerGroundSm, walkPos.z);
+        flourish(clockTime);
+      }
       return true;
+    },
+    setRhythm: ({ anchor, marketOpen: open, marketBusy }) => {
+      rhythmAnchor = anchor;
+      marketOpen = open;
+      for (const goods of marketGoods) goods.visible = open;
+      boards.visible = !open;
+      countryBaskets.visible = open && marketBusy;
+    },
+    canInvite: () =>
+      walking && !guide && !seatPlayer && !seatMuse && !boatState && !bathState && !danceState && !pairState &&
+      !skyWatchState && !secretMoment && !dreamMode && !handInHand,
+    startGuide: (x, z) => {
+      if (!walking) return false;
+      routineHold = false;
+      museReturning = false;
+      guide = { x, z, until: clockTime + 120 };
+      return true;
+    },
+    setDishes: setTableDishes,
+    setEstateCare: applyEstateCare,
+    setStepSounds: (on) => {
+      stepSounds = on;
     },
     setWalkMove: (x: number, y: number) => {
       padX = THREE.MathUtils.clamp(x, -1, 1);
