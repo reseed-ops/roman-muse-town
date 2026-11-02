@@ -765,9 +765,13 @@ const animFbxLoader = new FBXLoader();
  *  delta applied twice, splaying them out sideways, hands forever
  *  sticking out). The snapshot is restored before every bake and
  *  before the gate measures, so a bake never sees a posed bone. */
+const LIBRARY_PATIENCE_MS = 20000;
+
 export function createCharAnimator(args: {
   model: THREE.Object3D;
   resources: SceneResources;
+  /** The walker is moving: a clip parse now would be felt in the stick. */
+  isBusy?: () => boolean;
   urls: {
     idle: string; walk: string; run: string; wave: string; sit: string; dance?: string; poseA?: string; poseB?: string;
     /** Outdoor library sets (rig: OUTDOOR_RIG). talk = standing
@@ -1132,8 +1136,18 @@ export function createCharAnimator(args: {
         const c = onBindPose(() => checkRetargetedClip(model, clip));
         return c.finite && c.bodyOk && c.pivotOk;
       };
+      // Nothing waits on the library the moment the town appears, and each
+      // parse holds the frame, so a clip takes its turn while he stands
+      // still, however long a walk runs short of LIBRARY_PATIENCE_MS.
+      const quietTurn = async (): Promise<void> => {
+        const deadline = performance.now() + LIBRARY_PATIENCE_MS;
+        do {
+          await new Promise((resolve) => window.setTimeout(resolve, 400));
+        } while (args.isBusy?.() && performance.now() < deadline && !args.resources.disposed);
+      };
       const lenient = async (url?: string): Promise<THREE.AnimationClip | null> => {
         if (!url) return null;
+        await quietTurn();
         const clip = await loadClip(url);
         return clip && passes(clip) ? clip : null;
       };
@@ -1150,6 +1164,7 @@ export function createCharAnimator(args: {
       // seat placement; see pinHipXZInPlace).
       const lenientOutdoor = async (url: string | undefined, pinHipXZ: boolean): Promise<THREE.AnimationClip | null> => {
         if (!url) return null;
+        await quietTurn();
         const clip = await loadClip(url, OUTDOOR_RIG);
         if (!clip) return null;
         if (pinHipXZ) pinHipXZInPlace(clip);

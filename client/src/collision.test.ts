@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { circ, obb, resolveCollisions, stepEntersBox, type Obstacle } from "./collision";
+import { circ, obb, resolveCollisions, slideMotion, stepEntersBox, type Obstacle } from "./collision";
 
 const wall = obb(0, 0, 0.15, 4, 0); // a thin north-south wall at x = 0
 const CLEARANCE = 0.5;
@@ -57,5 +57,57 @@ describe("stepEntersBox", () => {
 
   test("a walker already inside can always step out", () => {
     expect(stepEntersBox([wall], 0, 0, 1, 0)).toBe(false);
+  });
+});
+
+describe("slideMotion", () => {
+  test("open ground leaves the step alone", () => {
+    expect(slideMotion([circ(5, 5, 0.4)], 0, 0, 0.1, 0, CLEARANCE)).toEqual({ dx: 0.1, dz: 0 });
+  });
+
+  test("a wall keeps only the part of the step along it", () => {
+    const m = slideMotion([wall], -0.66, 0, 0.1, 0.1, CLEARANCE);
+    expect(m.dx).toBeCloseTo(0);
+    expect(m.dz).toBeCloseTo(0.1);
+  });
+
+  test("a dead-on approach to a rock goes around it, at most of his speed", () => {
+    const m = slideMotion([circ(0.65, 0, 0.4)], 0, 0, 0.1, 0, CLEARANCE);
+    expect(Math.abs(m.dx)).toBeLessThan(0.01);
+    expect(Math.hypot(m.dx, m.dz)).toBeCloseTo(0.075);
+  });
+
+  test("walking past a rock is untouched once he's heading away from it", () => {
+    expect(slideMotion([circ(0, 0, 0.4)], 0.67, 0, 0.1, 0, CLEARANCE)).toEqual({ dx: 0.1, dz: 0 });
+  });
+
+  test("a ring of rocks is walked around without ever losing the way", () => {
+    const rocks = [circ(3, 0.1, 0.4), circ(5, -0.1, 0.45), circ(7, 0.15, 0.35)];
+    let x = 0;
+    let z = 0;
+    let kinks = 0;
+    let last = { dx: 0.1, dz: 0 };
+    for (let i = 0; i < 200 && x < 9; i++) {
+      const m = slideMotion(rocks, x, z, 0.1, 0, CLEARANCE);
+      const r = resolveCollisions(rocks, x + m.dx, z + m.dz, CLEARANCE);
+      const step = { dx: r.x - x, dz: r.z - z };
+      const turn = Math.abs(Math.atan2(last.dx * step.dz - last.dz * step.dx, last.dx * step.dx + last.dz * step.dz));
+      if (turn > 1.2) kinks++;
+      last = step;
+      x = r.x;
+      z = r.z;
+    }
+    expect(x).toBeGreaterThanOrEqual(9);
+    expect(kinks).toBe(0);
+  });
+
+  test("ghosts don't bend anything", () => {
+    const ghost = { ...circ(0.65, 0, 0.4), ghost: true };
+    expect(slideMotion([ghost], 0, 0, 0.1, 0, CLEARANCE)).toEqual({ dx: 0.1, dz: 0 });
+  });
+
+  test("small props keep a slimmer clearance than buildings", () => {
+    expect(resolveCollisions([circ(0, 0, 0.3)], 0.4, 0, CLEARANCE).x).toBeCloseTo(0.58);
+    expect(resolveCollisions([circ(0, 0, 0.9)], 1, 0, CLEARANCE).x).toBeCloseTo(0.9 + CLEARANCE);
   });
 });

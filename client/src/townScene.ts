@@ -33,6 +33,7 @@ import {
   obbWorld,
   pushOutOf,
   resolveCollisions as resolveAgainst,
+  slideMotion,
   stepEntersBox,
   type LiveBody,
   type Obstacle,
@@ -4582,6 +4583,7 @@ export function createTownScene(
       if (!opts.reducedMotion) {
         museAnim = createCharAnimator({
           resources,
+          isBusy: () => isMoving,
           model,
           urls: {
             idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceUrl, poseA: fPoseAUrl, poseB: fPoseBUrl,
@@ -4976,6 +4978,7 @@ export function createTownScene(
         if (!opts.reducedMotion) {
           playerAnim = createCharAnimator({
             resources,
+            isBusy: () => isMoving,
             model,
             urls: {
               idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceUrl,
@@ -5369,6 +5372,14 @@ export function createTownScene(
   let camPitchSmooth = 0;
   let camDistSmooth = 10.5;
   let isMoving = false;
+  // The stick's direction and tilt, eased a touch so a fresh push or a
+  // flick across builds in about 50 ms instead of arriving in one frame.
+  let wishX = 0;
+  let wishZ = 0;
+  // Where the camera is looking from. It trails him slightly, so what a
+  // brush against a rock does to his path isn't done to the whole screen.
+  let camFollowX = Number.NaN;
+  let camFollowZ = Number.NaN;
   let viewAspect = 1;
   let isLandscapeView = false;
   // The standard walk-camera framing, used on every entry into walk
@@ -5837,6 +5848,7 @@ export function createTownScene(
     // what lets the follow camera ease around him (in the camera
     // block below) without bending a held direction into a curve.
     if (!isMoving || walkDrag) inputYawRef = camYawSmooth;
+    if (!isMoving) wishX = wishZ = 0;
     if (isMoving) {
       const prevX = walkPos.x;
       const prevZ = walkPos.z;
@@ -5886,8 +5898,13 @@ export function createTownScene(
       // He walks in the input's camera-relative direction straight
       // away while the turn catches up, never a slide back toward
       // the camera just because he was facing it.
-      let mfx = wx;
-      let mfz = wz;
+      const tilt = Math.min(1, mag);
+      const wishT = opts.reducedMotion ? 1 : 1 - Math.exp(-dt * 22);
+      wishX += (wx * tilt - wishX) * wishT;
+      wishZ += (wz * tilt - wishZ) * wishT;
+      const wishLen = Math.hypot(wishX, wishZ);
+      let mfx = wishLen > 0.0001 ? wishX / wishLen : wx;
+      let mfz = wishLen > 0.0001 ? wishZ / wishLen : wz;
       // A sidestep in progress (see the unstuck check below) briefly
       // overrides the walk direction: a small sideways hop-step around
       // whatever is pinning him, instead of grinding into it.
@@ -5902,22 +5919,17 @@ export function createTownScene(
       // own body wherever she currently stands. Push-out removes
       // only the penetrating component of the motion, so pushing
       // diagonally against a wall slides along it.
-      const totalStep = step * Math.min(1, mag);
+      const totalStep = step * Math.min(1, wishLen);
       const subSteps = Math.max(1, Math.ceil(totalStep / 0.13));
       let newX = walkPos.x;
       let newZ = walkPos.z;
+      // Her body only counts where she can be seen, and at about her
+      // real size: a companion out of sight is not an invisible wall,
+      // and one beside him should not close a doorway.
+      const museBody = museGroup.visible ? { x: museGroup.position.x, z: museGroup.position.z, r: 0.4, pad: 0.15 } : undefined;
       for (let s = 0; s < subSteps; s++) {
-        const candX = newX + (mfx * totalStep) / subSteps;
-        const candZ = newZ + (mfz * totalStep) / subSteps;
-        // Her body only counts where she can be seen, and at about her
-        // real size: a companion out of sight is not an invisible wall,
-        // and one beside him should not close a doorway.
-        const resolved = resolveCollisions(
-          candX,
-          candZ,
-          0.5,
-          museGroup.visible ? { x: museGroup.position.x, z: museGroup.position.z, r: 0.4, pad: 0.15 } : undefined,
-        );
+        const slid = slideMotion(obstacles, newX, newZ, (mfx * totalStep) / subSteps, (mfz * totalStep) / subSteps, 0.5, museBody);
+        const resolved = resolveCollisions(newX + slid.dx, newZ + slid.dz, 0.5, museBody);
         // Whatever pushed this step around, it may not land on a wall.
         if (stepEntersBox(obstacles, newX, newZ, resolved.x, resolved.z)) continue;
         newX = resolved.x;
@@ -6154,7 +6166,9 @@ export function createTownScene(
       const dirX = -fx;
       const dirZ = -fz;
       for (const ob of obstacles) {
-        if (ob.ghost) continue;
+        // Rocks, posts and saplings pass the lens; a dolly for each one
+        // would pump the camera all the way down a street.
+        if (ob.ghost || (ob.kind === "circle" && ob.r < 0.9)) continue;
         const hit = rayObstacleEntry(walkPos.x, walkPos.z, dirX, dirZ, ob, 0.55);
         if (hit < boom) boom = hit;
       }
@@ -6193,22 +6207,35 @@ export function createTownScene(
     if (opts.reducedMotion) {
       camDistSmooth = boom;
     } else {
-      const distRate = boom < camDistSmooth ? 12 : 2.5;
-      camDistSmooth += (boom - camDistSmooth) * (1 - Math.exp(-dt * distRate));
+      // Dollying in stays quick but never lurches: stepping past a corner
+      // can pull the boom in by most of its length in a single frame.
+      const distRate = boom < camDistSmooth ? 8 : 2.5;
+      const distStep = (boom - camDistSmooth) * (1 - Math.exp(-dt * distRate));
+      camDistSmooth += Math.max(distStep, -11 * dt);
     }
-    let camX = walkPos.x - fx * camDistSmooth;
-    let camZ = walkPos.z - fz * camDistSmooth;
+    // A seat, a boat or a fast walk across town is a cut, not a trail.
+    if (opts.reducedMotion || !(Math.hypot(walkPos.x - camFollowX, walkPos.z - camFollowZ) < 3)) {
+      camFollowX = walkPos.x;
+      camFollowZ = walkPos.z;
+    } else {
+      const followT = 1 - Math.exp(-dt * 14);
+      camFollowX += (walkPos.x - camFollowX) * followT;
+      camFollowZ += (walkPos.z - camFollowZ) * followT;
+    }
+    const camGroundY = terrainHeight(camFollowX, camFollowZ);
+    let camX = camFollowX - fx * camDistSmooth;
+    let camZ = camFollowZ - fz * camDistSmooth;
     // Keep the camera inside the town's sensible range and off the ground.
     const camRad = Math.hypot(camX, camZ);
     if (camRad > 62) {
       camX = (camX / camRad) * 62;
       camZ = (camZ / camRad) * 62;
     }
-    let camY = groundY + framing.height + camPitchSmooth;
+    let camY = camGroundY + framing.height + camPitchSmooth;
     const minCamY = terrainHeight(camX, camZ) + 0.55;
     if (camY < minCamY) camY = minCamY;
     camera.position.set(camX, camY, camZ);
-    controls.target.set(walkPos.x + fx * 1.2, groundY + 1.15, walkPos.z + fz * 1.2);
+    controls.target.set(camFollowX + fx * 1.2, camGroundY + 1.15, camFollowZ + fz * 1.2);
     camera.lookAt(controls.target);
 
     // Proximity prompts: walking near an interactable no longer opens

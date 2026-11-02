@@ -29,9 +29,15 @@ export function obbWorld(ob: ObbObstacle, lx: number, lz: number): { x: number; 
   return { x: ob.x + lx * c + lz * s, z: ob.z - lx * s + lz * c };
 }
 
+/** Rocks, posts and trunks: a walker brushes past these, so they keep a
+ *  body's width of clearance rather than a building's. */
+const SMALL_PROP_R = 0.5;
+const SMALL_PROP_CLEARANCE = 0.28;
+
 /** How far a character with clearance `defAdd` keeps from a shape. */
 function clearanceFor(ob: Obstacle, defAdd: number): number {
-  return ob.pad === undefined ? defAdd : Math.min(ob.pad, defAdd);
+  const add = ob.pad === undefined ? defAdd : Math.min(ob.pad, defAdd);
+  return ob.kind === "circle" && ob.r <= SMALL_PROP_R ? Math.min(add, SMALL_PROP_CLEARANCE) : add;
 }
 
 /** Push a point out of ONE obstacle (circle or OBB). Positional
@@ -106,6 +112,79 @@ export function resolveCollisions(
     }
   }
   return { x: px, z: pz };
+}
+
+/** How far ahead of a round shape a walker starts to curve around it. */
+const ROUND_LOOKAHEAD = 0.35;
+
+/** The outward normal of a shape near the point, with how firmly to heed it:
+ *  1 on contact, and easing in across the lookahead for round shapes. Null
+ *  if it stands clear (or inside a box, which push-out handles). */
+function contactNormal(ob: Obstacle, x: number, z: number, defAdd: number): { nx: number; nz: number; firm: number } | null {
+  const reach = clearanceFor(ob, defAdd) + 0.02;
+  if (ob.kind === "circle") {
+    const dx = x - ob.x;
+    const dz = z - ob.z;
+    const d = Math.hypot(dx, dz);
+    const past = d - (ob.r + reach);
+    if (past >= ROUND_LOOKAHEAD || d <= 0.0001) return null;
+    return { nx: dx / d, nz: dz / d, firm: past <= 0 ? 1 : 1 - past / ROUND_LOOKAHEAD };
+  }
+  const { lx, lz } = obbLocal(ob, x, z);
+  const ddx = lx - clamp(lx, -ob.halfW, ob.halfW);
+  const ddz = lz - clamp(lz, -ob.halfD, ob.halfD);
+  const d = Math.hypot(ddx, ddz);
+  if (d >= reach || d <= 0.0001) return null;
+  const c = Math.cos(ob.rot);
+  const s = Math.sin(ob.rot);
+  return { nx: (ddx * c + ddz * s) / d, nz: (-ddx * s + ddz * c) / d, firm: 1 };
+}
+
+/** Bend a step along whatever it is about to touch, so the walker slides
+ *  instead of being walked in and shoved back out every frame, which reads
+ *  as a stutter. Round shapes are steered around from just before contact,
+ *  keeping most of his speed, since meeting one head-on at full stride would
+ *  otherwise be a sudden quarter turn. resolveCollisions has the last word. */
+export function slideMotion(
+  obstacles: readonly Obstacle[],
+  x: number,
+  z: number,
+  dx: number,
+  dz: number,
+  defAdd: number,
+  body?: LiveBody,
+): { dx: number; dz: number } {
+  const speed = Math.hypot(dx, dz);
+  if (speed <= 0) return { dx, dz };
+  let mx = dx;
+  let mz = dz;
+  const slideOff = (ob: Obstacle): void => {
+    if (ob.ghost) return;
+    const n = contactNormal(ob, x + mx, z + mz, defAdd);
+    if (!n) return;
+    const into = mx * n.nx + mz * n.nz;
+    if (into >= 0) return;
+    const headOn = -into / (Math.hypot(mx, mz) || 1);
+    mx -= into * n.nx * n.firm;
+    mz -= into * n.nz * n.firm;
+    if (ob.kind !== "circle") return;
+    // Round the side he already leans to; dead on, either will do.
+    const tx = dx - (dx * n.nx + dz * n.nz) * n.nx;
+    const tz = dz - (dx * n.nx + dz * n.nz) * n.nz;
+    const lean = Math.hypot(tx, tz);
+    const sx = lean > speed * 0.001 ? tx / lean : -n.nz;
+    const sz = lean > speed * 0.001 ? tz / lean : n.nx;
+    mx += sx * speed * 0.75 * headOn * n.firm;
+    mz += sz * speed * 0.75 * headOn * n.firm;
+    const now = Math.hypot(mx, mz);
+    if (now > speed) {
+      mx *= speed / now;
+      mz *= speed / now;
+    }
+  };
+  if (body) slideOff(circ(body.x, body.z, body.r, body.pad));
+  for (const ob of obstacles) slideOff(ob);
+  return { dx: mx, dz: mz };
 }
 
 /** Does the straight step from A to B enter a box it did not start in?

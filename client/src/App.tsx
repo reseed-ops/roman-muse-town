@@ -332,7 +332,12 @@ export function App() {
   // Analog left joystick: the knob offset (px) is mirrored to state for
   // rendering; the active pointer id lives in a ref so moves from other
   // touches (the ABXY thumb) never disturb it.
-  const [stickOffset, setStickOffset] = useState({ x: 0, y: 0 });
+  // Moved straight on the element: state here re-rendered the whole shell
+  // on every finger move, in the same frame as the walking it steers.
+  const stickKnobRef = useRef<HTMLSpanElement>(null);
+  const placeStickKnob = (x: number, y: number) => {
+    if (stickKnobRef.current) stickKnobRef.current.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+  };
   const stickPointer = useRef<number | null>(null);
 
   // Stylized weather: random events rolled by the scene, mirrored here
@@ -3673,14 +3678,14 @@ export function App() {
         dx = (dx / len) * STICK_RADIUS;
         dy = (dy / len) * STICK_RADIUS;
       }
-      setStickOffset({ x: dx, y: dy });
+      placeStickKnob(dx, dy);
       setPad(dx / STICK_RADIUS, -dy / STICK_RADIUS);
     },
     [setPad],
   );
   const stickEnd = useCallback(() => {
     stickPointer.current = null;
-    setStickOffset({ x: 0, y: 0 });
+    placeStickKnob(0, 0);
     setPad(0, 0);
   }, [setPad]);
 
@@ -4603,7 +4608,7 @@ export function App() {
     const next = !forcedLandscapeRef.current;
     forcedLandscapeRef.current = next;
     stickPointer.current = null;
-    setStickOffset({ x: 0, y: 0 });
+    placeStickKnob(0, 0);
     setPad(0, 0);
     setForcedLandscape(next);
   }, [setPad]);
@@ -4679,7 +4684,7 @@ export function App() {
     // (Keyed on full panels only, her talk bubble no longer hides
     // the stick, so it no longer stops a held stride either.)
     stickPointer.current = null;
-    setStickOffset({ x: 0, y: 0 });
+    placeStickKnob(0, 0);
     setPad(0, 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [anyFullPanelOpen]);
@@ -7788,11 +7793,9 @@ export function App() {
                 ✕
               </span>
               <span
+                ref={stickKnobRef}
                 aria-hidden="true"
-                className="absolute top-1/2 left-1/2 h-[54px] w-[54px] rounded-full border border-white/20 bg-[#3a3a3a]/55 shadow-[inset_0_2px_4px_rgba(255,255,255,0.22),0_3px_8px_rgba(0,0,0,0.5)]"
-                style={{
-                  transform: `translate(calc(-50% + ${stickOffset.x}px), calc(-50% + ${stickOffset.y}px))`,
-                }}
+                className="absolute top-1/2 left-1/2 h-[54px] w-[54px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-[#3a3a3a]/55 shadow-[inset_0_2px_4px_rgba(255,255,255,0.22),0_3px_8px_rgba(0,0,0,0.5)]"
               />
             </div>
           </div>
