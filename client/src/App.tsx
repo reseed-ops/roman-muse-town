@@ -345,7 +345,7 @@ export function App() {
   // on every finger move, in the same frame as the walking it steers.
   const stickKnobRef = useRef<HTMLSpanElement>(null);
   const placeStickKnob = (x: number, y: number) => {
-    if (stickKnobRef.current) stickKnobRef.current.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+    if (stickKnobRef.current) stickKnobRef.current.style.transform = `translate(${x}px, ${y}px)`;
   };
   const stickPointer = useRef<number | null>(null);
 
@@ -1894,7 +1894,7 @@ export function App() {
 
   // Open an interactable's panel (or run its action). Reached only by
   // an explicit act: a tap in overview, a tap on the place itself in
-  // walk mode, tapping the "A, …" prompt, or pressing A / E / Enter
+  // walk mode, tapping the "A, …" prompt, or pressing X / E / Enter
   // while its prompt is showing. Approach alone never lands here any
   // more, the scene reports proximity through onNearbyChange, and the
   // shell shows only the prompt.
@@ -2676,7 +2676,7 @@ export function App() {
     }
   }, [dreaming, museBubble]);
 
-  /** Rest at the basilica's bed nook (the A prompt there, or the
+  /** Rest at the basilica's bed nook (the X prompt there, or the
    *  menu's Rest): the town's day-ending ritual. The clock is never
    *  touched, he wakes to whatever the real local hour says. */
   const restInTown = useCallback(() => {
@@ -4314,14 +4314,16 @@ export function App() {
   // The Xbox controller is the walk-mode control scheme: the analog left
   // joystick drives the same pad vector as the keyboard, dragging the
   // open view orbits the camera, and A/B/X/Y map to real interactions:
-  //  A = Interact, with no panel open, opens whatever the "A, …"
-  //      prompt is showing; with a panel open, runs that panel's main
-  //      action (chat with Aelia, water the tree, …). The keyboard
+  //  A = Jump, like the space bar.
+  //  B = Back, closing the open panel; on the move it slides instead,
+  //      and standing still with nothing open it leaves walk mode.
+  //      The C key slides too.
+  //  X = Talk and interact, with no panel open, opens whatever the
+  //      "X, …" prompt is showing; with a panel open, runs that panel's
+  //      main action (chat with Aelia, water the tree, …). The keyboard
   //      interact keys, E or Enter, do exactly the same thing.
-  //  B = Back, close the open panel, or leave walk mode if none is open.
-  //  X = Stones, pick up a loose stone / throw the held one (the
-  //      hint lives on X too, when no stone is in play).
-  //  Y = Day / night.
+  //  Y = Special actions, pick up a loose stone / throw the held one
+  //      (the hint lives on Y too, when no stone is in play).
   const xboxInteract = () => {
     // A advances the summit scene first while it runs, it is the
     // night's "next" button, ahead of every other conversation.
@@ -4346,15 +4348,15 @@ export function App() {
     if (boardOpen || questOpen || secretOpen) {
       return;
     }
-    // No panel open and a prompt is showing: A opens that
+    // No panel open and a prompt is showing: X opens that
     // interactable. This, a press, not an approach, is the one way
     // panels open in walk mode.
     if (!treeOpen && !youOpen && !selected && !weatherOpen && !lettersOpen && !goalsOpen) {
       const target = nearbyRef.current;
       if (target) {
-        // Stones belong to X now (see xboxStone): A never picks
-        // up or throws, so an A press facing a stone prompt does
-        // not spend itself on the toy.
+        // Stones belong to Y (see xboxStone): X never picks up or
+        // throws, so an X press facing a stone prompt does not
+        // spend itself on the toy.
         if (target.kind === "stone") return;
         openInteractable(target.kind, target.id);
         return;
@@ -4382,7 +4384,7 @@ export function App() {
       window.setTimeout(() => setHintText(null), 3000);
       return;
     }
-    setHintText("Walk up to Aelia, a house, or the town tree, when the A prompt appears, press A to interact.");
+    setHintText("Walk up to Aelia, a house, or the town tree, when the X prompt appears, press X to interact.");
     window.setTimeout(() => setHintText(null), 3000);
   };
 
@@ -4395,8 +4397,11 @@ export function App() {
     const onKey = (e: KeyboardEvent) => {
       if (!walkingRef.current) return;
       const target = e.target as HTMLElement | null;
+      // A tapped control button keeps focus; Space must still jump, not press it.
+      const onControls = e.code === "Space" && !!target?.closest("[data-mt-controls]");
       if (
         target &&
+        !onControls &&
         (target.tagName === "INPUT" ||
           target.tagName === "TEXTAREA" ||
           target.tagName === "BUTTON" ||
@@ -4408,6 +4413,11 @@ export function App() {
         e.preventDefault();
         xboxInteractRef.current();
       }
+      if (e.code === "Space") {
+        e.preventDefault();
+        if (!e.repeat) sceneRef.current?.jump();
+      }
+      if ((e.key === "c" || e.key === "C") && !e.repeat) sceneRef.current?.slide();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -4448,6 +4458,8 @@ export function App() {
     } else if (seatedBenchRef.current) {
       // B stands him up from a bench before it ever leaves walk mode.
       sceneRef.current?.standUp();
+    } else if (sceneRef.current?.slide()) {
+      // On the move, B is the slide; it only means leave when he's still.
     } else if (walkingRef.current) {
       // B in walk mode drops him into the town overview. The ABXY
       // cluster stays mounted while the overview is up (see the
@@ -4666,9 +4678,9 @@ export function App() {
   // hide the controls exactly as before. Input conflicts resolve
   // thus: the stick is its own pointer surface (it never focuses
   // or types into the chat input, and the bubble sits top-centre,
-  // clear of the bottom-left stick); the A button already gives an
+  // clear of the bottom-left stick); the X button already gives an
   // open bubble first claim (it advances/closes the conversation,
-  // see xboxInteract), so A never interacts with the world while
+  // see xboxInteract), so X never interacts with the world while
   // she is talking; typing keeps the keyboard, and the scene's key
   // handler ignores keystrokes aimed at inputs, so WASD typed into
   // the chat never walks him.
@@ -5601,8 +5613,8 @@ export function App() {
               : isLandscape
                 ? "You're in landscape. The town is framed wide, panels dock to the side, and the walk camera pulls back a little so you and Aelia both stay in view."
                 : "Tip: this app's window doesn't turn when you rotate your phone, use Landscape in the ☰ menu and the town turns itself sideways instead. Panels dock to the side, and walking feels more cinematic."}{" "}
-            Walk up to Aelia by the town tree and you&apos;ll both wave; walk up to a house or the tree and press A when the prompt appears to interact, the garden key you simply walk over.
-            In walk mode the virtual Xbox controller appears: left joystick to walk, A to interact, B to go back, X for a hint, Y for day/night, and dragging anywhere on the open view swings the camera around you.
+            Walk up to Aelia by the town tree and you&apos;ll both wave; walk up to a house or the tree and press X when the prompt appears to interact, the garden key you simply walk over.
+            In walk mode the virtual Xbox controller appears: left joystick to walk, A or the space bar to jump, B or C to slide while moving (B goes back when you're still), X to talk and interact, Y for stones and hints, and dragging anywhere on the open view swings the camera around you.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {walking && (
@@ -5720,8 +5732,8 @@ export function App() {
                 {summitScene.beats[summitScene.index]?.choice
                   ? ""
                   : summitScene.index < summitScene.beats.length - 1
-                    ? "tap / A ▸"
-                    : "tap / A, and the night is kept"}
+                    ? "tap / X ▸"
+                    : "tap / X, and the night is kept"}
               </p>
             </button>
             {summitScene.beats[summitScene.index]?.choice && (
@@ -5800,10 +5812,10 @@ export function App() {
               </p>
               <p className="mt-1 text-right text-[11px] font-bold text-[#a87800]">
                 {museBubble.index < museBubble.lines.length - 1 || museBubble.cycle
-                  ? "tap / A ▸"
+                  ? "tap / X ▸"
                   : museBubble.invite
                     ? ""
-                    : "tap / A to close"}
+                    : "tap / X to close"}
               </p>
             </button>
             {museBubble.invite && !following && (
@@ -7550,7 +7562,7 @@ export function App() {
                   Another of her lines
                 </button>
                 <p className="mt-2 text-[12px] leading-relaxed text-white/55 italic">
-                  Talking to Aelia herself happens in speech bubbles now. Walk up to her and press A, and
+                  Talking to Aelia herself happens in speech bubbles now. Walk up to her and press X, and
                   she&apos;ll answer over her own head, like a proper role-playing game.
                 </p>
               </div>
@@ -7801,10 +7813,10 @@ export function App() {
           
           {/* The interaction prompt: walking near an interactable shows
               ONLY this chip, never the panel itself. Tapping the chip
-              (or pressing A / E / Enter) opens the nearest one's panel.
+              (or pressing X / E / Enter) opens the nearest one's panel.
               One prompt at a time: the scene reports only the nearest.
-              EXCEPTION. A stone target wears an X badge and answers
-              to X (xboxStone): stones moved off A entirely. */}
+              EXCEPTION. A stone target wears a Y badge and answers
+              to Y (xboxStone). */}
           {nearby && !anyPanelOpen && (
             <div
               className={
@@ -7819,23 +7831,23 @@ export function App() {
                 onClick={nearby.kind === "stone" ? xboxStone : xboxInteract}
                 aria-label={
                   nearby.kind === "stone"
-                    ? `X, ${nearbyPrompt(nearby) ?? "stone"}`
+                    ? `Y, ${nearbyPrompt(nearby) ?? "stone"}`
                     : `Interact, ${nearbyPrompt(nearby) ?? "interact"}`
                 }
               >
                 {nearby.kind === "stone" ? (
                   <span
                     aria-hidden="true"
-                    className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#2d7dd2] bg-[#1b1b1b] text-[13px] font-black text-[#5aa2e8]"
+                    className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#ffb900] bg-[#1b1b1b] text-[13px] font-black text-[#ffb900]"
                   >
-                    X
+                    Y
                   </span>
                 ) : (
                   <span
                     aria-hidden="true"
-                    className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#52b043] bg-[#1b1b1b] text-[13px] font-black text-[#7ed37a]"
+                    className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#2d7dd2] bg-[#1b1b1b] text-[13px] font-black text-[#5aa2e8]"
                   >
-                    A
+                    X
                   </span>
                 )}
                 {nearbyPrompt(nearby)}
@@ -7885,12 +7897,6 @@ export function App() {
               onContextMenu={(e) => e.preventDefault()}
             >
               <span
-                aria-hidden="true"
-                className="absolute top-1/2 left-1/2 flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#107c10] text-[10px] font-black text-white shadow"
-              >
-                ✕
-              </span>
-              <span
                 ref={stickKnobRef}
                 aria-hidden="true"
                 className="absolute top-1/2 left-1/2 h-[54px] w-[54px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-[#3a3a3a]/55 shadow-[inset_0_2px_4px_rgba(255,255,255,0.22),0_3px_8px_rgba(0,0,0,0.5)]"
@@ -7912,18 +7918,18 @@ export function App() {
             <span />
             <button
               type="button"
-              aria-label="Y button, switch day and night"
+              aria-label="Y button: pick up a loose stone at your feet, or throw the stone you are holding; with no stone in play, ask Aelia for a hint"
               className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#ffb900]/80 bg-[#1b1b1b]/55 text-lg font-black text-[#ffb900] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8),1px_0_0_rgba(0,0,0,0.6),-1px_0_0_rgba(0,0,0,0.6)] transition active:scale-90 active:bg-[#ffb900] active:text-black"
-              onClick={toggleNight}
+              onClick={xboxStone}
             >
               Y
             </button>
             <span />
             <button
               type="button"
-              aria-label="X button: pick up a loose stone at your feet, or throw the stone you are holding; with no stone in play, ask Aelia for a hint"
+              aria-label="X button, talk and interact with what the X prompt shows: chat with Aelia, water the tree, or visit the place you are standing by"
               className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#2d7dd2]/90 bg-[#1b1b1b]/55 text-lg font-black text-[#5aa2e8] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8),1px_0_0_rgba(0,0,0,0.6),-1px_0_0_rgba(0,0,0,0.6)] transition active:scale-90 active:bg-[#2d7dd2] active:text-white"
-              onClick={xboxStone}
+              onClick={xboxInteract}
             >
               X
             </button>
@@ -7932,7 +7938,7 @@ export function App() {
               type="button"
               aria-label={
                 walking
-                  ? "B button, back, close panel or go to the town overview"
+                  ? "B button, slide while moving; otherwise back, close panel or go to the town overview"
                   : "B button, back to Gaius, return to the third-person view"
               }
               className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#e74856]/90 bg-[#1b1b1b]/55 text-lg font-black text-[#ff7a85] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8),1px_0_0_rgba(0,0,0,0.6),-1px_0_0_rgba(0,0,0,0.6)] transition active:scale-90 active:bg-[#e74856] active:text-white"
@@ -7943,9 +7949,16 @@ export function App() {
             <span />
             <button
               type="button"
-              aria-label="A button, interact with what the A prompt shows: chat with Aelia, water the tree, or visit the place you are standing by"
+              aria-label="A button, jump"
               className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#52b043]/90 bg-[#1b1b1b]/55 text-lg font-black text-[#7ed37a] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8),1px_0_0_rgba(0,0,0,0.6),-1px_0_0_rgba(0,0,0,0.6)] transition active:scale-90 active:bg-[#107c10] active:text-white"
-              onClick={xboxInteract}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                sceneRef.current?.jump();
+              }}
+              onClick={(e) => {
+                // Keyboard activation has no pointer press before it.
+                if (e.detail === 0) sceneRef.current?.jump();
+              }}
             >
               A
             </button>
@@ -8016,7 +8029,7 @@ export function App() {
       {/* The bottom pill rows are gone (user declutter): Walk,
           Overview, Night, Guided tour, Hint, Zoom and Reset hunt
           all live in the ☰ town menu now. What remains at the
-          bottom is gameplay only, joystick, ABXY, the A prompt,
+          bottom is gameplay only, joystick, ABXY, the X prompt,
           the follow chip, plus this transient hint toast, which
           used to ride inside the old bar. */}
       {/* One-time rejoin hint: shown only after the first menu

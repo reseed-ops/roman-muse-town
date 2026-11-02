@@ -39,13 +39,13 @@ filenames.
 
 ## 2. Human Basic Motions, by Kevin Iglesias (Unity Asset Store)
 
-Drop at: `client/src/assets/anim/`, 13 FBX clips. Converted from the
+Drop at: `client/src/assets/anim/`, 14 FBX clips. Converted from the
 owner's purchased pack; **Asset Store EULA: embed in a product only, never
 redistribute the files.**
 
 `f_idle.fbx`, `f_walk.fbx`, `f_run.fbx`, `f_wave.fbx`, `f_sit.fbx`,
 `m_idle.fbx`, `m_walk.fbx`, `m_run.fbx`, `m_wave.fbx`, `m_sit.fbx`,
-`m_jump_start.fbx`, `m_jump_air.fbx`, `m_jump_end.fbx`
+`m_jump_start.fbx`, `m_jump_air.fbx`, `m_jump_end.fbx`, `m_slide.fbx` (HumanM@RunSlide01)
 
 ## 3. Human Dance Animations, by Kevin Iglesias (Unity Asset Store)
 

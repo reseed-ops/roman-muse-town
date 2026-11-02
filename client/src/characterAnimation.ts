@@ -710,7 +710,7 @@ function pinHipXZInPlace(clip: THREE.AnimationClip) {
   }
 }
 
-type CharMode = "dance" | "poseA" | "poseB" | "talk" | "flirt" | "hug" | null;
+type CharMode = "dance" | "poseA" | "poseB" | "talk" | "flirt" | "hug" | "jumpUp" | "jumpFall" | "jumpLand" | "slide" | null;
 
 export interface CharAnimator {
   /** The core clips are baked and the body can be shown animated. The
@@ -766,6 +766,7 @@ const animFbxLoader = new FBXLoader();
  *  sticking out). The snapshot is restored before every bake and
  *  before the gate measures, so a bake never sees a posed bone. */
 const LIBRARY_PATIENCE_MS = 20000;
+const SLIDE_SEC = 0.75;
 
 export function createCharAnimator(args: {
   model: THREE.Object3D;
@@ -780,6 +781,9 @@ export function createCharAnimator(args: {
      *  idle variety while bench-seated; flirt/hug = one-shot pair
      *  clips the scene stages only inside already-gated moments. */
     outdoor?: { talk: string[]; sitTalk: string[]; benchSit: string[]; flirt?: string; hug?: string };
+    /** His hop, in three parts. Their motion is his own: the scene lifts him. */
+    jump?: { start: string; air: string; end: string };
+    slide?: string;
   };
 }): CharAnimator {
   const { model, urls } = args;
@@ -956,6 +960,10 @@ export function createCharAnimator(args: {
       let hugClip: THREE.AnimationClip | null = null;
       let flirtA: THREE.AnimationAction | null = null;
       let hugA: THREE.AnimationAction | null = null;
+      let jumpUpA: THREE.AnimationAction | null = null;
+      let jumpAirA: THREE.AnimationAction | null = null;
+      let jumpLandA: THREE.AnimationAction | null = null;
+      let slideA: THREE.AnimationAction | null = null;
       out.hasPair = (kind) => (kind === "flirt" ? flirtA : hugA) !== null;
       out.pairDuration = (kind) => (kind === "flirt" ? flirtClip : hugClip)?.duration ?? 0;
       if (!idleA) return;
@@ -963,7 +971,7 @@ export function createCharAnimator(args: {
       out.hasWave = useWave && waveA !== null;
       out.hasSit = sitA !== null;
 
-      const weights = { idle: 1, walk: 0, run: 0, wave: 0, sit: 0, dance: 0, pose: 0, talk: 0, sitTalk: 0, bench: 0, pair: 0 };
+      const weights = { idle: 1, walk: 0, run: 0, wave: 0, sit: 0, dance: 0, pose: 0, talk: 0, sitTalk: 0, bench: 0, pair: 0, jump: 0 };
       let prevWaving = false;
       let prevMode: string | null = null;
       let poseFlipAt = 0;
@@ -1041,6 +1049,8 @@ export function createCharAnimator(args: {
         const talkT = mode === "talk" && !seated && talkActs.length > 0 && speed < 0.6 ? 1 : 0;
         const sitTalkT = mode === "talk" && seated && sitTalkActs.length > 0 ? 1 : 0;
         const benchT = seated && benchSeated && mode !== "talk" && benchActs.length > 0 ? 1 : 0;
+        const jumpMode = mode === "jumpUp" ? jumpUpA : mode === "jumpFall" ? jumpAirA : mode === "jumpLand" ? jumpLandA : mode === "slide" ? slideA : null;
+        weights.jump += ((jumpMode ? 1 : 0) - weights.jump) * (1 - Math.exp(-step * 22));
         const locoRate = 1 - Math.exp(-step * 7);
         const waveRate = 1 - Math.exp(-step * 10);
         const sitRate = 1 - Math.exp(-step * 6);
@@ -1066,6 +1076,8 @@ export function createCharAnimator(args: {
           const a = mode === "flirt" ? flirtA : hugA;
           if (a) a.time = 0;
         }
+        // reset, not a rewind: a one-shot that has run out stays finished otherwise.
+        if (jumpMode && prevMode !== mode) jumpMode.reset();
         if (mode === "talk" && prevMode !== "talk") {
           talkBag.start(performance.now());
           sitTalkBag.start(performance.now());
@@ -1083,7 +1095,7 @@ export function createCharAnimator(args: {
           activePose = activePose === poseAA ? poseBA : poseAA;
           poseFlipAt = performance.now() + 9000 + Math.random() * 6000;
         }
-        const locoScale = (1 - weights.wave) * (1 - weights.sit) * (1 - weights.dance) * (1 - weights.pose) * (1 - weights.talk) * (1 - weights.sitTalk) * (1 - weights.bench) * (1 - weights.pair);
+        const locoScale = (1 - weights.wave) * (1 - weights.sit) * (1 - weights.dance) * (1 - weights.pose) * (1 - weights.talk) * (1 - weights.sitTalk) * (1 - weights.bench) * (1 - weights.pair) * (1 - weights.jump);
         idleA.weight = weights.idle * locoScale;
         if (walkA) {
           walkA.weight = weights.walk * locoScale;
@@ -1113,6 +1125,9 @@ export function createCharAnimator(args: {
         for (const a of benchActs) a.weight = a === activeBench ? weights.bench : 0;
         if (flirtA) flirtA.weight = mode === "flirt" ? weights.pair : 0;
         if (hugA) hugA.weight = mode === "hug" ? weights.pair : 0;
+        for (const a of [jumpUpA, jumpAirA, jumpLandA, slideA]) {
+          if (a) a.weight = a === jumpMode ? weights.jump : 0;
+        }
         mixer.update(step);
       };
       out.prime = () => {
@@ -1151,6 +1166,24 @@ export function createCharAnimator(args: {
         const clip = await loadClip(url);
         return clip && passes(clip) ? clip : null;
       };
+      // Fit for a body brought low: a slide or a landing folds him far past
+      // what the standing gates allow, so only broken numbers are refused.
+      const action = async (url?: string): Promise<THREE.AnimationClip | null> => {
+        if (!url) return null;
+        await quietTurn();
+        const clip = await loadClip(url);
+        return clip && onBindPose(() => checkRetargetedClip(model, clip)).finite ? clip : null;
+      };
+      // First in line: a press of the jump button is likelier than a dance.
+      if (urls.jump) {
+        jumpUpA = mkOnce(await lenient(urls.jump.start), true);
+        // Hurried, so the crouch-and-spring fits the rise of a short hop.
+        if (jumpUpA) jumpUpA.timeScale = jumpUpA.getClip().duration / 0.28;
+        jumpAirA = mk(await lenient(urls.jump.air));
+        jumpLandA = mkOnce(await action(urls.jump.end), true);
+      }
+      slideA = mkOnce(await action(urls.slide), true);
+      if (slideA) slideA.timeScale = slideA.getClip().duration / SLIDE_SEC;
       const dance = await lenient(urls.dance);
       danceA = mk(dance);
       out.hasDance = danceA !== null;

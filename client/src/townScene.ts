@@ -20,6 +20,8 @@ import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.j
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { BATHS, BED_SPOT, BOARD_SPOT, COLOSSEUM, FOREST, FOREST_BUSHES, FOREST_DEN_ROCKS, FOREST_EDGE_LINES, FOREST_SPOTS, FOREST_TRAILS, FOREST_TREES, FORAGE_SPOTS, GOALS_SPOT, LAKE, LAKE_PAVILION, LETTER_DESK_SPOT, MUSE, PISCINA, PLACES, PLAYER, QUEST_BOARD_SPOT, SECRET, SEEK_LINES, STREETS, forestNorm, groundHeightAt, isGoldenElevation, seasonForDate, solarAngles, streetDistance, terrainHeight, type Season, type WeatherId } from "./town";
 import { pickPooled } from "./linePools";
+import { airborne, newJump, stepJump } from "./jump";
+import { endSlide, newSlide, slideSpeed, sliding, startSlide } from "./slide";
 import { FOLLOW_CAM, followCamSustain, followCamYawStep, type FollowCamGate } from "./followCam";
 import { setRainLevel, setRainShelter } from "./audio";
 import { FEEL } from "./feel";
@@ -68,6 +70,10 @@ import mWalkUrl from "./assets/anim/m_walk.fbx";
 import mRunUrl from "./assets/anim/m_run.fbx";
 import mWaveUrl from "./assets/anim/m_wave.fbx";
 import mSitUrl from "./assets/anim/m_sit.fbx";
+import mJumpStartUrl from "./assets/anim/m_jump_start.fbx";
+import mJumpAirUrl from "./assets/anim/m_jump_air.fbx";
+import mJumpEndUrl from "./assets/anim/m_jump_end.fbx";
+import mSlideUrl from "./assets/anim/m_slide.fbx";
 import villaUrl from "./assets/roman/villa_stories.glb";
 import houseSoundsUrl from "./assets/roman/house_sounds.glb";
 import houseGardenUrl from "./assets/roman/house_garden.glb";
@@ -216,6 +222,10 @@ export interface TownSceneHandle {
   enterWalk: () => void;
   exitWalk: () => void;
   setWalkMove: (x: number, y: number) => void;
+  /** Hop, if he is on foot and free to. */
+  jump: () => void;
+  /** Slide, if he is on the move. False if he's standing, so B can mean back. */
+  slide: () => boolean;
   /** In-town landscape switch: the shell has CSS-rotated the whole
    *  stage 90° clockwise because the host app window never rotates.
    *  While this is on, canvas pointer vectors are remapped from screen
@@ -5052,6 +5062,8 @@ export function createTownScene(
             model,
             urls: {
               idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceUrl,
+              jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },
+              slide: mSlideUrl,
               outdoor: {
                 talk: [mTalk1Url, mTalk2Url, mTalk3Url],
                 sitTalk: [mSitTalk1Url, mSitTalk2Url],
@@ -5433,6 +5445,9 @@ export function createTownScene(
   let camPitchSmooth = 0;
   let camDistSmooth = 10.5;
   let isMoving = false;
+  const hop = newJump();
+  const run = newSlide();
+  let hopLandedAt = -Infinity;
   // The stick's direction and tilt, eased a touch so a fresh push or a
   // flick across builds in about 50 ms instead of arriving in one frame.
   let wishX = 0;
@@ -5773,7 +5788,8 @@ export function createTownScene(
     ix = THREE.MathUtils.clamp(ix, -1, 1);
     iy = THREE.MathUtils.clamp(iy, -1, 1);
     const mag = Math.hypot(ix, iy);
-    isMoving = mag > 0.12;
+    // A slide carries on with the stick let go; it ends on its own.
+    isMoving = mag > 0.12 || sliding(run);
     // During a secret-place moment the Centurion stands still, the
     // moment's own choreography owns both characters' positions.
     if (secretMoment) isMoving = false;
@@ -5949,12 +5965,12 @@ export function createTownScene(
       //, vary with the frame rate, which read as jerkiness that
       // came and went by direction and by moment.
       const turnT = opts.reducedMotion ? 1 : 1 - Math.pow(1 - 0.22, dt * 60);
-      walkHeading = angleLerp(walkHeading, targetHeading, turnT);
+      if (!sliding(run)) walkHeading = angleLerp(walkHeading, targetHeading, turnT);
       // The stroll cap: hands joined, the pair walk at an unhurried
       // wanderer's pace however far the stick is pushed, hurrying
       // breaks the mood, and that is by design (pushing hard anyway
       // is answered by the hurry release above).
-      const speed = handInHand && followMode ? 2.3 : 5.2;
+      const speed = sliding(run) ? slideSpeed(run) : handInHand && followMode ? 2.3 : 5.2;
       const step = speed * dt;
       // He walks in the input's camera-relative direction straight
       // away while the turn catches up, never a slide back toward
@@ -5973,6 +5989,10 @@ export function createTownScene(
         mfx = playerSidestep.x;
         mfz = playerSidestep.z;
       }
+      if (sliding(run)) {
+        mfx = run.dirX;
+        mfz = run.dirZ;
+      }
       // Collisions: the step is taken in small substeps (≤0.13 each,
       // so even a hitched frame at run speed cannot tunnel through
       // the thinnest wall), and every substep is resolved out of
@@ -5980,7 +6000,7 @@ export function createTownScene(
       // own body wherever she currently stands. Push-out removes
       // only the penetrating component of the motion, so pushing
       // diagonally against a wall slides along it.
-      const totalStep = step * Math.min(1, wishLen);
+      const totalStep = sliding(run) ? step : step * Math.min(1, wishLen);
       const subSteps = Math.max(1, Math.ceil(totalStep / 0.13));
       let newX = walkPos.x;
       let newZ = walkPos.z;
@@ -6028,6 +6048,11 @@ export function createTownScene(
       // short sidestep around the blocker breaks the deadlock.
       const stepLen = step * Math.min(1, mag);
       const disp = Math.hypot(walkPos.x - prevX, walkPos.z - prevZ);
+      if (sliding(run)) {
+        run.left -= dt;
+        // Run out, or run into a wall.
+        if (run.left <= 0 || disp < totalStep * 0.3) endSlide(run, t);
+      }
       if (disp < stepLen * 0.35 && t >= playerSidestep.until) {
         playerStuckTime += dt;
       } else {
@@ -6074,7 +6099,9 @@ export function createTownScene(
       const dy = targetGY - playerGroundSm;
       if (Math.abs(dy) > 1.1) playerGroundSm = targetGY;
       else playerGroundSm += THREE.MathUtils.clamp(dy, -5 * dt, 5 * dt);
-      avatar.position.set(walkPos.x, playerGroundSm, walkPos.z);
+      const hopFree = !seatPlayer && !boatState && !bathState && !danceState && !pairState;
+      if (stepJump(hop, dt, performance.now() / 1000, hopFree)) hopLandedAt = t;
+      avatar.position.set(walkPos.x, playerGroundSm + hop.y, walkPos.z);
     }
     avatar.rotation.y = walkHeading;
     // Standing still with hands joined: he turns a little toward
@@ -10274,7 +10301,9 @@ export function createTownScene(
       }
     }
     if (playerAnim?.ready) {
-      playerAnim.update(dt, walking ? playerSpeedSm : 0, playerAnim.hasWave && playerSpeedSm < 0.4 && playerWaveAge >= 0 && playerWaveAge < WAVE_LEN, !!seatPlayer || !!boatState || !!bathState, pairState && !pairState.glide ? pairState.kind : danceState ? "dance" : talkAnimOpen ? "talk" : null, !!seatPlayer);
+      // A moving landing runs straight on; only a standing one takes a knee.
+      const hopMode = sliding(run) ? "slide" : airborne(hop) ? (hop.vy > 0 ? "jumpUp" : "jumpFall") : t - hopLandedAt < 0.2 && playerSpeedSm < 1 ? "jumpLand" : null;
+      playerAnim.update(dt, walking ? playerSpeedSm : 0, playerAnim.hasWave && playerSpeedSm < 0.4 && playerWaveAge >= 0 && playerWaveAge < WAVE_LEN, !!seatPlayer || !!boatState || !!bathState, hopMode ?? (pairState && !pairState.glide ? pairState.kind : danceState ? "dance" : talkAnimOpen ? "talk" : null), !!seatPlayer);
       playerInner.position.y = 0;
       playerInner.rotation.z = 0;
       if (!playerAnim.hasWave && playerRig && playerWaveAge >= 0 && playerWaveAge < 2.2) {
@@ -11520,6 +11549,14 @@ export function createTownScene(
       } else {
         flyTo([0, 32, 40], [0, 0.8, 0], 900);
       }
+    },
+    jump: () => {
+      if (!sliding(run)) hop.queuedAt = performance.now() / 1000;
+    },
+    slide: () => {
+      if (!walking || !isMoving || boatState || airborne(hop) || (handInHand && followMode)) return false;
+      if (!sliding(run)) startSlide(run, wishX || Math.sin(walkHeading), wishZ || Math.cos(walkHeading), clock.getElapsedTime());
+      return true;
     },
     setWalkMove: (x: number, y: number) => {
       padX = THREE.MathUtils.clamp(x, -1, 1);
