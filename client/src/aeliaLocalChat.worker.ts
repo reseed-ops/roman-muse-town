@@ -2,6 +2,7 @@ import {
   AutoProcessor,
   env,
   Gemma4ForConditionalGeneration,
+  ModelRegistry,
   type ProgressInfo,
   type Processor,
   type Tensor,
@@ -40,6 +41,9 @@ const MODEL_IDS: Record<LocalModelName, string> = {
   "Gemma 4 E4B": "onnx-community/gemma-4-E4B-it-ONNX",
   "Gemma 4 E2B": "onnx-community/gemma-4-E2B-it-ONNX",
 };
+// ModelRegistry covers model, tokenizer and preprocessor files. Gemma 4's
+// custom processor also reads these two files when chat starts.
+const GEMMA_PROCESSOR_FILES = ["processor_config.json", "chat_template.jinja"] as const;
 
 let processor: Processor | null = null;
 let model: Gemma4ForConditionalGeneration | null = null;
@@ -95,28 +99,115 @@ async function loadModel(id: number, name: LocalModelName): Promise<void> {
   selectedModel = name;
 }
 
+function modelFileUrl(modelId: string, filename: string): string {
+  const path = env.remotePathTemplate
+    .replaceAll("{model}", modelId)
+    .replaceAll("{revision}", "main")
+    .replace(/^\/+|\/+$/g, "");
+  return `${env.remoteHost.replace(/\/+$/, "")}/${path}/${filename.replace(/^\/+/, "")}`;
+}
+
+async function cacheResponse(
+  cache: Cache,
+  url: string,
+  response: Response,
+  onBytes: (count: number) => void,
+): Promise<void> {
+  if (!response.body) throw new Error("This app view cannot stream large model downloads to storage.");
+
+  const reader = response.body.getReader();
+  const stream = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        const next = await reader.read();
+        if (next.done) {
+          controller.close();
+          return;
+        }
+        if (next.value) {
+          onBytes(next.value.byteLength);
+          controller.enqueue(next.value);
+        }
+      } catch (error) {
+        controller.error(error);
+      }
+    },
+    cancel(reason) {
+      return reader.cancel(reason);
+    },
+  });
+  const headers = new Headers(response.headers);
+  await cache.put(url, new Response(stream, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  }));
+}
+
+async function modelIsCached(modelId: string): Promise<boolean> {
+  if (!env.useBrowserCache || typeof caches === "undefined") return false;
+  const options = { dtype: "q4f16" as const, device: "webgpu" as const };
+  if (!await ModelRegistry.is_cached(modelId, options)) return false;
+  const cache = await caches.open(env.cacheKey);
+  const extras = await Promise.all(GEMMA_PROCESSOR_FILES.map((file) => cache.match(modelFileUrl(modelId, file))));
+  return extras.every(Boolean);
+}
+
 async function downloadModelToCache(id: number, name: LocalModelName): Promise<void> {
   const modelId = MODEL_IDS[name];
-  status(id, "loading", `Downloading ${name} for offline use…`);
+  status(id, "loading", `Checking ${name}'s offline files…`);
   env.useBrowserCache = true;
-  const progress = (info: ProgressInfo) => {
-    if (info.status === "progress" && typeof info.progress === "number") {
-      const percent = Math.max(0, Math.min(100, Math.round(info.progress)));
-      if (percent % 10 === 0) status(id, "loading", `Downloading ${name}: ${percent}%…`);
+
+  // A restarted WebView may have committed every Cache Storage entry before
+  // losing its in-memory React state. Treat that as complete instead of
+  // starting the model over.
+  if (await modelIsCached(modelId)) return;
+  if (typeof caches === "undefined") throw new Error("This app view does not provide persistent model storage.");
+
+  const options = { dtype: "q4f16" as const, device: "webgpu" as const };
+  const registryFiles = await ModelRegistry.get_files(modelId, options);
+  const files = [...new Set([...registryFiles, ...GEMMA_PROCESSOR_FILES])];
+  const metadata = await Promise.all(files.map((file) => ModelRegistry.get_file_metadata(modelId, file)));
+  const sizes = metadata.map((item) => item.size ?? 0);
+  const totalBytes = sizes.reduce((sum, size) => sum + size, 0);
+  const cache = await caches.open(env.cacheKey);
+  let loadedBytes = 0;
+  let completeFiles = 0;
+  let lastPercent = -1;
+
+  const report = () => {
+    const byBytes = totalBytes > 0 ? loadedBytes / totalBytes : completeFiles / files.length;
+    // Reserve 100% for the post-download cache verification below. Seeing
+    // 100% must mean the button is genuinely done and safe to leave.
+    const percent = Math.min(99, Math.max(0, Math.round(byBytes * 100)));
+    if (percent !== lastPercent) {
+      lastPercent = percent;
+      status(id, "loading", `Downloading ${name}: ${percent}%…`);
     }
   };
-  const [nextProcessor, nextModel] = await Promise.all([
-    AutoProcessor.from_pretrained(modelId, { progress_callback: progress }),
-    Gemma4ForConditionalGeneration.from_pretrained(modelId, {
-      dtype: "q4f16",
-      device: "webgpu",
-      progress_callback: progress,
-    }) as Promise<Gemma4ForConditionalGeneration>,
-  ]);
-  // from_pretrained caches the files the chat path needs. Dispose the runtime
-  // session immediately so preparing both never leaves both models resident.
-  await nextModel.dispose();
-  void nextProcessor;
+
+  for (let index = 0; index < files.length; index += 1) {
+    const file = files[index];
+    const url = modelFileUrl(modelId, file);
+    if (await cache.match(url)) {
+      loadedBytes += sizes[index];
+      completeFiles += 1;
+      report();
+      continue;
+    }
+
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Could not download ${file} (${response.status}).`);
+    await cacheResponse(cache, url, response, (count) => {
+      loadedBytes += count;
+      report();
+    });
+    completeFiles += 1;
+    report();
+  }
+
+  if (!await modelIsCached(modelId)) throw new Error("The download finished, but persistent storage did not keep every model file.");
+  status(id, "loading", `Downloading ${name}: 100%…`);
 }
 
 async function prepareModel(request: DownloadRequest): Promise<void> {
