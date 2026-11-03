@@ -41,6 +41,7 @@ const MODEL_IDS: Record<LocalModelName, string> = {
   "Gemma 4 E4B": "onnx-community/gemma-4-E4B-it-ONNX",
   "Gemma 4 E2B": "onnx-community/gemma-4-E2B-it-ONNX",
 };
+const MODEL_NAMES: readonly LocalModelName[] = ["Gemma 4 E4B", "Gemma 4 E2B"];
 // ModelRegistry covers model, tokenizer and preprocessor files. Gemma 4's
 // custom processor also reads these two files when chat starts.
 const GEMMA_PROCESSOR_FILES = ["processor_config.json", "chat_template.jinja"] as const;
@@ -246,15 +247,31 @@ async function prepareModel(request: DownloadRequest): Promise<void> {
   }
 }
 
+// A phone that prepared E2B from the panel and then opened a chat used to
+// watch ensureModel pick by device memory and start downloading E4B over
+// the top of the cached model. The chat path now asks the cache before the
+// device: exactly one fully cached model wins outright, whichever it is;
+// both or neither keeps the device preference exactly as before. A probe
+// that throws counts as not cached.
+async function cachedModelNames(): Promise<LocalModelName[]> {
+  env.useBrowserCache = true;
+  const checks = await Promise.all(MODEL_NAMES.map((name) => modelIsCached(MODEL_IDS[name]).catch(() => false)));
+  return MODEL_NAMES.filter((_, index) => checks[index]);
+}
+
+async function chooseChatModel(): Promise<LocalModelName> {
+  const [only, second] = await cachedModelNames();
+  return only && !second ? only : modelForDevice();
+}
+
 async function ensureModel(id: number): Promise<void> {
   if (model && processor && selectedModel) return;
   const gpuCheck = checkWebGpu(id);
-  const preferred = modelForDevice();
-  await gpuCheck;
+  const [chosen] = await Promise.all([chooseChatModel(), gpuCheck]);
   try {
-    await loadModel(id, preferred);
+    await loadModel(id, chosen);
   } catch (error) {
-    if (preferred !== "Gemma 4 E4B") throw error;
+    if (chosen !== "Gemma 4 E4B") throw error;
     status(id, "loading", "E4B needs more memory here; trying the smaller E2B model…");
     await loadModel(id, "Gemma 4 E2B");
   }
