@@ -279,12 +279,16 @@ conversation partner answering in seconds, the owner chose the second:
 "Yes second."
 
 Design:
-- A resident director process on infrastructure the owner controls (the
-  spare PC is its intended home) holds the visit while it is open: it
-  polls the slate about every two seconds, and the moment visit mail
-  lands it calls a real model endpoint under the owner's own account
-  and key, with the answer streaming back into her bubble. Target
-  tempo: a letter answered in single-digit seconds, first words sooner.
+- A resident director process on infrastructure the owner controls
+  holds the visit while it is open: it polls the slate about every
+  two seconds, and the moment visit mail lands it calls a real model
+  endpoint under the owner's own account and key, with the answer
+  streaming back into her bubble. Target tempo: a letter answered in
+  single-digit seconds, first words sooner. The host is wherever a
+  proven channel reaches: his existing Railway bridge service is the
+  first proof host, the spare PC the long-term home; the phone itself
+  is the worst host (Android throttles background work, and the town
+  already loads the same device during play).
 - Gate 0, the channel proof, comes before any build (the lesson of the
   v58 watcher verdict): the slate today is reached through chat Muse's
   action channel, and the bridge must first prove that a non-agent
