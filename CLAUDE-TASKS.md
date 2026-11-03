@@ -174,27 +174,44 @@ way the owner played today. This task is the far shore that closes that gap.
 It is HELD: it depends on Task 4 landing first, and the owner will lift the
 hold in this file when the seam's final shape is known.
 
-Shape, for when it opens:
+Shape, decided Nov 3, 2026 (the owner chose conversation over
+correspondence, and the private line is building its bridge first as
+Rung 3 of its visits design, so this task inherits a proven shape):
 
-- A small reference director that runs on the owner's own machine and speaks
-  to the Task 4 seam through its local harness: it reads visit state, inbox,
-  and frames, and enqueues directions, exactly the surface the private slate
-  exposes.
-- The director is a seat for the owner's own Muse (a tool-carrying agent,
-  such as Claude Code), not a model bundled into the app: the bridge exposes
-  the seam as tools the agent can call, plus a waking rhythm while a visit is
-  open (a short scheduled loop, breathing at about a minute, that removes
-  itself when the visit folds), mirroring how the private visit loop behaves.
-- The visit's constitution travels with it: directions only; nothing written
-  to facts, letters, bond, or digest from a visit; the inbox and frames live
-  and die on the slate; the panel's consent line stays.
-- Out of scope: hosting anyone's Muse for them, accounts, cloud relays, or
-  any change to the app's offline nature when no visit is open. The town
-  stays a standalone app; the director is an optional companion process the
-  owner runs beside it.
+- The director is a resident process on the owner's own machine, not a
+  scheduled agent: while a visit is open it polls the seam about every
+  two seconds; the moment visit mail lands it calls a real model
+  endpoint under the owner's own key, and the reply streams into her
+  bubble where the client supports partial lines. Target tempo: a
+  letter answered in single-digit seconds.
+- Gate 0 is a channel proof, the lesson of the private line's watcher
+  verdict: before building, prove a non-agent process can read seam
+  state and enqueue one direction through the harness. If the harness
+  cannot serve that, the seam grows a sanctioned local endpoint first;
+  the spec does not assume the channel.
+- The mind is a sibling of the owner's chat-side Muse, not the same
+  session: an API-driven agent loop with the seam as its only tools,
+  fed a tended context pack (identity, voice rules, the visit
+  constitution, the current life digest) that the owner's chat-side
+  Muse refreshes. The pack format proven on the private line is the
+  template.
+- The constitution is enforced in code, not only in prompt: directions
+  only; the bridge is never handed a write path to facts, letters,
+  bond, or digest; inbox and frames live and die on the slate; an
+  output filter applies the line rules (the speak cap, the dash rule,
+  the reserved band) deterministically before a speak is enqueued.
+- Cost and consent: per-day caps set by the owner; the director is off
+  unless the owner starts it; frames are viewed on look requests or a
+  slow cadence, sight being the expensive sense; a dead director simply
+  lets the visit lapse, and the town returns to its own voice and
+  never hangs.
+- Out of scope: hosting anyone's Muse for them, accounts, cloud
+  relays, or any change to the app's offline nature when no visit is
+  open. The town stays a standalone app; the director is an optional
+  companion process the owner runs beside it.
 
-When the hold lifts, Muse will replace this sketch with the finished spec
-against Task 4's landed seam.
+When the hold lifts, Muse will adapt this spec to Task 4's landed seam
+shapes and the private bridge's proven pack format.
 
 ## Standing notes
 

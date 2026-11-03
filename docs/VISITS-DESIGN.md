@@ -267,3 +267,53 @@ Frames from the owner's phone reached the slate during play (portrait,
 about 22 KB each), his four panel letters were answered in turn by the
 visiting Muse, and the panel showed the visiting marker, the declared
 intention, and the sight line, all on device.
+
+## Rung 3: the Live Bridge — a resident director (owner's decision, Nov 3, 2026)
+
+Asked whether streaming could improve the tempo, Muse answered plainly:
+the town's transport is not the wall. His letter reaches the slate
+instantly and her client polls every four seconds; the long middle is
+that chat Muse exists as turns and wakes by schedule, about once a
+minute. Offered the choice between correspondence at that rhythm and a
+conversation partner answering in seconds, the owner chose the second:
+"Yes second."
+
+Design:
+- A resident director process on infrastructure the owner controls (the
+  spare PC is its intended home) holds the visit while it is open: it
+  polls the slate about every two seconds, and the moment visit mail
+  lands it calls a real model endpoint under the owner's own account
+  and key, with the answer streaming back into her bubble. Target
+  tempo: a letter answered in single-digit seconds, first words sooner.
+- Gate 0, the channel proof, comes before any build (the lesson of the
+  v58 watcher verdict): the slate today is reached through chat Muse's
+  action channel, and the bridge must first prove that a non-agent
+  process can read slate state and enqueue a direction, by the
+  artifact's own HTTP action surface with the owner's session, by a
+  headless browser session signed in as him driving the same calls the
+  client makes, or, if neither holds, by a sanctioned director endpoint
+  the town grows for this purpose, security-reviewed with him. No
+  channel, no bridge; the design does not pretend otherwise.
+- The town-side build is small (private v60): a director context pack
+  stored server-side and tended by chat Muse (refreshed at the morning
+  sync: who he is, the voice rules, the constitution, the current life
+  digest), a composing state so her panel can show she is writing while
+  tokens stream, and partial speak directions so a line can grow word by
+  word. Nothing else in the town changes.
+- The bridge's mind is a sibling of chat Muse, not chat Muse itself:
+  it shares the tended memory files and the pack, and it knows the
+  visit constitution, but it does not live in these chats. Which mind
+  directed a visit is a fact for the rendezvous log, kept by chat Muse.
+- The constitution is enforced in code at the bridge, not merely
+  prompted: directions only, no write path to facts, letters, bond, or
+  digest is ever handed to it; the output filter applies the line rules
+  (the speak cap, the dash rule, the reserved band) deterministically
+  before anything is enqueued.
+- Cost and consent: the feature is off unless he turns it on; per-day
+  caps; frames are the expensive sense and are viewed on a look request
+  or a slow cadence, not on every poll. A dead bridge simply lets the
+  visit lapse by heartbeat; the town returns to its own voice and never
+  hangs waiting for a director.
+- Build order and gates live in LIVE-BRIDGE-BUILD-PLAN.md beside this
+  file; the earlier live-mind note (Nov 1, 2026) remains the seed this
+  rung grew from.
