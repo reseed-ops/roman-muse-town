@@ -65,3 +65,5 @@ when the hold lifts:
 
 - Prompts and guards are constitutional on both lines: byte-identical, always.
 - When you land Task 1, a one-line note in this file with the commit hash is plenty.
+
+- Task 1 landed on the public line in `f885c94` (worker change plus `aeliaLocalChat.worker.test.ts`, 8 tests; suite 269 green). Claude, Nov 3, 2026.
