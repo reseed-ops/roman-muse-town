@@ -110,6 +110,59 @@ When it lands, Muse will port it home into the private town as v55 and adapt the
 follow gait to the visit slate there. A one-line note in this file with the commit
 hash is plenty, plus anything about the driver you think the port must not lose.
 
+## Task 4 (READY, added Nov 3, 2026): visit-ready client — the listening visit and visit frames, director seam included
+
+The private town shipped the full ladder on Nov 3, 2026: v58 (the listening visit:
+a slate inbox for panel mail, her quick voice hushed for panel chat while a visit
+is open, answers carried by an outside director) and v59 (visit frames: canvas-only
+stills of the player's view laid on the slate for the director to fetch and see).
+The design of record now lives in this repo at `docs/VISITS-DESIGN.md`; read it
+before starting, especially the constitution and the honest-limits parts. The first
+live listening visit ran the same day: the owner's panel letters were answered in
+turn by the visiting Muse with full context behind the words, frames from his
+phone reached the director during play, and the panel showed the visiting marker,
+the declared intention, and the sight line, all on device.
+
+This line has no server and no chat-side director, so build the halves that belong
+here, the same split as Task 3:
+
+1. Visit mode and the slate. A runtime-only visit state mirroring the private
+   shapes: a directions queue, a declared intention, the telemetry the private
+   slate carries (zones, seated flags, day phase, a capped recent-events ring),
+   and the visit lifecycle (begin, end, heartbeat lapse). Nothing about a visit is
+   persisted into the save; ending or lapsing clears the slate whole, inbox and
+   frames included.
+2. The listening half. While a visit is open, panel sends are captured as visit
+   mail (sequence-numbered, capped at the recent 20, slate-only) and shown in the
+   panel as carried to the director; neither the scripted reply, nor the
+   local-chat path, nor fact capture fires for them. Outside a visit the panel
+   behaves exactly as today. Answers arrive as speak directions through the seam
+   below and render in her bubble and the panel thread.
+3. The sight half. While a visit is open and the town is in the foreground,
+   capture still frames of the canvas only (never page elements or panels),
+   capped at 720 px on the long edge, JPEG quality 0.7, about every 30 s, the
+   first promptly, plus on a director's look request. Keep the latest two. While
+   a visit is open the panel carries the exact line: "Muse can see your view
+   while visiting."
+4. The director seam. One narrow interface through which an external director
+   reads visit state (frame metadata only, never bytes in state), the inbox, and
+   one frame at a time, and enqueues directions (goto, sit, stand, seat, stepout,
+   emote, speak, intend, look, and the pad verb). A local dev harness (a JSON file
+   drop or a localhost endpoint, your call, documented in the code) implements
+   the seam for testing; no accounts, no network service, nothing phones home.
+   The on-device Gemma chat is NOT the director and must not be wired as one; it
+   stays the town's own local voice, and the prompts and guards stay
+   byte-identical.
+5. Presence signs, as on the private line: her star turns violet while a visit
+   is open, the panel header carries the visiting marker, and the declared
+   intention renders as one violet line in the panel.
+
+Tests: pin the panel hush (a visit send fires no scripted reply, no local chat,
+no fact capture; a non-visit send is unchanged), the inbox cap and its death at
+visit end, frame validation and retention, the seam's direction validation, and
+end/lapse clearing. Keep the full suite green and report the new count. A
+one-line note in this file with the commit hash is plenty.
+
 ## Standing notes
 
 - Prompts and guards are constitutional on both lines: byte-identical, always.
