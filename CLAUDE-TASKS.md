@@ -61,6 +61,55 @@ when the hold lifts:
 - Muse will replace this HOLD with the finished spec, including the private build's
   final shapes and hashes, once the phone has spoken. Tuan will tell you when.
 
+## Task 3 (READY, added Nov 3, 2026): two-player pad support and the natural-motion driver
+
+Decided by Tuan on Nov 3, 2026 ("Add both: your channel and a human second pad";
+"claude can help as well"). The private town is gaining Muse Visits rung 2 (an
+intention loop) and, next, a second-player channel for Aelia. This task builds the
+shared half on the public line so Muse can port it home afterward, the same
+homecoming pattern as the Gemma chat.
+
+Goal: a second input channel, pad2, shaped exactly like the existing player input
+state, able to drive Aelia as a player-style character instead of only by her routine.
+
+Scope:
+
+1. Input routing. Read gamepads from the Gamepad API as distinct devices: the first
+   active gamepad drives Gaius (today's behavior); a second distinct gamepad drives
+   Aelia through pad2. Two Bluetooth Xbox controllers paired to one phone is the
+   target setup. Add a desktop keyboard fallback for pad2 (WASD plus nearby keys) so
+   the feature is testable without a second physical pad. A pad announces itself on
+   first button press, per the API's privacy behavior. Surface pad2 status in the
+   town menu: whether a second pad is connected, and what drives Aelia right now
+   (her routine, the second controller, or the keyboard).
+2. Aelia as player 2. While pad2 carries fresh input, her routine brain yields, as
+   it already does in other driven modes, and pad2 drives her existing character
+   controller: left stick moves camera-relative, stick magnitude walks or runs,
+   A jumps, B slides, X sits or stands when near a seat and waves otherwise, Y
+   unused for now. When pad2 input stops for a few seconds, she folds back to her
+   routine mid-stride, the way she already folds from other modes.
+3. The natural-motion driver, under pad2. Naturalness lives in the execution layer:
+   ease the stick vector (acceleration and deceleration curves), cap her heading
+   turn rate so she sweeps into turns instead of snapping, bleed pace as she
+   approaches a stop so she lands at a natural distance rather than exactly on a
+   point, and when she comes to rest near Gaius, settle her facing toward him at
+   conversational distance. Expose one driver behavior as a town menu toggle for
+   testing on this line: a follow mode in which the driver walks her at Gaius's
+   pace at a chosen offset, beside or behind. (On the private line, that follow
+   gait is driven by Muse's visiting intentions; here the toggle is its harness.)
+4. Not in scope: the private town's visit slate and its Muse-channel pad verb
+   (that slate does not exist on this line; Muse builds that half privately), any
+   change to the local-chat worker, its prompts or guards, and any save-format
+   change. Pad2 state is runtime only and is never persisted.
+
+Tests: pin the routing as pure logic where the codebase allows (which device maps
+to whom, fold-back timing), the driver's easing and approach behavior numerically,
+and the menu status derivation. Keep the full suite green and report the new count.
+
+When it lands, Muse will port it home into the private town as v55 and adapt the
+follow gait to the visit slate there. A one-line note in this file with the commit
+hash is plenty, plus anything about the driver you think the port must not lose.
+
 ## Standing notes
 
 - Prompts and guards are constitutional on both lines: byte-identical, always.
