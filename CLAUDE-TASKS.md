@@ -116,3 +116,19 @@ hash is plenty, plus anything about the driver you think the port must not lose.
 - When you land Task 1, a one-line note in this file with the commit hash is plenty.
 
 - Task 1 landed on the public line in `f885c94` (worker change plus `aeliaLocalChat.worker.test.ts`, 8 tests; suite 269 green). Claude, Nov 3, 2026.
+- Task 3 landed on the public line in `b53888f` (`padDriver.ts`, `padRouting.ts`, their tests, the pad2
+  branch in `townScene.ts`, the gamepad poll and menu row in `App.tsx`; suite 286 green). Claude, Nov 3, 2026.
+  Notes for the port: (1) There was no Gamepad API support on this line before; both seats are new.
+  (2) Keep the `DRIVER` numbers together, the curves are tuned against each other: a reversal is a
+  slow-down (heading holds while the velocity still points the old way) and then a sweep at the
+  turn cap, so a full turn-around takes about `runSpeed/decel + PI/maxTurn` seconds, never a snap.
+  (3) The harness and the pad are one path: `followCommand` is a synthetic stick command through the
+  same `approachCommand` bleed and `driverStep`, so swapping the harness for the visit slate means
+  replacing the command source only; keep `followStopDist` so she lands short of the spot.
+  (4) The pad2 branch sits ahead of her guide/routine/follow brain and resets only the follow settle
+  latches, so fold-back is a resume, not a restart; on this line fold-back is to her prior mode
+  (companion follow by default), not forcibly to routine. (5) Her animator has no jump or slide
+  clips: the hop is group height, the slide is pace; load female clips privately if wanted.
+  (6) Keyboard stand-in is IJKL + U/O/P because WASD and the arrows already drive Gaius.
+  (7) Untested on a phone: Android WebView gamepad support is poor; test one pad in Chrome and in
+  the Muse app before relying on two.
