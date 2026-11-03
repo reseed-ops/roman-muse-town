@@ -168,9 +168,11 @@ async function downloadModelToCache(id: number, name: LocalModelName): Promise<v
   const options = { dtype: "q4f16" as const, device: "webgpu" as const };
   const registryFiles = await ModelRegistry.get_files(modelId, options);
   const files = [...new Set([...registryFiles, ...GEMMA_PROCESSOR_FILES])];
-  const metadata = await Promise.all(files.map((file) => ModelRegistry.get_file_metadata(modelId, file)));
-  const sizes = metadata.map((item) => item.size ?? 0);
-  const totalBytes = sizes.reduce((sum, size) => sum + size, 0);
+  const entries = await Promise.all(files.map(async (file) => ({
+    file,
+    size: (await ModelRegistry.get_file_metadata(modelId, file)).size ?? 0,
+  })));
+  const totalBytes = entries.reduce((sum, entry) => sum + entry.size, 0);
   const cache = await caches.open(env.cacheKey);
   let loadedBytes = 0;
   let completeFiles = 0;
@@ -187,11 +189,10 @@ async function downloadModelToCache(id: number, name: LocalModelName): Promise<v
     }
   };
 
-  for (let index = 0; index < files.length; index += 1) {
-    const file = files[index];
+  for (const { file, size } of entries) {
     const url = modelFileUrl(modelId, file);
     if (await cache.match(url)) {
-      loadedBytes += sizes[index];
+      loadedBytes += size;
       completeFiles += 1;
       report();
       continue;
