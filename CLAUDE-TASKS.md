@@ -213,6 +213,63 @@ Rung 3 of its visits design, so this task inherits a proven shape):
 When the hold lifts, Muse will adapt this spec to Task 4's landed seam
 shapes and the private bridge's proven pack format.
 
+## Task 6 (READY, added Nov 3, 2026): the Live Bridge — a resident director, built here, deployed to the owner's Railway bridge
+
+Background in brief: the first listening visit (Nov 3, 2026) was directed by
+chat Muse through a scheduled loop waking about once a minute. The owner was
+offered the choice between correspondence at that rhythm and a conversation
+partner answering in seconds, and chose the second. The design of record is
+Rung 3 of `docs/VISITS-DESIGN.md`. This task builds the director. Build it
+after Task 4 lands: the seam shapes there are this task's foundation.
+
+Build, in this repo:
+
+1. A `bridge/` service (Node and TypeScript, the repo's stack): the resident
+   director. While a visit is open it polls the director channel about every
+   two seconds; new inbox mail is answered first, through the Anthropic API
+   with the owner's key (environment only, never in the repo), replies
+   streaming where the channel supports partial lines and going as whole
+   speaks otherwise. It keeps the visit loop's manners: one greeting,
+   throttled presence intentions, sight fetched on a look or a slow cadence,
+   never on every poll.
+2. The channel as one interface with two adapters. Adapter A: this line's
+   Task 4 seam harness. Adapter B: the private town's slate. Adapter B's
+   transport is Gate 0's to prove (the private slate is today reached only
+   through chat Muse's action channel): Muse is running that proof on the
+   private side and will append the proven transport and the exact shapes
+   to this task. Until that note lands, build Adapter B's interface and a
+   fake channel for tests, not a guessed transport.
+3. The constitution in code: a deterministic output filter applied before
+   any speak is enqueued (the speak length cap, no em dashes, the reserved
+   band, tender only); a slate-only tool surface, so the director process
+   is never handed a write path to facts, letters, bond, or digest;
+   per-day cost caps from configuration; and an off state in which the
+   process idles and a visit simply lapses by heartbeat.
+4. The context pack loader: a pack file (identity, voice rules, the
+   constitution, the current life digest) in the format the private line
+   proves, re-read on change, so the chat side's morning refresh lands
+   without a restart.
+5. The town-side pieces on this line, mirroring the private v60 list:
+   director context pack storage readable through the seam, a composing
+   state surfaced in her panel while the director writes, and partial
+   speak directions so a line can grow word by word. Muse will port
+   these home to the private town.
+6. Deployment shape: a Railway-ready service, targeting its own service
+   beside the owner's existing Reseed Agent Bridge relay in the same
+   project, environment-only secrets, and a short deploy note in
+   `bridge/README.md`. The owner or you run the actual deploy from a
+   local checkout; the chat side cannot deploy to Railway.
+
+Tests: pin the output filter's rules, pack loading and reload, the
+poll-and-answer loop against the fake channel (mail answered before
+presence, caps honored, a dead channel folds quietly), and the seam
+adapter against Task 4's harness. Keep the full suite green and report
+the new count. A one-line note in this file with the commit hash is
+plenty.
+
+Task 5 stays HOLD: it packages this director for installers once this
+build has proven itself in the owner's hands.
+
 ## Standing notes
 
 - Prompts and guards are constitutional on both lines: byte-identical, always.
