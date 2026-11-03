@@ -26,6 +26,17 @@ import { footingAt, strideStep, type Footing } from "./footing";
 import { airborne, newJump, stepJump } from "./jump";
 import { endSlide, newSlide, slideSpeed, sliding, startSlide, wasMovingRecently } from "./slide";
 import { FOLLOW_CAM, followCamSustain, followCamYawStep, type FollowCamGate } from "./followCam";
+import {
+  driverStep,
+  followCommand,
+  newDriver,
+  paceForTilt,
+  settleFacing,
+  stickToWorld,
+  type DriverCommand,
+  type FollowOffset,
+} from "./padDriver";
+import { pad2Live, type AeliaDriver } from "./padRouting";
 import { setRainLevel, setRainShelter } from "./audio";
 import { FEEL } from "./feel";
 import { buildMetaSudans, META_SUDANS_LINES } from "./metaSudans";
@@ -229,6 +240,21 @@ export interface TownSceneHandle {
   jump: () => void;
   /** Slide, if he is on the move. False if he's standing, so B can mean back. */
   slide: () => boolean;
+  /** Player 2 (Task 3, Nov 3 2026): the second channel that drives
+   *  Aelia as a player-style character. Her stick is camera-relative
+   *  like his; the source names who holds it, for the menu's status.
+   *  Runtime only, never persisted. */
+  setPad2Move: (x: number, y: number, source: "pad" | "keyboard") => void;
+  /** A = jump, B = slide (or stand up from a bench), X = sit on a seat
+   *  within reach, stand if seated, otherwise wave. */
+  pad2Press: (button: "a" | "b" | "x", source: "pad" | "keyboard") => void;
+  /** The natural-motion driver's follow harness (a test toggle on this
+   *  line): off, or the driver walks her at his pace beside or behind
+   *  him whenever pad2 is quiet. */
+  setDriverFollow: (mode: FollowOffset | "off") => void;
+  /** Who moves her right now: the second pad, the keyboard stand-in,
+   *  the follow harness, or her own mind (companion follow or routine). */
+  aeliaDriver: () => AeliaDriver;
   /** The day's rhythm: where she spends the hour, and how the market stands. */
   setRhythm: (rhythm: { anchor: string; marketOpen: boolean; marketBusy: boolean }) => void;
   /** Free for her to ask him somewhere: nothing else has the two of them. */
@@ -4560,6 +4586,20 @@ export function createTownScene(
     museSeatTarget = null;
     opts.onSitChange?.(null);
   };
+  /** Player 2 stands her up alone: at her seat's front point (or
+   *  behind, for the piscina rim), clear of the bench's footprint.
+   *  His seat is untouched; standing him up still stands them both. */
+  const standMuseUp = () => {
+    if (!seatMuse) return;
+    const b = seatMuse.bench;
+    const p = benchSlotPos(b, seatMuse.slot);
+    const out = b.standBehind ? 0.95 : -0.72;
+    const x = p.x + Math.sin(b.rotY) * out;
+    const z = p.z + Math.cos(b.rotY) * out;
+    museGroup.position.set(x, groundHeightAt(x, z), z);
+    museGroundSm = museGroup.position.y;
+    seatMuse = null;
+  };
 
   // --- Rowing on the lake ---------------------------------------------------
   // Boarding puts the Centurion in the boat's stern seat and, when
@@ -5856,6 +5896,20 @@ export function createTownScene(
     }
   };
   let museIsMoving = false;
+  // Player 2 (Task 3): pad2's stick and freshness, who holds it, the
+  // harness mode, and the driver's own state (velocity and swept
+  // heading), her hop and her slide. The driver re-seeds its heading
+  // from her body each time pad2 takes her over, so a hand-off never
+  // spins her.
+  let pad2X = 0;
+  let pad2Y = 0;
+  let pad2LastInputAt = -Infinity;
+  let pad2Source: "pad" | "keyboard" = "pad";
+  let driverFollow: FollowOffset | "off" = "off";
+  const pad2Drive = newDriver();
+  const pad2Hop = newJump();
+  const pad2Run = newSlide();
+  let pad2Driving = false;
   let museWalkPhase = 0;
   const musePose = { legL: 0, legR: 0, kneeL: 0, kneeR: 0, armL: 0, armR: 0, footYaw: 0, elbowL: -0.14, elbowR: 0.14, headYaw: 0, sway: 0 };
   // Her unstuck bookkeeping, mirroring the walker's: push-without-
@@ -7175,6 +7229,10 @@ export function createTownScene(
       museIsMoving = false;
       return;
     }
+    // Player 2 (Task 3): a firm push on her stick stands her up from a
+    // bench (B and X do too, in pad2Press); the pad2 branch below then
+    // takes her. The follow harness never stands her: it waits for him.
+    if (seatMuse && !museSeatTarget && pad2Live(pad2LastInputAt, t) && Math.hypot(pad2X, pad2Y) > 0.5) standMuseUp();
     if (seatMuse) {
       // Seated beside him on the bench: parked (her steering and the
       // collision resolve stay off, the seat point is inside the
@@ -7219,6 +7277,118 @@ export function createTownScene(
       }
       return;
     }
+    // --- Player 2 (Task 3) -------------------------------------------
+    // While pad2 carries fresh input her own brain yields, the way it
+    // yields to a guide or a bench errand, and the natural-motion
+    // driver (padDriver.ts) executes the stick: eased pace, swept
+    // turns, a settle toward him at rest. The follow harness is the
+    // same driver fed a synthetic command, his pace at an offset, so
+    // the private port receives the gait by the same road. A few
+    // seconds of pad silence folds her back mid-stride: nothing below
+    // is reset beyond the follow settle, so her follow or routine
+    // simply resumes from wherever the driver left her.
+    const padLive = pad2Live(pad2LastInputAt, t);
+    const harnessLive = driverFollow !== "off" && walking && !padLive;
+    if ((padLive || harnessLive) && !museSeatTarget) {
+      if (handInHand) {
+        // Walking off under her own stick lets go of his hand.
+        handInHand = false;
+        handHurryTime = 0;
+        opts.onHandInHandChange?.(false, "pad2");
+      }
+      followFrozenTarget = null;
+      followSettled = false;
+      playerStillTime = 0;
+      routineArrivedAt = -1000;
+      const cur = museGroup.position;
+      if (!pad2Driving) {
+        pad2Driving = true;
+        pad2Drive.heading = museGroup.rotation.y;
+        pad2Drive.vx = 0;
+        pad2Drive.vz = 0;
+      }
+      let cmd: DriverCommand;
+      if (padLive) {
+        // Camera-relative like his: against the walk camera's input
+        // reference yaw on foot, the orbit camera's facing otherwise.
+        const camYaw = walking ? inputYawRef : Math.atan2(controls.target.x - camera.position.x, controls.target.z - camera.position.z);
+        const stick = stickToWorld(pad2X, pad2Y, camYaw);
+        cmd = { dirX: stick.dirX, dirZ: stick.dirZ, speed: paceForTilt(stick.tilt) };
+      } else {
+        cmd = followCommand({
+          museX: cur.x,
+          museZ: cur.z,
+          gaiusX: walkPos.x,
+          gaiusZ: walkPos.z,
+          gaiusHeading: walkHeading,
+          gaiusSpeed: playerSpeedSm,
+          offset: driverFollow === "behind" ? "behind" : "beside",
+        });
+      }
+      // A slide in progress owns direction and pace, as his does.
+      if (sliding(pad2Run)) {
+        pad2Run.left -= dt;
+        cmd = { dirX: pad2Run.dirX, dirZ: pad2Run.dirZ, speed: slideSpeed(pad2Run) };
+        if (pad2Run.left <= 0) endSlide(pad2Run, t);
+      }
+      const out = driverStep(pad2Drive, cmd, dt);
+      // The same substepped resolve as her steering, at her clearance,
+      // with his body counted whenever he is on foot (hers already
+      // counts for him), then the town's rim.
+      let newX = cur.x;
+      let newZ = cur.z;
+      const stepLen = Math.hypot(out.stepX, out.stepZ);
+      if (stepLen > 1e-6) {
+        const sub = Math.max(1, Math.ceil(stepLen / 0.13));
+        for (let i = 0; i < sub; i++) {
+          const r = resolveCollisions(
+            newX + out.stepX / sub,
+            newZ + out.stepZ / sub,
+            0.45,
+            walking ? { x: walkPos.x, z: walkPos.z, r: 0.5 } : undefined,
+          );
+          newX = r.x;
+          newZ = r.z;
+        }
+        const rad = Math.hypot(newX, newZ);
+        const fn = forestNorm(newX, newZ);
+        if (rad > 52 && fn > 0.985) {
+          const dx = (newX / rad) * 52;
+          const dz = (newZ / rad) * 52;
+          const lx = FOREST.cx + ((newX - FOREST.cx) / fn) * 0.985;
+          const lz = FOREST.cz + ((newZ - FOREST.cz) / fn) * 0.985;
+          if (Math.hypot(newX - dx, newZ - dz) <= Math.hypot(newX - lx, newZ - lz)) {
+            newX = dx;
+            newZ = dz;
+          } else {
+            newX = lx;
+            newZ = lz;
+          }
+        }
+        // A slide into a wall ends there.
+        if (sliding(pad2Run) && Math.hypot(newX - cur.x, newZ - cur.z) < stepLen * 0.3) endSlide(pad2Run, t);
+      }
+      // Facing: swept by the driver on the move; at rest near him,
+      // settled toward him at conversational distance.
+      if (!out.moving && walking) pad2Drive.heading = settleFacing(pad2Drive.heading, newX, newZ, walkPos.x, walkPos.z, dt);
+      museGroup.rotation.y = pad2Drive.heading;
+      // Her hop rides on her group above the smoothed ground (her
+      // animator has no jump clips, so the hop itself is the motion).
+      const landed = stepJump(pad2Hop, dt, t, true);
+      {
+        const targetGY = groundHeightAt(newX, newZ);
+        if (!Number.isFinite(museGroundSm)) museGroundSm = targetGY;
+        const dy = targetGY - museGroundSm;
+        if (Math.abs(dy) > 1.1) museGroundSm = targetGY;
+        else museGroundSm += THREE.MathUtils.clamp(dy, -5 * dt, 5 * dt);
+      }
+      if (landed) puffDust(newX, museGroundSm, newZ);
+      museGroup.position.set(newX, museGroundSm + pad2Hop.y, newZ);
+      museWalkPhase += dt * (2.2 + out.speed * 1.55);
+      museIsMoving = out.moving;
+      return;
+    }
+    pad2Driving = false;
     let routineTarget: { x: number; z: number } | null = null;
     if (guide) {
       const here = museGroup.position;
@@ -12028,6 +12198,67 @@ export function createTownScene(
     setWalkMove: (x: number, y: number) => {
       padX = THREE.MathUtils.clamp(x, -1, 1);
       padY = THREE.MathUtils.clamp(y, -1, 1);
+    },
+    setPad2Move: (x: number, y: number, source) => {
+      pad2X = THREE.MathUtils.clamp(x, -1, 1);
+      pad2Y = THREE.MathUtils.clamp(y, -1, 1);
+      if (Math.hypot(pad2X, pad2Y) > 0.12) {
+        pad2LastInputAt = clock.getElapsedTime();
+        pad2Source = source;
+      }
+    },
+    pad2Press: (button, source) => {
+      const now = clock.getElapsedTime();
+      pad2LastInputAt = now;
+      pad2Source = source;
+      // Moments that own her body are hers to finish, not pad2's.
+      if (secretMoment || museHidden || boatState?.museAboard || danceState || pairState || skyWatchState || bathState?.museIn || dreamMode || museSeatTarget) return;
+      if (button === "a") {
+        if (!seatMuse && !sliding(pad2Run)) pad2Hop.queuedAt = now;
+        return;
+      }
+      if (button === "b") {
+        if (seatMuse) {
+          standMuseUp();
+          return;
+        }
+        if (!pad2Driving || airborne(pad2Hop)) return;
+        startSlide(pad2Run, pad2Drive.vx, pad2Drive.vz, now);
+        return;
+      }
+      // X: seated stands her; a seat within reach sits her; otherwise she waves.
+      if (seatMuse) {
+        standMuseUp();
+        return;
+      }
+      const cur = museGroup.position;
+      let best: { bench: BenchDef; slot: number; x: number; z: number; dist: number } | null = null;
+      for (const bench of BENCHES) {
+        for (const slot of [-1, 1]) {
+          if (seatPlayer && seatPlayer.bench.id === bench.id && seatPlayer.slot === slot) continue;
+          const p = benchSlotPos(bench, slot);
+          const dist = Math.hypot(cur.x - p.x, cur.z - p.z);
+          if (!best || dist < best.dist) best = { bench, slot, x: p.x, z: p.z, dist };
+        }
+      }
+      if (best && best.dist < 1.7) {
+        seatMuse = { bench: best.bench, slot: best.slot };
+        museGroup.position.set(best.x, groundHeightAt(best.x, best.z), best.z);
+        museGroup.rotation.y = best.bench.rotY + Math.PI;
+        pad2Hop.y = 0;
+        pad2Hop.vy = 0;
+        return;
+      }
+      museWaveStart = now;
+      if (opts.reducedMotion && museRig) poseWaveStill(museRig);
+    },
+    setDriverFollow: (mode) => {
+      driverFollow = mode;
+    },
+    aeliaDriver: () => {
+      if (pad2Live(pad2LastInputAt, clock.getElapsedTime())) return pad2Source;
+      if (driverFollow !== "off" && walking) return "harness";
+      return "self";
     },
     isWalking: () => walking,
     capturePostcard: () => {

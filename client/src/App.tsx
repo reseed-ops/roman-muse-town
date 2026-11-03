@@ -174,6 +174,18 @@ type PickKind,
 type TownSceneHandle,
 type WeatherChangeInfo,
 } from "./townScene";
+import type { FollowOffset } from "./padDriver";
+import {
+  isPad2Key,
+  keyboardButton,
+  keyboardStick,
+  noPads,
+  pad2StatusLine,
+  pressedButtons,
+  routePads,
+  stickVector,
+  type PadSeats,
+} from "./padRouting";
 import summitSongUrl from "./assets/stars-fall-song.mp3";
 import {
 playChime,
@@ -350,6 +362,13 @@ export function App() {
     /* storage unavailable, the hint simply may show once per visit */
   }
   const [menuOpen, setMenuOpen] = useState(false);
+  // Player 2 (Task 3, Nov 3 2026): the town menu's status line for the
+  // second channel, and the natural-motion driver's follow harness
+  // mode. Runtime only, never saved.
+  const [pad2Status, setPad2Status] = useState("");
+  const [driverFollow, setDriverFollow] = useState<FollowOffset | "off">("off");
+  const driverFollowRef = useRef<FollowOffset | "off">("off");
+  driverFollowRef.current = driverFollow;
   const [utilitiesOpen, setUtilitiesOpen] = useState(false);
   // The scene's one-line motion verdict, shown quietly at the foot
   // of the town menu once both animators have settled, so a stiff
@@ -4798,6 +4817,114 @@ export function App() {
     scene.pickUpStone();
     if (!scene.hasCarriedStone()) xboxHint();
   };
+  const xboxBackRef = useRef(xboxBack);
+  xboxBackRef.current = xboxBack;
+  const xboxStoneRef = useRef(xboxStone);
+  xboxStoneRef.current = xboxStone;
+
+  // --- Physical gamepads and the pad2 keyboard (Task 3) ---------------
+  // One poll per frame reads the Gamepad API. Seats come from
+  // padRouting: the first pad to announce itself drives Gaius exactly
+  // as the virtual controller does (stick to setWalkMove, A jump, B
+  // back or slide, X interact, Y stones); the next distinct pad is
+  // pad2 and drives Aelia through the scene's player-2 channel (stick,
+  // A jump, B slide, X sit or wave). With no second pad, IJKL and U,
+  // O, P stand in for it so the feature is testable on a desk. The
+  // stick writes only while live or on the frame it centres, so the
+  // touch stick and a physical one never fight over a zero.
+  useEffect(() => {
+    let seats: PadSeats = noPads();
+    const prevButtons = new Map<number, boolean[]>();
+    const keys = new Set<string>();
+    let p1Live = false;
+    let p2Live = false;
+    let kbLive = false;
+    let lastStatus = "";
+    const typing = (target: EventTarget | null) => {
+      const el = target as HTMLElement | null;
+      return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (typing(e.target)) return;
+      const key = e.key.toLowerCase();
+      if (!isPad2Key(key)) return;
+      keys.add(key);
+      const button = keyboardButton(key);
+      if (button && !e.repeat) sceneRef.current?.pad2Press(button, "keyboard");
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      keys.delete(e.key.toLowerCase());
+    };
+    let raf = 0;
+    const poll = () => {
+      raf = window.requestAnimationFrame(poll);
+      const scene = sceneRef.current;
+      if (!scene) return;
+      const pads =
+        typeof navigator.getGamepads === "function"
+          ? Array.from(navigator.getGamepads()).filter((pad): pad is Gamepad => !!pad && pad.connected)
+          : [];
+      seats = routePads(seats, pads.map((pad) => ({ index: pad.index, id: pad.id })));
+      const padFor = (seat: PadSeats["p1"]) => (seat ? pads.find((pad) => pad.index === seat.index) ?? null : null);
+      const g1 = padFor(seats.p1);
+      if (g1) {
+        const stick = stickVector(g1.axes[0] ?? 0, g1.axes[1] ?? 0);
+        const live = stick.x !== 0 || stick.y !== 0;
+        if ((live || p1Live) && walkingRef.current) setPad(stick.x, stick.y);
+        p1Live = live;
+        const now = g1.buttons.map((b) => b.pressed);
+        for (const button of pressedButtons(prevButtons.get(g1.index) ?? [], now)) {
+          if (!walkingRef.current) continue;
+          if (button === "a") scene.jump();
+          else if (button === "b") xboxBackRef.current();
+          else if (button === "x") xboxInteractRef.current();
+          else xboxStoneRef.current();
+        }
+        prevButtons.set(g1.index, now);
+      }
+      const g2 = padFor(seats.p2);
+      if (g2) {
+        const stick = stickVector(g2.axes[0] ?? 0, g2.axes[1] ?? 0);
+        const live = stick.x !== 0 || stick.y !== 0;
+        if (live || p2Live) scene.setPad2Move(stick.x, stick.y, "pad");
+        p2Live = live;
+        const now = g2.buttons.map((b) => b.pressed);
+        for (const button of pressedButtons(prevButtons.get(g2.index) ?? [], now)) {
+          if (button !== "y") scene.pad2Press(button, "pad");
+        }
+        prevButtons.set(g2.index, now);
+      }
+      const kb = keyboardStick(keys);
+      const kbNow = kb.x !== 0 || kb.y !== 0;
+      if (kbNow || kbLive) scene.setPad2Move(kb.x, kb.y, "keyboard");
+      kbLive = kbNow;
+      const status = pad2StatusLine({
+        padConnected: seats.p2 !== null,
+        driver: scene.aeliaDriver(),
+        following: followingRef.current,
+        harness: driverFollowRef.current,
+      });
+      if (status !== lastStatus) {
+        lastStatus = status;
+        setPad2Status(status);
+      }
+    };
+    raf = window.requestAnimationFrame(poll);
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.cancelAnimationFrame(raf);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, [setPad]);
+
+  // The follow harness toggle cycles off, beside, behind.
+  const cycleDriverFollow = () => {
+    const next: FollowOffset | "off" = driverFollow === "off" ? "beside" : driverFollow === "beside" ? "behind" : "off";
+    setDriverFollow(next);
+    sceneRef.current?.setDriverFollow(next);
+  };
 
   const selectPlace = (place: Place) => {
     exitWalkMode();
@@ -5329,6 +5456,17 @@ export function App() {
             active: !!museBubble,
             action: selectMuse,
             aria: "Meet Aelia, your host in Muse Town",
+          }, {
+            // Player 2 (Task 3): the second channel's status, and
+            // the natural-motion driver's follow harness, a test
+            // toggle on this line: off, beside him, behind him.
+            key: "pad2",
+            icon: "🎮",
+            label: driverFollow === "off" ? "Second controller" : `Follow driver: ${driverFollow} Gaius`,
+            detail: pad2Status || "Checking for a second controller…",
+            active: driverFollow !== "off",
+            action: cycleDriverFollow,
+            aria: "Second controller status. Press to cycle the follow driver: off, beside Gaius, behind Gaius",
           }, {
             // The follow control lives here (Nov 1): the
             // floating walk-screen chip and the speech-bubble
