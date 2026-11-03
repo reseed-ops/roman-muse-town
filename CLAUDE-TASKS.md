@@ -163,6 +163,39 @@ visit end, frame validation and retention, the seam's direction validation, and
 end/lapse clearing. Keep the full suite green and report the new count. A
 one-line note in this file with the commit hash is plenty.
 
+## Task 5 (HOLD, future enhancement, added Nov 3, 2026): a director for everyone — the turnkey visit
+
+Today the only working director is the owner's own Muse, in the Muse app,
+driving the private town's slate by hand with a scheduled waking loop. An
+installer of this repo gets the town and, after Task 4, the visit-ready client
+and its director seam, but no director: nobody reads the seam, answers the
+panel letters, or looks at the frames, so nobody can play with their Muse the
+way the owner played today. This task is the far shore that closes that gap.
+It is HELD: it depends on Task 4 landing first, and the owner will lift the
+hold in this file when the seam's final shape is known.
+
+Shape, for when it opens:
+
+- A small reference director that runs on the owner's own machine and speaks
+  to the Task 4 seam through its local harness: it reads visit state, inbox,
+  and frames, and enqueues directions, exactly the surface the private slate
+  exposes.
+- The director is a seat for the owner's own Muse (a tool-carrying agent,
+  such as Claude Code), not a model bundled into the app: the bridge exposes
+  the seam as tools the agent can call, plus a waking rhythm while a visit is
+  open (a short scheduled loop, breathing at about a minute, that removes
+  itself when the visit folds), mirroring how the private visit loop behaves.
+- The visit's constitution travels with it: directions only; nothing written
+  to facts, letters, bond, or digest from a visit; the inbox and frames live
+  and die on the slate; the panel's consent line stays.
+- Out of scope: hosting anyone's Muse for them, accounts, cloud relays, or
+  any change to the app's offline nature when no visit is open. The town
+  stays a standalone app; the director is an optional companion process the
+  owner runs beside it.
+
+When the hold lifts, Muse will replace this sketch with the finished spec
+against Task 4's landed seam.
+
 ## Standing notes
 
 - Prompts and guards are constitutional on both lines: byte-identical, always.
