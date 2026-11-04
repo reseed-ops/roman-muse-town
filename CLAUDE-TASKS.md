@@ -522,6 +522,71 @@ What waits on the decision: the storage layer (2) and the door (3).
 What does not: the transport and client shim (1), the visitor token,
 the PWA, the deploy note. Say the word on 2 and 3 and the build begins.
 
+### Owner's decisions (Nov 4, 2026) and what landed
+
+The owner answered both: **Postgres**, for many visitors at once, and
+**grow the server-side slate** (option b). Built accordingly, in four
+commits on the public line, Claude, Nov 4, 2026:
+
+- `8d13d59` the storage layer. The action layer awaits every query and
+  no synchronous driver call remains (`storage.test.ts` pins it);
+  `server/src/storage.ts` owns what differs by engine, and one rule
+  keeps the SQLite line atomic once a transaction can await: every
+  town action runs one at a time per town (a mutex on the SQLite line;
+  the request's advisory lock on Postgres). The artifact and Android
+  behaviour is unchanged; the SQLite suite is the same suite.
+- `13e7e08` Postgres. `schema.sqlite.ts` is the source of truth,
+  `schema.pg.ts` its mirror (pinned equal), `schema.ts` picks one per
+  process by `TOWN_DIALECT`; `drizzle-pg/` holds the Postgres
+  migrations, bundled as text. One schema per visitor, named by a hash
+  of the token; every request is one transaction with `search_path`
+  set to it and a transaction-scoped advisory lock on it, so isolation
+  is the database's on every query. `bun run test:pg` runs the action
+  layer on an in-process Postgres (pglite): a fresh town seeds and
+  plays, two visitors never see each other's town on any table, a
+  failed economy transaction rolls back alone, a save round-trips and
+  the sequences move past the restored ids.
+- `db8fabd` the town on the web (`web/`), the door, the PWA, the
+  bridge's town channel, the client's hosted defaults; `web/README.md`
+  is the deploy note with the owner's checklist and the launch gate.
+- This note.
+
+Notes for the port and the owner:
+1. The door's actions are `visitstate` (state plus mail since a seq),
+   `visitdirect`, `visitcomposing`, `visitframeget`, `beginvisit`,
+   `endvisit`, called through `POST /actions` with `x-director-token`
+   beside `x-visitor-token`. A director call addresses one visitor's
+   town by that visitor's own token, as expected: the owner's key is
+   shown under Muse Visits in the town's Settings, to share with Muse
+   once. Without the director token a door call answers exactly as an
+   unknown action does.
+2. The slate is server-side in memory, one face per visitor
+   (`shared/slateFace.ts`, the same face the bridge serves): nothing in
+   a visit is ever persisted, by the constitution, so a restart drops
+   open visits and each folds by heartbeat. The visitor's client feeds
+   its face through the Task 7 bridge routes on its own origin; while
+   hosted its bridge leg defaults to that door, an entered Live Bridge
+   still wins, and an idle glance every 10 s hears a director's
+   `beginvisit`.
+3. The web build needs the licensed assets in `client/src/assets/`
+   like the artifact build does; here it was verified with empty
+   placeholders for the 112 missing files, and the two tracked ones.
+4. `bun.lock` could not be refreshed on this machine (the hosted SDK
+   tarball is absent and `bun add` stops on it); `@electric-sql/pglite`
+   is in `package.json` and in CI's install line. Run `bun install`
+   once where the tarball exists.
+5. The Railway shape: the town service's root directory stays `/` and
+   its config path is `/web/railway.toml`; `web/Dockerfile` builds from
+   the root because `client/`, `server/` and `shared/` live outside
+   `web/`. Variables: `DATABASE_URL` (a reference to the Postgres
+   service), `DIRECTOR_TOKEN`, `TOWN_SECRET`. For the bridge:
+   `DIRECTOR_CHANNEL=town`, `TOWN_URL`, `DIRECTOR_TOKEN`,
+   `VISITOR_TOKEN`.
+6. Launch gate: not yet checked. The deployment may go up for the
+   owner's verification; the town is not linked or announced until the
+   asset and model licences are verified, and this file records when
+   that is done and by whom.
+
 ## Standing notes
 
 - Prompts and guards are constitutional on both lines: byte-identical, always.
@@ -568,6 +633,11 @@ the PWA, the deploy note. Say the word on 2 and 3 and the build begins.
   gloom and any character break refuse it outright, em dashes become commas, 40 words or 280 characters.
   The pack format is a guess at the proven one (`bridge/pack.example.md`, sections by `##` heading and
   a `rank:` line); `parsePack` is the one place to adapt. Not run against a live key here.
+- Task 8 landed on the public line in `8d13d59`, `13e7e08` and `db8fabd` (the storage layer and the
+  one-at-a-time rule, Postgres with a schema per visitor, `web/` with the door, the PWA and the
+  bridge's town channel; SQLite suite 354 green, Postgres suite 19 green). Claude, Nov 4, 2026. The
+  owner chose Postgres and the server-side slate; the notes for the port are under Task 8. The launch
+  gate stands open until the licences are verified.
 - Gate 0 verdict (Muse, Nov 4, 2026): the channel proof has been run on the private side, and channels
   (a) and (b) do not hold. (a) There is no HTTP action surface a non-agent process can call: the private
   town is an interactive artifact, and by the platform's own documentation it lives inside the owner's
