@@ -8,7 +8,7 @@
 // in the artifact database.
 
 import {
-defineAction,
+defineAction as defineSdkAction,
 z,
 type ActionsModule,
 type Ctx,
@@ -43,6 +43,10 @@ import { readingOutcome, SEED_LEDGER_SEED } from "./nursery";
 import { loadFishState } from "./fishState";
 import { runRetrySafe, type RequestIdentity } from "./retrySafe";
 import { saveActions } from "./saveActions";
+import { oneTownAtATime, storageOf } from "./storage";
+
+/** Every town action runs one at a time per town (storage.ts). */
+const defineAction: typeof defineSdkAction = (definition) => defineSdkAction(oneTownAtATime(definition));
 
 const stateResponse = z.object({
   found: z.array(z.string()),
@@ -472,12 +476,12 @@ interface AffectionRow {
   lastContactAt: Date | null;
 }
 
-function loadAffection(ctx: Ctx): AffectionRow {
+async function loadAffection(ctx: Ctx): Promise<AffectionRow> {
   const db = ctx.db<typeof schema>();
-  const rows = db
+  const rows = await db
     .select()
     .from(schema.affectionState)
-    .where(eq(schema.affectionState.id, 1)).all();
+    .where(eq(schema.affectionState.id, 1));
   const existing = rows[0];
   if (existing) {
     return {
@@ -488,7 +492,7 @@ function loadAffection(ctx: Ctx): AffectionRow {
       lastContactAt: existing.lastContactAt ?? null,
     };
   }
-  db.insert(schema.affectionState).values({ id: 1 }).onConflictDoNothing().run();
+  await db.insert(schema.affectionState).values({ id: 1 }).onConflictDoNothing();
   return { points: 0, dayKey: "", caps: "{}", flags: "{}", lastContactAt: null };
 }
 
@@ -654,32 +658,34 @@ interface PurseRow {
   flags: string;
 }
 
-/** Bun SQLite commits synchronous callbacks. Never await inside this scope:
- * a payment and its inventory/progress change must commit or roll back together. */
-function withEconomyTransaction(ctx: Ctx, work: (ctx: Ctx) => undefined, identity?: RequestIdentity): void {
+/** A payment and its inventory/progress change commit or roll back together.
+ * The work may await its own queries and nothing else: the town runs one
+ * action at a time (storage.ts), so the transaction holds exactly its own
+ * writes on SQLite, and on Postgres it is a savepoint inside the request. */
+async function withEconomyTransaction(ctx: Ctx, work: (ctx: Ctx) => Promise<void>, identity?: RequestIdentity): Promise<void> {
   const db = ctx.db<typeof schema>();
-  runRetrySafe(db, identity, (tx) => {
+  await runRetrySafe(storageOf(ctx), db, identity, async (tx) => {
     const scoped: Ctx = Object.create(ctx);
     scoped.db = (() => tx) as Ctx["db"];
-    work(scoped);
+    await work(scoped);
   });
 }
 
-function loadPurse(ctx: Ctx): PurseRow {
+async function loadPurse(ctx: Ctx): Promise<PurseRow> {
   const db = ctx.db<typeof schema>();
-  const rows = db.select().from(schema.purseState).where(eq(schema.purseState.id, 1)).all();
+  const rows = await db.select().from(schema.purseState).where(eq(schema.purseState.id, 1));
   const existing = rows[0];
   if (existing) return existing;
-  db.insert(schema.purseState).values({ id: 1 }).onConflictDoNothing().run();
+  await db.insert(schema.purseState).values({ id: 1 }).onConflictDoNothing();
   return { denarii: 0, upgrades: "[]", ingredients: "[]", dishes: "[]", seeds: 0, flags: "{}" };
 }
 
-function savePurse(ctx: Ctx, row: PurseRow): void {
+async function savePurse(ctx: Ctx, row: PurseRow): Promise<void> {
   const db = ctx.db<typeof schema>();
-  db
+  await db
     .insert(schema.purseState)
     .values({ id: 1, ...row })
-    .onConflictDoUpdate({ target: schema.purseState.id, set: { ...row } }).run();
+    .onConflictDoUpdate({ target: schema.purseState.id, set: { ...row } });
 }
 
 function parseList(json: string): string[] {
@@ -772,10 +778,10 @@ type DatingRow = {
   perkClaims: string;
 };
 
-function loadDating(ctx: Ctx): DatingRow {
+async function loadDating(ctx: Ctx): Promise<DatingRow> {
   const db = ctx.db<typeof schema>();
-  db.insert(schema.datingState).values({ id: 1 }).onConflictDoNothing().run();
-  const rows = db.select().from(schema.datingState).where(eq(schema.datingState.id, 1)).all();
+  await db.insert(schema.datingState).values({ id: 1 }).onConflictDoNothing();
+  const rows = await db.select().from(schema.datingState).where(eq(schema.datingState.id, 1));
   const r = rows[0];
   return {
     starbook: r?.starbook ?? "[]",
@@ -793,12 +799,12 @@ function loadDating(ctx: Ctx): DatingRow {
   };
 }
 
-function saveDating(ctx: Ctx, row: DatingRow): void {
+async function saveDating(ctx: Ctx, row: DatingRow): Promise<void> {
   const db = ctx.db<typeof schema>();
-  db
+  await db
     .insert(schema.datingState)
     .values({ id: 1, ...row })
-    .onConflictDoUpdate({ target: schema.datingState.id, set: { ...row } }).run();
+    .onConflictDoUpdate({ target: schema.datingState.id, set: { ...row } });
 }
 
 async function saveTaskCompanion(ctx: Ctx, row: TaskCompanionRow): Promise<void> {
@@ -819,16 +825,16 @@ function parseFlags(json: string): Record<string, boolean> {
 }
 
 /** Award denarii (quests, treasures, sales…). Returns the new balance. */
-function awardDenarii(ctx: Ctx, amount: number): number {
-  const purse = loadPurse(ctx);
+async function awardDenarii(ctx: Ctx, amount: number): Promise<number> {
+  const purse = await loadPurse(ctx);
   purse.denarii += amount;
-  savePurse(ctx, purse);
+  await savePurse(ctx, purse);
   return purse.denarii;
 }
 
-function saveAffection(ctx: Ctx, row: AffectionRow): void {
+async function saveAffection(ctx: Ctx, row: AffectionRow): Promise<void> {
   const db = ctx.db<typeof schema>();
-  db
+  await db
     .insert(schema.affectionState)
     .values({
       id: 1,
@@ -847,7 +853,7 @@ function saveAffection(ctx: Ctx, row: AffectionRow): void {
         flags: row.flags,
         lastContactAt: row.lastContactAt,
       },
-    }).run();
+    });
 }
 
 function sameUtcDay(a: Date, b: Date): boolean {
@@ -929,18 +935,19 @@ const economyResponse = stateResponse.pick({
 });
 
 /** Small gameplay response: no letters, fact memory, journal or blob URL signing. */
-function loadEconomyState(ctx: Ctx): z.infer<typeof economyResponse> {
+async function loadEconomyState(ctx: Ctx): Promise<z.infer<typeof economyResponse>> {
   const db = ctx.db<typeof schema>();
-  const purse = loadPurse(ctx);
-  const rank = affectionRank(db.select().from(schema.affectionState).where(eq(schema.affectionState.id, 1)).get()?.points ?? 0);
-  const { catchRows, releasedFish, hasGoldenCarp } = loadFishState(db);
-  const gardenRows = db.select().from(schema.gardenState).where(eq(schema.gardenState.id, 1)).all();
-  const challengeRows = db.select().from(schema.challengesState).all();
-  const inscriptionRows = db.select().from(schema.inscriptionsState).all();
-  const summitRow = db.select().from(schema.summitState).where(eq(schema.summitState.id, 1)).get();
-  const phoenixRow = db.select().from(schema.phoenixState).where(eq(schema.phoenixState.id, 1)).get();
-  const piscinaRow = db.select().from(schema.piscinaState).where(eq(schema.piscinaState.id, 1)).get();
-  const bathsRow = db.select().from(schema.bathsState).where(eq(schema.bathsState.id, 1)).get();
+  const purse = await loadPurse(ctx);
+  const affectionRows = await db.select().from(schema.affectionState).where(eq(schema.affectionState.id, 1)).limit(1);
+  const rank = affectionRank(affectionRows[0]?.points ?? 0);
+  const { catchRows, releasedFish, hasGoldenCarp } = await loadFishState(db);
+  const gardenRows = await db.select().from(schema.gardenState).where(eq(schema.gardenState.id, 1));
+  const challengeRows = await db.select().from(schema.challengesState);
+  const inscriptionRows = await db.select().from(schema.inscriptionsState);
+  const summitRow = (await db.select().from(schema.summitState).where(eq(schema.summitState.id, 1)).limit(1))[0];
+  const phoenixRow = (await db.select().from(schema.phoenixState).where(eq(schema.phoenixState.id, 1)).limit(1))[0];
+  const piscinaRow = (await db.select().from(schema.piscinaState).where(eq(schema.piscinaState.id, 1)).limit(1))[0];
+  const bathsRow = (await db.select().from(schema.bathsState).where(eq(schema.bathsState.id, 1)).limit(1))[0];
   const now = new Date();
   const summitReady =
     rank >= 10 &&
@@ -1341,7 +1348,7 @@ async function loadState(ctx: Ctx): Promise<z.infer<typeof stateResponse>> {
       rank,
       band: affectionBand(rank),
     },
-    ...loadEconomyState(ctx),
+    ...(await loadEconomyState(ctx)),
     dream: {
       morning_pending: (dreamRow?.morningPending ?? 0) !== 0,
       echo_pending: (dreamRow?.echoPending ?? 0) !== 0,
@@ -1851,18 +1858,18 @@ export const Actions = {
     request: z.object({ collectibleId: z.string().min(1).max(64) }).extend({ request_id: z.string().uuid().optional() }),
     response: stateResponse,
     async handler(ctx, args) {
-      withEconomyTransaction(ctx, (ctx) => {
+      await withEconomyTransaction(ctx, async (ctx) => {
         const db = ctx.db<typeof schema>();
-        const before = db
+        const before = await db
           .select()
           .from(schema.discoveries)
-          .where(eq(schema.discoveries.collectibleId, args.collectibleId)).all();
-        db
+          .where(eq(schema.discoveries.collectibleId, args.collectibleId));
+        await db
           .insert(schema.discoveries)
           .values({ collectibleId: args.collectibleId })
-          .onConflictDoNothing().run();
+          .onConflictDoNothing();
         // A found treasure pays out in denarii, once, when it's new.
-        if (before.length === 0) awardDenarii(ctx, TREASURE_DENARII);
+        if (before.length === 0) await awardDenarii(ctx, TREASURE_DENARII);
       }, { requestId: args.request_id, action: "markFound", payload: args });
       ctx.invalidateQueries();
       return loadState(ctx);
@@ -2274,18 +2281,18 @@ export const Actions = {
     request: z.object({ questId: z.string().min(1).max(64) }).extend({ request_id: z.string().uuid().optional() }),
     response: stateResponse,
     async handler(ctx, args) {
-      withEconomyTransaction(ctx, (ctx) => {
+      await withEconomyTransaction(ctx, async (ctx) => {
         const db = ctx.db<typeof schema>();
-        const before = db
+        const before = await db
           .select()
           .from(schema.questsState)
-          .where(eq(schema.questsState.questId, args.questId)).all();
-        db
+          .where(eq(schema.questsState.questId, args.questId));
+        await db
           .insert(schema.questsState)
           .values({ questId: args.questId })
-          .onConflictDoNothing().run();
+          .onConflictDoNothing();
         // A finished quest pays its denarii, once, when it's new.
-        if (before.length === 0) awardDenarii(ctx, QUEST_DENARII);
+        if (before.length === 0) await awardDenarii(ctx, QUEST_DENARII);
       }, { requestId: args.request_id, action: "markQuestDone", payload: args });
       ctx.invalidateQueries();
       return loadState(ctx);
@@ -2912,9 +2919,9 @@ export const Actions = {
     }).extend({ request_id: z.string().uuid().optional() }),
     response: stateResponse,
     handler: async (ctx, args) => {
-      withEconomyTransaction(ctx, (ctx) => {
+      await withEconomyTransaction(ctx, async (ctx) => {
         const db = ctx.db<typeof schema>();
-        const dating = loadDating(ctx);
+        const dating = await loadDating(ctx);
         const today = utcDayKey(new Date());
         const tastes = parseStringMap(dating.tastes);
         tastes[args.item] = args.tier;
@@ -2937,25 +2944,25 @@ export const Actions = {
           }
           // Consume the given thing.
           if (args.consume === "ingredient" || args.consume === "dish") {
-            const purse = loadPurse(ctx);
+            const purse = await loadPurse(ctx);
             const list = parseList(args.consume === "ingredient" ? purse.ingredients : purse.dishes);
             const idx = list.indexOf(args.item);
             if (idx >= 0) {
               list.splice(idx, 1);
               if (args.consume === "ingredient") purse.ingredients = JSON.stringify(list);
               else purse.dishes = JSON.stringify(list);
-              savePurse(ctx, purse);
+              await savePurse(ctx, purse);
             }
           } else if (args.consume === "fish") {
-            const rows = db
+            const rows = await db
               .select()
               .from(schema.catches)
-              .where(and(eq(schema.catches.fishId, args.item), eq(schema.catches.sold, 0), eq(schema.catches.released, 0))).all();
+              .where(and(eq(schema.catches.fishId, args.item), eq(schema.catches.sold, 0), eq(schema.catches.released, 0)));
             const row = rows[0];
-            if (row) db.delete(schema.catches).where(eq(schema.catches.id, row.id)).run();
+            if (row) await db.delete(schema.catches).where(eq(schema.catches.id, row.id));
           }
         }
-        saveDating(ctx, dating);
+        await saveDating(ctx, dating);
       }, { requestId: args.request_id, action: "recordGift", payload: args });
       ctx.invalidateQueries();
       return loadState(ctx);
@@ -3044,17 +3051,17 @@ export const Actions = {
     }).extend({ request_id: z.string().uuid().optional() }),
     response: stateResponse,
     handler: async (ctx, args) => {
-      withEconomyTransaction(ctx, (ctx) => {
-        const dating = loadDating(ctx);
+      await withEconomyTransaction(ctx, async (ctx) => {
+        const dating = await loadDating(ctx);
         const today = utcDayKey(new Date());
         const claims = parseStringMap(dating.perkClaims);
         if (claims[args.perk] !== today) {
           claims[args.perk] = today;
           dating.perkClaims = JSON.stringify(claims);
-          saveDating(ctx, dating);
-          const purse = loadPurse(ctx);
+          await saveDating(ctx, dating);
+          const purse = await loadPurse(ctx);
           purse.ingredients = JSON.stringify([...parseList(purse.ingredients), args.item].slice(-40));
-          savePurse(ctx, purse);
+          await savePurse(ctx, purse);
         }
       }, { requestId: args.request_id, action: "claimPerk", payload: args });
       ctx.invalidateQueries();
@@ -3103,28 +3110,28 @@ export const Actions = {
     request: z.object({ spot_id: z.string().min(1).max(40) }).extend({ request_id: z.string().uuid().optional() }),
     response: stateResponse,
     handler: async (ctx, args) => {
-      withEconomyTransaction(ctx, (ctx) => {
+      await withEconomyTransaction(ctx, async (ctx) => {
         const item = own(FORAGE_ITEMS, args.spot_id);
         if (item) {
           const db = ctx.db<typeof schema>();
           const today = utcDayKey(new Date());
-          const rows = db.select().from(schema.forageState).where(eq(schema.forageState.id, 1)).all();
+          const rows = await db.select().from(schema.forageState).where(eq(schema.forageState.id, 1));
           const taken = parseDayMap(rows[0]?.taken ?? "{}");
           if (taken[args.spot_id] !== today) {
             taken[args.spot_id] = today;
             if (rows[0]) {
-              db
+              await db
                 .update(schema.forageState)
                 .set({ taken: JSON.stringify(taken) })
-                .where(eq(schema.forageState.id, 1)).run();
+                .where(eq(schema.forageState.id, 1));
             } else {
-              db.insert(schema.forageState).values({ id: 1, taken: JSON.stringify(taken) }).run();
+              await db.insert(schema.forageState).values({ id: 1, taken: JSON.stringify(taken) });
             }
-            const purse = loadPurse(ctx);
+            const purse = await loadPurse(ctx);
             const owned = parseList(purse.ingredients);
             owned.push(item);
             purse.ingredients = JSON.stringify(owned);
-            savePurse(ctx, purse);
+            await savePurse(ctx, purse);
           }
         }
       }, { requestId: args.request_id, action: "foragePick", payload: args });
@@ -3140,10 +3147,10 @@ export const Actions = {
     async handler(ctx, args): Promise<z.infer<typeof earnResponse>> {
       let rankedUp: number | null = null;
       let capped = false;
-      withEconomyTransaction(ctx, (ctx) => {
+      await withEconomyTransaction(ctx, async (ctx) => {
         const db = ctx.db<typeof schema>();
         const now = new Date();
-        const row = loadAffection(ctx);
+        const row = await loadAffection(ctx);
         row.points = cooledPoints(row, now);
         const oldRank = affectionRank(row.points);
         // Roll the day's caps over at midnight (UTC).
@@ -3187,7 +3194,7 @@ export const Actions = {
         row.dayKey = today;
         row.caps = JSON.stringify(caps);
         row.flags = JSON.stringify(flags);
-        saveAffection(ctx, row);
+        await saveAffection(ctx, row);
         const newRank = affectionRank(row.points);
 
         if (newRank > oldRank) {
@@ -3201,11 +3208,11 @@ export const Actions = {
           for (let r = oldRank + 1; r <= newRank; r++) {
             const letter = RANK_LETTERS[r];
             if (letter) {
-              db.insert(schema.letters).values({
+              await db.insert(schema.letters).values({
                 dateLabel,
                 title: letter.title,
                 body: letter.body,
-              }).run();
+              });
             }
           }
         }
@@ -3225,14 +3232,14 @@ export const Actions = {
     request: z.object({ key: z.string().min(1).max(64), amount: z.number().int().min(1).max(100) }).extend({ request_id: z.string().uuid().optional() }),
     response: economyResponse,
     async handler(ctx, args) {
-      withEconomyTransaction(ctx, (ctx) => {
-        const purse = loadPurse(ctx);
+      await withEconomyTransaction(ctx, async (ctx) => {
+        const purse = await loadPurse(ctx);
         const flags = parseFlags(purse.flags);
         if (!flags[`award:${args.key}`]) {
           flags[`award:${args.key}`] = true;
           purse.flags = JSON.stringify(flags);
           purse.denarii += args.amount;
-          savePurse(ctx, purse);
+          await savePurse(ctx, purse);
         }
       }, { requestId: args.request_id, action: "awardOnce", payload: args });
       ctx.invalidateQueries();
@@ -3245,16 +3252,16 @@ export const Actions = {
     request: z.object({ upgrade: z.string().min(1).max(40) }).extend({ request_id: z.string().uuid().optional() }),
     response: economyResponse,
     async handler(ctx, args) {
-      withEconomyTransaction(ctx, (ctx) => {
+      await withEconomyTransaction(ctx, async (ctx) => {
         const price = own(UPGRADE_PRICES, args.upgrade);
         if (price !== undefined) {
-          const purse = loadPurse(ctx);
+          const purse = await loadPurse(ctx);
           const owned = parseList(purse.upgrades);
           if (!owned.includes(args.upgrade) && purse.denarii >= price) {
             purse.denarii -= price;
             owned.push(args.upgrade);
             purse.upgrades = JSON.stringify(owned);
-            savePurse(ctx, purse);
+            await savePurse(ctx, purse);
           }
         }
       }, { requestId: args.request_id, action: "buyUpgrade", payload: args });
@@ -3268,16 +3275,16 @@ export const Actions = {
     request: z.object({ ingredient: z.string().min(1).max(40) }).extend({ request_id: z.string().uuid().optional() }),
     response: economyResponse,
     async handler(ctx, args) {
-      withEconomyTransaction(ctx, (ctx) => {
+      await withEconomyTransaction(ctx, async (ctx) => {
         const price = own(INGREDIENT_PRICES, args.ingredient);
         if (price !== undefined) {
-          const purse = loadPurse(ctx);
+          const purse = await loadPurse(ctx);
           const owned = parseList(purse.ingredients);
           if (!owned.includes(args.ingredient) && purse.denarii >= price) {
             purse.denarii -= price;
             owned.push(args.ingredient);
             purse.ingredients = JSON.stringify(owned);
-            savePurse(ctx, purse);
+            await savePurse(ctx, purse);
           }
         }
       }, { requestId: args.request_id, action: "buyIngredient", payload: args });
@@ -3292,10 +3299,10 @@ export const Actions = {
     response: economyResponse,
     async handler(ctx, args) {
       let cooked: string | null = null as string | null;
-      withEconomyTransaction(ctx, (ctx) => {
+      await withEconomyTransaction(ctx, async (ctx) => {
         const dish = own(DISH_FOR_INGREDIENT, args.ingredient);
         if (dish) {
-          const purse = loadPurse(ctx);
+          const purse = await loadPurse(ctx);
           const owned = parseList(purse.ingredients);
           const idx = owned.indexOf(args.ingredient);
           if (idx >= 0) {
@@ -3304,7 +3311,7 @@ export const Actions = {
             const dishes = parseList(purse.dishes);
             dishes.push(dish);
             purse.dishes = JSON.stringify(dishes);
-            savePurse(ctx, purse);
+            await savePurse(ctx, purse);
             cooked = dish;
           }
         }
@@ -3323,12 +3330,12 @@ export const Actions = {
     request: z.object({}).extend({ request_id: z.string().uuid().optional() }),
     response: economyResponse,
     async handler(ctx, args) {
-      withEconomyTransaction(ctx, (ctx) => {
-        const purse = loadPurse(ctx);
+      await withEconomyTransaction(ctx, async (ctx) => {
+        const purse = await loadPurse(ctx);
         if (purse.denarii >= SEED_PRICE) {
           purse.denarii -= SEED_PRICE;
           purse.seeds += SEEDS_PER_POUCH;
-          savePurse(ctx, purse);
+          await savePurse(ctx, purse);
         }
       }, { requestId: args.request_id, action: "buySeeds", payload: args });
       ctx.invalidateQueries();
@@ -3341,20 +3348,20 @@ export const Actions = {
     request: z.object({}).extend({ request_id: z.string().uuid().optional() }),
     response: economyResponse,
     async handler(ctx, args) {
-      withEconomyTransaction(ctx, (ctx) => {
+      await withEconomyTransaction(ctx, async (ctx) => {
         const db = ctx.db<typeof schema>();
-        const rows = db.select().from(schema.gardenState).where(eq(schema.gardenState.id, 1)).all();
-        const purse = loadPurse(ctx);
+        const rows = await db.select().from(schema.gardenState).where(eq(schema.gardenState.id, 1));
+        const purse = await loadPurse(ctx);
         if (!rows[0]?.plantedOn && purse.seeds > 0) {
           purse.seeds -= 1;
-          savePurse(ctx, purse);
-          db
+          await savePurse(ctx, purse);
+          await db
             .insert(schema.gardenState)
             .values({ id: 1, plantedOn: utcDayKey(new Date()), waterDays: 0, lastWateredDay: null })
             .onConflictDoUpdate({
               target: schema.gardenState.id,
               set: { plantedOn: utcDayKey(new Date()), waterDays: 0, lastWateredDay: null },
-            }).run();
+            });
         }
       }, { requestId: args.request_id, action: "plantGarden", payload: args });
       ctx.invalidateQueries();
@@ -3367,16 +3374,16 @@ export const Actions = {
     request: z.object({}).extend({ request_id: z.string().uuid().optional() }),
     response: economyResponse,
     async handler(ctx, args) {
-      withEconomyTransaction(ctx, (ctx) => {
+      await withEconomyTransaction(ctx, async (ctx) => {
         const db = ctx.db<typeof schema>();
-        const rows = db.select().from(schema.gardenState).where(eq(schema.gardenState.id, 1)).all();
+        const rows = await db.select().from(schema.gardenState).where(eq(schema.gardenState.id, 1));
         const garden = rows[0];
         const today = utcDayKey(new Date());
         if (garden?.plantedOn && garden.lastWateredDay !== today) {
-          db
+          await db
             .update(schema.gardenState)
             .set({ waterDays: garden.waterDays + 1, lastWateredDay: today })
-            .where(eq(schema.gardenState.id, 1)).run();
+            .where(eq(schema.gardenState.id, 1));
         }
       }, { requestId: args.request_id, action: "waterGarden", payload: args });
       ctx.invalidateQueries();
@@ -3389,20 +3396,20 @@ export const Actions = {
     request: z.object({}).extend({ request_id: z.string().uuid().optional() }),
     response: economyResponse,
     async handler(ctx, args) {
-      withEconomyTransaction(ctx, (ctx) => {
+      await withEconomyTransaction(ctx, async (ctx) => {
         const db = ctx.db<typeof schema>();
-        const rows = db.select().from(schema.gardenState).where(eq(schema.gardenState.id, 1)).all();
+        const rows = await db.select().from(schema.gardenState).where(eq(schema.gardenState.id, 1));
         const garden = rows[0];
         if (garden?.plantedOn && garden.waterDays >= 3) {
-          db
+          await db
             .update(schema.gardenState)
             .set({ plantedOn: null, waterDays: 0, lastWateredDay: null, harvests: garden.harvests + 1 })
-            .where(eq(schema.gardenState.id, 1)).run();
-          awardDenarii(ctx, GARDEN_HARVEST_DENARII);
+            .where(eq(schema.gardenState.id, 1));
+          await awardDenarii(ctx, GARDEN_HARVEST_DENARII);
           // The pick of the crop goes to the kitchen; the rest sells as before.
-          const purse = loadPurse(ctx);
+          const purse = await loadPurse(ctx);
           purse.ingredients = JSON.stringify([...parseList(purse.ingredients), "garden-greens"]);
-          savePurse(ctx, purse);
+          await savePurse(ctx, purse);
         }
       }, { requestId: args.request_id, action: "harvestGarden", payload: args });
       ctx.invalidateQueries();
@@ -3415,10 +3422,10 @@ export const Actions = {
     request: z.object({ fish_id: z.string().min(1).max(40) }).extend({ request_id: z.string().uuid().optional() }),
     response: economyResponse,
     async handler(ctx, args) {
-      withEconomyTransaction(ctx, (ctx) => {
+      await withEconomyTransaction(ctx, async (ctx) => {
         if (own(FISH_PRICES, args.fish_id) !== undefined) {
           const db = ctx.db<typeof schema>();
-          db.insert(schema.catches).values({ fishId: args.fish_id }).run();
+          await db.insert(schema.catches).values({ fishId: args.fish_id });
         }
       }, { requestId: args.request_id, action: "recordCatch", payload: args });
       ctx.invalidateQueries();
@@ -3431,19 +3438,19 @@ export const Actions = {
     request: z.object({}).extend({ request_id: z.string().uuid().optional() }),
     response: economyResponse,
     async handler(ctx, args) {
-      withEconomyTransaction(ctx, (ctx) => {
+      await withEconomyTransaction(ctx, async (ctx) => {
         const db = ctx.db<typeof schema>();
-        const unsold = db
+        const unsold = await db
           .select()
           .from(schema.catches)
-          .where(and(eq(schema.catches.sold, 0), eq(schema.catches.released, 0))).all();
+          .where(and(eq(schema.catches.sold, 0), eq(schema.catches.released, 0)));
         if (unsold.length > 0) {
           const total = unsold.reduce((sum, row) => sum + (own(FISH_PRICES, row.fishId) ?? 0), 0);
-          db
+          await db
             .update(schema.catches)
             .set({ sold: 1 })
-            .where(and(eq(schema.catches.sold, 0), eq(schema.catches.released, 0))).run();
-          if (total > 0) awardDenarii(ctx, total);
+            .where(and(eq(schema.catches.sold, 0), eq(schema.catches.released, 0)));
+          if (total > 0) await awardDenarii(ctx, total);
         }
       }, { requestId: args.request_id, action: "sellFish", payload: args });
       ctx.invalidateQueries();
@@ -3456,21 +3463,21 @@ export const Actions = {
     request: z.object({ fish_id: z.string().min(1).max(40) }).extend({ request_id: z.string().uuid().optional() }),
     response: economyResponse,
     async handler(ctx, args) {
-      withEconomyTransaction(ctx, (ctx) => {
+      await withEconomyTransaction(ctx, async (ctx) => {
         const ingredient = `catch-${args.fish_id}`;
         if (!own(DISH_FOR_INGREDIENT, ingredient)) return;
         const db = ctx.db<typeof schema>();
-        const row = db
+        const row = (await db
           .select()
           .from(schema.catches)
           .where(and(eq(schema.catches.fishId, args.fish_id), eq(schema.catches.sold, 0), eq(schema.catches.released, 0)))
           .orderBy(asc(schema.catches.id))
-          .limit(1).all()[0];
+          .limit(1))[0];
         if (!row) return;
-        db.update(schema.catches).set({ sold: 1 }).where(eq(schema.catches.id, row.id)).run();
-        const purse = loadPurse(ctx);
+        await db.update(schema.catches).set({ sold: 1 }).where(eq(schema.catches.id, row.id));
+        const purse = await loadPurse(ctx);
         purse.ingredients = JSON.stringify([...parseList(purse.ingredients), ingredient]);
-        savePurse(ctx, purse);
+        await savePurse(ctx, purse);
       }, { requestId: args.request_id, action: "pantryCatch", payload: args });
       ctx.invalidateQueries();
       return loadEconomyState(ctx);
@@ -3482,9 +3489,9 @@ export const Actions = {
     request: z.object({ fish_id: z.string().min(1).max(60) }).extend({ request_id: z.string().uuid().optional() }),
     response: economyResponse,
     async handler(ctx, args) {
-      withEconomyTransaction(ctx, (ctx) => {
+      await withEconomyTransaction(ctx, async (ctx) => {
         const db = ctx.db<typeof schema>();
-        const live = db
+        const live = await db
           .select()
           .from(schema.catches)
           .where(
@@ -3495,10 +3502,10 @@ export const Actions = {
             ),
           )
           .orderBy(asc(schema.catches.id))
-          .limit(1).all();
+          .limit(1);
         const row = live[0];
         if (row) {
-          db.update(schema.catches).set({ released: 1 }).where(eq(schema.catches.id, row.id)).run();
+          await db.update(schema.catches).set({ released: 1 }).where(eq(schema.catches.id, row.id));
         }
       }, { requestId: args.request_id, action: "releaseFish", payload: args });
       ctx.invalidateQueries();
@@ -3556,12 +3563,12 @@ export const Actions = {
     }).extend({ request_id: z.string().uuid().optional() }),
     response: economyResponse,
     async handler(ctx, args) {
-      withEconomyTransaction(ctx, (ctx) => {
+      await withEconomyTransaction(ctx, async (ctx) => {
         if (args.stake === 5 || args.stake === 10) {
-          const purse = loadPurse(ctx);
+          const purse = await loadPurse(ctx);
           if (args.result === "win") purse.denarii += args.stake;
           if (args.result === "lose") purse.denarii = Math.max(0, purse.denarii - args.stake);
-          savePurse(ctx, purse);
+          await savePurse(ctx, purse);
         }
       }, { requestId: args.request_id, action: "settleKnucklebones", payload: args });
       ctx.invalidateQueries();
@@ -3574,18 +3581,18 @@ export const Actions = {
     request: z.object({ challenge_id: z.string().min(1).max(40) }).extend({ request_id: z.string().uuid().optional() }),
     response: economyResponse,
     async handler(ctx, args) {
-      withEconomyTransaction(ctx, (ctx) => {
+      await withEconomyTransaction(ctx, async (ctx) => {
         const db = ctx.db<typeof schema>();
-        const before = db
+        const before = await db
           .select()
           .from(schema.challengesState)
-          .where(eq(schema.challengesState.challengeId, args.challenge_id)).all();
+          .where(eq(schema.challengesState.challengeId, args.challenge_id));
         if (before.length === 0) {
-          db
+          await db
             .insert(schema.challengesState)
             .values({ challengeId: args.challenge_id })
-            .onConflictDoNothing().run();
-          awardDenarii(ctx, CHALLENGE_DENARII);
+            .onConflictDoNothing();
+          await awardDenarii(ctx, CHALLENGE_DENARII);
         }
       }, { requestId: args.request_id, action: "completeChallenge", payload: args });
       ctx.invalidateQueries();
@@ -3598,21 +3605,21 @@ export const Actions = {
     request: z.object({ fragment_id: z.string().min(1).max(40) }).extend({ request_id: z.string().uuid().optional() }),
     response: economyResponse,
     async handler(ctx, args) {
-      withEconomyTransaction(ctx, (ctx) => {
+      await withEconomyTransaction(ctx, async (ctx) => {
         const db = ctx.db<typeof schema>();
-        db
+        await db
           .insert(schema.inscriptionsState)
           .values({ fragmentId: args.fragment_id })
-          .onConflictDoNothing().run();
-        const all = db.select().from(schema.inscriptionsState).all();
+          .onConflictDoNothing();
+        const all = await db.select().from(schema.inscriptionsState);
         if (all.length >= INSCRIPTION_TOTAL) {
-          const purse = loadPurse(ctx);
+          const purse = await loadPurse(ctx);
           const flags = parseFlags(purse.flags);
           if (!flags.inscriptions_done) {
             flags.inscriptions_done = true;
             purse.flags = JSON.stringify(flags);
             purse.denarii += INSCRIPTION_REWARD;
-            savePurse(ctx, purse);
+            await savePurse(ctx, purse);
           }
         }
       }, { requestId: args.request_id, action: "markInscription", payload: args });

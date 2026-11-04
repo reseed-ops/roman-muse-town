@@ -5,6 +5,7 @@ import { drizzle } from "drizzle-orm/bun-sqlite";
 import * as schema from "./schema";
 import { exportTownSave, restoreTownSave } from "./saveService";
 import { runRetrySafe } from "./retrySafe";
+import { sqliteStorage } from "./storage";
 
 let sqlite: Database;
 let db: ReturnType<typeof drizzle<typeof schema>>;
@@ -75,13 +76,13 @@ test("retrying a committed restore preserves changes made after it", async () =>
   expect(stored.size).toBe(1);
 });
 
-test("request receipts reject payload reuse and roll back with failed work", () => {
+test("request receipts reject payload reuse and roll back with failed work", async () => {
   const identity = { requestId: "purchase-id", action: "purchase", payload: { amount: 1 } };
-  const work = (tx: Parameters<Parameters<typeof runRetrySafe>[2]>[0]): undefined => { tx.insert(schema.journal).values({ text: "purchase" }).run(); };
-  expect(runRetrySafe(db, identity, work)).toBe(true);
-  expect(runRetrySafe(db, identity, work)).toBe(false);
-  expect(() => runRetrySafe(db, { ...identity, payload: { amount: 2 } }, work)).toThrow("different action");
-  expect(() => runRetrySafe(db, { ...identity, requestId: "failed-id" }, (tx) => { work(tx); throw new Error("failure"); })).toThrow("failure");
+  const work = async (tx: Parameters<Parameters<typeof runRetrySafe>[3]>[0]): Promise<void> => { await tx.insert(schema.journal).values({ text: "purchase" }); };
+  expect(await runRetrySafe(sqliteStorage, db, identity, work)).toBe(true);
+  expect(await runRetrySafe(sqliteStorage, db, identity, work)).toBe(false);
+  await expect(runRetrySafe(sqliteStorage, db, { ...identity, payload: { amount: 2 } }, work)).rejects.toThrow("different action");
+  await expect(runRetrySafe(sqliteStorage, db, { ...identity, requestId: "failed-id" }, async (tx) => { await work(tx); throw new Error("failure"); })).rejects.toThrow("failure");
   expect(db.select().from(schema.journal).all()).toHaveLength(2);
   expect(db.select().from(schema.requestReceipts).all()).toHaveLength(1);
 });

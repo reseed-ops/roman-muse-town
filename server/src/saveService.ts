@@ -1,11 +1,11 @@
 import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
 import { getTableColumns, getTableName } from "drizzle-orm";
-import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import type { AnySQLiteTable } from "drizzle-orm/sqlite-core";
 import { MAX_ATTACHMENT_BYTES, MAX_SAVE_BYTES, readSaveEnvelope, SAVE_FORMAT, SAVE_SCHEMA_VERSION, SAVE_VERSION, type TownSave } from "../../shared/saveFormat";
 import * as schema from "./schema";
 import { runRetrySafe } from "./retrySafe";
+import { sqliteStorage, type TownDb, type TownStorage } from "./storage";
 
 interface BlobStore {
   getUrl(key: string): Promise<string>;
@@ -93,8 +93,14 @@ function validateAttachments(save: TownSave): Map<string, Uint8Array> {
   return attachments;
 }
 
-export async function exportTownSave(db: BunSQLiteDatabase<typeof schema>, blobs: BlobStore, fetchImage: typeof fetch = fetch): Promise<string> {
-  const snapshot = db.transaction((tx) => Object.fromEntries(tables.map((table) => [getTableName(table), tx.select().from(table).all().map((row) => Object.fromEntries(Object.entries(row).map(([key, value]) => [key, value instanceof Date ? value.getTime() : value])))])));
+export async function exportTownSave(db: TownDb, blobs: BlobStore, fetchImage: typeof fetch = fetch): Promise<string> {
+  // One table after another is one consistent picture: the town runs one
+  // action at a time (storage.ts), so nothing writes between these reads.
+  const snapshot: Record<string, Record<string, unknown>[]> = {};
+  for (const table of tables) {
+    const rows = await db.select().from(table);
+    snapshot[getTableName(table)] = rows.map((row) => Object.fromEntries(Object.entries(row).map(([key, value]) => [key, value instanceof Date ? value.getTime() : value])));
+  }
   const save: TownSave = { format: SAVE_FORMAT, version: SAVE_VERSION, schemaVersion: SAVE_SCHEMA_VERSION, exportedAt: new Date().toISOString(), tables: snapshot as TownSave["tables"], attachments: [] };
   let size = Buffer.byteLength(JSON.stringify(save));
   for (const key of new Set((save.tables.postcards ?? []).map((row) => String(row.blobKey)))) {
@@ -126,7 +132,7 @@ export async function exportTownSave(db: BunSQLiteDatabase<typeof schema>, blobs
   return json;
 }
 
-export async function restoreTownSave(db: BunSQLiteDatabase<typeof schema>, blobs: BlobStore, json: string, requestId?: string): Promise<void> {
+export async function restoreTownSave(db: TownDb, blobs: BlobStore, json: string, requestId?: string, storage: TownStorage = sqliteStorage): Promise<void> {
   const save = readSaveEnvelope(json);
   const decoded = validateRows(save);
   checkRestoreLimits(save);
@@ -142,13 +148,14 @@ export async function restoreTownSave(db: BunSQLiteDatabase<typeof schema>, blob
       replacement.set(key, next);
     }
     for (const row of decoded.get(schema.postcards) ?? []) row.blobKey = replacement.get(String(row.blobKey));
-    const applied = runRetrySafe(db, { requestId, action: "restoreSave", payload: { json } }, (tx) => {
-      for (const table of tables) tx.delete(table).run();
+    const applied = await runRetrySafe(storage, db, { requestId, action: "restoreSave", payload: { json } }, async (tx) => {
+      for (const table of tables) await tx.delete(table);
       for (const [table, rows] of decoded) {
         // Small batches keep SQLite's variable limit independent of save size.
         const batchSize = Math.max(1, Math.floor(500 / Object.keys(getTableColumns(table)).length));
-        for (let i = 0; i < rows.length; i += batchSize) tx.insert(table).values(rows.slice(i, i + batchSize)).run();
+        for (let i = 0; i < rows.length; i += batchSize) await tx.insert(table).values(rows.slice(i, i + batchSize));
       }
+      await storage.afterRestore(tx);
     });
     if (!applied) await Promise.allSettled(uploaded.map((key) => blobs.delete(key)));
   } catch (error) {
