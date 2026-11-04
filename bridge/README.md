@@ -8,6 +8,11 @@ them, keeps the visit loop's manners (one greeting, throttled presence
 intentions, sight on a look or a slow cadence), and applies the
 constitution in code before anything is enqueued.
 
+Since Task 7 (Nov 4, 2026, Gate 0's verdict) the bridge is also a
+SERVING face: the town client calls out to it over HTTPS during a visit,
+posting its slate snapshot and pulling directions back. The bridge never
+calls into the town's platform. See "The bridge leg" below.
+
 ## Shape
 
 - `src/channel.ts`: the director channel, one narrow interface: state,
@@ -16,10 +21,17 @@ constitution in code before anything is enqueued.
   digest.
 - `src/seamAdapter.ts`: Adapter A, over this line's Task 4 seam harness
   (`harness/visitHarness.ts`) by HTTP.
-- `src/slateAdapter.ts`: Adapter B, over the private town's slate. The
-  interface and the action mapping only; the transport is Gate 0's to
-  prove on the private side. Until the proven transport and shapes are
-  appended to `CLAUDE-TASKS.md`, it refuses every call plainly.
+- `src/slateFace.ts`: Adapter B, the serving face (Task 7). It holds the
+  snapshot the town client posts (state, new inbox mail, the latest
+  frame, each validated at the door) and the directions the director
+  leaves, and reads to the director loop as a channel. When no snapshot
+  has arrived inside the lapse window the slate dies and the face reads
+  closed: the bridge goes quiet, and the town folds the visit by its own
+  heartbeat.
+- `src/bridgeServer.ts`: the HTTP carrier for that face, two endpoints
+  gated by the per-installation token (`BRIDGE_TOKEN`), compared in
+  constant time; a missing or wrong token is refused with a bare 401 and
+  logged without the value.
 - `src/outputFilter.ts`: the constitution as a deterministic filter:
   speak only, the dash rule, the speak cap, the reserved band, tender
   only.
@@ -52,14 +64,52 @@ Open the town with `?harness=http://localhost:8787` (or set localStorage
 `muse-town-visit-harness`), then open a visit from the town menu, or ask
 the harness to: `curl -X POST localhost:8787/visit/begin`.
 
+## The bridge leg (Task 7)
+
+With `DIRECTOR_CHANNEL=bridge` the process serves the director face on
+`PORT` and the town client, during a visit and only when a bridge URL is
+set in its Settings (Muse Visits), calls out about every two seconds and
+promptly on new mail or a fresh frame:
+
+```
+POST /bridge/snapshot          { state, mail, frame }  -> { ok, latestSeq, frameId }
+GET  /bridge/directions?since=N                        -> { directions, composing, directorSeenAt }
+```
+
+Both carry `Authorization: Bearer <BRIDGE_TOKEN>`. The token is set by
+the owner in this service's variables and typed into the town's visit
+settings; it is held in that browser only and never committed. The
+pulled directions pass the town's seam validator before they reach the
+scene, exactly as harness directions do; the composing flag drives the
+panel's writing line. With no bridge URL set the town makes no call at
+all. The wire shapes live in `shared/visitProtocol.ts` (the Task 7
+section). TLS is the host's: Railway terminates HTTPS in front of the
+service.
+
+Run it locally against the town:
+
+```
+cd bridge
+export DIRECTOR_ENABLED=true ANTHROPIC_API_KEY=sk-ant-... \
+       DIRECTOR_CHANNEL=bridge BRIDGE_TOKEN=$(openssl rand -hex 24) PORT=8790
+bun run dev
+```
+
+Then in the town's Settings, Muse Visits, enter `http://localhost:8790`
+and the same token, and open a visit from the menu.
+
 ## Environment
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `DIRECTOR_ENABLED` | `false` | Off unless `true`; off, the process idles. |
 | `ANTHROPIC_API_KEY` | (none) | The owner's key. Required to answer. Never in the repo. |
-| `DIRECTOR_CHANNEL` | `seam` | `seam` (Adapter A) or `slate` (Adapter B, unproven). |
-| `HARNESS_URL` | `http://localhost:8787` | The seam harness. |
+| `DIRECTOR_CHANNEL` | `seam` | `seam` (Adapter A, polls the harness) or `bridge` (Adapter B, serves the face; `slate` is accepted as its old name). |
+| `BRIDGE_TOKEN` | (none) | The per-installation token the town presents. Required for `bridge`; without it the face does not serve. Never in the repo. |
+| `PORT` | `8790` | The face's port (`bridge` only; Railway sets it). |
+| `BRIDGE_ALLOW_ORIGIN` | `*` | CORS origin for the face; set it to the town's origin to narrow it (the token gates either way). |
+| `SNAPSHOT_LAPSE_MS` | `30000` | No snapshot for this long and the held visit dies; the face reads closed. |
+| `HARNESS_URL` | `http://localhost:8787` | The seam harness (`seam` only). |
 | `DIRECTOR_MODEL` | `claude-opus-5-5` | The model. |
 | `PACK_PATH` | `./pack.md` | The context pack file. |
 | `LEDGER_PATH` | `./ledger.json` | The cost ledger; empty string disables persistence. |
@@ -79,18 +129,25 @@ The owner runs this from a local checkout; the chat side cannot deploy.
    new service from this repository and set its **root directory** to
    `bridge/`. `railway.toml` carries the build (`npm install && npm run
    build`) and start (`npm start`) commands.
-2. Set the variables above in the service, at least `DIRECTOR_ENABLED=true`
-   and `ANTHROPIC_API_KEY`. Secrets live in Railway's variables, never in
-   the repo.
-3. The channel: a Railway service cannot reach a harness on your laptop.
-   For the seam line, run the harness somewhere the service can reach
-   (its own tiny service, `HARNESS_URL` pointing at it) and point the
-   town at the same URL. For the private town, Adapter B waits on Gate 0.
+   The build compiles `../shared/visitProtocol.ts` alongside `src/`, so
+   the build context must include the repository's `shared/` directory:
+   if the service's root-directory isolation hides it, set the root
+   directory to the repository root instead, with the build command
+   `cd bridge && npm install && npm run build` and the start command
+   `cd bridge && npm start`.
+2. Set the variables above in the service, at least `DIRECTOR_ENABLED=true`,
+   `ANTHROPIC_API_KEY`, `DIRECTOR_CHANNEL=bridge` and a long random
+   `BRIDGE_TOKEN`. Secrets live in Railway's variables, never in the repo.
+3. The channel: with `bridge`, the town calls the service's public HTTPS
+   URL (Railway's generated domain, or your own); enter that URL and the
+   same token in the town's Settings, Muse Visits. The seam line is for
+   local work: a Railway service cannot reach a harness on your laptop.
 4. The pack: mount or commit a `pack.md` the chat side can refresh (a
    Railway volume at the `PACK_PATH`, or a small sync job). The loader
    polls its mtime every five seconds.
-5. Watch the logs: `greeted`, `answered: …`, `intended: …`, and `channel
-   unreachable … folding quietly` are the whole vocabulary.
+5. Watch the logs: `greeted`, `answered: …`, `intended: …`, `channel
+   unreachable … folding quietly`, and `refused POST /bridge/snapshot: no
+   token` (never the value) are the whole vocabulary.
 
 ## Tests
 
@@ -101,5 +158,9 @@ bun test bridge/src          # from the repo root, or `bun run test` here
 They pin the output filter's rules, pack loading and reload, the cost
 caps, the poll-and-answer loop against the fake channel (mail answered
 before presence, one greeting, partial then final speaks, caps honored,
-a dead channel folds quietly, the off state idles), and the seam adapter
-against Task 4's harness over real HTTP.
+a dead channel folds quietly, the off state idles), the seam adapter
+against Task 4's harness over real HTTP, and the serving face (Task 7):
+the token refused on both endpoints, a snapshot-to-answer round trip
+against a stub mind over real HTTP, and the lapse. The town's side of
+the leg is pinned in `client/src/visitBridgeClient.test.ts` (no call
+without a bridge URL; refused directions never reach the queue).

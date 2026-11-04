@@ -5,8 +5,13 @@
  */
 export type BridgeConfig = {
   enabled: boolean;
-  channel: "seam" | "slate";
+  channel: "seam" | "bridge";
   harnessUrl: string;
+  /** The per-installation token the town presents (Task 7); never in the repo. */
+  bridgeToken: string | null;
+  port: number;
+  allowOrigin: string;
+  snapshotLapseMs: number;
   apiKey: string | null;
   model: string;
   packPath: string;
@@ -28,8 +33,12 @@ const num = (v: string | undefined, fallback: number): number => {
 export function readConfig(env: Record<string, string | undefined> = process.env): BridgeConfig {
   return {
     enabled: env.DIRECTOR_ENABLED === "true" || env.DIRECTOR_ENABLED === "1",
-    channel: env.DIRECTOR_CHANNEL === "slate" ? "slate" : "seam",
+    channel: env.DIRECTOR_CHANNEL === "bridge" || env.DIRECTOR_CHANNEL === "slate" ? "bridge" : "seam",
     harnessUrl: env.HARNESS_URL || "http://localhost:8787",
+    bridgeToken: env.BRIDGE_TOKEN || null,
+    port: num(env.PORT, 8790),
+    allowOrigin: env.BRIDGE_ALLOW_ORIGIN || "*",
+    snapshotLapseMs: num(env.SNAPSHOT_LAPSE_MS, 30_000),
     apiKey: env.ANTHROPIC_API_KEY || null,
     model: env.DIRECTOR_MODEL || "claude-opus-5-5",
     packPath: env.PACK_PATH || "./pack.md",

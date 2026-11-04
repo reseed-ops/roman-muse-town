@@ -8,6 +8,7 @@ import { reliableActions } from "./reliableActions";
 import { addDeviceState, restoreDeviceState, saveDownload } from "./townSaveClient";
 import { MAX_SAVE_BYTES, readSaveEnvelope, type TownSave } from "../../shared/saveFormat";
 import type { PerformanceSnapshot } from "./performanceMonitor";
+import type { BridgeSettings } from "./visitBridgeClient";
 import "./townUtilities.css";
 
 function preference(key: string, fallback: boolean): boolean {
@@ -42,10 +43,13 @@ function PerformanceOverlay({ scene }: { scene: RefObject<TownSceneHandle | null
   </aside>;
 }
 
-export function TownUtilities({ open, onClose, scene, state, ready, holdArrival, onArrivalOpen, onNavigate, lowGraphics, onLowGraphicsChange }: {
+export function TownUtilities({ open, onClose, scene, state, ready, holdArrival, onArrivalOpen, onNavigate, lowGraphics, onLowGraphicsChange, bridge, onBridgeChange }: {
   open: boolean; onClose(): void; scene: RefObject<TownSceneHandle | null>; state: TownState | undefined;
   ready: boolean; holdArrival: boolean; onArrivalOpen(open: boolean): void; onNavigate(destination: ArrivalDestination): void;
   lowGraphics: boolean; onLowGraphicsChange(on: boolean): void;
+  /** Muse Visits (Task 7): the Live Bridge the town calls out to during
+   *  a visit, owner-entered and held in this browser only. */
+  bridge: BridgeSettings; onBridgeChange(next: BridgeSettings): void;
 }) {
   const queryClient = useQueryClient();
   const dialog = useRef<HTMLDivElement>(null);
@@ -62,6 +66,11 @@ export function TownUtilities({ open, onClose, scene, state, ready, holdArrival,
   const [selected, setSelected] = useState<{ json: string; save: TownSave; requestId: string } | null>(null);
   const [recovery, setRecovery] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState(() => reliableActions.list().length);
+  // The bridge fields edit locally and commit on blur or Enter, so a
+  // half-typed token is never stored or presented.
+  const [bridgeDraft, setBridgeDraft] = useState<BridgeSettings>(bridge);
+  useEffect(() => { setBridgeDraft(bridge); }, [bridge]);
+  const commitBridge = () => { if (bridgeDraft.url !== bridge.url || bridgeDraft.token !== bridge.token) onBridgeChange(bridgeDraft); };
 
   useEffect(() => {
     const timer = window.setInterval(() => { setDay(utcDay(new Date())); setPendingCount(reliableActions.list().length); }, 30000);
@@ -163,6 +172,20 @@ export function TownUtilities({ open, onClose, scene, state, ready, holdArrival,
             })}>Restore selected save</button>
           </div>}
           {pendingCount > 0 && <p>{pendingCount} action{pendingCount === 1 ? " has" : "s have"} an unconfirmed response. Repeating the same action safely reuses its request ID.</p>}
+        </section>
+        <section>
+          <h3>Muse Visits</h3>
+          <p>While a visit is open, the town calls out to your Live Bridge and nowhere else; with no address, a visit runs undirected and the town makes no call. The address and token stay on this device.</p>
+          <label className="town-field">Bridge address
+            <input type="url" inputMode="url" autoComplete="off" spellCheck={false} placeholder="https://your-bridge.up.railway.app" value={bridgeDraft.url}
+              onChange={(event) => setBridgeDraft((d) => ({ ...d, url: event.target.value }))} onBlur={commitBridge}
+              onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); commitBridge(); } }} />
+          </label>
+          <label className="town-field">Bridge token
+            <input type="password" autoComplete="off" placeholder="the token set in the bridge's service" value={bridgeDraft.token}
+              onChange={(event) => setBridgeDraft((d) => ({ ...d, token: event.target.value }))} onBlur={commitBridge}
+              onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); commitBridge(); } }} />
+          </label>
         </section>
         <section>
           <h3>Performance</h3>

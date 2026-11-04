@@ -3,7 +3,8 @@
  *
  * The one vocabulary shared by the town client, the local dev harness
  * (harness/visitHarness.ts) that stands in for the private slate on
- * this line, and the Live Bridge director (bridge/). Everything here is
+ * this line, the Live Bridge director (bridge/) and its serving face
+ * the client calls out to (Task 7). Everything here is
  * pure data and validation: no DOM, no network, no town geometry, so
  * every rule is pinned by a test and every side agrees byte for byte.
  *
@@ -240,6 +241,38 @@ export function validateDirection(raw: unknown): DirectionValidation {
   }
 }
 
+// --- Frames at the door ------------------------------------------------
+// A frame is validated wherever it crosses a seam (the harness, the
+// bridge's face, the client before it carries one): a JPEG data URL
+// with a real JPEG head, no larger than FRAME_MAX_BYTES decoded.
+
+const JPEG_DATA_URL_HEAD = "data:image/jpeg;base64,";
+
+/** Decoded byte length of a base64 payload, without decoding it. */
+export function base64Bytes(b64: string): number {
+  const len = b64.length;
+  if (len === 0) return 0;
+  let pad = 0;
+  if (b64.endsWith("==")) pad = 2;
+  else if (b64.endsWith("=")) pad = 1;
+  return Math.floor((len * 3) / 4) - pad;
+}
+
+export type FrameCheck = { ok: true; bytes: number } | { ok: false; error: string };
+
+/** A frame is a JPEG data URL (the base64 of 0xFFD8FF begins "/9j/")
+ *  no larger than FRAME_MAX_BYTES decoded. */
+export function validateFrameDataUrl(dataUrl: unknown, maxBytes = FRAME_MAX_BYTES): FrameCheck {
+  if (typeof dataUrl !== "string") return { ok: false, error: "a frame is a data URL string" };
+  if (!dataUrl.startsWith(JPEG_DATA_URL_HEAD)) return { ok: false, error: "a frame is a JPEG data URL" };
+  const b64 = dataUrl.slice(JPEG_DATA_URL_HEAD.length);
+  if (!b64.startsWith("/9j/")) return { ok: false, error: "not a JPEG head" };
+  if (!/^[A-Za-z0-9+/]+=*$/.test(b64)) return { ok: false, error: "not base64" };
+  const bytes = base64Bytes(b64);
+  if (bytes > maxBytes) return { ok: false, error: `frame over ${maxBytes} bytes` };
+  return { ok: true, bytes };
+}
+
 /** A ground point the town can walk: inside the rim. (The client adds
  *  the forest ellipse, which lies partly outside the rim.) */
 export const withinTownRim = (x: number, z: number): boolean => Math.hypot(x, z) <= TOWN_RIM_RADIUS;
@@ -272,3 +305,49 @@ export type ClientSyncResponse = {
 };
 
 export type DirectorPack = { text: string; updatedAt: number | null };
+
+// --- The bridge leg (Task 7) ------------------------------------------
+// Gate 0's verdict: the town CLIENT calls out to the Live Bridge over
+// HTTPS, the same courier role it plays for the harness above; the
+// bridge never calls into the town's platform. Two endpoints, both
+// gated by a per-installation token the owner sets on each end (a
+// bearer token in the Authorization header; never in this repo):
+//
+//   POST /bridge/snapshot    BridgeSnapshotRequest -> BridgeSnapshotResponse
+//   GET  /bridge/directions?since=N   -> BridgePullResponse
+//
+// The client posts about every BRIDGE_BEAT_MS while a visit is open,
+// and promptly when new mail or a fresh frame lands; it pulls on the
+// same beat. Frame bytes travel only in a snapshot, and only once.
+
+export const BRIDGE_BEAT_MS = 2000;
+/** The bridge treats a visit as gone when no snapshot has arrived for
+ *  this long; it goes quiet, and the town folds the visit by its own
+ *  heartbeat. */
+export const BRIDGE_SNAPSHOT_LAPSE_MS = 30_000;
+
+export type BridgeSnapshotRequest = {
+  state: VisitStateView;
+  /** Inbox mail the bridge has not been handed yet (seq above the
+   *  client's acknowledged cursor); the bridge keeps the recent
+   *  VISIT_INBOX_CAP. */
+  mail: VisitMail[];
+  /** The latest frame, when the client has not carried it yet. */
+  frame: VisitFrame | null;
+};
+
+export type BridgeSnapshotResponse = {
+  ok: true;
+  /** The highest mail seq the bridge now holds for this visit. */
+  latestSeq: number;
+  /** The latest frame id the bridge now holds, or null. */
+  frameId: number | null;
+};
+
+export type BridgePullResponse = {
+  /** Directions queued since the client's cursor, oldest first. */
+  directions: QueuedDirection[];
+  composing: boolean;
+  /** When the director loop last read the held snapshot; null if never. */
+  directorSeenAt: number | null;
+};

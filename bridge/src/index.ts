@@ -10,11 +10,13 @@ import { createCostLedger, type LedgerDay } from "./costCaps.js";
 import { createDirector } from "./director.js";
 import { createPackLoader, filePackSource } from "./pack.js";
 import { createSeamAdapter } from "./seamAdapter.js";
-import { createSlateAdapter, unprovenTransport } from "./slateAdapter.js";
+import { createSlateFace } from "./slateFace.js";
+import { startBridgeServer } from "./bridgeServer.js";
+import type { DirectorChannel } from "./channel.js";
 
 const log = (line: string) => console.log(`${new Date().toISOString()} ${line}`);
 
-function main(): void {
+async function main(): Promise<void> {
   const cfg = readConfig();
   if (!cfg.enabled) {
     log("DIRECTOR_ENABLED is not true: the director idles; any visit lapses by heartbeat. Set it to true to direct.");
@@ -22,7 +24,25 @@ function main(): void {
   if (cfg.enabled && !cfg.apiKey) {
     log("ANTHROPIC_API_KEY is missing; the director cannot answer. Idling.");
   }
-  const channel = cfg.channel === "slate" ? createSlateAdapter(unprovenTransport()) : createSeamAdapter({ baseUrl: cfg.harnessUrl });
+  let channel: DirectorChannel;
+  let face = "";
+  if (cfg.channel === "bridge") {
+    // Adapter B (Task 7): the town client calls out to this face. With
+    // no token set the face does not serve: the channel reads closed
+    // and the director idles, and nothing is ever answered unauthenticated.
+    const slate = createSlateFace({ lapseMs: cfg.snapshotLapseMs });
+    channel = slate.channel;
+    if (!cfg.bridgeToken) {
+      log("BRIDGE_TOKEN is missing; the director face will not serve. Idling.");
+      face = "(not serving: no BRIDGE_TOKEN)";
+    } else {
+      const server = await startBridgeServer({ face: slate, token: cfg.bridgeToken, port: cfg.port, allowOrigin: cfg.allowOrigin, log });
+      face = `serving on :${server.port}`;
+    }
+  } else {
+    channel = createSeamAdapter({ baseUrl: cfg.harnessUrl });
+    face = cfg.harnessUrl;
+  }
   let initial: LedgerDay | null = null;
   if (cfg.ledgerPath) {
     try {
@@ -69,8 +89,8 @@ function main(): void {
   };
   process.on("SIGINT", stop);
   process.on("SIGTERM", stop);
-  log(`live bridge: channel=${cfg.channel} ${cfg.channel === "seam" ? cfg.harnessUrl : "(transport unproven)"} model=${cfg.model} pack=${cfg.packPath}`);
+  log(`live bridge: channel=${cfg.channel} ${face} model=${cfg.model} pack=${cfg.packPath}`);
   void director.run();
 }
 
-main();
+void main();

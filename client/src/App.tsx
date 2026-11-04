@@ -211,7 +211,8 @@ import {
 } from "./visitSlate";
 import { frameDue, validateFrameDataUrl } from "./visitFrames";
 import { HARNESS_STORAGE_KEY, IDLE_GLANCE_MS, resolveHarnessUrl, syncWithHarness } from "./visitHarnessClient";
-import { FRAME_JPEG_QUALITY, FRAME_MAX_EDGE, SIGHT_LINE, VISITING_MARKER, VISIT_POLL_MS, type QueuedDirection } from "../../shared/visitProtocol";
+import { bridgeClose, bridgeConfigured, bridgeLeg, emptyBridgeCursor, readBridgeSettings, storeBridgeSettings, type BridgeCursor, type BridgeSettings } from "./visitBridgeClient";
+import { BRIDGE_BEAT_MS, FRAME_JPEG_QUALITY, FRAME_MAX_EDGE, SIGHT_LINE, VISITING_MARKER, VISIT_POLL_MS, type QueuedDirection } from "../../shared/visitProtocol";
 import {
 playChime,
 playJar,
@@ -405,7 +406,7 @@ export function App() {
     intention: string | null;
     composing: boolean;
     thread: VisitThreadEntry[];
-    director: "none" | "live" | "unreachable";
+    director: "none" | "live" | "unreachable" | "refused";
   }>({ active: false, intention: null, composing: false, thread: [], director: "none" });
   // The director seam's harness: ?harness= or localStorage
   // "muse-town-visit-harness" names it; without either the town never
@@ -423,6 +424,33 @@ export function App() {
     harnessRef.current = { url: resolveHarnessUrl(search, () => stored), configured: explicit };
   }
   const visitLastFrameAtRef = useRef<number | null>(null);
+  // The Live Bridge (Task 7): the bridge leg runs only while a visit is
+  // open and a bridge URL is set in the visit settings. URL and token
+  // are owner-entered, held in this browser only, never sent anywhere
+  // but the bridge itself.
+  const [bridgeSettings, setBridgeSettings] = useState<BridgeSettings>(() => {
+    try {
+      return readBridgeSettings((key) => localStorage.getItem(key));
+    } catch {
+      return { url: "", token: "" };
+    }
+  });
+  const bridgeRef = useRef(bridgeSettings);
+  bridgeRef.current = bridgeSettings;
+  const bridgeCursorRef = useRef<BridgeCursor>(emptyBridgeCursor());
+  /** A prompt bridge beat (new mail, a fresh frame); a no-op unless the leg is on. */
+  const bridgeNudgeRef = useRef<() => void>(() => {});
+  const updateBridgeSettings = useCallback((next: BridgeSettings) => {
+    const saved = storeBridgeSettings((key, value) => {
+      try {
+        if (value === null) localStorage.removeItem(key);
+        else localStorage.setItem(key, value);
+      } catch {
+        /* storage unavailable: the settings hold for this session */
+      }
+    }, next);
+    setBridgeSettings(saved);
+  }, []);
   const [utilitiesOpen, setUtilitiesOpen] = useState(false);
   // The scene's one-line motion verdict, shown quietly at the foot
   // of the town menu once both animators have settled, so a stiff
@@ -3672,6 +3700,7 @@ export function App() {
       visitRef.current = captured.slate;
       visitThreadRef.current = [...visitThreadRef.current, { who: "him", text: msg, seq: captured.mail.seq }];
       setVisitUi((ui) => ({ ...ui, thread: visitThreadRef.current }));
+      bridgeNudgeRef.current();
       return;
     }
     // Notes for Muse: a typed request/wish for the town ("can we
@@ -4992,7 +5021,7 @@ export function App() {
   };
 
   // --- Muse Visits (Task 4): lifecycle, the beat, and enactment ------
-  const publishVisit = useCallback((director?: "none" | "live" | "unreachable") => {
+  const publishVisit = useCallback((director?: "none" | "live" | "unreachable" | "refused") => {
     const s = visitRef.current;
     setVisitUi((ui) => {
       const next = {
@@ -5011,6 +5040,7 @@ export function App() {
     visitRef.current = beginVisit(visitRef.current, Date.now());
     visitThreadRef.current = [];
     visitLastFrameAtRef.current = null;
+    bridgeCursorRef.current = emptyBridgeCursor();
     sceneRef.current?.setVisitActive(true);
     publishVisit("none");
   }, [publishVisit]);
@@ -5020,8 +5050,11 @@ export function App() {
     visitRef.current = endVisit(visitRef.current);
     visitThreadRef.current = [];
     visitLastFrameAtRef.current = null;
+    bridgeCursorRef.current = emptyBridgeCursor();
     sceneRef.current?.setVisitActive(false);
     publishVisit("none");
+    // The bridge hears the visit closed now rather than at its lapse.
+    void bridgeClose(bridgeRef.current);
   }, [publishVisit]);
   const visitRefs = useRef({ beginVisitNow, endVisitNow });
   visitRefs.current = { beginVisitNow, endVisitNow };
@@ -5049,6 +5082,17 @@ export function App() {
       }
     }
   };
+  /** Enact everything queued, in order. The harness beat and the
+   *  bridge leg both land here, so a direction is applied one way. */
+  const drainVisitQueue = (s: VisitSlate): VisitSlate => {
+    for (;;) {
+      const step = nextDirection(s);
+      s = step.slate;
+      if (!step.next) break;
+      s = enactVisitDirection(s, step.next);
+    }
+    return s;
+  };
   const visitBeat = async () => {
     const scene = sceneRef.current;
     const harness = harnessRef.current;
@@ -5063,15 +5107,18 @@ export function App() {
       for (const text of telemetryEvents(s.telemetry, telemetry)) s = recordEvent(s, now, text);
       s = setTelemetry(s, telemetry);
       const foreground = typeof document === "undefined" || document.visibilityState === "visible";
+      let frameLanded = false;
       if (frameDue({ lastFrameAt: visitLastFrameAtRef.current, now, lookRequested: s.lookRequested, foreground })) {
         const shot = scene.captureVisitFrame(FRAME_MAX_EDGE, FRAME_JPEG_QUALITY);
         const check = shot ? validateFrameDataUrl(shot.dataUrl) : null;
         if (shot && check?.ok) {
           s = acceptFrame(s, { dataUrl: shot.dataUrl, width: shot.width, height: shot.height, bytes: check.bytes }, now);
           visitLastFrameAtRef.current = now;
+          frameLanded = true;
         }
       }
       visitRef.current = s;
+      if (frameLanded) bridgeNudgeRef.current();
     }
     if (!harness?.configured) {
       publishVisit(s.active ? "none" : undefined);
@@ -5097,13 +5144,7 @@ export function App() {
       return;
     }
     s = absorbDirections(s, res.directions, now);
-    for (;;) {
-      const step = nextDirection(s);
-      s = step.slate;
-      if (!step.next) break;
-      s = enactVisitDirection(s, step.next);
-    }
-    visitRef.current = s;
+    visitRef.current = drainVisitQueue(s);
     publishVisit(director);
   };
   const visitBeatRef = useRef(visitBeat);
@@ -5126,6 +5167,51 @@ export function App() {
     const timer = window.setInterval(tick, period);
     return () => window.clearInterval(timer);
   }, [visitUi.active]);
+  // The Live Bridge leg (Task 7): about every BRIDGE_BEAT_MS while a
+  // visit is open and a bridge URL is set, and promptly on new mail or
+  // a fresh frame. The snapshot goes out; the directions come back in
+  // through the seam validator and the same enactment as the harness;
+  // the bridge's composing state drives the panel's writing line.
+  const bridgeBeat = async () => {
+    const result = await bridgeLeg({ settings: bridgeRef.current, read: () => visitRef.current, cursor: bridgeCursorRef.current, now: Date.now });
+    if (!result || !result.slate.active) return;
+    bridgeCursorRef.current = result.cursor;
+    if (result.outcome !== "ok") {
+      publishVisit(result.outcome);
+      return;
+    }
+    visitRef.current = drainVisitQueue(result.slate);
+    publishVisit(result.directorSeenAt !== null && Date.now() - result.directorSeenAt < 15_000 ? "live" : "none");
+  };
+  const bridgeBeatRef = useRef(bridgeBeat);
+  bridgeBeatRef.current = bridgeBeat;
+  const bridgeOn = visitUi.active && bridgeConfigured(bridgeSettings);
+  useEffect(() => {
+    if (!bridgeOn) return;
+    let busy = false;
+    let again = false;
+    const tick = () => {
+      if (busy) {
+        again = true;
+        return;
+      }
+      busy = true;
+      void bridgeBeatRef.current().finally(() => {
+        busy = false;
+        if (again) {
+          again = false;
+          tick();
+        }
+      });
+    };
+    bridgeNudgeRef.current = tick;
+    tick();
+    const timer = window.setInterval(tick, BRIDGE_BEAT_MS);
+    return () => {
+      window.clearInterval(timer);
+      bridgeNudgeRef.current = () => {};
+    };
+  }, [bridgeOn, bridgeSettings.url, bridgeSettings.token]);
 
   const selectPlace = (place: Place) => {
     exitWalkMode();
@@ -5430,7 +5516,7 @@ export function App() {
         }
       />
 
-      <TownUtilities open={utilitiesOpen} onClose={() => setUtilitiesOpen(false)} scene={sceneRef} state={state.data} holdArrival={holdArrival} onArrivalOpen={(open) => { arrivalOpenRef.current = open; }} ready={sceneReady} lowGraphics={lowGfx} onLowGraphicsChange={setLowGfx}
+      <TownUtilities open={utilitiesOpen} onClose={() => setUtilitiesOpen(false)} scene={sceneRef} state={state.data} holdArrival={holdArrival} onArrivalOpen={(open) => { arrivalOpenRef.current = open; }} ready={sceneReady} lowGraphics={lowGfx} onLowGraphicsChange={setLowGfx} bridge={bridgeSettings} onBridgeChange={updateBridgeSettings}
         onNavigate={(destination) => {
           if (destination === "letters") selectLetters();
           else if (destination === "garden") selectGarden();
@@ -5677,10 +5763,12 @@ export function App() {
             icon: "✦",
             label: visitUi.active ? "End Muse's visit" : "Open a visit for Muse",
             detail: visitUi.active
-              ? `${VISITING_MARKER}. ${visitUi.director === "live" ? "A director is reading the slate." : visitUi.director === "unreachable" ? "The harness is unreachable; nobody is directing." : "Nobody is directing yet."} Her quick voice is hushed for panel chat.`
-              : harnessRef.current?.configured
-                ? `Director seam at ${harnessRef.current.url}.`
-                : "No director seam named (?harness= or localStorage muse-town-visit-harness); a visit would run undirected.",
+              ? `${VISITING_MARKER}. ${visitUi.director === "live" ? "A director is reading the slate." : visitUi.director === "unreachable" ? "The director is unreachable; nobody is directing." : visitUi.director === "refused" ? "The bridge refused the token; check Settings." : "Nobody is directing yet."} Her quick voice is hushed for panel chat.`
+              : bridgeConfigured(bridgeSettings)
+                ? `Live Bridge at ${bridgeSettings.url}${bridgeSettings.token ? "" : " (no token entered)"}.${harnessRef.current?.configured ? ` Director seam at ${harnessRef.current.url}.` : ""}`
+                : harnessRef.current?.configured
+                  ? `Director seam at ${harnessRef.current.url}.`
+                  : "No director named (a Live Bridge in Settings, or ?harness=); a visit would run undirected.",
             active: visitUi.active,
             action: () => (visitUi.active ? endVisitNow() : beginVisitNow()),
             aria: visitUi.active ? "End Muse's visit; Aelia returns to her own voice" : "Open a visit for Muse; a director may then move Aelia and speak through her",

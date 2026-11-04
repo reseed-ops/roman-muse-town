@@ -2,9 +2,9 @@ import { expect, test } from "bun:test";
 import { startHarness } from "../../harness/visitHarness";
 import { beginVisit, captureMail, acceptFrame, emptySlate, stateView, unsentFrames } from "../../client/src/visitSlate";
 import { createSeamAdapter } from "./seamAdapter.js";
-import { createSlateAdapter, unprovenTransport } from "./slateAdapter.js";
 
-// Adapter A against Task 4's harness over real HTTP; Adapter B refuses plainly until Gate 0.
+// Adapter A against Task 4's harness over real HTTP. Adapter B, the
+// serving face, is pinned in slateFace.test.ts and bridgeServer.test.ts.
 
 test("the seam adapter reads state, inbox and one frame, directs, composes and reads the pack", async () => {
   let t = 4_000_000;
@@ -37,10 +37,4 @@ test("the seam adapter reads state, inbox and one frame, directs, composes and r
   }
   // Dead: a closed harness throws, which the director folds.
   await expect(channel.readState()).rejects.toThrow();
-});
-
-test("Adapter B refuses every call until its transport is proven", async () => {
-  const b = createSlateAdapter(unprovenTransport());
-  await expect(b.readState()).rejects.toThrow(/Gate 0/);
-  await expect(b.direct({ kind: "look" })).rejects.toThrow(/Gate 0/);
 });

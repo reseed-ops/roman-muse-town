@@ -7,7 +7,13 @@
  * one on a director's look. The validator keeps a frame honest at the
  * seam: a real JPEG head and a decoded byte cap.
  */
-import { FRAME_CADENCE_MS, FRAME_MAX_BYTES, FRAME_MAX_EDGE } from "../../shared/visitProtocol";
+import { FRAME_CADENCE_MS, FRAME_MAX_EDGE } from "../../shared/visitProtocol";
+
+// The validator (a real JPEG head, the decoded byte cap) is protocol:
+// the harness and the Live Bridge's face check frames at their doors
+// with the same function, so it lives in shared/visitProtocol.ts and
+// is re-exported here for the client's callers.
+export { base64Bytes, validateFrameDataUrl, type FrameCheck } from "../../shared/visitProtocol";
 
 /** Scale a canvas down so its long edge is at most maxEdge. Never up. */
 export function frameDimensions(width: number, height: number, maxEdge = FRAME_MAX_EDGE): { width: number; height: number; scale: number } {
@@ -19,33 +25,6 @@ export function frameDimensions(width: number, height: number, maxEdge = FRAME_M
     height: Math.max(2, Math.round(height * scale)),
     scale,
   };
-}
-
-const JPEG_DATA_URL_HEAD = "data:image/jpeg;base64,";
-
-/** Decoded byte length of a base64 payload, without decoding it. */
-export function base64Bytes(b64: string): number {
-  const len = b64.length;
-  if (len === 0) return 0;
-  let pad = 0;
-  if (b64.endsWith("==")) pad = 2;
-  else if (b64.endsWith("=")) pad = 1;
-  return Math.floor((len * 3) / 4) - pad;
-}
-
-export type FrameCheck = { ok: true; bytes: number } | { ok: false; error: string };
-
-/** A frame is a JPEG data URL (the base64 of 0xFFD8FF begins "/9j/")
- *  no larger than FRAME_MAX_BYTES decoded. */
-export function validateFrameDataUrl(dataUrl: unknown, maxBytes = FRAME_MAX_BYTES): FrameCheck {
-  if (typeof dataUrl !== "string") return { ok: false, error: "a frame is a data URL string" };
-  if (!dataUrl.startsWith(JPEG_DATA_URL_HEAD)) return { ok: false, error: "a frame is a JPEG data URL" };
-  const b64 = dataUrl.slice(JPEG_DATA_URL_HEAD.length);
-  if (!b64.startsWith("/9j/")) return { ok: false, error: "not a JPEG head" };
-  if (!/^[A-Za-z0-9+/]+=*$/.test(b64)) return { ok: false, error: "not base64" };
-  const bytes = base64Bytes(b64);
-  if (bytes > maxBytes) return { ok: false, error: `frame over ${maxBytes} bytes` };
-  return { ok: true, bytes };
 }
 
 /** Is a frame due this beat? The first frame of a visit is prompt, a

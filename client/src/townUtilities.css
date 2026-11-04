@@ -12,6 +12,8 @@
 .town-tools .town-close,.town-arrival .town-close { position:absolute; right:10px; top:8px; width:36px; background:transparent; color:white; font-size:24px; }
 .town-tools .town-file { display:block; margin-top:16px; }
 .town-file input { display:block; max-width:100%; margin-top:8px; }
+.town-tools .town-field { display:block; margin:12px 0; }
+.town-field input { display:block; width:100%; margin-top:6px; padding:8px 10px; border-radius:10px; border:1px solid #ffffff3d; background:#16241e; color:#fff8df; font-size:14px; }
 .town-restore-preview { padding:12px; margin-top:12px; border:1px solid #ffd34e66; border-radius:12px; }
 .town-tools .town-error { color:#ffd0bd; }
 .town-arrival { position:absolute; z-index:35; top:80px; right:14px; width:min(320px,calc(100% - 28px)); padding:18px; border-radius:20px; background:#22332bf5; color:#fff8df; box-shadow:0 10px 30px #0004; }
