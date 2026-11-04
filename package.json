@@ -4,11 +4,13 @@
   "type": "module",
   "packageManager": "bun@1.3.10",
   "scripts": {
-    "test": "bun test server client/src shared harness bridge/src",
+    "test": "bun run test:sqlite && bun run test:pg",
     "typecheck": "bun x tsc --noEmit -p client/tsconfig.json && bun x tsc --noEmit -p server/tsconfig.json",
     "build": "bun run build:server && bun run build:client",
     "build:server": "cd server && bun build ./src/actions.ts --target=bun --outfile=./dist/actions.js",
-    "build:client": "bun ./client/build.mjs"
+    "build:client": "bun ./client/build.mjs",
+    "test:sqlite": "bun test server client/src shared harness bridge/src",
+    "test:pg": "TOWN_DIALECT=postgres bun test server/src/postgres.test.ts"
   },
   "dependencies": {
     "@hatch/space-sdk": "file:/opt/hatch/skills/spaces/ts-runtime/dist/space-sdk.tgz",
@@ -21,6 +23,7 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.3.14",
     "@types/bun": "1.4.2",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",

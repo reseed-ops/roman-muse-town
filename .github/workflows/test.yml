@@ -2,7 +2,8 @@ name: Tests
 
 # The hosted SDK is unavailable on GitHub runners. Install only test
 # dependencies separately; economy tests mock action registration and
-# exercise the actual handlers against migrated Bun SQLite databases.
+# exercise the actual handlers against migrated Bun SQLite databases, and
+# postgres.test.ts runs them again on an in-process Postgres (pglite).
 
 on:
   pull_request:
@@ -23,6 +24,6 @@ jobs:
       - name: Install test dependencies without the hosted SDK
         run: |
           mkdir -p "$RUNNER_TEMP/town-test-deps"
-          bun add --cwd "$RUNNER_TEMP/town-test-deps" drizzle-orm@0.45.2 zod@4.4.3 three@0.187.0
+          bun add --cwd "$RUNNER_TEMP/town-test-deps" drizzle-orm@0.45.2 zod@4.4.3 three@0.187.0 @electric-sql/pglite@0.3.14
           ln -s "$RUNNER_TEMP/town-test-deps/node_modules" node_modules
       - run: bun run test
