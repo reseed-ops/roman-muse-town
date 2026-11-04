@@ -366,7 +366,11 @@ The shape, as decided:
   service environment, refused quietly without it, so the Live
   Bridge, or the owner's own Muse, can direct a visit in a
   hosted town by calling the server directly. Ordinary play
-  actions require the visitor token only.
+  actions require the visitor token only. One spike detail to
+  settle inside that door: how a director call addresses one
+  visitor's town; the expected answer is that visitor's own
+  token, shared by the owner with his Muse once and kept like
+  the bridge token.
 - PWA: a manifest, and a service worker with versioned cache-first
   static assets (the scene's models and textures are the heavy
   first load this exists to cure), network-first for action
