@@ -306,7 +306,7 @@ build has proven itself in the owner's hands.
   are performed as the wave. (5) The lapse is 20 min from the last mail or direction; the client's own
   clock, so a dead harness still folds her back. (6) `showBubbleGrowing` shows the LAST page of a
   growing line; the final speak re-shows from page one.
-- Task 6 landed on the public line in the commit after `9d10683` (`bridge/`: channel, seam adapter,
+- Task 6 landed on the public line in `13381e6` (`bridge/`: channel, seam adapter,
   slate adapter interface, fake channel, output filter, pack loader, cost caps, director loop, Anthropic
   mind, Railway note; the town-side pieces, composing state, partial speaks and the pack route, rode in
   with Task 4; suite 327 green). Claude, Nov 4, 2026. Adapter B carries the interface and placeholder
