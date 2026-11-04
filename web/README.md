@@ -50,7 +50,7 @@ the one thing the client learns is a meta tag saying it is hosted.
 
 1. In the Railway project, add a **PostgreSQL** service (New → Database → PostgreSQL).
 2. Add a new service from this GitHub repository, **beside** the bridge, not inside it.
-3. In that service's settings leave **Root Directory** at `/` and set **Config Path** to `/web/railway.toml` (the Dockerfile builds from the repository root because `client/`, `server/` and `shared/` live outside `web/`).
+3. In that service's settings leave **Root Directory** at `/` and either set **Config Path** to `/web/railway.toml` or set the variable `RAILWAY_DOCKERFILE_PATH=web/Dockerfile` (what the CLI can do; the config path is dashboard-only). Either way the Dockerfile builds from the repository root because `client/`, `server/` and `shared/` live outside `web/`.
 4. Variables: `DATABASE_URL` → `${{Postgres.DATABASE_URL}}` (a reference to the database service); `DIRECTOR_TOKEN` → a long random string (`openssl rand -hex 32`); `TOWN_SECRET` → another. Railway sets `PORT`.
 5. Deploy: push to `main`, or from a local checkout `railway link` to the service and `railway up`.
 6. Networking → Custom Domain → `town.reseed.net`; add the CNAME Railway shows at the DNS host; wait for the certificate.
@@ -58,6 +58,8 @@ the one thing the client learns is a meta tag saying it is hosted.
 8. The director: in the bridge service set `DIRECTOR_CHANNEL=town`, `TOWN_URL=https://town.reseed.net`, `DIRECTOR_TOKEN` (the same value as the town's) and `VISITOR_TOKEN` (the owner's own visitor key, shown under Muse Visits in the town's Settings). See `bridge/README.md`.
 
 What never enters this repository: `DATABASE_URL`, `DIRECTOR_TOKEN`, `TOWN_SECRET`, any visitor token.
+
+Done on Nov 4, 2026 from the owner's CLI session (Claude): steps 1 to 4 and 6 in the `Reseed` project, as the services `Postgres-vORX` (Railway ignored the requested name) and `muse-town`, with `DATABASE_URL`, `DIRECTOR_TOKEN`, `TOWN_SECRET` and `RAILWAY_DOCKERFILE_PATH` set, the generated domain `muse-town-production.up.railway.app`, and `town.reseed.net` waiting on its CNAME to `pkxqml5a.up.railway.app`. Step 5 waits: `railway up` must run from a checkout that holds the licensed assets, which this machine does not.
 
 ## Run and test locally
 
