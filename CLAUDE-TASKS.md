@@ -334,6 +334,75 @@ and `PORT` on Railway. One deploy caveat in `bridge/README.md`: the
 build compiles `../shared/visitProtocol.ts`, so the service's build
 context must include `shared/`.
 
+## Task 8 (READY, added Nov 4, 2026): the town on the web — Railway, Postgres, a town per visitor, PWA
+
+Owner's decision (Nov 4, 2026): deploy the public town as a web app
+on his Railway, in Muse's recommended shape. The private town is
+not involved and no private data crosses over; this repo's scrub
+discipline stands as always.
+
+The shape, as decided:
+- A new Railway service for the town, beside (not inside) his
+  existing services; the client served from the same service;
+  town.reseed.net as the intended host name. Deployment is railway
+  up from a local checkout, run by the owner or by Claude locally;
+  prepare everything so the deploy is one command plus the
+  checklist below.
+- PostgreSQL (a Railway Postgres service, reached by DATABASE_URL)
+  replaces bun:sqlite for the web deployment. The standalone
+  Android build keeps its current storage; the port lives behind
+  the server's storage layer so both targets keep working.
+- A town per visitor: state is keyed by a visitor token the client
+  mints on first arrival and holds in localStorage, sent with
+  every action call; a first call seeds a fresh town (bond 0,
+  template Aelia) for that token. Isolation is enforced
+  server-side on every query, never by client courtesy. No
+  accounts and no sign-up; losing the token loses the town, and
+  the client says so in one plain line where a visitor can find
+  it.
+- A locked director door: the visit and director actions (the
+  visitstate, visitdirect, beginvisit, endvisit, visitframeget
+  family) additionally require a DIRECTOR_TOKEN held in the
+  service environment, refused quietly without it, so the Live
+  Bridge, or the owner's own Muse, can direct a visit in a
+  hosted town by calling the server directly. Ordinary play
+  actions require the visitor token only.
+- PWA: a manifest, and a service worker with versioned cache-first
+  static assets (the scene's models and textures are the heavy
+  first load this exists to cure), network-first for action
+  calls, and clean retirement of the old cache on a new version.
+  Installable and full screen; no offline play is promised,
+  since state lives on the server.
+
+Order of work:
+1. Spike and note first: append a short findings section to this
+   task before the build begins, covering how the server runs
+   outside the space runtime (what the space-sdk transport needs
+   to serve plain HTTP on Railway), what the Postgres port
+   actually touches, the expected Railway footprint in one line
+   (service and database size, so the owner sees the carrying
+   cost), and any part of the shape above that the code refuses.
+   If the spike finds a blocker that changes the shape
+   materially, stop at the note and let the owner decide;
+   otherwise proceed in the same task.
+2. The build: the storage port, visitor keying and seeding, the
+   director door, the PWA. Suite green with new pins: visitor
+   isolation proven by test (two tokens, no cross-reads or
+   cross-writes on any action); director actions refused without
+   the token; seed-on-first-visit; the Android target's existing
+   tests untouched and green.
+3. A deploy checklist in a web deploy note in this repo: the
+   exact owner steps, one line each (create the Postgres
+   service; create the town service from this repo; set
+   DATABASE_URL and DIRECTOR_TOKEN and the start command; add
+   the town.reseed.net domain and its DNS records; run railway
+   up).
+4. Launch gate, standing from the public edition's charter: the
+   deployment may go up for the owner's own verification, but
+   the town is not linked, announced, or posted anywhere until
+   the asset and model licenses are verified. Note in this file
+   when that check is done and by whom.
+
 ## Standing notes
 
 - Prompts and guards are constitutional on both lines: byte-identical, always.
