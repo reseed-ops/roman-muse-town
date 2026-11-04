@@ -1,0 +1,22 @@
+{
+  "name": "muse-town-live-bridge",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/bridge/src/index.js",
+    "dev": "bun run src/index.ts",
+    "test": "bun test src",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "5.6.3"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

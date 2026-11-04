@@ -1,0 +1,5 @@
+# The owner's own: the tended pack and the day's ledger never enter the repo.
+pack.md
+ledger.json
+dist/
+node_modules/

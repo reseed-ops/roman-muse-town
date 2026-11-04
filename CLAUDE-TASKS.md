@@ -292,3 +292,27 @@ build has proven itself in the owner's hands.
   (6) Keyboard stand-in is IJKL + U/O/P because WASD and the arrows already drive Gaius.
   (7) Untested on a phone: Android WebView gamepad support is poor; test one pad in Chrome and in
   the Muse app before relying on two.
+- Task 4 landed on the public line in `9d10683` (`shared/visitProtocol.ts`, `client/src/visitSlate.ts`,
+  `visitFrames.ts`, `visitHarnessClient.ts`, the visit branch in `townScene.ts`, the beat, hush, menu row
+  and panel signs in `App.tsx`, the harness in `harness/`; suite 308 green). Claude, Nov 4, 2026.
+  Notes for the port: (1) The seam on this line is the harness's HTTP surface (routes in
+  `harness/visitHarness.ts`); the client pushes its whole slate view each beat and pulls directions, so
+  the private slate replaces the carrier only. (2) Mail capture is a plain early return in `sendChat`
+  before the notebook, facts, flirt deflection, local chat and scripted reply; the player's own bubble
+  still shows his line. (3) Goto lands 1.7 m short of Gaius, 0.6 m short of a point, on the mark for a
+  seat, and then HOLDS her where she stopped (re-approaching only under "to Gaius"); a visit errand
+  outranks companion follow and a guide, and a pad verb outranks the errand; a human's fresh pad2 input
+  outranks the director's pad verb. (4) Emotes: her animator has a wave only on this line; bow and dance
+  are performed as the wave. (5) The lapse is 20 min from the last mail or direction; the client's own
+  clock, so a dead harness still folds her back. (6) `showBubbleGrowing` shows the LAST page of a
+  growing line; the final speak re-shows from page one.
+- Task 6 landed on the public line in the commit after `9d10683` (`bridge/`: channel, seam adapter,
+  slate adapter interface, fake channel, output filter, pack loader, cost caps, director loop, Anthropic
+  mind, Railway note; the town-side pieces, composing state, partial speaks and the pack route, rode in
+  with Task 4; suite 327 green). Claude, Nov 4, 2026. Adapter B carries the interface and placeholder
+  action names (`SLATE_ACTIONS` in `bridge/src/slateAdapter.ts`) only; it refuses every call until the
+  Gate 0 note lands. The filter's band rules mirror `town.ts` (reserved 0–2, warming 3–5, close 6–7,
+  devoted 8+): vocatives above the band are stripped, kisses below devoted refuse the line, crude words,
+  gloom and any character break refuse it outright, em dashes become commas, 40 words or 280 characters.
+  The pack format is a guess at the proven one (`bridge/pack.example.md`, sections by `##` heading and
+  a `rank:` line); `parsePack` is the one place to adapt. Not run against a live key here.

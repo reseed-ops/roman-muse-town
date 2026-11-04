@@ -1,0 +1,11 @@
+# Railway service config for the Live Bridge (Task 6). Set the service's
+# root directory to `bridge/` in the Railway dashboard; secrets live in
+# the service's variables, never here. See README.md.
+[build]
+builder = "NIXPACKS"
+buildCommand = "npm install && npm run build"
+
+[deploy]
+startCommand = "npm start"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
