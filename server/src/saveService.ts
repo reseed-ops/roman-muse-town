@@ -7,10 +7,13 @@ import * as schema from "./schema";
 import { runRetrySafe } from "./retrySafe";
 import { sqliteStorage, type TownDb, type TownStorage } from "./storage";
 
-interface BlobStore {
+export interface BlobStore {
   getUrl(key: string): Promise<string>;
   put(key: string, data: Uint8Array, options: { contentType: string }): Promise<unknown>;
   delete(key: string): Promise<unknown>;
+  /** A store that can hand its bytes over directly (the web server's,
+   *  Task 8) skips the download through its own URL. */
+  read?(key: string): Promise<Uint8Array | null>;
 }
 const tables = Object.values(schema) as AnySQLiteTable[];
 const byName = new Map(tables.map((table) => [getTableName(table), table]));
@@ -104,6 +107,16 @@ export async function exportTownSave(db: TownDb, blobs: BlobStore, fetchImage: t
   const save: TownSave = { format: SAVE_FORMAT, version: SAVE_VERSION, schemaVersion: SAVE_SCHEMA_VERSION, exportedAt: new Date().toISOString(), tables: snapshot as TownSave["tables"], attachments: [] };
   let size = Buffer.byteLength(JSON.stringify(save));
   for (const key of new Set((save.tables.postcards ?? []).map((row) => String(row.blobKey)))) {
+    if (blobs.read) {
+      const bytes = await blobs.read(key);
+      if (!bytes) throw new Error("A postcard could not be read. No incomplete save was exported.");
+      if (bytes.length > MAX_ATTACHMENT_BYTES) throw new Error("A postcard is too large to export.");
+      const base64 = Buffer.from(bytes).toString("base64");
+      size += base64.length + key.length + 100;
+      if (size > MAX_SAVE_BYTES) throw new Error("The save exceeds the 32 MB limit.");
+      save.attachments.push({ key, contentType: "image/jpeg", base64 });
+      continue;
+    }
     const response = await fetchImage(await blobs.getUrl(key), { signal: AbortSignal.timeout(30000) });
     if (!response.ok) throw new Error("A postcard could not be downloaded. No incomplete save was exported.");
     if (Number(response.headers.get("content-length") ?? 0) > MAX_ATTACHMENT_BYTES) throw new Error("A postcard is too large to export.");

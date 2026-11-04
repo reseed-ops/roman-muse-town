@@ -350,4 +350,27 @@ export type BridgePullResponse = {
   composing: boolean;
   /** When the director loop last read the held snapshot; null if never. */
   directorSeenAt: number | null;
+  /** A director asked the town to open a visit (the hosted town's door,
+   *  Task 8; the bridge's own face never sets it). Present only when true. */
+  begin?: boolean;
+  /** A director asked the town to end the visit. Present only when true. */
+  end?: boolean;
 };
+
+// --- The hosted town (Task 8) -----------------------------------------
+// On the web the town's own server holds one slate face per visitor
+// behind the same two bridge routes, gated by the visitor's token, and
+// a director reaches that face through the locked visit actions (the
+// door), gated by the service's DIRECTOR_TOKEN plus the visitor's own
+// token. The client learns it is hosted from one meta tag the web build
+// writes, and then defaults its bridge leg to its own origin.
+
+/** The meta tag name the web build writes into index.html. */
+export const HOSTED_META_NAME = "muse-town-hosted";
+/** The visitor token header, on every action call and the door. */
+export const VISITOR_TOKEN_HEADER = "x-visitor-token";
+/** The director token header, on door calls only. */
+export const DIRECTOR_TOKEN_HEADER = "x-director-token";
+/** The locked visit actions: a director's view of one visitor's slate. */
+export const DOOR_ACTIONS = ["visitstate", "visitdirect", "visitcomposing", "visitframeget", "beginvisit", "endvisit"] as const;
+export type DoorAction = (typeof DOOR_ACTIONS)[number];

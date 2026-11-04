@@ -18,6 +18,7 @@
  * never written anywhere else.
  */
 import { BRIDGE_BEAT_MS, type BridgePullResponse, type BridgeSnapshotRequest, type BridgeSnapshotResponse } from "../../shared/visitProtocol";
+import { isHostedTown, visitorToken } from "./hosted";
 import { emptySlate, enqueueDirection, setComposing, stateView, type VisitSlate } from "./visitSlate";
 
 export const BRIDGE_URL_STORAGE_KEY = "muse-town-visit-bridge-url";
@@ -43,6 +44,24 @@ export function storeBridgeSettings(write: (key: string, value: string | null) =
  *  (the bridge then refuses, and the menu says so). */
 export const bridgeConfigured = (s: BridgeSettings | null | undefined): s is BridgeSettings => !!s && /^https?:\/\/\S+$/.test(s.url);
 
+/** The hosted town's own director door as the default bridge (Task 8):
+ *  this origin, the visitor's own token. Null anywhere but the web, so
+ *  the artifact and the Android build keep making no call at all. */
+export function hostedBridgeSettings(
+  hosted: boolean = isHostedTown(),
+  origin: string = typeof location === "undefined" ? "" : location.origin,
+  token: () => string = visitorToken,
+): BridgeSettings | null {
+  if (!hosted || !/^https?:\/\/\S+$/.test(origin)) return null;
+  return { url: origin.replace(/\/+$/, ""), token: token() };
+}
+
+/** The bridge the leg runs against: an owner-entered one first, else
+ *  the hosted town's own door, else none. */
+export function resolveBridge(entered: BridgeSettings | null | undefined, hosted: BridgeSettings | null): BridgeSettings | null {
+  return bridgeConfigured(entered) ? entered : hosted;
+}
+
 /** What the client has already handed over, per visit. */
 export type BridgeCursor = {
   /** Mail with seq at or below this has been held by the bridge. */
@@ -66,6 +85,8 @@ export type BridgeLegResult = {
   /** Directions pulled and queued; refused ones are counted apart. */
   queued: number;
   refused: number;
+  /** The director asked the town to end the visit (the hosted door). */
+  ended: boolean;
 };
 
 type Call = { status: number; json: unknown } | null;
@@ -119,7 +140,7 @@ export async function bridgeLeg(input: {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(snapshot),
   }, fetchImpl);
-  const fail = (outcome: BridgeLegOutcome): BridgeLegResult => ({ slate: read(), cursor: input.cursor, outcome, directorSeenAt: null, queued: 0, refused: 0 });
+  const fail = (outcome: BridgeLegOutcome): BridgeLegResult => ({ slate: read(), cursor: input.cursor, outcome, directorSeenAt: null, queued: 0, refused: 0, ended: false });
   if (!posted) return fail("unreachable");
   if (posted.status === 401) return fail("refused");
   const ack = posted.json as BridgeSnapshotResponse | null;
@@ -136,7 +157,8 @@ export async function bridgeLeg(input: {
     sentFrameId: Math.max(input.cursor.sentFrameId, snapshot.frame?.id ?? 0),
     pulledThrough: input.cursor.pulledThrough,
   };
-  if (!slate.active) return { slate, cursor, outcome: "ok", directorSeenAt: pull.directorSeenAt ?? null, queued: 0, refused: 0 };
+  if (!slate.active) return { slate, cursor, outcome: "ok", directorSeenAt: pull.directorSeenAt ?? null, queued: 0, refused: 0, ended: false };
+  if (pull.end === true) return { slate, cursor, outcome: "ok", directorSeenAt: typeof pull.directorSeenAt === "number" ? pull.directorSeenAt : null, queued: 0, refused: 0, ended: true };
   let queued = 0;
   let refused = 0;
   const t = now();
@@ -152,7 +174,18 @@ export async function bridgeLeg(input: {
     else refused += 1;
   }
   slate = setComposing(slate, pull.composing === true);
-  return { slate, cursor, outcome: "ok", directorSeenAt: typeof pull.directorSeenAt === "number" ? pull.directorSeenAt : null, queued, refused };
+  return { slate, cursor, outcome: "ok", directorSeenAt: typeof pull.directorSeenAt === "number" ? pull.directorSeenAt : null, queued, refused, ended: false };
+}
+
+/** The idle glance (hosted town only): with no visit open, one pull on
+ *  a slow cadence to hear a director's begin request through the door.
+ *  Null when nothing was heard or the door could not be reached. */
+export async function bridgeGlance(settings: BridgeSettings | null | undefined, fetchImpl: typeof fetch = fetch): Promise<{ begin: boolean } | null> {
+  if (!bridgeConfigured(settings)) return null;
+  const pulled = await call(`${settings.url}/bridge/directions?since=0`, settings.token, { method: "GET" }, fetchImpl);
+  if (!pulled || pulled.status !== 200) return null;
+  const pull = pulled.json as BridgePullResponse | null;
+  return pull ? { begin: pull.begin === true } : null;
 }
 
 /** The visit ended on the town: one closed snapshot so the bridge

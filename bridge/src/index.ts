@@ -12,7 +12,9 @@ import { createPackLoader, filePackSource } from "./pack.js";
 import { createSeamAdapter } from "./seamAdapter.js";
 import { createSlateFace } from "./slateFace.js";
 import { startBridgeServer } from "./bridgeServer.js";
+import { createTownChannel } from "./townChannel.js";
 import type { DirectorChannel } from "./channel.js";
+import { createFakeChannel } from "./fakeChannel.js";
 
 const log = (line: string) => console.log(`${new Date().toISOString()} ${line}`);
 
@@ -38,6 +40,18 @@ async function main(): Promise<void> {
     } else {
       const server = await startBridgeServer({ face: slate, token: cfg.bridgeToken, port: cfg.port, allowOrigin: cfg.allowOrigin, log });
       face = `serving on :${server.port}`;
+    }
+  } else if (cfg.channel === "town") {
+    // The hosted town's door (Task 8): this bridge directs one visitor's
+    // town through the locked visit actions. Without all three settings
+    // the channel reads closed and the director idles.
+    if (!cfg.townUrl || !cfg.directorToken || !cfg.visitorToken) {
+      log("TOWN_URL, DIRECTOR_TOKEN and VISITOR_TOKEN are all required for the town channel; the director idles.");
+      channel = createFakeChannel();
+      face = "(not directing: town settings missing)";
+    } else {
+      channel = createTownChannel({ townUrl: cfg.townUrl, directorToken: cfg.directorToken, visitorToken: cfg.visitorToken });
+      face = cfg.townUrl;
     }
   } else {
     channel = createSeamAdapter({ baseUrl: cfg.harnessUrl });

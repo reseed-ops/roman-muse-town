@@ -211,7 +211,7 @@ import {
 } from "./visitSlate";
 import { frameDue, validateFrameDataUrl } from "./visitFrames";
 import { HARNESS_STORAGE_KEY, IDLE_GLANCE_MS, resolveHarnessUrl, syncWithHarness } from "./visitHarnessClient";
-import { bridgeClose, bridgeConfigured, bridgeLeg, emptyBridgeCursor, readBridgeSettings, storeBridgeSettings, type BridgeCursor, type BridgeSettings } from "./visitBridgeClient";
+import { bridgeClose, bridgeConfigured, bridgeGlance, bridgeLeg, emptyBridgeCursor, hostedBridgeSettings, readBridgeSettings, resolveBridge, storeBridgeSettings, type BridgeCursor, type BridgeSettings } from "./visitBridgeClient";
 import { BRIDGE_BEAT_MS, FRAME_JPEG_QUALITY, FRAME_MAX_EDGE, SIGHT_LINE, VISITING_MARKER, VISIT_POLL_MS, type QueuedDirection } from "../../shared/visitProtocol";
 import {
 playChime,
@@ -435,8 +435,13 @@ export function App() {
       return { url: "", token: "" };
     }
   });
-  const bridgeRef = useRef(bridgeSettings);
-  bridgeRef.current = bridgeSettings;
+  // On the web (Task 8) the town's own director door is the default
+  // bridge: this origin, the visitor's token; an owner-entered bridge
+  // still wins. Off the web it is null, and nothing here changes.
+  const [hostedBridge] = useState<BridgeSettings | null>(() => hostedBridgeSettings());
+  const activeBridge = resolveBridge(bridgeSettings, hostedBridge);
+  const bridgeRef = useRef(activeBridge);
+  bridgeRef.current = activeBridge;
   const bridgeCursorRef = useRef<BridgeCursor>(emptyBridgeCursor());
   /** A prompt bridge beat (new mail, a fresh frame); a no-op unless the leg is on. */
   const bridgeNudgeRef = useRef<() => void>(() => {});
@@ -5180,12 +5185,19 @@ export function App() {
       publishVisit(result.outcome);
       return;
     }
+    if (result.ended) {
+      // The director ended it through the hosted door: the town folds
+      // the visit itself, exactly as it folds a harness end.
+      visitRef.current = result.slate;
+      visitRefs.current.endVisitNow();
+      return;
+    }
     visitRef.current = drainVisitQueue(result.slate);
     publishVisit(result.directorSeenAt !== null && Date.now() - result.directorSeenAt < 15_000 ? "live" : "none");
   };
   const bridgeBeatRef = useRef(bridgeBeat);
   bridgeBeatRef.current = bridgeBeat;
-  const bridgeOn = visitUi.active && bridgeConfigured(bridgeSettings);
+  const bridgeOn = visitUi.active && bridgeConfigured(activeBridge);
   useEffect(() => {
     if (!bridgeOn) return;
     let busy = false;
@@ -5211,7 +5223,27 @@ export function App() {
       window.clearInterval(timer);
       bridgeNudgeRef.current = () => {};
     };
-  }, [bridgeOn, bridgeSettings.url, bridgeSettings.token]);
+  }, [bridgeOn, activeBridge?.url, activeBridge?.token]);
+  // The hosted town's idle glance (Task 8): with no visit open and the
+  // town's own door as the bridge, one slow pull to hear a director's
+  // begin request. An owner-entered bridge is never glanced at idle.
+  const glanceOn = !visitUi.active && !!hostedBridge && !bridgeConfigured(bridgeSettings);
+  useEffect(() => {
+    if (!glanceOn) return;
+    let busy = false;
+    const tick = () => {
+      if (busy) return;
+      busy = true;
+      void bridgeGlance(hostedBridge).then((heard) => {
+        if (heard?.begin) visitRefs.current.beginVisitNow();
+      }).finally(() => {
+        busy = false;
+      });
+    };
+    tick();
+    const timer = window.setInterval(tick, IDLE_GLANCE_MS);
+    return () => window.clearInterval(timer);
+  }, [glanceOn, hostedBridge]);
 
   const selectPlace = (place: Place) => {
     exitWalkMode();
@@ -5766,7 +5798,9 @@ export function App() {
               ? `${VISITING_MARKER}. ${visitUi.director === "live" ? "A director is reading the slate." : visitUi.director === "unreachable" ? "The director is unreachable; nobody is directing." : visitUi.director === "refused" ? "The bridge refused the token; check Settings." : "Nobody is directing yet."} Her quick voice is hushed for panel chat.`
               : bridgeConfigured(bridgeSettings)
                 ? `Live Bridge at ${bridgeSettings.url}${bridgeSettings.token ? "" : " (no token entered)"}.${harnessRef.current?.configured ? ` Director seam at ${harnessRef.current.url}.` : ""}`
-                : harnessRef.current?.configured
+                : hostedBridge
+                  ? "This town's own director door is the bridge; Muse may direct a visit through it."
+                  : harnessRef.current?.configured
                   ? `Director seam at ${harnessRef.current.url}.`
                   : "No director named (a Live Bridge in Settings, or ?harness=); a visit would run undirected.",
             active: visitUi.active,

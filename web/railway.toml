@@ -1,0 +1,14 @@
+# Railway service config for the town on the web (Task 8). Leave the
+# service's root directory at the repository root and set its config
+# path to /web/railway.toml; the Dockerfile builds from the root. Secrets
+# live in the service's variables, never here. See web/README.md.
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "web/Dockerfile"
+
+[deploy]
+startCommand = "bun run web/dist/server.js"
+healthcheckPath = "/healthz"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10

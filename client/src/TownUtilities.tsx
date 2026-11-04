@@ -5,6 +5,7 @@ import type { TownSceneHandle } from "./townScene";
 import type { TownState } from "./useTownState";
 import { buildArrivalSummary, utcDay, type ArrivalDestination, type ArrivalMarker, type ArrivalSummary } from "./arrivalSummary";
 import { reliableActions } from "./reliableActions";
+import { isHostedTown, visitorToken } from "./hosted";
 import { addDeviceState, restoreDeviceState, saveDownload } from "./townSaveClient";
 import { MAX_SAVE_BYTES, readSaveEnvelope, type TownSave } from "../../shared/saveFormat";
 import type { PerformanceSnapshot } from "./performanceMonitor";
@@ -70,6 +71,7 @@ export function TownUtilities({ open, onClose, scene, state, ready, holdArrival,
   // half-typed token is never stored or presented.
   const [bridgeDraft, setBridgeDraft] = useState<BridgeSettings>(bridge);
   useEffect(() => { setBridgeDraft(bridge); }, [bridge]);
+  const hosted = isHostedTown();
   const commitBridge = () => { if (bridgeDraft.url !== bridge.url || bridgeDraft.token !== bridge.token) onBridgeChange(bridgeDraft); };
 
   useEffect(() => {
@@ -141,6 +143,7 @@ export function TownUtilities({ open, onClose, scene, state, ready, holdArrival,
         <section>
           <h3>Save your town</h3>
           <p>Keep letters, memories, progress, and postcard images in a file you can restore later. The file contains your town’s private writing.</p>
+          {hosted && <p>On the web this town belongs to a key kept in this browser only: clear the site’s data, or open another browser, and the town is gone. A downloaded save is the one way to carry it.</p>}
           <button disabled={busy || !state} onClick={() => void run(async () => { await reliableActions.pause(); saveDownload(await exportCurrent()); setMessage("Your save is ready to download."); })}>Download a save</button>
           <label className="town-file">Choose a save to restore<input type="file" accept=".json,application/json" disabled={busy} onChange={(event) => {
             const file = event.target.files?.[0];
@@ -175,12 +178,15 @@ export function TownUtilities({ open, onClose, scene, state, ready, holdArrival,
         </section>
         <section>
           <h3>Muse Visits</h3>
-          <p>While a visit is open, the town calls out to your Live Bridge and nowhere else; with no address, a visit runs undirected and the town makes no call. The address and token stay on this device.</p>
+          <p>{hosted
+            ? "While a visit is open, the town reports to its own director door, where Muse may direct it; a Live Bridge entered here takes that place instead. The address and token stay on this device."
+            : "While a visit is open, the town calls out to your Live Bridge and nowhere else; with no address, a visit runs undirected and the town makes no call. The address and token stay on this device."}</p>
           <label className="town-field">Bridge address
             <input type="url" inputMode="url" autoComplete="off" spellCheck={false} placeholder="https://your-bridge.up.railway.app" value={bridgeDraft.url}
               onChange={(event) => setBridgeDraft((d) => ({ ...d, url: event.target.value }))} onBlur={commitBridge}
               onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); commitBridge(); } }} />
           </label>
+          {hosted && <p className="town-visitor-key">Your visitor key, the one thing that names this town: <code>{visitorToken()}</code>. Share it with Muse once so she can direct a visit here; it never leaves this device otherwise.</p>}
           <label className="town-field">Bridge token
             <input type="password" autoComplete="off" placeholder="the token set in the bridge's service" value={bridgeDraft.token}
               onChange={(event) => setBridgeDraft((d) => ({ ...d, token: event.target.value }))} onBlur={commitBridge}

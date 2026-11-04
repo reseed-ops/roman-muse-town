@@ -12,7 +12,7 @@
 
 import { createHash } from "node:crypto";
 import { sql } from "drizzle-orm";
-import { pgTable, text, timestamp, type PgDatabase, type PgQueryResultHKT } from "drizzle-orm/pg-core";
+import { customType, pgTable, text, timestamp, type PgDatabase, type PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { PG_MIGRATIONS } from "./pgMigrations";
 import * as schema from "./schema.pg";
 import type { TownDb, TownStorage } from "./storage";
@@ -22,13 +22,31 @@ import type { TownDb, TownStorage } from "./storage";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type PgTownDb = PgDatabase<PgQueryResultHKT, any, any>;
 
-const asPg = (db: TownDb): PgTownDb => db as unknown as PgTownDb;
+/** The web server's blob store runs on the request's transaction, which
+ *  it receives under the action layer's type. */
+export const asPg = (db: TownDb): PgTownDb => db as unknown as PgTownDb;
 const asTown = (db: PgTownDb): TownDb => db as unknown as TownDb;
 
 /** Per-town migration journal; lives inside each town's schema. */
 export const townMigrations = pgTable("town_migrations", {
   name: text("name").primaryKey(),
   appliedAt: timestamp("applied_at", { withTimezone: true, mode: "date" }).notNull().$defaultFn(() => new Date()),
+});
+
+const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({
+  dataType: () => "bytea",
+  toDriver: (value) => value,
+  fromDriver: (value) => (value instanceof Uint8Array ? value : new Uint8Array(value as ArrayBufferLike)),
+});
+
+/** The postcard images, inside each town's schema (migration 0002): the
+ *  web deployment's blob store (web/src/blobStore.ts). Not a town table:
+ *  saves carry the images as attachments, never this table. */
+export const townBlobs = pgTable("town_blobs", {
+  key: text("key").primaryKey(),
+  contentType: text("content_type").notNull(),
+  bytes: bytea("bytes").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().$defaultFn(() => new Date()),
 });
 
 /** Tables whose id is a sequence: a restore inserts explicit ids, and the

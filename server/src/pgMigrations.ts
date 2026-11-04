@@ -7,9 +7,11 @@
 // Never edit a migration that has shipped: every existing town has run it.
 
 import town0001 from "../../drizzle-pg/0001_town.sql" with { type: "text" };
+import blobs0002 from "../../drizzle-pg/0002_blobs.sql" with { type: "text" };
 
 export interface PgMigration { name: string; sql: string }
 
 export const PG_MIGRATIONS: readonly PgMigration[] = [
   { name: "0001_town", sql: town0001 },
+  { name: "0002_blobs", sql: blobs0002 },
 ];

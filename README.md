@@ -101,3 +101,13 @@ are not part of this repository; see `ASSETS.md`.
 A downloadable Android build of the town (no Muse account, no server;
 state lives on the device) is attached to this repository's Releases,
 with SHA-256 checksums. Later builds are produced from this source.
+
+## The town on the web
+
+The same town runs as a web app on the owner's Railway: one service, a
+Postgres beside it, a town per visitor keyed by a token the browser
+mints and keeps, a locked door through which a director reaches a
+hosted visit, and a service worker that makes the second load light. The
+shape, the deploy checklist and the launch gate are in `web/README.md`.
+Nothing of the artifact line changes for it: `server/src/storage.ts`
+explains how one action layer runs on both engines.

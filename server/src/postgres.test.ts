@@ -15,6 +15,7 @@ import { getTableConfig as sqliteTableConfig, type SQLiteTable } from "drizzle-o
 import { z } from "zod";
 import * as pgSchema from "./schema.pg";
 import * as sqliteSchema from "./schema.sqlite";
+import { PG_MIGRATIONS } from "./pgMigrations";
 import { PRUNED_RECEIPTS_KEPT } from "./retrySafe";
 import { ensureTown, forgetReadyTowns, postgresStorage, townSchemaName, withTown, type PgTownDb } from "./storage.pg";
 import type { TownDb } from "./storage";
@@ -74,7 +75,7 @@ describe.skipIf(!onPostgres)("the town on Postgres", () => {
   /** A fresh visitor: a new token, a new schema, the migrations run. */
   async function newTown(): Promise<string> {
     const schemaName = townSchemaName(`visitor-${++towns}-${Date.now()}`);
-    expect(await ensureTown(db, schemaName)).toBe(1);
+    expect(await ensureTown(db, schemaName)).toBe(PG_MIGRATIONS.length);
     expect(await ensureTown(db, schemaName)).toBe(0);
     return schemaName;
   }
@@ -103,7 +104,7 @@ describe.skipIf(!onPostgres)("the town on Postgres", () => {
     const columns = (await client.query(`SELECT table_name, column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_schema = '${town}' ORDER BY table_name, ordinal_position`)) as { rows: { table_name: string; column_name: string; data_type: string; is_nullable: string; column_default: string | null }[] };
     const byTable = new Map<string, typeof columns.rows>();
     for (const row of columns.rows) byTable.set(row.table_name, [...(byTable.get(row.table_name) ?? []), row]);
-    expect([...byTable.keys()].sort()).toEqual([...Object.values(pgSchema).map(getTableName), "town_migrations"].sort());
+    expect([...byTable.keys()].sort()).toEqual([...Object.values(pgSchema).map(getTableName), "town_migrations", "town_blobs"].sort());
     for (const table of Object.values(pgSchema)) {
       const live = byTable.get(getTableName(table))!;
       for (const column of Object.values(getTableColumns(table))) {

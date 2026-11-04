@@ -5,8 +5,13 @@
  */
 export type BridgeConfig = {
   enabled: boolean;
-  channel: "seam" | "bridge";
+  channel: "seam" | "bridge" | "town";
   harnessUrl: string;
+  /** The hosted town's origin, its director token and the one visitor's
+   *  token (Task 8's door); all `town` only, none ever in the repo. */
+  townUrl: string | null;
+  directorToken: string | null;
+  visitorToken: string | null;
   /** The per-installation token the town presents (Task 7); never in the repo. */
   bridgeToken: string | null;
   port: number;
@@ -33,8 +38,11 @@ const num = (v: string | undefined, fallback: number): number => {
 export function readConfig(env: Record<string, string | undefined> = process.env): BridgeConfig {
   return {
     enabled: env.DIRECTOR_ENABLED === "true" || env.DIRECTOR_ENABLED === "1",
-    channel: env.DIRECTOR_CHANNEL === "bridge" || env.DIRECTOR_CHANNEL === "slate" ? "bridge" : "seam",
+    channel: env.DIRECTOR_CHANNEL === "bridge" || env.DIRECTOR_CHANNEL === "slate" ? "bridge" : env.DIRECTOR_CHANNEL === "town" ? "town" : "seam",
     harnessUrl: env.HARNESS_URL || "http://localhost:8787",
+    townUrl: env.TOWN_URL || null,
+    directorToken: env.DIRECTOR_TOKEN || null,
+    visitorToken: env.VISITOR_TOKEN || null,
     bridgeToken: env.BRIDGE_TOKEN || null,
     port: num(env.PORT, 8790),
     allowOrigin: env.BRIDGE_ALLOW_ORIGIN || "*",

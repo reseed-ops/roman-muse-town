@@ -10,7 +10,9 @@
     "build:server": "cd server && bun build ./src/actions.ts --target=bun --outfile=./dist/actions.js",
     "build:client": "bun ./client/build.mjs",
     "test:sqlite": "bun test server client/src shared harness bridge/src",
-    "test:pg": "TOWN_DIALECT=postgres bun test server/src/postgres.test.ts"
+    "test:pg": "TOWN_DIALECT=postgres bun test server/src/postgres.test.ts web/src",
+    "build:web": "bun run web/build.ts",
+    "start:web": "bun run web/dist/server.js"
   },
   "dependencies": {
     "@hatch/space-sdk": "file:/opt/hatch/skills/spaces/ts-runtime/dist/space-sdk.tgz",

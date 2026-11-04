@@ -98,13 +98,31 @@ bun run dev
 Then in the town's Settings, Muse Visits, enter `http://localhost:8790`
 and the same token, and open a visit from the menu.
 
+## The town channel (Task 8)
+
+A hosted town (`web/README.md`) holds one slate face per visitor behind
+its own door: the locked visit actions, admitted only with the town
+service's `DIRECTOR_TOKEN` beside the visitor's own token. With
+`DIRECTOR_CHANNEL=town` this bridge reads and directs that one visitor's
+visit through the door (`src/townChannel.ts`), and the director loop is
+untouched: it sees one more `DirectorChannel`. The visitor's client feeds
+the face itself, through the same two bridge routes as Task 7, on its own
+origin; nothing here calls into the client. `beginvisit` and `endvisit`
+are at the door too, for the owner's own Muse to open or fold a visit by
+hand (`curl -X POST $TOWN_URL/actions -H "x-director-token: …" -H
+"x-visitor-token: …" -d '{"action":"beginvisit","args":{}}'`); the loop
+never calls them.
+
 ## Environment
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `DIRECTOR_ENABLED` | `false` | Off unless `true`; off, the process idles. |
 | `ANTHROPIC_API_KEY` | (none) | The owner's key. Required to answer. Never in the repo. |
-| `DIRECTOR_CHANNEL` | `seam` | `seam` (Adapter A, polls the harness) or `bridge` (Adapter B, serves the face; `slate` is accepted as its old name). |
+| `DIRECTOR_CHANNEL` | `seam` | `seam` (Adapter A, polls the harness), `bridge` (Adapter B, serves the face; `slate` is accepted as its old name) or `town` (calls the hosted town's door, Task 8). |
+| `TOWN_URL` | (none) | The hosted town's origin (`town` only), e.g. `https://town.reseed.net`. |
+| `DIRECTOR_TOKEN` | (none) | The town service's director token (`town` only). Never in the repo. |
+| `VISITOR_TOKEN` | (none) | The one visitor whose town this bridge directs (`town` only): the owner's own visitor key from the town's Settings. Never in the repo. |
 | `BRIDGE_TOKEN` | (none) | The per-installation token the town presents. Required for `bridge`; without it the face does not serve. Never in the repo. |
 | `PORT` | `8790` | The face's port (`bridge` only; Railway sets it). |
 | `BRIDGE_ALLOW_ORIGIN` | `*` | CORS origin for the face; set it to the town's origin to narrow it (the token gates either way). |

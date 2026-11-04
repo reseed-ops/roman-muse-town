@@ -1,0 +1,24 @@
+{
+  "name": "muse-town-web",
+  "private": true,
+  "type": "module",
+  "description": "The town on the web (Task 8): the dependencies the web build needs on a machine without the hosted SDK. Versions mirror the root package.json.",
+  "scripts": {
+    "build": "cd .. && bun run web/build.ts",
+    "start": "cd .. && bun run web/dist/server.js"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "4.3.0",
+    "@tanstack/react-query": "5.100.10",
+    "drizzle-orm": "0.45.2",
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
+    "three": "^0.187.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "tailwindcss": "4.1.13",
+    "tailwindcss-safe-area": "1.3.0",
+    "bun-plugin-tailwind": "0.0.15"
+  }
+}

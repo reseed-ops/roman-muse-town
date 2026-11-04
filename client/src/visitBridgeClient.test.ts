@@ -141,3 +141,23 @@ test("a wrong token reads as refused and an unreachable bridge as unreachable; n
     await server.close();
   }
 });
+
+test("the hosted door's begin and end requests reach the town: a glance begins, a pull ends", async () => {
+  const { bridgeGlance } = await import("./visitBridgeClient");
+  const settings = { url: "https://town.example", token: "visitor-token-0000000000" };
+  const answers: unknown[] = [];
+  const fetchImpl = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    if (init?.method === "POST") return new Response(JSON.stringify({ ok: true, latestSeq: 0, frameId: null }), { status: 200 });
+    return new Response(JSON.stringify(answers.shift() ?? { directions: [], composing: false, directorSeenAt: null }), { status: 200 });
+  }) as unknown as typeof fetch;
+  expect(await bridgeGlance(null, fetchImpl)).toBeNull();
+  answers.push({ directions: [], composing: false, directorSeenAt: null, begin: true });
+  expect(await bridgeGlance(settings, fetchImpl)).toEqual({ begin: true });
+  expect(await bridgeGlance(settings, fetchImpl)).toEqual({ begin: false });
+  const slate = beginVisit(emptySlate(), 1);
+  answers.push({ directions: [{ id: 1, at: 2, direction: { kind: "look" } }], composing: false, directorSeenAt: 2, end: true });
+  const result = await bridgeLeg({ settings, read: () => slate, cursor: emptyBridgeCursor(), now: () => 3, fetchImpl });
+  expect(result?.outcome).toBe("ok");
+  expect(result?.ended).toBe(true);
+  expect(result?.queued).toBe(0);
+});
