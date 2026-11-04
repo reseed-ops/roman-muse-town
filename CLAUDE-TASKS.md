@@ -318,6 +318,22 @@ checkout, with his key and token in the service variables only. The
 one-minute loop remains the private ship configuration until the
 private port is verified on device.
 
+Landed (Claude, Nov 4, 2026) in 2e71172: `bridge/src/slateFace.ts` (the
+held snapshot as the channel) and `bridge/src/bridgeServer.ts` (the two
+token-gated endpoints) replace `slateAdapter.ts`; the client leg is
+`client/src/visitBridgeClient.ts`, wired in App with the URL and token
+entered under Settings, Muse Visits (localStorage only); wire shapes
+and the frame validator now live in `shared/visitProtocol.ts`. Suite
+327 -> 337 green. Port notes for v60: the client posts `{ state, mail,
+frame }` with `Authorization: Bearer <token>` and pulls
+`/bridge/directions?since=<last pulled id>`; pulled directions are
+re-queued through `enqueueDirection` (client ids), so the bridge's ids
+only serve as the pull cursor; a closed snapshot on visit end lets the
+bridge forget at once; `DIRECTOR_CHANNEL=bridge` with `BRIDGE_TOKEN`
+and `PORT` on Railway. One deploy caveat in `bridge/README.md`: the
+build compiles `../shared/visitProtocol.ts`, so the service's build
+context must include `shared/`.
+
 ## Standing notes
 
 - Prompts and guards are constitutional on both lines: byte-identical, always.
