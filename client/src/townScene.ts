@@ -36,7 +36,17 @@ import {
   type DriverCommand,
   type FollowOffset,
 } from "./padDriver";
-import { pad2Live, type AeliaDriver } from "./padRouting";
+import { pad2Live, type AeliaDriver, type Pad2Source } from "./padRouting";
+import {
+  PAD_VERB_MAX_MS,
+  VISIT_STAR_COLOR,
+  VISIT_STAR_EMISSIVE,
+  withinTownRim,
+  type VisitAnchorName,
+  type VisitDirection,
+  type VisitTelemetry,
+} from "../../shared/visitProtocol";
+import { frameDimensions } from "./visitFrames";
 import { setRainLevel, setRainShelter } from "./audio";
 import { FEEL } from "./feel";
 import { buildMetaSudans, META_SUDANS_LINES } from "./metaSudans";
@@ -244,10 +254,10 @@ export interface TownSceneHandle {
    *  Aelia as a player-style character. Her stick is camera-relative
    *  like his; the source names who holds it, for the menu's status.
    *  Runtime only, never persisted. */
-  setPad2Move: (x: number, y: number, source: "pad" | "keyboard") => void;
+  setPad2Move: (x: number, y: number, source: Pad2Source) => void;
   /** A = jump, B = slide (or stand up from a bench), X = sit on a seat
    *  within reach, stand if seated, otherwise wave. */
-  pad2Press: (button: "a" | "b" | "x", source: "pad" | "keyboard") => void;
+  pad2Press: (button: "a" | "b" | "x", source: Pad2Source) => void;
   /** The natural-motion driver's follow harness (a test toggle on this
    *  line): off, or the driver walks her at his pace beside or behind
    *  him whenever pad2 is quiet. */
@@ -255,6 +265,25 @@ export interface TownSceneHandle {
   /** Who moves her right now: the second pad, the keyboard stand-in,
    *  the follow harness, or her own mind (companion follow or routine). */
   aeliaDriver: () => AeliaDriver;
+  /** Muse Visits (Task 4, Nov 2026). While a visit is open her star
+   *  turns violet, and the shell enacts the director's directions
+   *  through visitDirect. Ending a visit folds her back mid-stride:
+   *  the hold is dropped, nothing else is reset. Runtime only. */
+  setVisitActive: (on: boolean) => void;
+  /** Enact one body direction (goto, sit, stand, seat, stepout,
+   *  emote, pad). Speak, intend and look belong to the shell. Returns
+   *  false when the direction cannot be taken right now (a moment
+   *  owns her body, a point is outside the walkable world). */
+  visitDirect: (direction: VisitDirection) => boolean;
+  /** The slate's telemetry: zones, seated flags, day phase, headings,
+   *  her bearing and distance to him, who holds pad2. */
+  visitTelemetry: () => VisitTelemetry;
+  /** A still of the renderer's canvas only (never a page element),
+   *  scaled to maxEdge on the long edge, JPEG at quality. */
+  captureVisitFrame: (maxEdge: number, quality: number) => { dataUrl: string; width: number; height: number } | null;
+  /** A growing line in her bubble (a partial speak): shows the latest
+   *  page of the text so far and keeps the bubble up while it grows. */
+  showBubbleGrowing: (text: string) => void;
   /** The day's rhythm: where she spends the hour, and how the market stands. */
   setRhythm: (rhythm: { anchor: string; marketOpen: boolean; marketBusy: boolean }) => void;
   /** Free for her to ask him somewhere: nothing else has the two of them. */
@@ -5904,12 +5933,21 @@ export function createTownScene(
   let pad2X = 0;
   let pad2Y = 0;
   let pad2LastInputAt = -Infinity;
-  let pad2Source: "pad" | "keyboard" = "pad";
+  let pad2Source: Pad2Source = "pad";
   let driverFollow: FollowOffset | "off" = "off";
   const pad2Drive = newDriver();
   const pad2Hop = newJump();
   const pad2Run = newSlide();
   let pad2Driving = false;
+  // Muse Visits (Task 4): a visit's hold on her body. visitGoto is an
+  // errand to a spot (or to him); visitHold is where a finished errand
+  // leaves her, idle in place until the next direction, re-approaching
+  // him when "to Gaius" is her standing direction and he walks off.
+  // A director's pad verb rides pad2 with its own expiry.
+  let visitActive = false;
+  let visitGoto: { x: number; z: number; toGaius: boolean; seat: { bench: BenchDef; slot: number } | null; until: number } | null = null;
+  let visitHold: { x: number; z: number; withGaius: boolean } | null = null;
+  let pad2DirectorUntil = -Infinity;
   let museWalkPhase = 0;
   const musePose = { legL: 0, legR: 0, kneeL: 0, kneeR: 0, armL: 0, armR: 0, footYaw: 0, elbowL: -0.14, elbowR: 0.14, headYaw: 0, sway: 0 };
   // Her unstuck bookkeeping, mirroring the walker's: push-without-
@@ -7078,6 +7116,77 @@ export function createTownScene(
     },
   };
   const ROUTINE_DAY_ORDER = ["market", "forum", "stories", "lake"];
+  /** Muse Visits: the named anchors a goto may use, as ground spots.
+   *  Her routine spots where they exist, the town's own landmarks
+   *  otherwise; "gaius" is dynamic and "bench" is the nearest bench. */
+  const benchFront = (b: BenchDef): [number, number] => {
+    const out = b.standBehind ? 0.95 : -0.72;
+    return [b.x + Math.sin(b.rotY) * out, b.z + Math.cos(b.rotY) * out];
+  };
+  const nearestBenchFrom = (x: number, z: number): BenchDef => {
+    let best = BENCHES[0]!;
+    let bestD = Infinity;
+    for (const b of BENCHES) {
+      const d = Math.hypot(b.x - x, b.z - z);
+      if (d < bestD) {
+        bestD = d;
+        best = b;
+      }
+    }
+    return best;
+  };
+  /** The nearest free seat slot to her, with its distance. */
+  const nearestFreeSlot = (x: number, z: number): { bench: BenchDef; slot: number; x: number; z: number; dist: number } | null => {
+    let best: { bench: BenchDef; slot: number; x: number; z: number; dist: number } | null = null;
+    for (const bench of BENCHES) {
+      for (const slot of [-1, 1]) {
+        if (seatPlayer && seatPlayer.bench.id === bench.id && seatPlayer.slot === slot) continue;
+        const p = benchSlotPos(bench, slot);
+        const dist = Math.hypot(x - p.x, z - p.z);
+        if (!best || dist < best.dist) best = { bench, slot, x: p.x, z: p.z, dist };
+      }
+    }
+    return best;
+  };
+  const VISIT_SPOTS: Record<Exclude<VisitAnchorName, "gaius" | "bench">, [number, number]> = {
+    tree: [3.6, 4.2],
+    forum: [PLAYER.spawn[0], PLAYER.spawn[1] - 28],
+    lakeshore: [-9.7, -29.9],
+    stories: [-12.6, -12.4],
+    terrace: [3.6, -27],
+    market: [6.2, 35.2],
+    boat: [LAKE.bank[0], LAKE.bank[1]],
+    bath: [24, 26.6],
+    gate: [VILLA.gate[0], VILLA.gate[1] - 1.5],
+    sounds: [-14, 2.2],
+    piscina: [-11.5, 25.6],
+  };
+  const visitSpotFor = (anchor: VisitAnchorName): [number, number] | null => {
+    if (anchor === "gaius") return walking ? [walkPos.x, walkPos.z] : null;
+    if (anchor === "bench") return benchFront(nearestBenchFrom(museGroup.position.x, museGroup.position.z));
+    return VISIT_SPOTS[anchor];
+  };
+  /** The slate's coarse zone for a point: the nearest named spot
+   *  within a few paces, else roaming. */
+  const visitZoneAt = (x: number, z: number): string => {
+    let best = "roaming";
+    let bestD = 5;
+    for (const [name, [sx, sz]] of Object.entries(VISIT_SPOTS)) {
+      const d = Math.hypot(x - sx, z - sz);
+      if (d < bestD) {
+        bestD = d;
+        best = name;
+      }
+    }
+    for (const b of BENCHES) {
+      const d = Math.hypot(x - b.x, z - b.z);
+      if (d < Math.min(bestD, 2.2)) {
+        bestD = d;
+        best = "bench";
+      }
+    }
+    return best;
+  };
   /** The next stop on her way to a goal, along the villa's walks. */
   let museRoute: { goal: string; stops: [number, number][] } = { goal: "", stops: [] };
   function nextRouteStop(goalX: number, goalZ: number): { x: number; z: number } {
@@ -7287,6 +7396,13 @@ export function createTownScene(
     // seconds of pad silence folds her back mid-stride: nothing below
     // is reset beyond the follow settle, so her follow or routine
     // simply resumes from wherever the driver left her.
+    // A director's pad verb decays to rest on its own when its hold
+    // runs out: the stick drops to neutral, the driver bleeds pace,
+    // and the ordinary fold-back follows a breath later.
+    if (pad2Source === "director" && t > pad2DirectorUntil && (pad2X !== 0 || pad2Y !== 0)) {
+      pad2X = 0;
+      pad2Y = 0;
+    }
     const padLive = pad2Live(pad2LastInputAt, t);
     const harnessLive = driverFollow !== "off" && walking && !padLive;
     if ((padLive || harnessLive) && !museSeatTarget) {
@@ -7390,7 +7506,54 @@ export function createTownScene(
     }
     pad2Driving = false;
     let routineTarget: { x: number; z: number } | null = null;
-    if (guide) {
+    // --- Muse Visits (Task 4) -----------------------------------------
+    // A visit errand outranks her routine, her companion follow and a
+    // guide; a pad verb (above) outranks the errand. She walks on her
+    // ordinary steering, street-pulled and collision-aware, and lands
+    // a natural distance short of a person, on the mark for a seat.
+    if (visitActive && visitGoto) {
+      // "To Gaius" follows him as he moves, re-routing only when he
+      // has shifted a stride, so the walk planner is not asked each frame.
+      if (visitGoto.toGaius && walking && Math.hypot(walkPos.x - visitGoto.x, walkPos.z - visitGoto.z) > 1.5) {
+        visitGoto.x = walkPos.x;
+        visitGoto.z = walkPos.z;
+      }
+      const here = museGroup.position;
+      const dGoal = Math.hypot(here.x - visitGoto.x, here.z - visitGoto.z);
+      const stopDist = visitGoto.seat ? 0.2 : visitGoto.toGaius ? 1.7 : 0.6;
+      if (dGoal <= stopDist || t > visitGoto.until) {
+        const done = visitGoto;
+        visitGoto = null;
+        if (done.seat && dGoal <= 0.6) {
+          seatMuse = { bench: done.seat.bench, slot: done.seat.slot };
+          museGroup.position.set(done.x, groundHeightAt(done.x, done.z), done.z);
+          museGroup.rotation.y = done.seat.bench.rotY + Math.PI;
+          visitHold = null;
+        } else {
+          visitHold = { x: here.x, z: here.z, withGaius: done.toGaius };
+        }
+        museIsMoving = false;
+        return;
+      }
+      routineTarget = { x: visitGoto.x, z: visitGoto.z };
+    } else if (visitActive && visitHold) {
+      // Idle where she was left, in character: facing him when he is
+      // near, and following him back to conversational distance when
+      // "to Gaius" is her standing direction and he walks off.
+      const here = museGroup.position;
+      const dHim = Math.hypot(walkPos.x - here.x, walkPos.z - here.z);
+      if (visitHold.withGaius && walking && dHim > 4.5) {
+        visitGoto = { x: walkPos.x, z: walkPos.z, toGaius: true, seat: null, until: t + 60 };
+      } else {
+        museIsMoving = false;
+        here.y = groundHeightAt(here.x, here.z);
+        if (walking && dHim < 4.5) {
+          museGroup.rotation.y = angleLerp(museGroup.rotation.y, Math.atan2(walkPos.x - here.x, walkPos.z - here.z), 0.06);
+        }
+        return;
+      }
+    }
+    if (guide && !routineTarget) {
       const here = museGroup.position;
       const fromHim = Math.hypot(walkPos.x - here.x, walkPos.z - here.z);
       const hisWay = Math.hypot(walkPos.x - guide.x, walkPos.z - guide.z);
@@ -7532,7 +7695,7 @@ export function createTownScene(
     }
     let targetX: number;
     let targetZ: number;
-    if (followMode) {
+    if (followMode && !visitGoto) {
       if (!walking) {
         museIsMoving = false;
         playerStillTime = 0;
@@ -11793,6 +11956,54 @@ export function createTownScene(
   resources.adopt(scene);
   frame();
 
+  /** Player 2 and the visit pad verb share one button path. */
+  const pad2PressFrom = (button: "a" | "b" | "x", source: Pad2Source) => {
+    const now = clock.getElapsedTime();
+    if (source === "director" && pad2Source !== "director" && pad2Live(pad2LastInputAt, now)) return;
+    pad2LastInputAt = now;
+    pad2Source = source;
+    // Moments that own her body are hers to finish, not pad2's.
+    if (secretMoment || museHidden || boatState?.museAboard || danceState || pairState || skyWatchState || bathState?.museIn || dreamMode || museSeatTarget) return;
+    if (button === "a") {
+      if (!seatMuse && !sliding(pad2Run)) pad2Hop.queuedAt = now;
+      return;
+    }
+    if (button === "b") {
+      if (seatMuse) {
+        standMuseUp();
+        return;
+      }
+      if (!pad2Driving || airborne(pad2Hop)) return;
+      startSlide(pad2Run, pad2Drive.vx, pad2Drive.vz, now);
+      return;
+    }
+    // X: seated stands her; a seat within reach sits her; otherwise she waves.
+    if (seatMuse) {
+      standMuseUp();
+      return;
+    }
+    const cur = museGroup.position;
+    let best: { bench: BenchDef; slot: number; x: number; z: number; dist: number } | null = null;
+    for (const bench of BENCHES) {
+      for (const slot of [-1, 1]) {
+        if (seatPlayer && seatPlayer.bench.id === bench.id && seatPlayer.slot === slot) continue;
+        const p = benchSlotPos(bench, slot);
+        const dist = Math.hypot(cur.x - p.x, cur.z - p.z);
+        if (!best || dist < best.dist) best = { bench, slot, x: p.x, z: p.z, dist };
+      }
+    }
+    if (best && best.dist < 1.7) {
+      seatMuse = { bench: best.bench, slot: best.slot };
+      museGroup.position.set(best.x, groundHeightAt(best.x, best.z), best.z);
+      museGroup.rotation.y = best.bench.rotY + Math.PI;
+      pad2Hop.y = 0;
+      pad2Hop.vy = 0;
+      return;
+    }
+    museWaveStart = now;
+    if (opts.reducedMotion && museRig) poseWaveStill(museRig);
+  };
+
   return {
     flyTo,
     performanceSnapshot: () => runtime.snapshot(),
@@ -12200,6 +12411,8 @@ export function createTownScene(
       padY = THREE.MathUtils.clamp(y, -1, 1);
     },
     setPad2Move: (x: number, y: number, source) => {
+      // A fresh human input outranks a director's channel while it lasts.
+      if (source === "director" && pad2Source !== "director" && pad2Live(pad2LastInputAt, clock.getElapsedTime())) return;
       pad2X = THREE.MathUtils.clamp(x, -1, 1);
       pad2Y = THREE.MathUtils.clamp(y, -1, 1);
       if (Math.hypot(pad2X, pad2Y) > 0.12) {
@@ -12207,51 +12420,7 @@ export function createTownScene(
         pad2Source = source;
       }
     },
-    pad2Press: (button, source) => {
-      const now = clock.getElapsedTime();
-      pad2LastInputAt = now;
-      pad2Source = source;
-      // Moments that own her body are hers to finish, not pad2's.
-      if (secretMoment || museHidden || boatState?.museAboard || danceState || pairState || skyWatchState || bathState?.museIn || dreamMode || museSeatTarget) return;
-      if (button === "a") {
-        if (!seatMuse && !sliding(pad2Run)) pad2Hop.queuedAt = now;
-        return;
-      }
-      if (button === "b") {
-        if (seatMuse) {
-          standMuseUp();
-          return;
-        }
-        if (!pad2Driving || airborne(pad2Hop)) return;
-        startSlide(pad2Run, pad2Drive.vx, pad2Drive.vz, now);
-        return;
-      }
-      // X: seated stands her; a seat within reach sits her; otherwise she waves.
-      if (seatMuse) {
-        standMuseUp();
-        return;
-      }
-      const cur = museGroup.position;
-      let best: { bench: BenchDef; slot: number; x: number; z: number; dist: number } | null = null;
-      for (const bench of BENCHES) {
-        for (const slot of [-1, 1]) {
-          if (seatPlayer && seatPlayer.bench.id === bench.id && seatPlayer.slot === slot) continue;
-          const p = benchSlotPos(bench, slot);
-          const dist = Math.hypot(cur.x - p.x, cur.z - p.z);
-          if (!best || dist < best.dist) best = { bench, slot, x: p.x, z: p.z, dist };
-        }
-      }
-      if (best && best.dist < 1.7) {
-        seatMuse = { bench: best.bench, slot: best.slot };
-        museGroup.position.set(best.x, groundHeightAt(best.x, best.z), best.z);
-        museGroup.rotation.y = best.bench.rotY + Math.PI;
-        pad2Hop.y = 0;
-        pad2Hop.vy = 0;
-        return;
-      }
-      museWaveStart = now;
-      if (opts.reducedMotion && museRig) poseWaveStill(museRig);
-    },
+    pad2Press: (button, source) => pad2PressFrom(button, source),
     setDriverFollow: (mode) => {
       driverFollow = mode;
     },
@@ -12259,6 +12428,145 @@ export function createTownScene(
       if (pad2Live(pad2LastInputAt, clock.getElapsedTime())) return pad2Source;
       if (driverFollow !== "off" && walking) return "harness";
       return "self";
+    },
+    setVisitActive: (on) => {
+      if (visitActive === on) return;
+      visitActive = on;
+      const mat = museStar.material as THREE.MeshStandardMaterial;
+      mat.color.setHex(on ? VISIT_STAR_COLOR : 0xffd34e);
+      mat.emissive.setHex(on ? VISIT_STAR_EMISSIVE : 0xa87800);
+      if (!on) {
+        // Folding back mid-stride: the errand and the hold are
+        // dropped, her own mind resumes from where she stands.
+        visitGoto = null;
+        visitHold = null;
+        museRoute = { goal: "", stops: [] };
+        if (pad2Source === "director") {
+          pad2X = 0;
+          pad2Y = 0;
+          pad2LastInputAt = -Infinity;
+        }
+      }
+    },
+    visitDirect: (direction) => {
+      if (!visitActive) return false;
+      const now = clock.getElapsedTime();
+      // Moments that own her body are hers to finish, not a director's.
+      if (secretMoment || museHidden || boatState?.museAboard || danceState || pairState || skyWatchState || bathState?.museIn || dreamMode) return false;
+      const cur = museGroup.position;
+      switch (direction.kind) {
+        case "goto": {
+          let spot: [number, number] | null;
+          if ("anchor" in direction) spot = visitSpotFor(direction.anchor);
+          else spot = withinTownRim(direction.x, direction.z) || forestNorm(direction.x, direction.z) <= 0.985 ? [direction.x, direction.z] : null;
+          if (!spot) return false;
+          if (seatMuse) standMuseUp();
+          museSeatTarget = null;
+          visitHold = null;
+          museRoute = { goal: "", stops: [] };
+          const toGaius = "anchor" in direction && direction.anchor === "gaius";
+          visitGoto = { x: spot[0], z: spot[1], toGaius, seat: null, until: now + 120 };
+          return true;
+        }
+        case "sit":
+        case "seat": {
+          if (seatMuse) return true;
+          const slot = nearestFreeSlot(cur.x, cur.z);
+          if (!slot) return false;
+          visitHold = null;
+          museRoute = { goal: "", stops: [] };
+          if (slot.dist < 1.7) {
+            seatMuse = { bench: slot.bench, slot: slot.slot };
+            museGroup.position.set(slot.x, groundHeightAt(slot.x, slot.z), slot.z);
+            museGroup.rotation.y = slot.bench.rotY + Math.PI;
+            visitGoto = null;
+            return true;
+          }
+          visitGoto = { x: slot.x, z: slot.z, toGaius: false, seat: { bench: slot.bench, slot: slot.slot }, until: now + 120 };
+          return true;
+        }
+        case "stand":
+        case "stepout": {
+          if (!seatMuse) return direction.kind === "stand";
+          standMuseUp();
+          visitHold = { x: museGroup.position.x, z: museGroup.position.z, withGaius: false };
+          return true;
+        }
+        case "emote": {
+          // Her animator carries a wave; bow and dance have no solo
+          // clips on this line, so each is performed as her wave.
+          museWaveStart = now;
+          if (opts.reducedMotion && museRig) poseWaveStill(museRig);
+          return true;
+        }
+        case "pad": {
+          if (pad2Source !== "director" && pad2Live(pad2LastInputAt, now)) return false;
+          pad2DirectorUntil = now + Math.min(PAD_VERB_MAX_MS, direction.ms) / 1000;
+          visitGoto = null;
+          visitHold = null;
+          pad2X = THREE.MathUtils.clamp(direction.dx, -1, 1);
+          pad2Y = THREE.MathUtils.clamp(direction.dz, -1, 1);
+          pad2LastInputAt = now;
+          pad2Source = "director";
+          for (const b of direction.buttons) pad2PressFrom(b, "director");
+          return true;
+        }
+        default:
+          return false;
+      }
+    },
+    visitTelemetry: () => {
+      const mx = museGroup.position.x;
+      const mz = museGroup.position.z;
+      const dx = walkPos.x - mx;
+      const dz = walkPos.z - mz;
+      const now = clock.getElapsedTime();
+      const padLive = pad2Live(pad2LastInputAt, now);
+      return {
+        museZone: visitZoneAt(mx, mz),
+        gaiusZone: walking ? visitZoneAt(walkPos.x, walkPos.z) : "away",
+        museSeated: !!seatMuse,
+        gaiusSeated: !!seatPlayer,
+        gaiusWalking: walking,
+        dayPhase: nightMix > 0.6 ? "night" : skyElevDeg < 8.5 ? (skyAzimDeg < 180 ? "dawn" : "dusk") : "day",
+        museX: Math.round(mx * 10) / 10,
+        museZ: Math.round(mz * 10) / 10,
+        gaiusX: Math.round(walkPos.x * 10) / 10,
+        gaiusZ: Math.round(walkPos.z * 10) / 10,
+        museHeading: Math.round(museGroup.rotation.y * 100) / 100,
+        gaiusHeading: Math.round(walkHeading * 100) / 100,
+        bearingToGaius: Math.round(Math.atan2(dx, dz) * 100) / 100,
+        distanceToGaius: Math.round(Math.hypot(dx, dz) * 10) / 10,
+        pad2Source: padLive ? (pad2Source === "director" ? "director" : "human") : "none",
+      };
+    },
+    captureVisitFrame: (maxEdge, quality) => {
+      try {
+        renderer.render(scene, camera);
+        const srcCanvas = renderer.domElement;
+        const dims = frameDimensions(srcCanvas.width, srcCanvas.height, maxEdge);
+        const out = document.createElement("canvas");
+        out.width = dims.width;
+        out.height = dims.height;
+        const c2 = out.getContext("2d");
+        if (!c2) return null;
+        c2.drawImage(srcCanvas, 0, 0, out.width, out.height);
+        return { dataUrl: out.toDataURL("image/jpeg", quality), width: out.width, height: out.height };
+      } catch {
+        return null;
+      }
+    },
+    showBubbleGrowing: (text) => {
+      const b = museBubble;
+      const now = clockTime;
+      b.pages = paginateBubbleText(b.ctx, text);
+      b.pageIdx = Math.max(0, b.pages.length - 1);
+      b.showAt = Math.min(b.showAt < 0 ? now : b.showAt, now);
+      b.pageEndAt = now + bubblePageDuration(b.pages[b.pageIdx] ?? "") + 2;
+      b.hideAt = b.pageEndAt;
+      b.tailFrac = b.sprite.visible ? b.tailFrac : 0.5;
+      drawBubblePage(b);
+      b.sprite.visible = true;
     },
     isWalking: () => walking,
     capturePostcard: () => {

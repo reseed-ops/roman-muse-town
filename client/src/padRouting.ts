@@ -88,8 +88,12 @@ export function keyboardButton(key: string): Exclude<PadButton, "y"> | null {
  *  PAD2_IDLE_SEC; a breath later her own mind resumes mid-stride. */
 export const pad2Live = (lastInputAt: number, now: number): boolean => now - lastInputAt < PAD2_IDLE_SEC;
 
+/** Who holds pad2: a physical pad, the keyboard stand-in, or (Task 4)
+ *  a visiting director's pad verb, a held vector that decays on its own. */
+export type Pad2Source = "pad" | "keyboard" | "director";
+
 /** Who moves her right now, as the scene reports it. */
-export type AeliaDriver = "pad" | "keyboard" | "harness" | "self";
+export type AeliaDriver = Pad2Source | "harness" | "self";
 
 export type Pad2StatusInput = {
   padConnected: boolean;
@@ -107,6 +111,8 @@ export function pad2StatusLine(input: Pad2StatusInput): string {
       ? "Aelia: driven by the second controller."
       : input.driver === "keyboard"
         ? "Aelia: driven by the keyboard."
+        : input.driver === "director"
+          ? "Aelia: driven by Muse's channel."
         : input.driver === "harness"
           ? `Aelia: follow driver, ${input.harness === "behind" ? "behind" : "beside"} Gaius.`
           : input.following

@@ -188,6 +188,31 @@ import {
 } from "./padRouting";
 import summitSongUrl from "./assets/stars-fall-song.mp3";
 import {
+  absorbDirections,
+  acceptFrame,
+  beginVisit,
+  captureMail,
+  emptySlate,
+  endVisit,
+  markFramesSent,
+  nextDirection,
+  recordEvent,
+  requestLook,
+  setComposing,
+  setIntention,
+  setTelemetry,
+  stateView,
+  telemetryEvents,
+  threadWithSpeak,
+  unsentFrames,
+  visitLapsed,
+  type VisitSlate,
+  type VisitThreadEntry,
+} from "./visitSlate";
+import { frameDue, validateFrameDataUrl } from "./visitFrames";
+import { HARNESS_STORAGE_KEY, IDLE_GLANCE_MS, resolveHarnessUrl, syncWithHarness } from "./visitHarnessClient";
+import { FRAME_JPEG_QUALITY, FRAME_MAX_EDGE, SIGHT_LINE, VISITING_MARKER, VISIT_POLL_MS, type QueuedDirection } from "../../shared/visitProtocol";
+import {
 playChime,
 playJar,
 playSparkleChime,
@@ -369,6 +394,35 @@ export function App() {
   const [driverFollow, setDriverFollow] = useState<FollowOffset | "off">("off");
   const driverFollowRef = useRef<FollowOffset | "off">("off");
   driverFollowRef.current = driverFollow;
+  // Muse Visits (Task 4, Nov 2026): the runtime-only visit slate and
+  // its panel mirror. The slate lives in a ref (the beat and the panel
+  // send both write it); the mirror is what the panel and menu read.
+  // Nothing here is ever persisted into the save.
+  const visitRef = useRef<VisitSlate>(emptySlate());
+  const visitThreadRef = useRef<VisitThreadEntry[]>([]);
+  const [visitUi, setVisitUi] = useState<{
+    active: boolean;
+    intention: string | null;
+    composing: boolean;
+    thread: VisitThreadEntry[];
+    director: "none" | "live" | "unreachable";
+  }>({ active: false, intention: null, composing: false, thread: [], director: "none" });
+  // The director seam's harness: ?harness= or localStorage
+  // "muse-town-visit-harness" names it; without either the town never
+  // calls anywhere, and a visit opened from the menu runs undirected.
+  const harnessRef = useRef<{ url: string; configured: boolean } | null>(null);
+  if (!harnessRef.current) {
+    let stored: string | null = null;
+    try {
+      stored = localStorage.getItem(HARNESS_STORAGE_KEY);
+    } catch {
+      /* storage unavailable */
+    }
+    const search = typeof window !== "undefined" ? window.location.search : "";
+    const explicit = !!(stored && stored.trim()) || /[?&]harness=/.test(search);
+    harnessRef.current = { url: resolveHarnessUrl(search, () => stored), configured: explicit };
+  }
+  const visitLastFrameAtRef = useRef<number | null>(null);
   const [utilitiesOpen, setUtilitiesOpen] = useState(false);
   // The scene's one-line motion verdict, shown quietly at the foot
   // of the town menu once both animators have settled, so a stiff
@@ -3609,6 +3663,17 @@ export function App() {
     if (!msg) return;
     setChatDraft("");
     sceneRef.current?.showBubble("player", msg);
+    // Muse Visits (Task 4): while a visit is open his line is laid on
+    // the slate as visit mail, carried to the director, and NOTHING
+    // below fires: no scripted reply, no local chat, no notebook, no
+    // fact capture. The town remembers nothing of the out-here talk.
+    if (visitRef.current.active) {
+      const captured = captureMail(visitRef.current, msg, Date.now());
+      visitRef.current = captured.slate;
+      visitThreadRef.current = [...visitThreadRef.current, { who: "him", text: msg, seq: captured.mail.seq }];
+      setVisitUi((ui) => ({ ...ui, thread: visitThreadRef.current }));
+      return;
+    }
     // Notes for Muse: a typed request/wish for the town ("can we
     // add…", "I wish…", "please change…", "note this") is saved to
     // her notebook for the real Muse, and her reply acknowledges
@@ -4926,6 +4991,142 @@ export function App() {
     sceneRef.current?.setDriverFollow(next);
   };
 
+  // --- Muse Visits (Task 4): lifecycle, the beat, and enactment ------
+  const publishVisit = useCallback((director?: "none" | "live" | "unreachable") => {
+    const s = visitRef.current;
+    setVisitUi((ui) => {
+      const next = {
+        active: s.active,
+        intention: s.intention,
+        composing: s.composing,
+        thread: visitThreadRef.current,
+        director: director ?? (s.active ? ui.director : "none"),
+      };
+      // A quiet beat changes nothing: no re-render of the shell.
+      return next.active === ui.active && next.intention === ui.intention && next.composing === ui.composing && next.thread === ui.thread && next.director === ui.director ? ui : next;
+    });
+  }, []);
+  const beginVisitNow = useCallback(() => {
+    if (visitRef.current.active) return;
+    visitRef.current = beginVisit(visitRef.current, Date.now());
+    visitThreadRef.current = [];
+    visitLastFrameAtRef.current = null;
+    sceneRef.current?.setVisitActive(true);
+    publishVisit("none");
+  }, [publishVisit]);
+  const endVisitNow = useCallback(() => {
+    if (!visitRef.current.active) return;
+    // The slate dies whole: inbox, frames, intention, queue, events.
+    visitRef.current = endVisit(visitRef.current);
+    visitThreadRef.current = [];
+    visitLastFrameAtRef.current = null;
+    sceneRef.current?.setVisitActive(false);
+    publishVisit("none");
+  }, [publishVisit]);
+  const visitRefs = useRef({ beginVisitNow, endVisitNow });
+  visitRefs.current = { beginVisitNow, endVisitNow };
+  /** Enact one direction: speak, intend and look belong to the shell
+   *  (her bubble, the panel, the sight half); the body verbs go to
+   *  the scene. Returns the slate after the direction. */
+  const enactVisitDirection = (s: VisitSlate, q: QueuedDirection): VisitSlate => {
+    const scene = sceneRef.current;
+    const d = q.direction;
+    switch (d.kind) {
+      case "speak": {
+        const partial = d.partial === true;
+        if (partial) scene?.showBubbleGrowing(d.text);
+        else scene?.showBubble("muse", d.text);
+        visitThreadRef.current = threadWithSpeak(visitThreadRef.current, d.text, d.lineId, partial);
+        return s;
+      }
+      case "intend":
+        return setIntention(s, d.text);
+      case "look":
+        return requestLook(s);
+      default: {
+        const taken = scene?.visitDirect(d) ?? false;
+        return taken ? recordEvent(s, Date.now(), `enacted ${d.kind}`) : s;
+      }
+    }
+  };
+  const visitBeat = async () => {
+    const scene = sceneRef.current;
+    const harness = harnessRef.current;
+    const now = Date.now();
+    let s = visitRef.current;
+    if (s.active && visitLapsed(s, now)) {
+      visitRefs.current.endVisitNow();
+      return;
+    }
+    if (s.active && scene) {
+      const telemetry = scene.visitTelemetry();
+      for (const text of telemetryEvents(s.telemetry, telemetry)) s = recordEvent(s, now, text);
+      s = setTelemetry(s, telemetry);
+      const foreground = typeof document === "undefined" || document.visibilityState === "visible";
+      if (frameDue({ lastFrameAt: visitLastFrameAtRef.current, now, lookRequested: s.lookRequested, foreground })) {
+        const shot = scene.captureVisitFrame(FRAME_MAX_EDGE, FRAME_JPEG_QUALITY);
+        const check = shot ? validateFrameDataUrl(shot.dataUrl) : null;
+        if (shot && check?.ok) {
+          s = acceptFrame(s, { dataUrl: shot.dataUrl, width: shot.width, height: shot.height, bytes: check.bytes }, now);
+          visitLastFrameAtRef.current = now;
+        }
+      }
+      visitRef.current = s;
+    }
+    if (!harness?.configured) {
+      publishVisit(s.active ? "none" : undefined);
+      return;
+    }
+    const newFrames = unsentFrames(s);
+    const res = await syncWithHarness(harness.url, { state: stateView(s), inbox: s.inbox, newFrames, enactedThrough: s.enactedThrough });
+    s = visitRef.current;
+    if (!res) {
+      publishVisit(s.active ? "unreachable" : undefined);
+      return;
+    }
+    const director = res.directorSeenAt !== null && now - res.directorSeenAt < 15_000 ? "live" : "none";
+    if (!s.active) {
+      if (res.begin) visitRefs.current.beginVisitNow();
+      return;
+    }
+    s = markFramesSent(s, newFrames.map((f) => f.id));
+    s = setComposing(s, res.composing);
+    if (res.end) {
+      visitRef.current = s;
+      visitRefs.current.endVisitNow();
+      return;
+    }
+    s = absorbDirections(s, res.directions, now);
+    for (;;) {
+      const step = nextDirection(s);
+      s = step.slate;
+      if (!step.next) break;
+      s = enactVisitDirection(s, step.next);
+    }
+    visitRef.current = s;
+    publishVisit(director);
+  };
+  const visitBeatRef = useRef(visitBeat);
+  visitBeatRef.current = visitBeat;
+  useEffect(() => {
+    // The beat: every VISIT_POLL_MS while a visit is open; the idle
+    // glance (a director's begin request) only with a harness named.
+    const configured = harnessRef.current?.configured ?? false;
+    if (!visitUi.active && !configured) return;
+    const period = visitUi.active ? VISIT_POLL_MS : IDLE_GLANCE_MS;
+    let busy = false;
+    const tick = () => {
+      if (busy) return;
+      busy = true;
+      void visitBeatRef.current().finally(() => {
+        busy = false;
+      });
+    };
+    tick();
+    const timer = window.setInterval(tick, period);
+    return () => window.clearInterval(timer);
+  }, [visitUi.active]);
+
   const selectPlace = (place: Place) => {
     exitWalkMode();
     stopTour();
@@ -5467,6 +5668,22 @@ export function App() {
             active: driverFollow !== "off",
             action: cycleDriverFollow,
             aria: "Second controller status. Press to cycle the follow driver: off, beside Gaius, behind Gaius",
+          }, {
+            // Muse Visits (Task 4): open or end a visit. While one is
+            // open her star is violet, her quick voice is hushed for
+            // panel chat, and a director (through the seam) may move
+            // her and borrow her bubble.
+            key: "visit",
+            icon: "✦",
+            label: visitUi.active ? "End Muse's visit" : "Open a visit for Muse",
+            detail: visitUi.active
+              ? `${VISITING_MARKER}. ${visitUi.director === "live" ? "A director is reading the slate." : visitUi.director === "unreachable" ? "The harness is unreachable; nobody is directing." : "Nobody is directing yet."} Her quick voice is hushed for panel chat.`
+              : harnessRef.current?.configured
+                ? `Director seam at ${harnessRef.current.url}.`
+                : "No director seam named (?harness= or localStorage muse-town-visit-harness); a visit would run undirected.",
+            active: visitUi.active,
+            action: () => (visitUi.active ? endVisitNow() : beginVisitNow()),
+            aria: visitUi.active ? "End Muse's visit; Aelia returns to her own voice" : "Open a visit for Muse; a director may then move Aelia and speak through her",
           }, {
             // The follow control lives here (Nov 1): the
             // floating walk-screen chip and the speech-bubble
@@ -6203,8 +6420,9 @@ export function App() {
               className="absolute -bottom-[7px] left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 bg-[#fdfaf2]"
             />
             <div className="flex items-center justify-between gap-2">
-              <p className="flex items-center gap-1.5 text-[12px] font-black tracking-wide text-[#a87800] uppercase">
+              <p className={`flex items-center gap-1.5 text-[12px] font-black tracking-wide uppercase ${visitUi.active ? "text-[#6d28d9]" : "text-[#a87800]"}`}>
                 <span aria-hidden="true">✦</span> Aelia
+                {visitUi.active && <span className="font-bold normal-case tracking-normal">· {VISITING_MARKER}</span>}
               </p>
               <span className="flex items-center gap-1.5">
                 {voiceOk && (
@@ -6230,6 +6448,25 @@ export function App() {
                 </button>
               </span>
             </div>
+            {visitUi.active && (
+              <div className="mt-1.5 rounded-2xl bg-[#8b5cf6]/10 px-3 py-2 text-[12px] leading-relaxed" aria-live="polite">
+                {visitUi.intention && <p className="font-semibold text-[#6d28d9]">{visitUi.intention}</p>}
+                <p className="text-[#2b2118]/60">{SIGHT_LINE}</p>
+                {visitUi.composing && <p className="text-[#6d28d9]/80 italic">Muse is writing…</p>}
+                {visitUi.thread.length > 0 && (
+                  <ul className="mt-1.5 flex flex-col gap-1">
+                    {visitUi.thread.slice(-8).map((entry, i) => (
+                      <li key={`${entry.who}:${entry.seq ?? entry.lineId ?? i}`} className={entry.who === "him" ? "text-[#6d28d9]" : "text-[#2b2118]"}>
+                        <span className="font-bold">{entry.who === "him" ? "You" : "Aelia"}: </span>
+                        {entry.text}
+                        {entry.who === "him" && <span className="text-[#6d28d9]/70"> · carried to Muse</span>}
+                        {entry.partial && <span className="text-[#6d28d9]/70">…</span>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
             <button
               type="button"
               className="mt-1 block w-full text-left"
