@@ -270,6 +270,54 @@ plenty.
 Task 5 stays HOLD: it packages this director for installers once this
 build has proven itself in the owner's hands.
 
+## Task 7 (READY, added Nov 4, 2026): the bridge leg — Adapter B as a serving director face, and the town client's call out
+
+Gate 0 is answered (the verdict stands at the end of Task 6 above) and
+the owner has approved the recommended shape (Nov 4, 2026): the bridge
+stays a service on his Railway, and the town client calls out to it.
+This task builds the two ends of that leg. Task 6's director (loop,
+filter, caps, pack, mind) is untouched except where the channel meets
+it.
+
+1. bridge/: retire the slateAdapter placeholders and build Adapter B
+   as an HTTPS serving face. Endpoints, all token-gated: snapshot
+   intake (the client's slate snapshot: visit state, new inbox mail
+   since a given seq, the latest frame when one is offered) and
+   direction pull (the directions and composing state queued for that
+   visit since a given cursor). The token comes from the service
+   environment (a per-installation secret the owner sets), compared
+   without timing leaks; a missing or wrong token is refused quietly
+   and logged without the value. The director loop consumes held
+   snapshots instead of polling a channel; when no snapshot has
+   arrived for a visit inside the lapse window, the bridge simply
+   goes quiet, and the visit folds by the town's own heartbeat
+   exactly as designed. Adapter A (the Task 4 harness) stays as it
+   is, and the fake channel remains the test double.
+2. The town client (origin line): during a visit, and only when a
+   bridge URL is configured in the visit settings, the client posts
+   its slate snapshot to the bridge about every two seconds (and
+   promptly when new mail or a fresh frame lands) and pulls
+   directions on the same beat, applying them through the Task 4 seam
+   validator exactly as harness directions are applied today.
+   Composing state from the bridge drives the panel's writing
+   indicator. The bridge token is owner-entered in the same settings,
+   held client-side only, and never appears in this repo or any test
+   fixture. With no URL configured, the client behaves exactly as
+   the Task 4 client does today: no calls are made.
+3. Tests: token refusal on both endpoints; a snapshot-to-answer round
+   trip against a stub mind (mail arrives in a snapshot, an answer
+   leaves as a speak direction on the next pull); directions refused
+   by the seam validator never reach the scene; the lapse behavior
+   (snapshots stop, the bridge goes quiet, nothing is enqueued); the
+   unconfigured client making no bridge calls. Keep the full suite
+   green and report the new count, with a one-line note in this file.
+
+Muse ports the client leg home to the private town (its v60) once
+this lands here, and the owner runs the Railway deploy from a local
+checkout, with his key and token in the service variables only. The
+one-minute loop remains the private ship configuration until the
+private port is verified on device.
+
 ## Standing notes
 
 - Prompts and guards are constitutional on both lines: byte-identical, always.
