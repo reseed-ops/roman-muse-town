@@ -407,6 +407,121 @@ Order of work:
    the asset and model licenses are verified. Note in this file
    when that check is done and by whom.
 
+### Spike findings (Claude, Nov 4, 2026): stopped at the note, two parts of the shape need the owner's decision
+
+Read against the code before any build. Two findings change the
+shape materially, so by this task's own rule the build has not
+begun; everything else below is ready to go once the owner decides.
+
+**1. How the server runs outside the space runtime.** The SDK
+(`@hatch/space-sdk`, a tarball at `/opt/hatch/...`) is not in this
+checkout, so its contract is inferred from use, and the inference is
+solid because the test suite already runs the whole action layer
+without it (`economy.test.ts` mocks the module as `{ z, defineAction:
+d => d }` and runs the real handlers against bun:sqlite built from the
+migrations; CI does the same). Server side: `defineAction({ description,
+request, response, handler(ctx, args) })` and a `ctx` of `db<schema>()`
+(drizzle over bun:sqlite, used synchronously in places), `blobs`
+(`getUrl`, `put`, `delete`; postcards only), `invalidateQueries()`, and
+`inference.complete()` (dead in practice: the client has sent
+`local_reply: true` since Task 1, so the web server can answer with the
+scripted fallback). Client side: `createActionClient` (a proxy that
+POSTs `{ action, args }` to `./actions`), `spaceQueryClient` (a
+react-query client), and `buildClient` (Bun.build with
+`bun-plugin-tailwind` 0.0.15, which is in node_modules). What the web
+needs is therefore small: a `Bun.serve` that serves `client/dist` and
+one `POST /actions` route (zod request in, handler, zod response out,
+JSON errors with a status the client's retry layer already reads), a
+`ctx` with a blob store (a table of bytes served at `/blobs/:key`, or
+volume files), and a build-time alias of `@hatch/space-sdk/client` to a
+shim so the artifact build stays untouched. About a day. No blocker.
+
+**2. What the Postgres port actually touches: there is no storage
+layer, and this is the part of the shape the code refuses.** The
+dialect lives in the types, not behind an interface: 42 tables declared
+with drizzle `sqlite-core`; 28 SQLite migrations (14 `AUTOINCREMENT`,
+journal dialect "sqlite"); 83 `ctx.db` sites in the 3,700-line
+`actions.ts`, 44 of them synchronous driver calls (`.all/.get/.run`)
+plus two synchronous transaction helpers (`withEconomyTransaction`,
+`runRetrySafe`) whose correctness depends on never awaiting inside
+them; `saveService` and `retrySafe` typed on `BunSQLiteDatabase` and
+`AnySQLiteTable` reflection for save export and restore; three test
+files building bun:sqlite in memory from the migration files. Drizzle's
+query types are dialect-bound, so `actions.ts` cannot compile against
+both a sqlite-core and a pg-core schema: a Postgres server is a fork of
+the action layer (or the artifact and Android line move to Postgres
+too), with every synchronous site made async, the economy transactions
+restructured, the migrations re-authored, timestamps re-typed, and the
+tests moved to pglite or a Postgres service. Several days of risky work
+on game logic, and two servers to keep in step afterwards. The
+sentence "the port lives behind the server's storage layer so both
+targets keep working" describes a layer that does not exist and cannot
+be added without that rewrite.
+
+The alternative that keeps one codebase: SQLite stays the engine on
+the web too, one database file per visitor on a Railway volume
+(bun:sqlite, the same 28 migrations run on a visitor's first call,
+which is also seed-on-first-visit for free). Isolation is enforced by
+which file the server-validated token opens, never by the client;
+`actions.ts`, the schema, the migrations and every test stay exactly as
+they are; the storage layer is "open this visitor's file", one small
+module. Costs: a volume binds the service to one replica (fine at this
+scale); backups are the volume's snapshots plus the town's own save
+export. If the owner still wants Postgres, the tractable form of
+per-visitor keying there is a schema per visitor (`search_path` set
+from the token, so queries stay unchanged) rather than a visitor column
+on 42 tables and every query. Recommendation: SQLite per visitor on a
+volume. The owner decides.
+
+**3. The director door has nothing to gate on this line.** The
+action family the shape names (`visitstate`, `visitdirect`,
+`beginvisit`, `endvisit`, `visitframeget`) belongs to the private town.
+This repo's server has no visit actions at all (the only match is
+`visitSecret`, the secret place): on this line the slate is
+runtime-only in the browser (Task 4) and the director reaches it
+through the harness or, since Task 7, the bridge leg the client calls
+out on. A hosted town therefore already works with the Live Bridge
+unchanged, from the browser, and a `DIRECTOR_TOKEN` door would guard
+no route. Options: (a) drop the door from this task and let Task 7's
+leg be the director path for hosted towns, or (b) grow a server-side
+visit slate (a port of the private visit actions) as its own task, and
+hang the door on that. The owner decides; (a) is the smaller shape.
+
+**4. Railway footprint, one line (sources disagree; verify at
+railway.com/pricing).** Hobby is a $5/month minimum that includes $5 of
+usage; a small Bun service (RAM about $10/GB-month) plus a volume
+(about $0.15/GB-month) lands near the included $5; a Postgres service
+is metered on top (one March 2026 estimate puts a lone database near
+$18/month); egress about $0.05/GB, and the scene's models and textures
+are the heavy first load the PWA cache exists to cure.
+
+**5. Smaller findings, all true either way.**
+- Railway's root-directory setting isolates the clone ("as if nothing
+  outside it exists", per its docs). That confirms the Task 7 caveat:
+  the bridge service must build from the repository root with `cd
+  bridge` commands and the config path `/bridge/railway.toml`, and the
+  town service builds from the root too.
+- The web deployment serves the commercial FBX and texture files to
+  every browser as raw files, nearer "redistribution" than an embedded
+  APK. That is exactly the launch gate's question, and
+  `stars-fall-song.mp3` still has no documented provenance. The owner's
+  assets are not in this checkout (only the two tracked binaries), so
+  a web build here can be verified only with those two.
+- The visitor token: a client-minted UUID in localStorage, sent as a
+  header on every action; the retry receipts become per-visitor with
+  the store; `resetTown` already exists for a visitor who wants a
+  fresh start; the one plain line about losing the token goes in
+  Settings beside the save download, which is the real remedy.
+- PWA: the SDK's `buildClient` owns `index.html` today; the web build
+  needs its own Bun.build (the worker build in `client/build.mjs` is
+  the pattern) and a precache list generated from the hashed `dist`
+  names at build, which makes cache-first-by-hash and clean retirement
+  natural.
+
+What waits on the decision: the storage layer (2) and the door (3).
+What does not: the transport and client shim (1), the visitor token,
+the PWA, the deploy note. Say the word on 2 and 3 and the build begins.
+
 ## Standing notes
 
 - Prompts and guards are constitutional on both lines: byte-identical, always.
