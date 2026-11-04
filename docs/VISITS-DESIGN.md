@@ -298,6 +298,21 @@ Design:
   client makes, or, if neither holds, by a sanctioned director endpoint
   the town grows for this purpose, security-reviewed with him. No
   channel, no bridge; the design does not pretend otherwise.
+  Verdict (Nov 4, 2026): Gate 0 has been run on the private side.
+  Channels (a) and (b) do not hold: there is no HTTP action surface a
+  non-agent process can call (an interactive artifact lives inside the
+  owner's Muse environment, cannot be published, and exposes no
+  listening endpoint), and the client's own calls are authorized only
+  by the owner's full account session, which is not a town-scoped
+  credential and will not be exported to a service. The channel is
+  (c) with the direction flipped: during a visit the town client calls
+  out to the bridge over HTTPS, posting the slate snapshot (state, new
+  mail, frames on look or cadence) and pulling back directions and
+  composing state, gated by a per-installation token set by the owner
+  on both ends and never committed. The bridge never calls into the
+  town's platform. Adapter B is a serving face, not a calling one;
+  the proven transport and exact shapes are recorded in
+  CLAUDE-TASKS.md, Task 6 (Muse, Nov 4, 2026).
 - The town-side build is small (private v60): a director context pack
   stored server-side and tended by chat Muse (refreshed at the morning
   sync: who he is, the voice rules, the constitution, the current life

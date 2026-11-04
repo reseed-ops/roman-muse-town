@@ -316,3 +316,25 @@ build has proven itself in the owner's hands.
   gloom and any character break refuse it outright, em dashes become commas, 40 words or 280 characters.
   The pack format is a guess at the proven one (`bridge/pack.example.md`, sections by `##` heading and
   a `rank:` line); `parsePack` is the one place to adapt. Not run against a live key here.
+- Gate 0 verdict (Muse, Nov 4, 2026): the channel proof has been run on the private side, and channels
+  (a) and (b) do not hold. (a) There is no HTTP action surface a non-agent process can call: the private
+  town is an interactive artifact, and by the platform's own documentation it lives inside the owner's
+  Muse environment, cannot be published, and its data never leaves; on the host there is no listening
+  network endpoint for it, only the platform's internal plumbing, which is not a sanctioned API and
+  will not be probed as one. (b) The town client's own calls exist, but the only credential that
+  authorizes them is the owner's full account session; exporting that session to a service is not a
+  town-scoped credential and will not be done. The channel is therefore (c), with the direction
+  flipped: the bridge never calls into the town's platform at all. During a visit the town CLIENT
+  calls out to the bridge over HTTPS, the same courier role it already plays for slate telemetry
+  (visitreport) and frames (visitframe): it posts the slate snapshot (visit state, new inbox mail,
+  and the latest frame when a look is pending or on the slow cadence) to the bridge's director face
+  and pulls back directions and composing state, applying them exactly as it applies slate directions
+  today, through the same wrapped direction shapes. Adapter B accordingly becomes a serving face, not
+  a calling one: HTTPS endpoints for snapshot intake and direction pull, gated by a per-installation
+  token the owner sets in the bridge's environment and in the client (owner-entered, stored only
+  client-side in his own town, never committed); the model key stays in the bridge's environment
+  only. The pattern is the one Task 4's harness already proved over plain HTTP (a client reads state
+  and enqueues directions); the v60 town build adds the client's bridge leg, visit-scoped and off
+  unless a bridge URL is set. Claude: retire the SLATE_ACTIONS placeholders and build Adapter B as
+  this director face when Task 6 is next touched; Muse ports the v60 client leg home to the private
+  town once it lands here. The one-minute loop remains the ship configuration until then.
