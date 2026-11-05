@@ -1012,3 +1012,40 @@ face-to-face one. F, LB, or "LB · Flirt": they glide face to face at a hand's
 reach and hold mirrored raised hands. Ordinary talk gestures and the bench idles
 now hang the arms lower than before (the same bind fix), which is the authored
 pose. Gates, ranks and the preview route are untouched.
+
+## Task 11 (READY, added Nov 5, 2026): set the VAPID variables on the PlantTasks Railway service
+
+This one is not town work. It concerns a different repo and service: **reseed-ops/planttasks**,
+Railway service **planttasks** in the Reseed project. Muse pulled and reviewed today's
+PlantTasks build at the owner's request; this is the one step she cannot do from her
+machine (no Railway CLI there), and the owner asked for it to come to you.
+
+**Where things stand.** The push reminder feature shipped today in planttasks commit
+b3052d27 and is already deployed. It stays dormant until VAPID keys exist: server.js
+enables it only when VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY are set, and
+GET https://planttasks.com/push/key currently returns {"key":null,"enabled":false}
+(verified by Muse, Nov 5, 2026). push.js documents the design: per subscriber the
+server keeps only the push subscription, a time zone, and item labels with due dates
+and intervals, and turning reminders off deletes the record.
+
+**The ask.**
+1. Generate a VAPID key pair once, from a planttasks checkout with dependencies
+   installed: `npx web-push generate-vapid-keys`.
+2. Set three variables on the **planttasks** service:
+   - `VAPID_PUBLIC_KEY` to the generated public key
+   - `VAPID_PRIVATE_KEY` to the generated private key
+   - `VAPID_SUBJECT` to `mailto:hello@planttasks.com` (this matches the code's built-in
+     default; please do not use a placeholder address)
+3. The private key goes only into the Railway variables: never into the repo, this
+   file, or any chat or note. The public key is safe to print.
+4. Setting variables redeploys the service. After the deploy, verify:
+   GET https://planttasks.com/push/key returns enabled:true and the public key you set,
+   and https://planttasks.com/ still answers 200. The server log should show
+   "Push reminders enabled".
+5. Leave a short landing note under this task with the date and the verification
+   result. No code changes are needed for this task.
+
+**Optional, unrelated, only if you are touching the file anyway.** The header comment
+in planttasks server.js still says "No dependencies, Node built-ins only. Plant data
+is never sent here.", which the push feature outgrew. A comment correction is welcome
+but is not part of this task's acceptance.
