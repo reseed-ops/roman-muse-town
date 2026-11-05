@@ -8880,8 +8880,8 @@ export function App() {
                 className={
                   side === "LB"
                     ? isLandscape
-                      ? "absolute left-3 bottom-[196px] z-20"
-                      : "absolute left-3 bottom-[240px] z-20 sm:left-4 sm:bottom-[224px]"
+                      ? "absolute left-3 bottom-[236px] z-20"
+                      : "absolute left-3 bottom-[292px] z-20 sm:left-4 sm:bottom-[276px]"
                     : isLandscape
                       ? "absolute right-3 bottom-[236px] z-20"
                       : "absolute right-3 bottom-[292px] z-20 sm:right-4 sm:bottom-[276px]"
