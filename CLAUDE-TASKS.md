@@ -749,8 +749,9 @@ Notes for the port and the owner:
   into nine packs (`web/assetPack.ts`, `client/src/assetPack.ts`), the bundle carries
   `pack:` strings instead of URLs, the client fetches a pack once and slices from it,
   and an asset path on the hosted town answers 404 (server test). 114 assets, 86.5 MB,
-  byte-identical inside the packs; the dist went from 122 files to 19. Deploy: see the
-  landing note.
+  byte-identical inside the packs; the dist went from 122 files to 19. Deployed the same
+  night on the owner's word (build cf8005b2685a, bundle main-n6pj6x7h.js); asset paths
+  verified 404 live, manifest and packs served.
 
 ## Task 9 (READY, added Nov 5, 2026): hosted web town fixes: Aelia's missing textures, the conversation panel rectangle, and the unreachable hug and flirt pairs
 
@@ -1473,4 +1474,4 @@ fetch failed`, `expected N bytes`).
 `tsc` 295 errors, the SDK baseline, nothing new; `web/` files type clean; web build
 `3b5274c2c165`, 19 client files, bundle `main-4sc8jj6v.js`.
 
-**Deploy.** DEPLOY_PLACEHOLDER
+**Deploy.** DONE, Nov 5, 2026, night, on the owner's word in chat (two uploads failed mid-request on this device's network, the third went through): Railway build `cf8005b2685a`, 18 client files, bundle `main-n6pj6x7h.js`. Verified live from here: `/healthz` `{"ok":true}` on both domains, both serving that bundle; `/packs/manifest.json` 200 with 9 packs and 114 entries; a pack served immutable (the greek pack, 233,108 bytes); and four spellings of a licensed file's path (`/assets/f_hug-….fbx`, `/assets/centurion.vrm`, `/assets/anim/outdoor/f_hug.fbx`, `/client/src/assets/centurion.vrm`) all 404. The scene, the bodies, the clips, the song and the pair preview are Muse's live check, as the task sets out.
