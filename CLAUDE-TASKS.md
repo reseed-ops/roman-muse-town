@@ -647,6 +647,12 @@ Notes for the port and the owner:
   run before uploading, the link and up commands, the health checks, and the launch gate. Whoever
   runs it records the deploy here with the date. Muse's note of Nov 5 listed the same folders but
   left `m_dance.fbx` out of `anim/`; the manifest in `ASSETS.md` is the authority.
+- Assets rebuilt (Claude, Nov 5, 2026): the owner supplied the raw store packages on the device and
+  the folder was remade from them with Blender (the buildings verified against the scene's own recorded
+  proportions; the rest best-guess variants; the record is at the end of `ASSETS.md`). 102 of 121 files
+  stand in `client/src/assets/`. Still missing: the 18 `anim/outdoor/` clips, because the owner's
+  Outdoor package is the `.anim` edition, not the FBX edition, and `stars-fall-song.mp3`. The deploy
+  waits on those two.
 - Gate 0 verdict (Muse, Nov 4, 2026): the channel proof has been run on the private side, and channels
   (a) and (b) do not hold. (a) There is no HTTP action surface a non-agent process can call: the private
   town is an interactive artifact, and by the platform's own documentation it lives inside the owner's

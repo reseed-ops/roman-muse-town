@@ -149,3 +149,65 @@ only one whose licence was positively verified as allowing it.
 | --- | --- | --- |
 | `stars-fall-song.mp3` | `client/src/assets/` | The summit scene's song. **Origin not documented** in the original's notes; owner-supplied. Confirm provenance before any release build ships it. A receiving town can substitute any quiet song file of its own. |
 | `icon.webp` | space root | The app icon. Regenerate for a new artifact. |
+
+---
+
+## Rebuild record (Claude, Nov 5, 2026): the folder remade from the raw packs
+
+No converted copy of this folder existed outside the original artifact
+environment, so it was rebuilt on the owner's device from the store
+packages he supplied (`.unitypackage` files are gzip tarballs of
+`<guid>/asset` + `<guid>/pathname`; Blender 4.3 headless did the
+FBX→glTF step, no images embedded, transforms applied, Y up). What each
+town file was made from, so the next rebuild is a copy, not a hunt:
+
+- **Buildings**, verified: Blender's bounding-box depth/width ratios
+  matched the ratios `townScene.ts` recorded from the original GLBs to
+  three decimals. `villa_stories` = SM_villa_roman_01, `house_sounds` =
+  SM_house_roman_01, `house_garden` = SM_house_roman_02,
+  `insulae_recipes` = SM_insulae_building_02, `senate` = SM_senate,
+  `annex_sidechat` = SM_attachment_building_01, `temple` = SM_temple,
+  `pavilion_stars` = SM_pavillion, `colosseum` = SM_colosseum,
+  `booth_a/b/c` = the `_2x1` variants (the scene's measured 1.73 × 0.86
+  booth footprint is 2:1).
+- **Props and nature**, best guess where the pack offers variants (the
+  scene scales every model to a placed width or height, so a different
+  variant changes the look, never the layout): `bush_a..e` =
+  SM_bush_01..05, `bush_roman` = SM_bush_06, `tree_a..d` =
+  SM_tree_a/b/c/d_01, `conifer` = SM_tree_conifer_01, `cypress` =
+  SM_tree_cypress_01, `olive` = SM_tree_olive_01, `flower_a` =
+  SM_flower_01, `flower_med` = SM_flower_mediterranean, `flower_group` =
+  SM_flower_small_group, `grass_patch` = SM_grass_mesh_01, `rock_pack` =
+  SM_rock_004, `crate` = SM_crate_wood_02, `bread` = SM_bread_round,
+  `bowl` = SM_bowl_01, `pottery1/2` = SM_pottery_001/002, `banner` =
+  SM_banner_01, `banner_triangle` = SM_banner_triangle_01, `arch_round`
+  = SM_arch_round_01, `paddle` = SM_paddle_01; the rest carry the pack's
+  own name. `torch.fbx` is SM_torch.FBX copied as is. `palette.png` is
+  M_colorpalette_BaseColor.png re-saved losslessly (10 KB);
+  `water_normal.png` is M_water_Normal.png.
+- **Clips** (Human Basic Motions, Dance): `*_idle` = Idle01, `*_walk` =
+  Walk01_Forward, `*_run` = Run01_Forward, `*_wave` = HandWave01 (all
+  named in `characterAnimation.ts`); `*_sit` = SitMedium01 - Loop,
+  `*_dance` = Dance01, `f_pose_a/b` = DancePose01/02 - Loop (best
+  guesses); the jump and slide files as listed in section 2.
+- **Greek**: the pack's `Models/` folder, not `Models/Optimized/`: the
+  standard files carry no UVs and flat per-material colours, which is
+  what the scene's material repair expects. `greek_atlas.png` =
+  Textures/Greek_Combined.png.
+- **Pets**: HONETi `models/*.FBX` renamed to lower case, the four listed
+  textures. **Phoenix**: the pack's one FBX (material `Phoenix_Mat`, as
+  the scene checks) with Phoenix_01_Tex.png. **Wolf**:
+  Dire_Wolf_Lite.glb from the itch.io zip, unchanged (clips `idle_loop`,
+  `walk_loop`, `run_loop`, `bite`).
+
+Not rebuilt, still missing from the owner's folder:
+
+- The 18 **Outdoor** clips: the BUNDLE Outdoor Animations package in the
+  owner's library is the Unity `.anim` edition (1,145 `.anim` clips and
+  demo armatures only), not the FBX edition this town was built against
+  (section 4 warned of exactly this). The FBX edition is needed; the
+  `.anim` curves cannot be turned into FBX clips here.
+- `stars-fall-song.mp3`: no candidate on the device; owner-supplied.
+
+`townScene.ts` and `App.tsx` import every one of these files statically,
+so the web build fails until all 121 are present (see `CLAUDE.md`).
