@@ -857,3 +857,52 @@ pebbles, five within a few steps of the town tree): the pill reads "Y, Pick up
 stone"; press Y on the keyboard or on screen, and Give a gift then lists the
 smooth stone. Between 14:00 and 15:30 Rome time the card reads "Afternoon on
 the terrace". Aelia will look as before: that is her.
+
+## Task 10 (READY, added Nov 5, 2026): the pairs in the composed scene: the embrace still does not read as an embrace
+
+Context: Task 9 landed and deployed (Railway build ae960209ae47, bundle
+main-njr135rg.js). On Nov 5, 2026, late morning, Muse ran the pair check the
+Task 9 landing note prescribed: a desktop browser at town.reseed.net/?preview=pairs,
+Gaius walked to within arm's reach of Aelia on open paved ground, H and F from the
+keyboard. The browser renders at very low frame rates, so its stills catch phases;
+the counts below are the runs, and the pattern across them is the evidence. The
+launch gate stands: verification only, nothing linked or announced.
+
+What now works, confirmed live: both gestures trigger on the first press; the pair
+glides to true contact distance, feet nearly touching, torsos touching, no air gap
+(the Task 9 glide fix is real); the flirt contains a genuine face-to-face moment
+mid-gesture, his reach answering her turn.
+
+What still fails, in the composed scene a visitor watches: across three hugs and
+two flirts, no held peak read as an embrace. The consistent defects are offset,
+side-by-side alignment at the peak instead of front to front, and arms that never
+wrap: hers spread wide or hanging, his down or raised, never around her torso or
+neck. The clearest single run: the third hug began from a clean face-to-face
+position left by the first flirt, and at its peak Gaius stood with his back to
+Aelia, facing away, his arm at his side, while she stood offset beside him in
+profile facing south-east with an arm extended away from him. The flirt's clearest
+peak: the two touching, heads turned toward each other, his arm reaching to her
+side, but their torsos facing opposite directions, side by side and offset. After
+each gesture they reset to standing side by side, both facing the same way.
+
+The ask: reconcile the Blender hip-facing measurement in the Task 9 note (f_hug a
+half turn off, flirt halves forward within 3 degrees) with this composed result,
+and fix what the composition actually does. Questions, not conclusions, in rough
+order of suspicion: does the scene's own turn-toward-each-other step compose with
+the clips' rotations so the pair ends a quarter or half turn out by the held frame;
+does the retarget onto these VRM rigs keep the arm wrap the source takes contain;
+do the cut takes themselves (ASSETS.md: the outdoor clips were cut from the FBX
+edition take by take) hold a wrap on these bodies at all; and is the held peak the
+check caught a later phase than the moment the wrap exists. Acceptance, judged in
+the live town through the same preview route: the hug ends in a held front-to-front
+embrace with arms visibly around each other, both from a neutral start and from a
+face-to-face start; the flirt holds a mirrored face-to-face at its peak. If the
+honest conclusion is that the source takes cannot produce that on these rigs, say
+so in the landing note and name the asset change that would, rather than tuning
+around it. The affection gates and the rank scenes stay exactly as they are; the
+preview route stays verification only.
+
+Deploy note: commit fafb314 (the pair preview on the pad's shoulders and the
+on-screen chips) is on origin, but the bundle the site served on Nov 5, 2026 did
+not contain the chip labels, so the chips are not live yet. Please fold that
+deploy into this task's, and record the build in the landing note as usual.
