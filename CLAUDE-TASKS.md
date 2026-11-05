@@ -740,7 +740,8 @@ Notes for the port and the owner:
   pair camera did engage in the Task 12 build but at the walk's 10.5 m rest it read
   as a distant profile, and among the trees the boom collision made it overhead; the
   hold now booms in to 5.5 m and logs `[muse-town] pair camera` when it engages.
-  Hug, spacing and gates untouched. Deploy: see the landing note.
+  Hug, spacing and gates untouched. Deployed the same night on the owner's word (build
+  4374b6bae71c, bundle main-f0ra4y15.js).
 
 ## Task 9 (READY, added Nov 5, 2026): hosted web town fixes: Aelia's missing textures, the conversation panel rectangle, and the unreachable hug and flirt pairs
 
@@ -1296,7 +1297,7 @@ takes and the gates are untouched; the hug plays as verified, seen closer.
 `tsc` 295 errors, the SDK baseline, nothing new; web build `93bfc33b12d1`, 122
 client files, bundle `main-94b646j4.js`.
 
-**Deploy.** PENDING at commit time; the line after this one records it.
+**Deploy.** DONE, Nov 5, 2026, night, on the owner's word in chat: Railway build `4374b6bae71c`, 122 client files, bundle `main-f0ra4y15.js`. The owner verifies `/healthz` and the served bundle themselves.
 
 **What the owner re-verifies.** F through the preview route, in the open (the pair
 camera is a walk camera: trunks in its line still pull it in): the glide to a
