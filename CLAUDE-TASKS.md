@@ -694,9 +694,8 @@ Notes for the port and the owner:
   `?preview=pairs` gives H (hug) and F (flirt) in walk mode for verifying the
   clips, gates untouched; the terrace card says Afternoon until the eleventh
   Roman hour. The pale rectangle is not reproduced here (the 3D bubble over
-  Gaius's head is the candidate; needs a screenshot). The build is NOT yet on
-  Railway: the upload was blocked by the session's permission mode, so the
-  owner runs CLAUDE.md step 4, or re-runs me with the permission.
+  Gaius's head is the candidate; needs a screenshot). Deployed the same
+  afternoon on the owner's word (build ae960209ae47, bundle main-njr135rg.js).
 
 ## Task 9 (READY, added Nov 5, 2026): hosted web town fixes: Aelia's missing textures, the conversation panel rectangle, and the unreachable hug and flirt pairs
 
@@ -840,12 +839,13 @@ new errors in the touched files (the 295 reported are the missing-SDK cascade
 plus one pre-existing unused variable at townScene.ts:6674). Web build: 122
 client files.
 
-**Deploy: not yet uploaded.** The `railway up` from the clean export (CLAUDE.md
-step 4) was blocked by this session's permission mode. The owner runs step 4
-from a checkout that holds the assets, or runs me again with that permission;
-until then town.reseed.net serves the Nov 5 morning build without these fixes.
+**Deploy: DONE (Nov 5, 2026, afternoon, on the owner's word).** `railway up`
+from the clean export (CLAUDE.md step 4), 121 assets in the export; Railway
+build `ae960209ae47`, 122 client files, bundle `main-njr135rg.js`; `/healthz`
+ok and the new bundle served on both town.reseed.net and
+muse-town-production.up.railway.app.
 
-**Re-verify at town.reseed.net once deployed (a fresh visitor town is fine):**
+**Re-verify at town.reseed.net (a fresh visitor town is fine):**
 open `https://town.reseed.net/?preview=pairs`, walk Gaius up to Aelia (two
 metres or less, open ground, neither seated), press H: they glide to arm's
 length and embrace facing each other, her face toward him; press F: the flirt
