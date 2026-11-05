@@ -1494,3 +1494,43 @@ where the flirt's three-quarter framing reads clearly. With this record,
 the public README carries the town's web section with its link to
 town.reseed.net, in the same commit as this note. The gate is closed;
 the town is open to visitors.
+
+## Task 15 (READY, added Nov 5, 2026): the hug's pair camera: give the embrace the flirt's three-quarter
+
+Context: Tasks 13 and 14 are deployed and verified live (the flirt passes
+in the open, three of three runs; the packed scene loads whole; the launch
+gate is cleared and recorded above, and the town is publicly linked). In
+that same fourth verification (Nov 5, 2026, late afternoon, open ground at
+the centre of the avenue, the same slow browser as all the pair checks),
+the hug was run twice and could not be fully judged, for a camera reason.
+
+What the check saw, both runs the same: a brief front-to-front moment at
+the start, bodies touching, heads close, her head just over his shoulder,
+almost completely hidden behind Gaius's back and red cloak, because the
+hug's closer pair camera stays directly behind him. The long held pose
+that followed, the one that could be judged in enlarged frames, had her
+offset to his right side at an angle, a small gap between the torsos,
+heads close; her arms were around his neck and shoulders, his right hand
+at her waist, his left arm apparently behind her, all foreshortened and
+partly obscured by the cloak. So the embrace's elements are present, but
+front to front and touching is not clearly readable from the hug's pair
+camera, where the flirt's three-quarter framing (Task 13) reads clearly.
+For reference, the hug passed cleanly twice in the Task 10 build from the
+ordinary walk camera, before pair holds had the boom-in.
+
+The ask, small: give the hug's hold a three-quarter framing in the
+flirt's manner, a yaw off his heading with the boom distance as it now
+stands, so the embrace's peak reads from the pair camera. One question
+rides with it: is the offset, gapped pose the check judged the take's
+settle after a front-to-front peak, or the hold itself? If the hold
+genuinely sits offset after its peak, say so in the landing note, and
+whether the hold can be composed to stay at the peak within this task's
+scope. Acceptance, judged live through the preview route in the open,
+across repeated runs: H shows the embrace readable at its held peak,
+front to front or three-quarter, touching, her arms around his neck and
+shoulders and his hands at her waist visible in frame.
+
+Scope: the hug's staging, spacing and takes, and the flirt's framing,
+stay untouched. The deploy rides as usual and the landing note records
+the build. The gate is already cleared; this is ordinary polish, and
+nothing about it holds the link.
