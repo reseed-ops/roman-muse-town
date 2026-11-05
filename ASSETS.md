@@ -210,21 +210,33 @@ town file was made from, so the next rebuild is a copy, not a hunt:
   communicates sitting-1.1, -1.3 and `m_sittalk1/2` = He communicates
   sitting-1.1, -1.3 (Couples/Sit/Communication); `f_bench1/2` = She is
   sitting on a bench-1.1, -1.3 and `m_bench1/2` = He is sitting on a
-  bench-1.1, -1.3 (250+ Outdoor SD/Bench/Sitting_on_a_bench); `m_hug` =
-  He hugs-1.1 with `f_hug` = He hugs-1.1.1 (Couples/Stand/Hugs);
-  `m_flirt` = Couple flirt-1.1 with `f_flirt` = Couple flirt-1.1.1 (550+
-  Outdoor/Couple/Couple Flirt). The talk, seated and bench takes are
-  best guesses among equivalent loops. The hug and flirt halves are each
-  one take's two sides, which is what the scene needs. Measured later
-  the same day (Task 9, Blender, thigh line against the rest pose):
-  `f_hug` (He hugs-1.1.1) is authored a half turn from the rig's
-  forward, facing its initiator, with its hips on the same spot;
-  `m_hug` faces forward; both flirt halves face forward within 3°; no
-  pair take travels (hip drift under 3 cm). The client turns a pair
+  bench-1.1, -1.3 (250+ Outdoor SD/Bench/Sitting_on_a_bench). The pair
+  takes were recut for Task 10 (Nov 5, 2026, evening) after the first
+  cut was measured in the composed scene: `m_hug` = Couple flirt-4.3.3
+  with `f_hug` = Couple flirt-4.3 (550+ Outdoor/Couple/Couple Flirt:
+  the pack's one standing front-to-front hold with arms around each
+  other, her arms around his neck, his hands at her waist, authored
+  0.37 m hip to hip, 167° face to face); `m_flirt` = Couple flirt-2.3
+  with `f_flirt` = Couple flirt-2.3.3 (face to face at 0.42 m, each
+  with a hand raised to the other's chest, mirrored). Which half is
+  "he" is a reading of the poses (the neck hold is given to her), the
+  pack does not say. The first cut, He hugs-1.1 + 1.1.1 and Couple
+  flirt-1.1 + 1.1.1, is measured in the Task 10 landing note: He hugs
+  is a hand on the shoulder with her arms down (no standing take in
+  the Couples pack wraps both arms), and Couple flirt-1 has the two
+  facing the same way, she behind him. The talk, seated and bench
+  takes are best guesses among equivalent loops. Measured on Nov 5
+  (Task 9, Blender, thigh line against the rest pose): the partner
+  half of a take is authored turned to face its initiator, and the two
+  files carry the authored spacing on their armature objects (the
+  bake drops it, so the scene supplies it); the client turns a pair
   clip to face forward on its first frame before use
-  (`faceForwardInPlace` in `characterAnimation.ts`), so the files are
-  used as cut and need no swapping; the embrace spacing is measured
-  from the clips rather than assumed.
+  (`faceForwardInPlace` in `characterAnimation.ts`). Every take in the
+  pack is 3.33 s (X.1, X.3 loops) or a 0.7 to 1.4 s transition (X.2,
+  X.4). The pack's rig binds in a relaxed A-pose (upper arms 49° below
+  level, elbows bent 44°), not the VRMs' T-pose; the bake matches the
+  arm chain's bind posture before carrying a take (`armBindPostureFix`),
+  which Task 10 added after the first cut's arms came out spread.
 
 Not rebuilt, still missing from the owner's folder:
 

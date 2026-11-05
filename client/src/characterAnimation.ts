@@ -244,7 +244,7 @@ interface AnimRigSpec {
   thighL: string;
   thighR: string;
 }
-const IGLESIAS_RIG: AnimRigSpec = {
+export const IGLESIAS_RIG: AnimRigSpec = {
   map: ANIM_BONE_MAP,
   hips: ANIM_HIPS_S,
   chest: "B-chest",
@@ -256,7 +256,7 @@ const IGLESIAS_RIG: AnimRigSpec = {
  *  He and She files, gender lives in the motion, not the bones,
  *  verified by dumping the bind pose of sampled files (all 21
  *  mapped bones present, hip height 98.1 in source units). */
-const OUTDOOR_RIG: AnimRigSpec = {
+export const OUTDOOR_RIG: AnimRigSpec = {
   map: {
     J_Bip_C_Hips: "Hips",
     J_Bip_C_Spine: "Spine",
@@ -288,7 +288,7 @@ const OUTDOOR_RIG: AnimRigSpec = {
 const ANIM_WALK_MPS = 2.0; // measured from the pack's root-motion walk
 const ANIM_RUN_MPS = 4.0; // measured from the pack's root-motion run
 
-interface AnimBind {
+export interface AnimBind {
   obj: THREE.Object3D;
   worldQuat: THREE.Quaternion;
   worldPos: THREE.Vector3;
@@ -357,10 +357,68 @@ function animAnatomicalFrame(
   return new THREE.Quaternion().setFromRotationMatrix(m);
 }
 
+/** The arm chain's bind posture, matched. The bake carries each
+ *  bone's rotation AWAY FROM ITS OWN BIND, which is only the same
+ *  pose on both skeletons when the two binds stand alike. The VRMs
+ *  bind in a T-pose (arms level); the Human Basic Motions rig does
+ *  too, but the Outdoor library's rig binds in a relaxed A-pose,
+ *  upper arms 49° below level with the elbows bent 44° and the
+ *  forearms forward (measured Nov 5, 2026, bind_diag on the real
+ *  files). Carried as deltas, every Outdoor arm came out that much
+ *  higher and wider than authored: a hug's arms spread instead of
+ *  wrapping, which is what the first live pair check saw. So for
+ *  the shoulder, upper arm and forearm the target's bind is first
+ *  turned so its bone points where the source's bind bone points
+ *  (the minimal rotation between the two directions, in target
+ *  space), and the delta is applied on top of that; the hand takes
+ *  its forearm's turn, keeping its bind relation to it. A rig whose
+ *  bind already matches gets a near-identity turn and bakes as
+ *  before. Legs and spine are left alone on purpose: their bind
+ *  differences are anatomy (where a model's neck or knee sits), not
+ *  posture, and they have looked right since the first clip. */
+const ARM_CHAIN_CHILD: Readonly<Record<string, string>> = {
+  J_Bip_L_Shoulder: "J_Bip_L_UpperArm",
+  J_Bip_L_UpperArm: "J_Bip_L_LowerArm",
+  J_Bip_L_LowerArm: "J_Bip_L_Hand",
+  J_Bip_R_Shoulder: "J_Bip_R_UpperArm",
+  J_Bip_R_UpperArm: "J_Bip_R_LowerArm",
+  J_Bip_R_LowerArm: "J_Bip_R_Hand",
+};
+const ARM_CHAIN_END: Readonly<Record<string, string>> = {
+  J_Bip_L_Hand: "J_Bip_L_LowerArm",
+  J_Bip_R_Hand: "J_Bip_R_LowerArm",
+};
+export function armBindPostureFix(
+  srcBind: Map<string, AnimBind>,
+  tgtBind: Map<string, AnimBind>,
+  rig: AnimRigSpec,
+  corr: THREE.Quaternion,
+): Map<string, THREE.Quaternion> {
+  const out = new Map<string, THREE.Quaternion>();
+  for (const [tgtName, childName] of Object.entries(ARM_CHAIN_CHILD)) {
+    const tb = tgtBind.get(tgtName);
+    const tc = tgtBind.get(childName);
+    const sName = rig.map[tgtName];
+    const scName = rig.map[childName];
+    const sb = sName ? srcBind.get(sName) : undefined;
+    const sc = scName ? srcBind.get(scName) : undefined;
+    if (!tb || !tc || !sb || !sc) continue;
+    const dt = tc.worldPos.clone().sub(tb.worldPos);
+    const ds = sc.worldPos.clone().sub(sb.worldPos).applyQuaternion(corr);
+    if (dt.lengthSq() < 1e-10 || ds.lengthSq() < 1e-10) continue;
+    out.set(tgtName, new THREE.Quaternion().setFromUnitVectors(dt.normalize(), ds.normalize()));
+  }
+  for (const [hand, forearm] of Object.entries(ARM_CHAIN_END)) {
+    const q = out.get(forearm);
+    if (q) out.set(hand, q.clone());
+  }
+  return out;
+}
+
 /** Bake one source clip onto the target VRM skeleton. Returns the
  *  retargeted clip plus the source rig's bind hip height (source
  *  units, centimetres), or null if the rigs don't line up. */
-function bakeRetargetedClip(
+export function bakeRetargetedClip(
   srcRoot: THREE.Object3D,
   srcClip: THREE.AnimationClip,
   tgtRoot: THREE.Object3D,
@@ -390,6 +448,7 @@ function bakeRetargetedClip(
   const corr = frameT.clone().multiply(frameS.clone().invert()); // src space -> tgt space
   const corrInv = corr.clone().invert();
   const hipScale = tgtHipsBind.worldPos.y / srcHipsBind.worldPos.y;
+  const postureFix = armBindPostureFix(srcBind, tgtBind, rig, corr);
 
   const ordered = [...chain].sort(
     (a, b) => (tgtBind.get(a.name)?.depth ?? 0) - (tgtBind.get(b.name)?.depth ?? 0),
@@ -441,7 +500,8 @@ function bakeRetargetedClip(
         animRootSpace(srcRoot, srcObj).decompose(new THREE.Vector3(), sw, new THREE.Vector3());
         const delta = sw.multiply(srcBindEntry.worldQuat.clone().invert());
         const deltaT = corr.clone().multiply(delta).multiply(corrInv);
-        wq = deltaT.multiply(bind.worldQuat);
+        const fix = postureFix.get(obj.name);
+        wq = deltaT.multiply(fix ? fix.clone().multiply(bind.worldQuat) : bind.worldQuat);
         if (obj.name === ANIM_HIPS_T) {
           const sp = new THREE.Vector3();
           animRootSpace(srcRoot, srcObj).decompose(sp, new THREE.Quaternion(), new THREE.Vector3());
@@ -609,7 +669,7 @@ function measureRetargetedClip(
  *  old capture-pose bake (arms already procedurally lowered when the
  *  "bind" was read) landed at -0.59..-0.66, arms splayed, hands
  *  sticking out. -0.7 sits between those two populations. */
-function checkRetargetedClip(
+export function checkRetargetedClip(
   model: THREE.Object3D,
   clip: THREE.AnimationClip,
 ): { finite: boolean; legsOk: boolean; armsOk: boolean; bodyOk: boolean; pivotOk: boolean } {

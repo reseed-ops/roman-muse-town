@@ -7360,13 +7360,14 @@ export function createTownScene(
     }
     if (pairState) {
       // A pair moment: her position is the glide's; she faces him
-      // for the length of the clip, then ordinary life resumes.
+      // for the length of the clip, then ordinary life resumes. The
+      // turn is paced by time, not by frame (0.12 per 1/60 s), and
+      // completes with the glide: a browser running the town at a
+      // few frames a second left her a quarter turn short of him
+      // at the clip's peak, in profile beside him.
       museIsMoving = false;
-      museGroup.rotation.y = angleLerp(
-        museGroup.rotation.y,
-        Math.atan2(walkPos.x - museGroup.position.x, walkPos.z - museGroup.position.z),
-        0.12,
-      );
+      const toHim = Math.atan2(walkPos.x - museGroup.position.x, walkPos.z - museGroup.position.z);
+      museGroup.rotation.y = pairState.glide ? angleLerp(museGroup.rotation.y, toHim, 1 - Math.pow(1 - 0.12, dt * 60)) : toHim;
       return;
     }
     if (skyWatchState) {
@@ -9005,14 +9006,17 @@ export function createTownScene(
   // already gated (rank scenes, structured dates), the scene only
   // checks staging sanity here (awake, ashore, unseated, close);
   // every affection/rank rule lives in the shell and is untouched.
-  // The hug glides the pair to embrace spacing first: contact
-  // distance (HUG_CONTACT_M, hip to hip) plus whatever each body's
-  // own clip steps in, measured on the retargeted hips (the first
-  // cuts stepped her in ≈0.27 m and him ≈0.01 m, so the spacing was
-  // a fixed 0.85 m; the Nov 5 FBX-edition cuts play in place, and a
-  // fixed 0.85 m had them hugging the air). The flirt pair plays
-  // where they stand, no glide: talk distance is its distance.
-  const HUG_CONTACT_M = 0.57;
+  // Both pairs glide to their take's authored spacing first: the
+  // pack places the two bodies a fixed distance apart (Couple flirt
+  // 4.3, the embrace, 0.37 m hip to hip; Couple flirt 2.3, the
+  // face-to-face flirt, 0.42 m), scaled for these taller bodies and
+  // measured on the retargeted skeletons as group-origin spacing
+  // (the hips sit ≈0.1 m inside the two origins), plus whatever
+  // each clip steps in on its own. A flirt played wherever the two
+  // happened to stand reached into the air at talk distance, and a
+  // fixed 0.57 m hug (the He hugs take, hand on the shoulder, her
+  // arms down) never read as an embrace: see Task 10's note.
+  const PAIR_SPACING_M: Record<"flirt" | "hug", number> = { hug: 0.5, flirt: 0.55 };
   let talkAnimOpen = false;
   let pairState: { kind: "flirt" | "hug"; t: number; dur: number; glide: PairGlide | null } | null = null;
   function playPairMoment(kind: "flirt" | "hug"): boolean {
@@ -9027,8 +9031,8 @@ export function createTownScene(
     if (dur <= 0) return false;
     walkHeading = Math.atan2(dx, dz);
     let glide: PairGlide | null = null;
-    const spacing = kind === "hug" ? HUG_CONTACT_M + museAnim.pairStepIn("hug") + playerAnim.pairStepIn("hug") : dist;
-    if (kind === "hug" && Math.abs(dist - spacing) > 0.05) {
+    const spacing = PAIR_SPACING_M[kind] + museAnim.pairStepIn(kind) + playerAnim.pairStepIn(kind);
+    if (Math.abs(dist - spacing) > 0.05) {
       const ux = dx / dist;
       const uz = dz / dist;
       const mx = (walkPos.x + museGroup.position.x) / 2;
@@ -10451,8 +10455,10 @@ export function createTownScene(
       if (pairState.glide) {
         if (stepGlide(pairState.glide, dt, 0.9)) pairState.glide = null;
       } else {
-        const face = Math.atan2(museGroup.position.x - walkPos.x, museGroup.position.z - walkPos.z);
-        avatar.rotation.y = angleLerp(avatar.rotation.y, face, 0.12);
+        // Square to her for the clip itself (his heading was set
+        // toward her at staging; the glide keeps the line).
+        walkHeading = Math.atan2(museGroup.position.x - walkPos.x, museGroup.position.z - walkPos.z);
+        avatar.rotation.y = walkHeading;
       }
       if (pairState.t >= pairState.dur) pairState = null;
     }

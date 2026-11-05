@@ -697,6 +697,18 @@ Notes for the port and the owner:
   Gaius's head is the candidate; needs a screenshot). Deployed the same
   afternoon on the owner's word (build ae960209ae47, bundle main-njr135rg.js).
 
+- Task 10 landed (Claude, Nov 5, 2026, evening): code and docs in one commit (hash in
+  the landing note). The embrace failed for three reasons found by running the town's
+  own bake on both VRMs outside the browser: the Outdoor pack's rig binds in an A-pose
+  and the bake carried rotations away from bind, so every Outdoor arm came out about
+  50° higher and wider than authored (fixed in the bake, `armBindPostureFix`); the
+  takes cut on Nov 5 were a hand-on-the-shoulder hug and a flirt with both facing the
+  same way (recut: Couple flirt-4.3 is the embrace, 2.3 the face-to-face flirt, see
+  ASSETS.md; the four files in `client/src/assets/anim/outdoor/` changed, not in git);
+  and her turn toward him was paced per frame, a quarter turn short at a few fps (now
+  by time, done with the glide, which both pairs now make to the take's spacing). The
+  facing pipeline itself was right. Deploy: see the landing note.
+
 ## Task 9 (READY, added Nov 5, 2026): hosted web town fixes: Aelia's missing textures, the conversation panel rectangle, and the unreachable hug and flirt pairs
 
 Context: the web town (Task 8) is deployed and live at town.reseed.net with its own
@@ -906,3 +918,97 @@ Deploy note: commit fafb314 (the pair preview on the pad's shoulders and the
 on-screen chips) is on origin, but the bundle the site served on Nov 5, 2026 did
 not contain the chip labels, so the chips are not live yet. Please fold that
 deploy into this task's, and record the build in the landing note as usual.
+
+### Landing note (Claude, Nov 5, 2026, evening)
+
+**How it was looked at.** The device cannot draw the WebGL town (software GL fails
+the shaders), so the check ran the scene's own pipeline outside the browser: the
+real `centurion.vrm` and `muse-avatar.vrm`, the real FBX takes, `bakeRetargetedClip`
+and `faceForwardInPlace` from `characterAnimation.ts`, the two bodies mounted,
+scaled and placed exactly as `townScene.ts` places a pair (facing each other at the
+staged spacing), sampled through the clip and drawn as stick figures from the side,
+front and above. Blender measured the source takes, all 64 standing hug and flirt
+files in the pack, in the pack's own world frame.
+
+**The reconciliation asked for.** The Task 9 facing measurement was right, and the
+loader's turn works: composed, both bodies face each other within 0.3° for the whole
+clip, from any start. The half turn is not in the pipeline. What produced the
+picture Muse saw was three other things, in order of weight:
+
+1. **The retarget spread every arm.** The Outdoor pack's rig binds in a relaxed
+   A-pose (upper arms 49° below level, elbows bent 44°, forearms forward); the VRMs
+   bind in a T-pose. The bake carried each bone's rotation *away from its own bind*,
+   which is the same pose on both skeletons only when the binds stand alike, so
+   every Outdoor arm landed about 50° higher and wider than authored. Measured on
+   the old hug: his hands authored 0.19 to 0.20 m to either side of her, composed
+   0.47 to 0.56 m, the "spread wide" of the check. The Human Basic Motions rig (idle,
+   walk, wave, dance) binds in a T-pose, which is why nothing else ever looked
+   wrong. Fixed in the bake: for the shoulder, upper arm and forearm the target's
+   bind is first turned to point where the source's bind bone points, then the
+   delta goes on top (`armBindPostureFix`, arm chain only; legs and spine differ
+   by anatomy, not posture, and are left as they were). A rig whose bind already
+   matches bakes as before within 7°. All 26 clips pass the town's clip gate on
+   both bodies after the change; `armPosture.test.ts` holds the A-pose/T-pose case
+   on two toy rigs.
+2. **The takes.** The first cut's `m_hug`/`f_hug` (He hugs-1.1 + 1.1.1) is a loose
+   hug: his right hand on her shoulder, his left reaching, her arms down behind
+   her back, authored 0.65 m apart. No standing take in the Couples pack wraps
+   both arms (He hugs-2 and She hugs-2 are side-by-side arm-over-shoulder holds;
+   She hugs-1 is her hands on his shoulders). The first cut's flirt (Couple
+   flirt-1.1 + 1.1.1) has the two facing the *same* way, she 0.3 m behind him,
+   which the scene then turned face to face: "torsos facing opposite directions,
+   side by side and offset" is that take squared up. Recut from the same pack
+   (files replaced in `client/src/assets/anim/outdoor/`, names unchanged, nothing
+   in git): the hug is now Couple flirt-4.3 + 4.3.3, the pack's one standing
+   front-to-front hold with arms around each other (her arms around his neck,
+   his hands at her waist, authored 0.37 m hip to hip, 167° face to face); the
+   flirt is Couple flirt-2.3 + 2.3.3 (face to face at 0.42 m, each with a hand
+   raised to the other's chest, mirrored). Which half is "he" is read from the
+   poses; the pack does not say. ASSETS.md records all of it.
+3. **The composition.** The flirt played wherever the two stood (up to 2.4 m, no
+   glide), so its reach went into the air; her turn toward him was a fixed 12%
+   per frame, which at the check's few frames a second left her a quarter turn
+   short at the peak, "in profile beside him"; the hug's fixed 0.57 m was the old
+   take's distance. Now both pairs glide to their take's spacing (`PAIR_SPACING_M`,
+   0.50 m hug and 0.55 m flirt between the two group origins, which puts the hips
+   0.40 and 0.44 m apart, the authored distances scaled for these taller bodies),
+   her turn is paced by time and completes with the glide, and his heading is
+   squared to her when the clip starts.
+
+**What the composed result measures now** (the town's bake, both real bodies):
+hug, hips 0.40 m apart, heads 0.53 m, her hands 8 to 18 cm behind his hip line at
+his mid-back, his hands at her waist front, both facing within 0.3°; flirt, hips
+0.44 m, both right hands raised to chest height toward the other, mirrored, face to
+face. Honest limits: her arms close around his *back*, not his neck as authored
+(he is 1.94 m to her 1.80, and the VRMs' reach is shorter than the pack rig's), and
+the hands' roll (which way a palm faces) is approximate, since matching a bind by
+limb direction leaves the twist to the minimal rotation. The embrace reads; if the
+neck hold matters, that is a height change or a bespoke take, not a tuning.
+
+**"Gaius with his back to Aelia."** Not reproduced: his heading is set toward her
+at staging and nothing turns him during the clip. The reading that fits the
+evidence is the low frame rate (her slow turn, the stills catching the moment
+after the clip when she steps back to his side and both face the same way) rather
+than a half turn in the data; if it recurs after this build, a screenshot with the
+`[muse-town] pair preview` console line beside it settles it.
+
+**Asset change, for the owner's desktop.** The four files `m_hug.fbx`, `f_hug.fbx`,
+`m_flirt.fbx`, `f_flirt.fbx` under `client/src/assets/anim/outdoor/` must be the
+takes ASSETS.md now names (byte copies of the pack's FBX files). A build from a
+folder with the first cut still runs; it plays the old takes at the new spacing.
+
+**Suites.** `bun run test`: 360 pass, 18 skip, 0 fail; `test:pg` 19 pass; client
+`tsc` 295 errors, the SDK baseline, nothing new in touched files; web build
+`c07ccf5fc83b`, 122 client files, bundle `main-wr9gq0zz.js` (carries the Task 9
+pad chips from fafb314, which were never deployed).
+
+**Deploy.** DEPLOY_PLACEHOLDER
+
+**What the owner re-verifies at town.reseed.net** (`?preview=pairs`, walk mode near
+Aelia, in the open): H, RB, or the "RB · Hug" chip: the two glide to touching
+distance and hold an embrace for 3.3 s, her arms around his back, his hands at her
+waist, heads close, front to front, from a side-by-side start and from a
+face-to-face one. F, LB, or "LB · Flirt": they glide face to face at a hand's
+reach and hold mirrored raised hands. Ordinary talk gestures and the bench idles
+now hang the arms lower than before (the same bind fix), which is the authored
+pose. Gates, ranks and the preview route are untouched.
