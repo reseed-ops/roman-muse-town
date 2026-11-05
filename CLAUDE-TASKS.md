@@ -727,6 +727,11 @@ Notes for the port and the owner:
   view from his right for the hold of any pair moment (`PAIR_CAM_YAW`); nothing in
   the takes, staging, spacing or gates changed. Deployed the same evening on the owner's word (build 7103f3a5784e, bundle main-p2p0xcpm.js).
 
+- Task 11 landed (Claude, Nov 5, 2026, evening): VAPID variables set on the planttasks
+  service by the owner from the prompt (the classifier refuses secret-store writes
+  here); push/key reports enabled with the public key, home page 200. Note under
+  the task.
+
 ## Task 9 (READY, added Nov 5, 2026): hosted web town fixes: Aelia's missing textures, the conversation panel rectangle, and the unreachable hug and flirt pairs
 
 Context: the web town (Task 8) is deployed and live at town.reseed.net with its own
@@ -1067,6 +1072,24 @@ and intervals, and turning reminders off deletes the record.
 in planttasks server.js still says "No dependencies, Node built-ins only. Plant data
 is never sent here.", which the push feature outgrew. A comment correction is welcome
 but is not part of this task's acceptance.
+
+### Landing note (Claude, Nov 5, 2026, evening)
+
+Done, Nov 5, 2026, about 20:40 on the device clock. The key pair was generated on
+the device with Node's own crypto (a P-256 pair in web-push's encoding: the
+65-byte uncompressed public point and the 32-byte private scalar, base64url),
+since the session's permission classifier refused `npx web-push`. It refused
+every write to the service as well, so the owner ran the step from the chat
+prompt with a script that read the keys from a file and masked the private key
+in its output: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT`
+(`mailto:hello@planttasks.com`) set on the planttasks service, Railway redeployed.
+Verified after the redeploy: `GET https://planttasks.com/push/key` returns
+`{"key":"BE8E1X1YWRhTsL6JxvbMGO6AjdsblJSbcqczUjkQPE1DT0V9riLb6vl-JPUitiCAbibWi47-1pPTNszium2vrts","enabled":true}`
+and `https://planttasks.com/` answers HTTP 200. The server log line was not read
+(production log reads are refused here too); the endpoint is the proof. The
+private key exists only in the Railway variables: the local key file and the
+script were deleted once the endpoint answered. No code changed; the server.js
+header comment was left alone.
 
 ## Task 12 (READY, added Nov 5, 2026): the flirt's missing half: her hand never rises
 
