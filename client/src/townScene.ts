@@ -9005,11 +9005,14 @@ export function createTownScene(
   // already gated (rank scenes, structured dates), the scene only
   // checks staging sanity here (awake, ashore, unseated, close);
   // every affection/rank rule lives in the shell and is untouched.
-  // The hug glides the pair to embrace spacing (0.85 m) first: her
-  // clip steps in ≈0.27 m and his ≈0.01 m (measured), so they meet
-  // at contact distance instead of hugging the air. The flirt pair
-  // closes ≈0.55 m between them, which is exactly talk distance,
-  // no glide, it plays where they stand.
+  // The hug glides the pair to embrace spacing first: contact
+  // distance (HUG_CONTACT_M, hip to hip) plus whatever each body's
+  // own clip steps in, measured on the retargeted hips (the first
+  // cuts stepped her in ≈0.27 m and him ≈0.01 m, so the spacing was
+  // a fixed 0.85 m; the Nov 5 FBX-edition cuts play in place, and a
+  // fixed 0.85 m had them hugging the air). The flirt pair plays
+  // where they stand, no glide: talk distance is its distance.
+  const HUG_CONTACT_M = 0.57;
   let talkAnimOpen = false;
   let pairState: { kind: "flirt" | "hug"; t: number; dur: number; glide: PairGlide | null } | null = null;
   function playPairMoment(kind: "flirt" | "hug"): boolean {
@@ -9024,17 +9027,19 @@ export function createTownScene(
     if (dur <= 0) return false;
     walkHeading = Math.atan2(dx, dz);
     let glide: PairGlide | null = null;
-    if (kind === "hug" && dist > 0.9) {
+    const spacing = kind === "hug" ? HUG_CONTACT_M + museAnim.pairStepIn("hug") + playerAnim.pairStepIn("hug") : dist;
+    if (kind === "hug" && Math.abs(dist - spacing) > 0.05) {
       const ux = dx / dist;
       const uz = dz / dist;
       const mx = (walkPos.x + museGroup.position.x) / 2;
       const mz = (walkPos.z + museGroup.position.z) / 2;
+      const half = spacing / 2;
       glide = {
         t: 0,
         fp: walkPos.clone(),
-        tp: new THREE.Vector3(mx - ux * 0.425, walkPos.y, mz - uz * 0.425),
+        tp: new THREE.Vector3(mx - ux * half, walkPos.y, mz - uz * half),
         fm: museGroup.position.clone(),
-        tm: new THREE.Vector3(mx + ux * 0.425, museGroup.position.y, mz + uz * 0.425),
+        tm: new THREE.Vector3(mx + ux * half, museGroup.position.y, mz + uz * half),
       };
     }
     pairState = { kind, t: 0, dur: dur + (glide ? 0.9 : 0) + 0.35, glide };

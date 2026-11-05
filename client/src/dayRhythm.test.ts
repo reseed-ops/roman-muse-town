@@ -15,6 +15,13 @@ test("each part has its place", () => {
   expect(dayRhythm(null, plain, null).anchor).toBe("lake");
 });
 
+test("the terrace hours say afternoon until the light goes gold", () => {
+  expect(dayRhythm(9, plain, null).title).toBe("Afternoon on the terrace");
+  expect(dayRhythm(10, plain, null).anchor).toBe("terrace");
+  expect(dayRhythm(11, plain, null).title).toBe("Dusk on the terrace");
+  expect(dayRhythm(12, plain, null).title).toBe("Dusk on the terrace");
+});
+
 test("the stalls shutter for the evening", () => {
   expect(dayRhythm(2, plain, null).marketOpen).toBe(true);
   expect(dayRhythm(10, plain, null).marketOpen).toBe(false);

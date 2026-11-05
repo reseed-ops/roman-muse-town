@@ -76,5 +76,13 @@ export function dayRhythm(hour: number | null, date: RomanDate, festival: string
     };
   }
   const plain = ORDINARY[part];
-  return { ...shared, ...plain, id: part, override: null, spot: SPOTS[plain.anchor] };
+  // The terrace hours run from the ninth; the gold itself comes with
+  // the eleventh. Until then the card says afternoon, not dusk (the
+  // Nov 5 hosted verification read "Dusk" over full daylight). The
+  // part, its anchor and the market's hours are unchanged.
+  const titled =
+    part === "dusk" && hour !== null && hour <= 10
+      ? { ...plain, title: "Afternoon on the terrace", line: "The light is lengthening along the whole length of the axis." }
+      : plain;
+  return { ...shared, ...titled, id: part, override: null, spot: SPOTS[plain.anchor] };
 }

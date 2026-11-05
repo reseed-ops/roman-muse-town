@@ -4943,9 +4943,29 @@ export function App() {
       const el = target as HTMLElement | null;
       return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
     };
+    // Pair-clip preview for the owner's verification only, behind
+    // ?preview=pairs: H stages the hug, F the flirt, through the
+    // scene's ordinary staging (walk mode, both bodies ready, within
+    // reach, nothing else under way). It plays the two bodies and
+    // nothing more: no affection, no scene lines, every rank gate
+    // exactly as it is.
+    const pairPreview = /[?&]preview=pairs(?:&|$)/.test(window.location.search);
     const onKeyDown = (e: KeyboardEvent) => {
       if (typing(e.target)) return;
       const key = e.key.toLowerCase();
+      // Y on the keyboard: the stone verb the on-screen Y already
+      // carries (the Nov 5 hosted verification found no key for it).
+      if (key === "y" && !e.repeat && walkingRef.current) {
+        e.preventDefault();
+        xboxStoneRef.current();
+        return;
+      }
+      if (pairPreview && (key === "h" || key === "f") && !e.repeat && walkingRef.current) {
+        const kind = key === "h" ? "hug" : "flirt";
+        const staged = sceneRef.current?.playPairMoment(kind) ?? false;
+        console.info(`[muse-town] pair preview: ${kind} ${staged ? "staged" : "refused (stand a few steps from Aelia, in the open, both bodies ready)"}`);
+        return;
+      }
       if (!isPad2Key(key)) return;
       keys.add(key);
       const button = keyboardButton(key);

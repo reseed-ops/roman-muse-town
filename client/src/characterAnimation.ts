@@ -710,6 +710,62 @@ function pinHipXZInPlace(clip: THREE.AnimationClip) {
   }
 }
 
+/** Turn a retargeted clip so its body faces the rig's own forward
+ *  (+Z of the hips' parent space) on its first frame, rotating the
+ *  hips' orientation and travel together about the first frame's
+ *  hip column. The Outdoor couple takes are authored in one shared
+ *  space: the partner half (X.1.1) stands facing its initiator, a
+ *  half turn from the rig's forward (measured Nov 5: f_hug 180°,
+ *  m_hug 0°, both flirt halves within 3°). The scene turns each
+ *  body toward the other itself, so a clip carrying its own half
+ *  turn faced Aelia AWAY from him for the length of the hug. */
+export function faceForwardInPlace(clip: THREE.AnimationClip) {
+  const q = clip.tracks.find((t) => t.name === `${ANIM_HIPS_T}.quaternion`);
+  if (!q) return;
+  const qv = q.values as ArrayLike<number> as Float32Array;
+  if (qv.length < 4) return;
+  const first = new THREE.Quaternion(qv[0] ?? 0, qv[1] ?? 0, qv[2] ?? 0, qv[3] ?? 1);
+  const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(first);
+  const yaw = Math.atan2(fwd.x, fwd.z);
+  if (Math.abs(yaw) < 0.02) return;
+  const unyaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -yaw);
+  const tmp = new THREE.Quaternion();
+  for (let i = 0; i + 3 < qv.length; i += 4) {
+    tmp.set(qv[i] ?? 0, qv[i + 1] ?? 0, qv[i + 2] ?? 0, qv[i + 3] ?? 1).premultiply(unyaw);
+    qv[i] = tmp.x;
+    qv[i + 1] = tmp.y;
+    qv[i + 2] = tmp.z;
+    qv[i + 3] = tmp.w;
+  }
+  const p = clip.tracks.find((t) => t.name === `${ANIM_HIPS_T}.position`);
+  if (!p) return;
+  const pv = p.values as ArrayLike<number> as Float32Array;
+  const x0 = pv[0] ?? 0;
+  const z0 = pv[2] ?? 0;
+  const v = new THREE.Vector3();
+  for (let i = 0; i + 2 < pv.length; i += 3) {
+    v.set((pv[i] ?? 0) - x0, 0, (pv[i + 2] ?? 0) - z0).applyQuaternion(unyaw);
+    pv[i] = x0 + v.x;
+    pv[i + 2] = z0 + v.z;
+  }
+}
+
+/** How far a clip's hips travel forward (+Z of the hips' parent
+ *  space, the body's facing once faceForwardInPlace has run) from
+ *  its first frame, in the model's own units: the step a pair clip
+ *  takes toward its partner. The scene adds it to the contact
+ *  distance it glides the pair to, so they meet at contact whether a
+ *  take travels or plays in place. */
+export function hipForwardStep(clip: THREE.AnimationClip): number {
+  const p = clip.tracks.find((t) => t.name === `${ANIM_HIPS_T}.position`);
+  if (!p) return 0;
+  const pv = p.values as ArrayLike<number> as Float32Array;
+  const z0 = pv[2] ?? 0;
+  let best = 0;
+  for (let i = 2; i < pv.length; i += 3) best = Math.max(best, (pv[i] ?? 0) - z0);
+  return best;
+}
+
 type CharMode = "dance" | "poseA" | "poseB" | "talk" | "flirt" | "hug" | "jumpUp" | "jumpFall" | "jumpLand" | "slide" | null;
 
 export interface CharAnimator {
@@ -747,6 +803,10 @@ export interface CharAnimator {
    *  for the shorter of the two durations. */
   hasPair: (kind: "flirt" | "hug") => boolean;
   pairDuration: (kind: "flirt" | "hug") => number;
+  /** The forward step the pair clip's hips take toward the partner,
+   *  in world metres at the body's current scale (0 for a take that
+   *  plays in place). */
+  pairStepIn: (kind: "flirt" | "hug") => number;
   update: (dt: number, speed: number, waving: boolean, seated?: boolean, mode?: CharMode, benchSeated?: boolean) => void;
   /** Apply the idle clip NOW, so a body revealed in the same tick is
    *  already standing in its idle pose, never the bind pose, never a
@@ -815,6 +875,7 @@ export function createCharAnimator(args: {
     danceDuration: 0,
     hasPair: () => false,
     pairDuration: () => 0,
+    pairStepIn: () => 0,
     update: () => {},
     prime: () => {},
   };
@@ -985,6 +1046,13 @@ export function createCharAnimator(args: {
       let slideA: THREE.AnimationAction | null = null;
       out.hasPair = (kind) => (kind === "flirt" ? flirtA : hugA) !== null;
       out.pairDuration = (kind) => (kind === "flirt" ? flirtClip : hugClip)?.duration ?? 0;
+      const pairWorldScale = new THREE.Vector3();
+      out.pairStepIn = (kind) => {
+        const clip = kind === "flirt" ? flirtClip : hugClip;
+        if (!clip) return 0;
+        args.model.getWorldScale(pairWorldScale);
+        return hipForwardStep(clip) * pairWorldScale.x;
+      };
       if (!idleA) return;
       idleA.weight = 1;
       out.hasWave = useWave && waveA !== null;
@@ -1225,12 +1293,16 @@ export function createCharAnimator(args: {
       // clears its hips by half a metre), baked through OUTDOOR_RIG.
       // Seated families get their hip XZ pinned (the scene owns
       // seat placement; see pinHipXZInPlace).
-      const lenientOutdoor = async (url: string | undefined, pinHipXZ: boolean): Promise<THREE.AnimationClip | null> => {
+      const lenientOutdoor = async (url: string | undefined, pinHipXZ: boolean, faceForward = false): Promise<THREE.AnimationClip | null> => {
         if (!url) return null;
         await quietTurn();
         const clip = await loadClip(url, OUTDOOR_RIG);
         if (!clip) return null;
         if (pinHipXZ) pinHipXZInPlace(clip);
+        // The pair halves: whichever way the take was authored, the
+        // body faces its own forward on frame one; the scene turns
+        // the two toward each other (see faceForwardInPlace).
+        if (faceForward) faceForwardInPlace(clip);
         return passes(clip) ? clip : null;
       };
       if (urls.outdoor) {
@@ -1246,9 +1318,9 @@ export function createCharAnimator(args: {
           const a = mk(await lenientOutdoor(u, true));
           if (a) benchActs.push(a);
         }
-        flirtClip = await lenientOutdoor(urls.outdoor.flirt, false);
+        flirtClip = await lenientOutdoor(urls.outdoor.flirt, false, true);
         flirtA = mkOnce(flirtClip, true);
-        hugClip = await lenientOutdoor(urls.outdoor.hug, false);
+        hugClip = await lenientOutdoor(urls.outdoor.hug, false, true);
         hugA = mkOnce(hugClip, true);
       }
     } catch (err) {
