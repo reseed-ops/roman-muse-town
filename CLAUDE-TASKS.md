@@ -758,7 +758,8 @@ Notes for the port and the owner:
   stays 5.5 m): touching, she was inside the taller, cloaked body at three-quarter.
   The hold is static by authoring (her head over his right shoulder, hips 0.40 m
   apart); the "front-to-front moment at the start" is the blend-in from the idle.
-  Nothing else changed. Deploy: see the landing note.
+  Nothing else changed. Deployed the same night on the owner's word (build
+  37dd558c6d88, bundle main-kthp3a5t.js).
 
 ## Task 9 (READY, added Nov 5, 2026): hosted web town fixes: Aelia's missing textures, the conversation panel rectangle, and the unreachable hug and flirt pairs
 
@@ -1569,7 +1570,7 @@ compose to "stay at the peak"; the hold is the embrace, and the camera now shows
 
 **Suites.** `bun run test`: 367 pass, 19 skip, 0 fail; `test:pg` 20 pass; client `tsc` 295 errors, the SDK baseline, nothing new; web build `2da3134bc226`, 18 client files, bundle `main-m5bsnsxe.js`.
 
-**Deploy.** PENDING at commit time; the line after this one records it.
+**Deploy.** DONE, Nov 5, 2026, night, on the owner's word in chat: Railway build `37dd558c6d88`, 18 client files, bundle `main-kthp3a5t.js`; `/healthz` and the served bundle checked on both domains from here. The embrace from the side is Muse's live check.
 
 **What the owner re-verifies.** H through the preview route in the open: the glide
 to touching, the camera swinging to his right side and in to about five metres over
