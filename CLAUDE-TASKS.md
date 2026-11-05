@@ -719,6 +719,14 @@ Notes for the port and the owner:
   through the Gamepad API (left stick, ABXY, LB/RB, standard mapping; the first
   pad takes Gaius, a second takes Aelia).
 
+- Task 12 landed (Claude, Nov 5, 2026, evening): her flirt hand does rise, at clip
+  level and after the bake (arm directions within 5° of the take on both bodies);
+  it is authored modest (a forearm fold to the partner's chest, the other hand on
+  her hip) and from the follow camera, straight behind Gaius, every part of her
+  was behind his torso, hug included. The walk camera now eases to a three-quarter
+  view from his right for the hold of any pair moment (`PAIR_CAM_YAW`); nothing in
+  the takes, staging, spacing or gates changed. Deploy: see the landing note.
+
 ## Task 9 (READY, added Nov 5, 2026): hosted web town fixes: Aelia's missing textures, the conversation panel rectangle, and the unreachable hug and flirt pairs
 
 Context: the web town (Task 8) is deployed and live at town.reseed.net with its own
@@ -1101,3 +1109,51 @@ cannot be had from this pack.
 Scope: the hug, the pair staging and spacing, and the gates are verified or
 settled; please do not retune them to chase this. The deploy rides as usual
 once it lands, and the landing note records the build.
+
+### Landing note (Claude, Nov 5, 2026, evening)
+
+**Her hand rises; his body hid it.** Measured with the same pipeline as Task 10 (the
+town's own bake on both real VRMs, the two bodies composed as the scene composes
+them, and the source takes in Blender):
+
+- *The assignment is right.* `f_flirt` is Couple flirt-2.3.3 and `m_flirt` is 2.3,
+  and the two halves are near mirror images: in each, the right hand is raised
+  0.18 m forward and 0.32 m above the hips (to the partner's chest at the take's
+  0.42 m), the left arm hangs, hers with the hand resting on her hip. Swapping the
+  halves changes nothing that matters.
+- *The bake keeps it.* On Aelia's rig the retargeted arm directions are within 5°
+  of the take's (upper arm hanging, forearm folded up and across); her right hand
+  sits 0.08 m in front of her hips at 0.34 m up, his 0.07 m at 0.37 m. The reach
+  is shorter than authored on both bodies because the VRoid chest and neck bind
+  leaning back (a trait of the models the bake leaves alone on purpose, the idle
+  has always worn it), so both hands fold to their own chests rather than reaching
+  the other's. No idle or pose blends over her clip during the hold.
+- *The camera hid it.* The walk camera stands behind Gaius on his heading and looks
+  past him at her. Drawn from that camera at its real distance and height, Aelia
+  is entirely inside his silhouette, in the flirt and in the hug; her right hand,
+  in front of her own chest, is behind his torso. "One hand on her hip, the other
+  arm down" is exactly what shows: the hip hand and her hanging upper arm, with
+  the folded forearm hidden. His raised hand, on the camera side, reads.
+
+**What changed.** The walk camera eases to a three-quarter view from his right
+(`PAIR_CAM_YAW`, 0.95 rad) for the hold of a pair moment, flirt and hug alike, and
+stays where it lands (the loose follow recenters once he walks on). A drag, a
+pinch or reduced motion leaves the camera alone. The takes, the staging, the
+spacing and the gates are untouched. From that view both raised hands are in the
+frame, mirrored, and the embrace shows her arms around him instead of his back.
+
+**The honest limit.** The mirrored flirt is what the pack has (Couple flirt-2 is its
+only face-to-face mirrored take; flirt-5 is her hand to her own hair with his at
+her hip, flirt-3 and 4 are not mirrored), and the raise is modest by authoring: a
+hand to the partner's chest, not a hand at face height. If the owner wants a
+bigger gesture it is a different pack or a bespoke clip.
+
+**Suites.** `bun run test`: 361 pass, 18 skip, 0 fail; `test:pg` 19 pass; client `tsc` 295 errors, the SDK baseline, nothing new; web build `f7a650fa3a75`, 122 client files, bundle `main-7hf2hptp.js` (it also carries the LB/RB shoulder buttons from 5405915).
+
+**Deploy.** PENDING at commit time; the line after this one records it.
+
+**What the owner re-verifies.** F through the preview route: the glide to a hand's
+reach, then the camera swings to his right over about a second and holds; both
+right hands are up at chest height toward each other, her left hand on her hip,
+his left arm hanging. H likewise shows the embrace from the side. Dragging the
+view during a hold keeps the drag.
