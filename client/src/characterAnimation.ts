@@ -179,6 +179,40 @@ export function poseHoldHandMuse(rig: VrmRig, amt: number, fromRest: boolean) {
   umbrellaBone(rig, rig.lHand, 0, 0, 0.12 * amt, fromRest);
 }
 
+/** The flirt's answering hand, raised (Task 13). Couple flirt-2, the
+ *  pack's one mirrored face-to-face take, raises each right hand only
+ *  as far as a forearm folded across the belly (0.18 m forward, 0.32 m
+ *  above the hips as authored; 0.08 m forward on these bodies, whose
+ *  chests bind leaning back), which reads as a hand at the waist and
+ *  shows from no camera: not from behind him, not from above. So for
+ *  the hold the right arm is composed instead, in the wave's manner
+ *  (a pose from the bind, eased in over the clip's own arm by slerp):
+ *  the hand comes up to the partner's chest, 0.28 m forward and
+ *  0.46 m above the hips, elbow low and out, on both bodies, mirrored.
+ *  The angles are per body because the take poses the two chests and
+ *  shoulders differently, and the arm hangs off those: solved on the
+ *  real bodies for the Task 13 note. */
+const FLIRT_LIFT = {
+  his: { upper: [-0.3, 1.26, 0.6], fore: [0, 0.76, 0.16] },
+  hers: { upper: [-0.57, 1.08, 0.36], fore: [0, 1.56, 0.11] },
+} as const;
+const liftTarget = new THREE.Quaternion();
+function liftBone(rig: VrmRig, bone: THREE.Object3D | null, e: readonly [number, number, number], amt: number) {
+  if (!bone) return;
+  const rest = rig.rest.get(bone);
+  if (!rest) return;
+  boneEuler.set(e[0], e[1], e[2]);
+  liftTarget.setFromEuler(boneEuler).multiply(rest);
+  if (amt >= 1) bone.quaternion.copy(liftTarget);
+  else bone.quaternion.slerp(liftTarget, amt);
+}
+export function poseFlirtLift(rig: VrmRig, amt: number, who: "his" | "hers") {
+  const q = FLIRT_LIFT[who];
+  liftBone(rig, rig.rUpperArm, q.upper, amt);
+  liftBone(rig, rig.rLowerArm, q.fore, amt);
+  liftBone(rig, rig.rHand, [0, 0, 0], amt);
+}
+
 // --- Retargeted motion clips -------------------------------------------------
 // Real animation clips replace the formula-swung limbs for locomotion
 // and idle. The clips come from the owner's purchased "Human Basic Motions"

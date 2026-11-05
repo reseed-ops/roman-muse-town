@@ -3,7 +3,8 @@ import { samplePath } from "./pathGeometry";
 import { streetWidth } from "./town";
 import { repairRomanMaterials } from "./romanMaterials";
 import { TreePlacement } from "./treePlacement";
-import { type VrmRig, collectRig, poseBone, poseWave, poseWaveStill, poseUmbrellaArm, poseThrowArm, poseLinkArm, poseHoldHandPlayer, poseHoldHandMuse, type CharAnimator, createCharAnimator, prepareVrm, collectBlinkMorphs, setBlink } from "./characterAnimation";
+import { type VrmRig, collectRig, poseBone, poseWave, poseWaveStill, poseUmbrellaArm, poseThrowArm, poseLinkArm, poseHoldHandPlayer, poseHoldHandMuse,
+  poseFlirtLift, type CharAnimator, createCharAnimator, prepareVrm, collectBlinkMorphs, setBlink } from "./characterAnimation";
 // The Muse Town diorama: a low-poly three.js scene with a plaza around
 // the great town tree, five clickable houses, lamp posts, smaller trees,
 // a day/night cycle, and two hidden collectibles (the pointy hat and the
@@ -5860,6 +5861,7 @@ export function createTownScene(
   let summitDone = false;
   let summitMeteor = false;
   let handInHand = false;
+  let flirtLift = 0;
   // Hand-in-hand wandering machinery: the joined-hands pose blend
   // (eased so hands meet and part gently, never snap), and the
   // hurry clock, push the stick hard for several seconds despite
@@ -6733,6 +6735,14 @@ export function createTownScene(
       camYawSmooth = angleLerp(camYawSmooth, walkHeading + PAIR_CAM_YAW, 1 - Math.exp(-dt * 1.6));
       fx = Math.sin(camYawSmooth);
       fz = Math.cos(camYawSmooth);
+      // Close enough to read two hands (Task 13: at the walk's 10.5 m
+      // rest the three-quarter view was taken for a distant profile);
+      // the boom collision above still shortens it among the trees.
+      boom = Math.min(boom, PAIR_CAM_DIST);
+      if (!pairState.framed) {
+        pairState.framed = true;
+        console.info(`[muse-town] pair camera: framing the ${pairState.kind} three-quarter from his right`);
+      }
     }
     if (opts.reducedMotion) {
       camDistSmooth = boom;
@@ -9030,10 +9040,12 @@ export function createTownScene(
   // fixed 0.57 m hug (the He hugs take, hand on the shoulder, her
   // arms down) never read as an embrace: see Task 10's note.
   const PAIR_SPACING_M: Record<"flirt" | "hug", number> = { hug: 0.5, flirt: 0.55 };
-  // The pair camera's yaw off his heading: three-quarter from his right.
+  // The pair camera's yaw off his heading: three-quarter from his right,
+  // and its boom for the hold (the rest distance is 10.5 m).
   const PAIR_CAM_YAW = 0.95;
+  const PAIR_CAM_DIST = 5.5;
   let talkAnimOpen = false;
-  let pairState: { kind: "flirt" | "hug"; t: number; dur: number; glide: PairGlide | null } | null = null;
+  let pairState: { kind: "flirt" | "hug"; t: number; dur: number; glide: PairGlide | null; framed: boolean } | null = null;
   function playPairMoment(kind: "flirt" | "hug"): boolean {
     if (!walking || pairState || danceState || bathState || boatState || seatPlayer || seatMuse || skyWatchState || secretMoment) return false;
     if (!museAnim?.ready || !playerAnim?.ready) return false;
@@ -9061,7 +9073,7 @@ export function createTownScene(
         tm: new THREE.Vector3(mx + ux * half, museGroup.position.y, mz + uz * half),
       };
     }
-    pairState = { kind, t: 0, dur: dur + (glide ? 0.9 : 0) + 0.35, glide };
+    pairState = { kind, t: 0, dur: dur + (glide ? 0.9 : 0) + 0.35, glide, framed: false };
     return true;
   }
 
@@ -11160,6 +11172,17 @@ export function createTownScene(
           museGroup.position.y = groundHeightAt(museGroup.position.x, museGroup.position.z);
         }
       }
+    }
+    // The flirt's answering hand (Task 13): both right forearms, folded
+    // at the belly as the take has them, are lifted to the partner's
+    // chest for the hold, composed over the clip like the joined hands
+    // above. Eases in with the hold and out after it.
+    const wantLift = pairState?.kind === "flirt" && !pairState.glide ? 1 : 0;
+    flirtLift += (wantLift - flirtLift) * Math.min(1, dt * 3.5);
+    if (flirtLift < 0.02 && wantLift === 0) flirtLift = 0;
+    if (flirtLift > 0.02) {
+      if (playerRig) poseFlirtLift(playerRig, flirtLift, "his");
+      if (museRig) poseFlirtLift(museRig, flirtLift, "hers");
     }
     // Standing joined: now and then she says so, in the close register.
     if (

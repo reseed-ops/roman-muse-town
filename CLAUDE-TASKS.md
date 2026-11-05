@@ -732,6 +732,16 @@ Notes for the port and the owner:
   here); push/key reports enabled with the public key, home page 200. Note under
   the task.
 
+- Task 13 landed (Claude, Nov 5, 2026, night): the take's "raise" is a forearm folded
+  at the belly on both bodies (measured again, with the frame order checked: nothing
+  blends over her clip), invisible from above and read as a hand at the waist; the
+  right arm is now composed for the flirt hold (`poseFlirtLift`, per-body angles
+  solved on the real bodies: both hands 0.28 m forward, 0.46 m up, mirrored). The
+  pair camera did engage in the Task 12 build but at the walk's 10.5 m rest it read
+  as a distant profile, and among the trees the boom collision made it overhead; the
+  hold now booms in to 5.5 m and logs `[muse-town] pair camera` when it engages.
+  Hug, spacing and gates untouched. Deploy: see the landing note.
+
 ## Task 9 (READY, added Nov 5, 2026): hosted web town fixes: Aelia's missing textures, the conversation panel rectangle, and the unreachable hug and flirt pairs
 
 Context: the web town (Task 8) is deployed and live at town.reseed.net with its own
@@ -1242,6 +1252,59 @@ Scope: the hug is verified and closed; do not retune it, the spacing, or the
 gates to chase this. The deploy rides as usual, and the landing note records
 the build.
 
+### Landing note (Claude, Nov 5, 2026, night)
+
+**Where her raise goes, from the composed data.** Sampled through the whole clip
+on her rig (the take is a static hold: every frame is the same pose within 2 cm),
+the right hand sits 0.08 m in front of her hips and 0.34 m above them, on her
+centre line, with the upper arm hanging straight down and the forearm folded up
+across the belly; his is the same pose 2 cm higher. That is the whole raise the
+take contains: a hand at the navel. It is hidden under her own chest and head from
+above, behind his torso from behind him, and from the side it is a hanging upper
+arm with the forearm tucked, which is "arm down". His reads only because his
+forearm is on the camera's side. The half assignment is right (the two halves are
+mirror images: swapping them moves nothing by more than 3 cm). The frame order was
+checked line by line: the idle-life procedural posing runs before the mixers, so
+the mixers overwrite it; after the mixers only the joined-hands pose runs, and
+it touches her left arm, not her right. Nothing blends over her clip during the
+hold, and there is no phase to miss.
+
+**What recovers it.** The pack has no mirrored take with a hand higher than the
+belly (Task 12's survey stands), so the raise is composed, in the wave's manner:
+for the flirt hold the right arm of each body is posed from the bind and eased in
+over the clip's own arm by slerp, `poseFlirtLift`. The angles are per body, solved
+on the real skeletons, because the take poses the two chests and shoulders
+differently and the arm hangs off those. Measured on both bodies, composed at the
+flirt's spacing: each right hand 0.28 m forward of its own hips and 0.46 m above
+them, 5 cm off the centre line, elbow low and out; his hand 0.16 m in front of
+her hips at her chest height, hers 0.16 m in front of his at his lower chest. Both
+hands up, toward each other, mirrored, from the hold's first second (the ease is
+the joined hands' 3.5 per second). `flirtLift.test.ts` holds the pose on a toy rig.
+
+**The camera.** The Task 12 framing was in the served bundle and did engage: it
+turns the yaw 54° off his heading, which at the walk's 10.5 m rest distance and
+4.2 m height is the "distant side profile" of runs 2 and 3; and run 1 was the boom
+collision, which among the trees shortens the boom to its 1.7 m floor, where a
+4.2 m-high camera looks straight down (the "overhead" frame). Now the hold also
+booms the camera in to 5.5 m (`PAIR_CAM_DIST`; the collision still shortens it
+where a trunk is in the line), and the moment the framing engages the console
+prints `[muse-town] pair camera: framing the flirt three-quarter from his right`,
+so a run can be checked for engagement by that line. The staging, the spacing, the
+takes and the gates are untouched; the hug plays as verified, seen closer.
+
+**Suites.** `bun run test`: 364 pass, 18 skip, 0 fail; `test:pg` 19 pass; client
+`tsc` 295 errors, the SDK baseline, nothing new; web build `93bfc33b12d1`, 122
+client files, bundle `main-94b646j4.js`.
+
+**Deploy.** PENDING at commit time; the line after this one records it.
+
+**What the owner re-verifies.** F through the preview route, in the open (the pair
+camera is a walk camera: trunks in its line still pull it in): the glide to a
+hand's reach, the camera swinging to his right and in to about five metres over a
+second, then both right hands up at chest height toward each other for the hold,
+her left hand on her hip and his left arm hanging as the take has them; the
+console line above on every run. The frame rate changes none of it (the hold's
+poses are static). H as before, now from the closer view.
 ## Note (Nov 5, 2026, from Muse via Tuan): the PlantTasks embed change has not landed on origin
 
 This follows the PlantTasks deploy note relayed to the owner today, the one reporting
@@ -1259,3 +1322,10 @@ deploys with the rest, and note here what the variable accepts and what the defa
 posture is. If it was meant for a different service, say which one. The owner has no
 specific origin he wants to allow yet; this note only closes the gap between the
 report and origin.
+
+**Reply (Claude, Nov 5, 2026, night, this session on the Android device):** no
+embed work exists here. The only PlantTasks action in this session was Task 11 (the
+VAPID variables); nothing about EMBED_ALLOWED_ORIGINS or framing headers was built,
+pushed or set from this machine, and this checkout has no planttasks clone. The
+deploy note that reported the variable did not come from this session, so the gap
+is between that report and origin, not anything pending here. Nothing to push.
