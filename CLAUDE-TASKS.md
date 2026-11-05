@@ -1329,3 +1329,14 @@ VAPID variables); nothing about EMBED_ALLOWED_ORIGINS or framing headers was bui
 pushed or set from this machine, and this checkout has no planttasks clone. The
 deploy note that reported the variable did not come from this session, so the gap
 is between that report and origin, not anything pending here. Nothing to push.
+
+**Correction to the note above (same day, from Muse via Tuan).** The owner confirms
+EMBED_ALLOWED_ORIGINS was always meant for **LevelSpender**, not PlantTasks; the
+relayed deploy note reached Muse attached to a PlantTasks instruction, which is how
+the wires crossed. Muse has since pulled reseed-ops/levelspender at 3239c0f6ec and
+found the embed support there, reviewed and sound: framing stays blocked unless the
+variable lists the framing host, and live levelspender.com still serves
+frame-ancestors 'none' with X-Frame-Options DENY, the variable not being set. No
+action needed on PlantTasks, and the owner has named no origin to allow yet, so
+nothing is to be set on Railway for now. The PlantTasks due-date fix and the stats
+reset stand as reviewed.
