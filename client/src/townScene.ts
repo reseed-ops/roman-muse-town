@@ -75,6 +75,7 @@ import {
 } from "./wind";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
+import { assetBytes, assetUrl, loadAssetTexture } from "./assetPack";
 import { clone as cloneSkeleton } from "three/addons/utils/SkeletonUtils.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { AVENUE_CYPRESSES, DISH_TABLE, GARDEN_BEDS, MARKET_BOOTHS, VILLA, VILLA_WALLS, resumeSpot, routeBetween, stairHeight } from "./layout";
@@ -795,9 +796,8 @@ const modelBytes = new Map<string, Promise<ArrayBuffer>>();
 function fetchModelBytes(url: string): Promise<ArrayBuffer> {
   let pending = modelBytes.get(url);
   if (!pending) {
-    pending = fetch(url).then((res) => {
-      if (!res.ok) throw new Error(`model fetch failed (${res.status}): ${url}`);
-      return res.arrayBuffer();
+    pending = assetBytes(url).catch((err: unknown) => {
+      throw new Error(`model fetch failed: ${url} (${err instanceof Error ? err.message : String(err)})`);
     });
     modelBytes.set(url, pending);
   }
@@ -922,12 +922,12 @@ function getPaletteTexture(): Promise<THREE.Texture> {
   if (!sharedPaletteTexture) {
     sharedPaletteTexture = new Promise((resolve, reject) => {
       const timeout = window.setTimeout(() => reject(new Error("Roman palette load timed out")), 15000);
-      new THREE.TextureLoader().load(paletteUrl, (texture) => {
+      loadAssetTexture(paletteUrl, (texture) => {
         window.clearTimeout(timeout);
         texture.flipY = false;
         texture.colorSpace = THREE.SRGBColorSpace;
         resolve(texture);
-      }, undefined, (error) => { window.clearTimeout(timeout); reject(error); });
+      }, (error) => { window.clearTimeout(timeout); reject(error); });
     });
   }
   return sharedPaletteTexture;
@@ -3369,7 +3369,7 @@ export function createTownScene(
   // across it and the material takes a deep blue sheen. The aqueduct's
   // west leg stands in the shallows at the lake's west inlet, the
   // arcade has crossed water since Rome, and it reads as intentional.
-  const waterTex = new THREE.TextureLoader().load(waterNormalUrl);
+  const waterTex = loadAssetTexture(waterNormalUrl);
   waterTex.wrapS = THREE.RepeatWrapping;
   waterTex.wrapT = THREE.RepeatWrapping;
   waterTex.repeat.set(3, 3);
@@ -8373,7 +8373,7 @@ export function createTownScene(
   function loadFbxSource(url: string, prepare: (source: THREE.Group) => void): Promise<THREE.Group> {
     let source = fbxSources.get(url);
     if (!source) {
-      source = fbxLoader2.loadAsync(url).then((g) => {
+      source = assetUrl(url).then((resolved) => fbxLoader2.loadAsync(resolved)).then((g) => {
         prepare(g);
         return g;
       });
@@ -8486,8 +8486,8 @@ export function createTownScene(
     world.children.forEach((c) => {
       if ((c as THREE.Group).userData?.proceduralWillow) willowGroups.push(c as THREE.Group);
     });
-    void gltfLoader
-      .loadAsync(treesPackUrl)
+    void assetUrl(treesPackUrl)
+      .then((resolved) => gltfLoader.loadAsync(resolved))
       .then((gltf) => {
         if (!resources.adopt(gltf.scene)) return null;
         const byName = new Map<string, THREE.Object3D>();
@@ -8826,7 +8826,6 @@ export function createTownScene(
   // The pets' real coats (see the imports): one shared texture per
   // kind, loaded from the bundle, the FBX's own references point
   // at the author's Windows paths and can never resolve.
-  const petTextureLoader = new THREE.TextureLoader();
   const petTextures = new Map<string, THREE.Texture>();
   function petTexture(kind: string): THREE.Texture | undefined {
     const url =
@@ -8838,7 +8837,7 @@ export function createTownScene(
     if (!url) return undefined;
     let tex = petTextures.get(kind);
     if (!tex) {
-      tex = petTextureLoader.load(url);
+      tex = loadAssetTexture(url);
       tex.colorSpace = THREE.SRGBColorSpace;
       petTextures.set(kind, tex);
     }
@@ -9191,11 +9190,11 @@ export function createTownScene(
   traceSprite.scale.set(0.4, 0.7, 1);
   traceSprite.visible = false;
   world.add(traceSprite);
-  void runtime.streaming.request(() => fbxLoader2.loadAsync(phoenixUrl), () => ({ x: COLOSSEUM.position[0], z: COLOSSEUM.position[1] }))
+  void runtime.streaming.request(() => assetUrl(phoenixUrl).then((resolved) => fbxLoader2.loadAsync(resolved)), () => ({ x: COLOSSEUM.position[0], z: COLOSSEUM.position[1] }))
     .then((g) => {
       if (!resources.adopt(g)) return null;
       repairModelMaterials(g, { label: "phoenix" });
-      const tex = new THREE.TextureLoader().load(phoenixTexUrl);
+      const tex = loadAssetTexture(phoenixTexUrl);
       tex.colorSpace = THREE.SRGBColorSpace;
       g.traverse((o) => {
         if (o instanceof THREE.Mesh) {
@@ -9508,7 +9507,7 @@ export function createTownScene(
     next.fadeIn(0.3).play();
     w.current = name;
   }
-  void runtime.streaming.request(() => gltfLoader.loadAsync(wolfUrl), () => ({ x: FOREST.glade[0], z: FOREST.glade[1] }))
+  void runtime.streaming.request(() => assetUrl(wolfUrl).then((resolved) => gltfLoader.loadAsync(resolved)), () => ({ x: FOREST.glade[0], z: FOREST.glade[1] }))
     .then((gltf) => {
       if (!resources.adopt(gltf.scene)) return null;
       const inner = new THREE.Group();

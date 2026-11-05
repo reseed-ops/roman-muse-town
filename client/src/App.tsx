@@ -188,6 +188,7 @@ import {
   type PadSeats,
 } from "./padRouting";
 import summitSongUrl from "./assets/stars-fall-song.mp3";
+import { assetUrl, assetUrlSync } from "./assetPack";
 import {
   absorbDirections,
   acceptFrame,
@@ -364,6 +365,13 @@ export function App() {
   // mode, both bodies ready, within reach, nothing else under way).
   // It plays the two bodies and nothing more: no affection, no scene
   // lines, every rank gate exactly as it is.
+  // The summit's song: packed in the hosted build, so its object URL is
+  // readied here, long before the ♪ button needs a URL it can open.
+  useEffect(() => {
+    void assetUrl(summitSongUrl).catch(() => {
+      /* the device voice carries the verse if the recording cannot load */
+    });
+  }, []);
   const pairPreview = useMemo(() => /[?&]preview=pairs(?:&|$)/.test(typeof window !== "undefined" ? window.location.search : ""), []);
   const stagePairPreview = useCallback((kind: "flirt" | "hug") => {
     if (!walkingRef.current) return;
@@ -2423,7 +2431,7 @@ export function App() {
     }
     if (!songAudioRef.current) {
       try {
-        songAudioRef.current = new Audio(summitSongUrl);
+        songAudioRef.current = new Audio(assetUrlSync(summitSongUrl));
       } catch {
         songAudioRef.current = null;
       }

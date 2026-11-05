@@ -147,7 +147,7 @@ only one whose licence was positively verified as allowing it.
 
 | File | Path | Notes |
 | --- | --- | --- |
-| `stars-fall-song.mp3` | `client/src/assets/` | The summit scene's song. **Origin not documented** in the original's notes; owner-supplied. Confirm provenance before any release build ships it. A receiving town can substitute any quiet song file of its own. |
+| `stars-fall-song.mp3` | `client/src/assets/` | The summit scene's song, AI generated for the scene during the town's original build (Nov 1, 2026, 00:07, the build night of the summit scene; the file carries "AI Generated" in its embedded metadata). Provenance the project's own: no owner-supplied copy ever existed (the Nov 5 rebuild record below listed it as missing from the owner's folder). The generating service and account are not recorded, so its output terms are the one residual unknown. A receiving town can substitute any quiet song file of its own. (Line corrected Nov 5, 2026, Task 14, on the launch gate review's evidence.) |
 | `icon.webp` | space root | The app icon. Regenerate for a new artifact. |
 
 ---
@@ -240,7 +240,7 @@ town file was made from, so the next rebuild is a copy, not a hunt:
 
 Not rebuilt, still missing from the owner's folder:
 
-- `stars-fall-song.mp3`: no candidate on the device; owner-supplied.
+- `stars-fall-song.mp3`: no candidate on the device at rebuild time; the file in use is the project's own AI-generated song (see section 11), restored to the folder the same day.
 
 `townScene.ts` and `App.tsx` import every one of these files statically,
 so the web build fails until all 121 are present (see `CLAUDE.md`).

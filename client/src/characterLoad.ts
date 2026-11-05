@@ -5,6 +5,8 @@
  *  dead file must cost the buildings a pause, never the visit. */
 export const CHARACTER_WAIT_MS = 8000;
 
+import { assetBytes } from "./assetPack";
+
 const clipBytes = new Map<string, Promise<ArrayBuffer>>();
 
 /** Raw bytes of an animation clip, fetched once per URL, so the early
@@ -12,9 +14,8 @@ const clipBytes = new Map<string, Promise<ArrayBuffer>>();
 export function fetchClipBytes(url: string): Promise<ArrayBuffer> {
   let pending = clipBytes.get(url);
   if (!pending) {
-    pending = fetch(url).then((res) => {
-      if (!res.ok) throw new Error(`clip fetch failed (${res.status}): ${url}`);
-      return res.arrayBuffer();
+    pending = assetBytes(url).catch((err: unknown) => {
+      throw new Error(`clip fetch failed: ${url} (${err instanceof Error ? err.message : String(err)})`);
     });
     clipBytes.set(url, pending);
   }

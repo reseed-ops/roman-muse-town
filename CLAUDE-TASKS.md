@@ -743,6 +743,15 @@ Notes for the port and the owner:
   Hug, spacing and gates untouched. Deployed the same night on the owner's word (build
   4374b6bae71c, bundle main-f0ra4y15.js).
 
+- Task 14 landed (Claude, Nov 5, 2026, night): the song's line in ASSETS.md says what the
+  gate review established (AI generated for the scene on Nov 1, provenance the project's
+  own, the generating service unrecorded); the web build packs every imported asset
+  into nine packs (`web/assetPack.ts`, `client/src/assetPack.ts`), the bundle carries
+  `pack:` strings instead of URLs, the client fetches a pack once and slices from it,
+  and an asset path on the hosted town answers 404 (server test). 114 assets, 86.5 MB,
+  byte-identical inside the packs; the dist went from 122 files to 19. Deploy: see the
+  landing note.
+
 ## Task 9 (READY, added Nov 5, 2026): hosted web town fixes: Aelia's missing textures, the conversation panel rectangle, and the unreachable hug and flirt pairs
 
 Context: the web town (Task 8) is deployed and live at town.reseed.net with its own
@@ -1410,3 +1419,58 @@ then records the gate as cleared in this file with the date and the owner's
 decision, and updates the public README with the web version section and
 the town.reseed.net link. The link does not precede the packed build; that
 ordering is the point of the gate.
+
+### Landing note (Claude, Nov 5, 2026, night)
+
+**Part 1.** ASSETS.md section 11 now reads, in substance, as asked: the summit scene's
+song, AI generated for the scene during the town's original build (Nov 1, 2026,
+00:07, the file's own "AI Generated" metadata), provenance the project's own; the
+generating service and account unrecorded, so its output terms are the one residual
+unknown; a receiving town can substitute any quiet song file. The table's shape and
+the substitution note are kept, and the rebuild record's "owner-supplied" line is
+corrected to match.
+
+**Part 2, the mechanism.** The web build (`web/build.ts`) now carries a Bun plugin
+that intercepts every import under `client/src/assets/` and emits the string
+`pack:<path>` in its place; after the bundle, the files go into packs under
+`web/dist/client/packs/`, raw concatenations with a manifest of byte ranges and
+MIME types (`web/assetPack.ts` decides the layout; the manifest is
+`packs/manifest.json`, served `no-cache`, the packs `<name>-<hash>.pack`, served
+immutable and cached on first use by the service worker, never precached). Nine
+packs, following the scene's own loading order: `bodies` (the two VRMs, 32.2 MB),
+`world` (trees, phoenix and its texture, 4.3 MB), `wolf` (11.9 MB, the forest's
+alone), `song` (0.2 MB, the summit's alone, readied at mount), `anim` (11.4 MB),
+`outdoor` (14.6 MB), `roman` (8.6 MB), `greek` (0.2 MB), `pets` (3.1 MB). On the
+client, `client/src/assetPack.ts` is the one place that knows: a pack is fetched
+once, on the first file asked from it, each file is sliced from it (bytes for the
+model and clip loaders, which already parsed from bytes; object URLs for the FBX
+and glTF loaders that take a URL, the textures and the song), and the pack's buffer
+is let go once every file in it has been taken. A plain URL passes straight
+through, so the artifact build and the APK, which never see the plugin, are
+untouched, and so are the repo's two included binaries (they ride in the packs on
+the web like everything else; nothing about their files changed).
+
+**Counts and sizes.** Before: 122 client files, 89 MB, of which 114 were asset
+files served one by one under `assets/` (the 7 files in the folder that nothing
+imports, `greek_dock`, `greek_pool_1`, `greek_atlas.png`, `apple`, `bowl`,
+`bush_roman`, `platform_wooden`, were never in a build and still are not). After:
+19 client files, 88.6 MB, of which 9 packs, 86.5 MB, and no `assets/` folder at all.
+Verified on the built dist by a script: all 114 imported assets byte-identical inside
+their packs; the bundle holds 114 `pack:` strings and no asset URL. The server test
+(`web/src/server.test.ts`) pins the rest: the manifest fresh, a pack immutable, and
+four spellings of a known licensed file's path all 404.
+
+**Acceptance, what can be judged from here.** (a) holds by construction and by test:
+no asset file exists in the deployed dist, so no asset path returns one. (b) and (c)
+are the live check: the same loaders consume the same bytes, the clip bake, the model
+parse, the textures and the song are unchanged downstream of the slice, and the
+pair preview stages as before (the pairs' clips come from the `outdoor` pack); this
+device cannot draw the scene, so Muse's visit is the proof. If anything fails to
+load, the console names the pack and the file (`asset not in any pack`, `asset pack
+fetch failed`, `expected N bytes`).
+
+**Suites.** `bun run test`: 367 pass, 18 skip, 0 fail; `test:pg` 20 pass; client
+`tsc` 295 errors, the SDK baseline, nothing new; `web/` files type clean; web build
+`3b5274c2c165`, 19 client files, bundle `main-4sc8jj6v.js`.
+
+**Deploy.** DEPLOY_PLACEHOLDER

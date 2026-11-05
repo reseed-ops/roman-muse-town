@@ -12,6 +12,8 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { drawIcon } from "./icon";
+import { buildPacks } from "./assetPack";
+import { relative, sep } from "node:path";
 
 // The Tailwind plugin carries a native module. On a machine whose
 // checkout sits on a mount that cannot map shared objects (an Android
@@ -23,6 +25,7 @@ const tailwind: import("bun").BunPlugin = (await import(process.env.MUSE_TAILWIN
 const ROOT = resolve(import.meta.dir, "..");
 const OUT = join(ROOT, "web", "dist");
 const CLIENT_OUT = join(OUT, "client");
+const ASSETS_DIR = join(ROOT, "client", "src", "assets");
 /** Files larger than this are cached on first use, not at install. */
 const PRECACHE_MAX_BYTES = 3 * 1024 * 1024;
 const ASSET_LOADERS = Object.fromEntries([".vrm", ".fbx", ".glb", ".gltf", ".png", ".jpg", ".jpeg", ".webp", ".mp3", ".ogg", ".wav", ".wasm", ".bin", ".onnx"].map((ext) => [ext, "file" as const]));
@@ -34,6 +37,21 @@ const alias = (map: Record<string, string>): import("bun").BunPlugin => ({
       const filter = new RegExp(`^${from.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")}$`);
       build.onResolve({ filter }, () => ({ path: to }));
     }
+  },
+});
+
+/** The licensed assets never leave the build as files (Task 14): every
+ *  import under client/src/assets becomes a "pack:<path>" string in the
+ *  bundle, and the files themselves go into a few packs written after
+ *  the bundle (see web/assetPack.ts and client/src/assetPack.ts). */
+const assetPack = (packed: Map<string, string>): import("bun").BunPlugin => ({
+  name: "asset-pack",
+  setup(build) {
+    build.onLoad({ filter: /[\\/]client[\\/]src[\\/]assets[\\/].+\.(vrm|fbx|glb|gltf|png|jpg|jpeg|webp|mp3|ogg|wav)$/i }, (args) => {
+      const rel = relative(ASSETS_DIR, args.path).split(sep).join("/");
+      packed.set(rel, args.path);
+      return { contents: `export default ${JSON.stringify(`pack:${rel}`)};`, loader: "js" };
+    });
   },
 });
 
@@ -85,13 +103,16 @@ export function precacheList(files: { path: string; bytes: number }[]): string[]
   const list = ["/"];
   for (const file of files) {
     if (file.path === "index.html" || file.path === "sw.js") continue;
+    // Packs are cached on first use, never at install, whatever their size.
+    if (file.path.startsWith("packs/")) continue;
     if (file.bytes > PRECACHE_MAX_BYTES) continue;
     list.push(`/${file.path}`);
   }
   return list;
 }
 
-async function buildClient(): Promise<{ files: { path: string; bytes: number }[]; script: string; styles: string[] }> {
+async function buildClient(): Promise<{ files: { path: string; bytes: number }[]; script: string; styles: string[]; packs: number; packedFiles: number }> {
+  const packed = new Map<string, string>();
   const result = await Bun.build({
     entrypoints: [join(ROOT, "client", "src", "main.tsx")],
     outdir: CLIENT_OUT,
@@ -102,9 +123,17 @@ async function buildClient(): Promise<{ files: { path: string; bytes: number }[]
     define: { "process.env.NODE_ENV": JSON.stringify("production") },
     naming: { entry: "[name]-[hash].[ext]", chunk: "[name]-[hash].[ext]", asset: "assets/[name]-[hash].[ext]" },
     loader: ASSET_LOADERS,
-    plugins: [tailwind, alias({ "@hatch/space-sdk/client": join(ROOT, "web", "shim", "spaceSdkClient.ts") })],
+    plugins: [assetPack(packed), tailwind, alias({ "@hatch/space-sdk/client": join(ROOT, "web", "shim", "spaceSdkClient.ts") })],
   });
   if (!result.success) fail(result.logs);
+  const built = buildPacks(
+    [...packed].map(([rel, abs]) => ({ rel, bytes: new Uint8Array(readFileSync(abs)) })),
+    (bytes) => createHash("sha256").update(bytes).digest("hex"),
+  );
+  mkdirSync(join(CLIENT_OUT, "packs"), { recursive: true });
+  for (const pack of built.packs) writeFileSync(join(CLIENT_OUT, pack.file), pack.bytes);
+  writeFileSync(join(CLIENT_OUT, "packs", "manifest.json"), JSON.stringify(built.manifest));
+  const packFiles = [...built.packs.map((pack) => pack.file), "packs/manifest.json"].map((path) => ({ path, bytes: statSync(join(CLIENT_OUT, path)).size }));
   const worker = await Bun.build({
     entrypoints: [join(ROOT, "client", "src", "aeliaLocalChat.worker.ts")],
     outdir: CLIENT_OUT,
@@ -116,11 +145,11 @@ async function buildClient(): Promise<{ files: { path: string; bytes: number }[]
     loader: ASSET_LOADERS,
   });
   if (!worker.success) fail(worker.logs);
-  const files = [...result.outputs, ...worker.outputs].map((output) => ({ path: output.path.slice(CLIENT_OUT.length + 1), bytes: statSync(output.path).size }));
+  const files = [...[...result.outputs, ...worker.outputs].map((output) => ({ path: output.path.slice(CLIENT_OUT.length + 1), bytes: statSync(output.path).size })), ...packFiles];
   const script = files.find((file) => /^main-[0-9a-z]+\.js$/i.test(file.path))?.path;
   if (!script) throw new Error("the client build produced no main bundle");
   const styles = files.filter((file) => file.path.endsWith(".css")).map((file) => file.path);
-  return { files, script, styles };
+  return { files, script, styles, packs: built.packs.length, packedFiles: packed.size };
 }
 
 async function buildServiceWorker(precache: string[], version: string): Promise<void> {
@@ -149,7 +178,7 @@ async function buildServer(): Promise<void> {
   if (!result.success) fail(result.logs);
 }
 
-export async function buildWeb(): Promise<{ version: string; files: string[] }> {
+export async function buildWeb(): Promise<{ version: string; files: string[]; packs: number; packedFiles: number }> {
   rmSync(OUT, { recursive: true, force: true });
   mkdirSync(CLIENT_OUT, { recursive: true });
   const client = await buildClient();
@@ -168,12 +197,12 @@ export async function buildWeb(): Promise<{ version: string; files: string[] }> 
   ];
   await buildServiceWorker(precacheList(files), version);
   await buildServer();
-  return { version, files: files.map((file) => file.path) };
+  return { version, files: files.map((file) => file.path), packs: client.packs, packedFiles: client.packedFiles };
 }
 
 if (import.meta.main) {
   const built = await buildWeb();
   const total = built.files.length;
-  console.log(`web build ${built.version}: ${total} client files in ${CLIENT_OUT}, server at ${join(OUT, "server.js")}`);
+  console.log(`web build ${built.version}: ${total} client files in ${CLIENT_OUT} (${built.packedFiles} assets in ${built.packs} packs), server at ${join(OUT, "server.js")}`);
   console.log(`main: ${basename(built.files.find((file) => file.startsWith("main-")) ?? "?")}`);
 }

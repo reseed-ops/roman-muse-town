@@ -67,6 +67,7 @@ Done on Nov 4, 2026 from the owner's CLI session (Claude): steps 1 to 4 and 6 in
 - `DATABASE_URL=postgres://… bun run start:web` serves on `PORT` (8080 by default). The door opens only with `DIRECTOR_TOKEN` set.
 - `bun run test:pg` runs the action layer, the isolation proofs and the HTTP surface against an in-process Postgres (pglite); `bun run test` runs both suites.
 - Licensed assets are not in this checkout (`ASSETS.md`); the web build needs them in `client/src/assets/` like the artifact build does.
+- The web build does not ship the assets as files (Task 14, Nov 5, 2026). Every import under `client/src/assets/` becomes a `pack:<path>` string in the bundle, the files go into a few packs under `web/dist/client/packs/` (`bodies`, `world`, `wolf`, `song`, `anim`, `outdoor`, `roman`, `greek`, `pets`, each `<name>-<hash>.pack`, byte ranges in `packs/manifest.json`), and the client fetches a pack once, on the first file it needs from it, and slices the rest from memory (`client/src/assetPack.ts`; the layout is `web/assetPack.ts`). A request for an asset path on the hosted town returns 404; the artifact build and the APK are untouched.
 
 ## Footprint
 
@@ -82,6 +83,8 @@ worker exists to cure.
 Standing from the public edition's charter: the deployment may go up for
 the owner's own verification, but the town is not linked, announced or
 posted anywhere until the asset and model licences are verified. The web
-serves the commercial model and texture files to every browser as raw
-files, nearer redistribution than an embedded APK, so that check comes
-first. `CLAUDE-TASKS.md` records when it is done and by whom.
+once served the commercial model and texture files to every browser as
+raw files, nearer redistribution than an embedded APK; since Task 14
+(Nov 5, 2026) they travel packed, no longer addressable one by one, which
+the licence gate review asked for before any public link. `CLAUDE-TASKS.md`
+records when the gate is cleared and by whom.

@@ -3,7 +3,7 @@
 // pglite and exercised with plain Request objects, no socket.
 
 import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
@@ -64,6 +64,9 @@ describe.skipIf(!onPostgres)("the town on the web", () => {
     writeFileSync(join(dist, "index.html"), "<!doctype html><title>Muse Town</title>");
     writeFileSync(join(dist, "main-abcdef12.js"), "console.log(1)");
     writeFileSync(join(dist, "sw.js"), "self.addEventListener('install', () => {})");
+    mkdirSync(join(dist, "packs"), { recursive: true });
+    writeFileSync(join(dist, "packs", "manifest.json"), JSON.stringify({ version: 1, packs: { roman: { file: "packs/roman-0123456789ab.pack", bytes: 5, files: 1 } }, entries: { "roman/temple.glb": { pack: "roman", offset: 0, size: 5, type: "model/gltf-binary" } } }));
+    writeFileSync(join(dist, "packs", "roman-0123456789ab.pack"), "glTF!");
     server = createTownServer({
       db: drizzle(pglite) as unknown as PgTownDb,
       actions: Actions as unknown as Record<string, TownAction>,
@@ -216,5 +219,20 @@ describe.skipIf(!onPostgres)("the town on the web", () => {
     expect((await server.fetch(new Request("http://town.test/missing.js"))).status).toBe(404);
     expect((await server.fetch(new Request("http://town.test/..%2f..%2fetc%2fpasswd"))).status).toBe(404);
     expect((await server.fetch(new Request("http://town.test/healthz"))).status).toBe(200);
+  });
+
+  test("the packed assets (Task 14): packs immutable, the manifest fresh, no asset file served by path", async () => {
+    const manifest = await server.fetch(new Request("http://town.test/packs/manifest.json"));
+    expect(manifest.status).toBe(200);
+    expect(manifest.headers.get("cache-control")).toBe("no-cache");
+    expect((await manifest.json()).entries["roman/temple.glb"].pack).toBe("roman");
+    const pack = await server.fetch(new Request("http://town.test/packs/roman-0123456789ab.pack"));
+    expect(pack.status).toBe(200);
+    expect(pack.headers.get("cache-control")).toContain("immutable");
+    expect(await pack.text()).toBe("glTF!");
+    // The licensed files are not on disk as files, so their old paths are not found.
+    for (const path of ["/assets/temple-0123456789ab.glb", "/assets/roman/temple.glb", "/roman/temple.glb", "/client/src/assets/roman/temple.glb"]) {
+      expect((await server.fetch(new Request(`http://town.test${path}`))).status).toBe(404);
+    }
   });
 });
