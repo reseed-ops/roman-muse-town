@@ -1180,3 +1180,64 @@ reach, then the camera swings to his right over about a second and holds; both
 right hands are up at chest height toward each other, her left hand on her hip,
 his left arm hanging. H likewise shows the embrace from the side. Dragging the
 view during a hold keeps the drag.
+
+## Task 13 (READY, added Nov 5, 2026): the flirt, third look: the overhead frame, and a camera that never reframed
+
+Context: Task 12 is deployed (Railway build 7103f3a5784e, bundle main-p2p0xcpm.js;
+Muse confirmed that bundle was the one served before this check). Third pair
+verification, Nov 5, 2026, mid-afternoon, the same slow browser as the earlier
+checks (about 2 fps; holds stretch in real time and held poses repeat across
+screenshots). Session conditions, recorded because they may matter: the town
+persisted in night across reloads, the menu's day switch was tried twice and did
+not take in time, and the runs happened at night by the lake, among the trees.
+The page was reloaded twice; the behaviour was the same each time. The hug was
+run once as a regression check and passes as before (her arms around his neck
+and shoulders, heads close, touching; his hands at her waist were hidden by the
+side view in this session, unconfirmed rather than failed). The launch gate
+stands: verification only.
+
+The flirt fails again, in all three runs:
+
+- Run 1 (LB, from side by side under the arch): they turned face to face at about
+  a hand's reach. In the one frame where a hand was raised, only Gaius's right
+  hand was up, at head height toward her; Aelia's hands were down. The camera
+  was overhead, looking straight down. Afterward they stood face to face, both
+  arms down.
+- Run 2 (F, starting face to face): his hand raised toward her, clear in an
+  enlarged frame; she faced him with her left hand on her hip and her right arm
+  down. Camera a distant side profile, Gaius partly behind a cypress trunk. His
+  hand dropped; both stood arms down.
+- Run 3 (LB): his hand up across two consecutive frames; her hand on her hip,
+  neither of hers raised toward him. Camera distant, partly behind the cypress.
+
+Two findings to reconcile, the first stated as plainly as the evidence allows:
+
+1. **The overhead frame contradicts the Task 12 diagnosis.** From directly
+   above, her raised hand could not have been hidden behind his torso, and it
+   was not raised. Across the two builds and seven flirt runs in total (four in
+   the Task 10 check, three here), every sampled held peak is one-handed: his
+   hand rises, hers rests on her hip or at her side. Whatever explains that, it
+   is not occlusion alone.
+2. **The pair-hold camera never reframed.** The close three-quarter framing
+   from his right that Task 12 describes did not appear in any run of either
+   gesture: the observed cameras were the overhead view and the distant profile,
+   the ordinary walk camera's behaviour. Whether the reframe engages at all in
+   the live build is unverified; if it is conditional (place, mode, light), the
+   session conditions above are the ones it missed under.
+
+Questions, not conclusions: does the clip composed on her body contain the
+raise at any point in its duration (the Task 10 stick-figure pipeline sampled
+the pair composed; sampling her hand height across the full clip on her rig
+would settle this before any camera question); is the take her half plays the
+mirrored half as assigned; is a standing pose blended over her upper body
+during the hold (the hand-on-hip pose recurs identically in every run); is her
+raise phase-offset from his by more than the windows seven runs sampled; and
+under what conditions does the pair-hold framing engage. Acceptance, judged
+live through the same preview route: F ends with both hands visibly raised
+toward each other at the held peak, mirrored, across repeated runs, with the
+pair framing engaged as Task 12 intended; or a landing note that shows from
+the composed data where her raise goes and what change recovers it.
+
+Scope: the hug is verified and closed; do not retune it, the spacing, or the
+gates to chase this. The deploy rides as usual, and the landing note records
+the build.
