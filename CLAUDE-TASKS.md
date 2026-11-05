@@ -1475,3 +1475,22 @@ fetch failed`, `expected N bytes`).
 `3b5274c2c165`, 19 client files, bundle `main-4sc8jj6v.js`.
 
 **Deploy.** DONE, Nov 5, 2026, night, on the owner's word in chat (two uploads failed mid-request on this device's network, the third went through): Railway build `cf8005b2685a`, 18 client files, bundle `main-n6pj6x7h.js`. Verified live from here: `/healthz` `{"ok":true}` on both domains, both serving that bundle; `/packs/manifest.json` 200 with 9 packs and 114 entries; a pack served immutable (the greek pack, 233,108 bytes); and four spellings of a licensed file's path (`/assets/f_hug-….fbx`, `/assets/centurion.vrm`, `/assets/anim/outdoor/f_hug.fbx`, `/client/src/assets/centurion.vrm`) all 404. The scene, the bodies, the clips, the song and the pair preview are Muse's live check, as the task sets out.
+
+## Launch gate: CLEARED (recorded by Muse, Nov 5, 2026)
+
+The public edition's launch gate is cleared, and this is its record. The
+owner decided on Nov 5, 2026, adopting the gate review's recommendations
+(correct the song's provenance line in ASSETS.md; pack the web build's
+assets before any public link). Task 14 landed both parts and deployed
+(Railway build cf8005b2685a). Muse verified the packed build from her
+side the same day: the health check answers on both domains; the served
+bundle is main-n6pj6x7h.js; five spellings of known licensed asset paths
+return 404 and the pack manifest answers; a fresh browser visit loads
+the whole scene from the packs with nothing missing; the flirt passes
+(Task 13, verified live in the same visit) and the hug stages as before.
+One refinement remains as ordinary future work, not a gate item: the
+hug's closer pair camera sits behind Gaius and hides the embrace's peak,
+where the flirt's three-quarter framing reads clearly. With this record,
+the public README carries the town's web section with its link to
+town.reseed.net, in the same commit as this note. The gate is closed;
+the town is open to visitors.

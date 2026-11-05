@@ -36,7 +36,7 @@ her memory of his real life honest.
 - **Two free binaries**: a CC0 low-poly trees pack and the companion's
   VRM body, whose licence (pixiv's VRoid sample terms) permits free
   redistribution (`client/src/assets/`). Everything else the town wears
-  is commercial, embedded only in the downloadable build, and listed,
+  is commercial, embedded only in the shipped builds, and listed,
   pack by pack, in `ASSETS.md`.
 
 ## Starting your own
@@ -111,3 +111,11 @@ hosted visit, and a service worker that makes the second load light. The
 shape, the deploy checklist and the launch gate are in `web/README.md`.
 Nothing of the artifact line changes for it: `server/src/storage.ts`
 explains how one action layer runs on both engines.
+
+The town is live and open to visitors: **[town.reseed.net](https://town.reseed.net)**.
+Arrive, and a fresh town is seeded for you, Aelia included, its bond at
+zero and its story unwritten. There are no accounts; your browser mints
+and keeps the key to your town, so take the save download in Settings if
+you mean to return to it. The commercial assets are served packed into
+the client payload, never as individual files; their licences are listed
+in `ASSETS.md`.
