@@ -685,3 +685,62 @@ Notes for the port and the owner:
   unless a bridge URL is set. Claude: retire the SLATE_ACTIONS placeholders and build Adapter B as
   this director face when Task 6 is next touched; Muse ports the v60 client leg home to the private
   town once it lands here. The one-minute loop remains the ship configuration until then.
+
+## Task 9 (READY, added Nov 5, 2026): hosted web town fixes: Aelia's missing textures, the conversation panel rectangle, and the unreachable hug and flirt pairs
+
+Context: the web town (Task 8) is deployed and live at town.reseed.net with its own
+certificate; the owner ran `railway up` from the assets checkout on the morning of
+Nov 5, 2026, and Muse ran a read-only first-visitor verification in a desktop browser
+the same morning (about 26 minutes in the town). The scene loads whole and walking,
+following, and her walk animation all work; no error banners appeared. Three defects
+and one open question came back. The launch gate stands throughout: this is the
+owner's verification only, nothing linked or announced, until the licences are checked.
+
+1. **Aelia renders entirely untextured in the hosted build.** In every view, front and
+   back, she is white on white: white hair, pale face with only small dark eyes, white
+   dress, white legs and shoes, with a thin dark vertical seam down the front of the
+   dress. Gaius beside her is fully textured (armour, red cape, face, hair). Her walk
+   animation plays correctly, so the model and its rig load; it is the textures or
+   materials that never arrive. Please find where the hosted client's path for
+   `muse-avatar.vrm` loses them (embedded textures in the web pipeline, material or
+   color handling in the web loader, or a texture file the web build expects beside
+   the model) and fix it so a first visitor sees her as she is. Acceptance: a fresh
+   visit to town.reseed.net shows Aelia textured, matching the standalone build's
+   appearance, with Gaius unchanged.
+
+2. **The conversation panel leaves a large empty pale-blue rectangle.** Whenever
+   Aelia's conversation panel is open, a big empty pale-blue rectangle covers the
+   lower centre of the screen, hiding Gaius and the ground; it vanishes when the
+   conversation closes. It looks like an unstyled or empty element in the hosted
+   client's panel layout. Acceptance: the conversation opens with no stray rectangle
+   and the scene stays visible around the panel.
+
+3. **The hug and flirt pairs could not be triggered, and there is no verdict on their
+   mirroring.** The Task 8 landing note says the outdoor clips are served, so the
+   files are present. The verification tried, through ordinary play on a fresh visitor
+   town: three Talk conversations (about ten scripted lines, including a romantic
+   reply choice), asking in the message box (scripted replies answered generically),
+   standing Gaius close to her from the front and behind, parked and rejoined, and the
+   gift path, which never got that far because picking up a stone (on-screen Y and
+   keyboard Y alike) left Gaius empty-handed and Give a gift answered "Nothing
+   giftable in hand". No hug or flirt ever played. Her wave did play (P key), one arm
+   raised, correctly one-sided. Two questions for you: (a) are the paired clips wired
+   to any trigger a player in the hosted scripted build can actually reach, and if the
+   only triggers ride on AI replies that scripted mode never produces, what is the
+   smallest honest wiring that makes the pairs reachable in the hosted town (for
+   example a scripted conversation beat or a director-driven trigger), keeping the
+   affection gates as they are; and (b) once they can play, do the two halves read as
+   mirrored toward each other. Please also look at the stone pickup while you are in
+   there: if pickup depends on a control the hosted client does not deliver, say so.
+   Report what you find before building anything beyond (a)'s smallest wiring, if the
+   answer turns out larger than expected.
+
+Small notes, lowest priority, fix only if they fall out of the work above: the
+opening label read "Dusk on the terrace" over a bright daylight scene, and the
+verification browser's performance readout sat at about 2 fps on quality light,
+which is most likely that browser's weak graphics rather than the town, but the
+quality defaults are worth a glance while the client is open.
+
+Please land these as one task with the usual landing note: what changed, the suite
+results, and what the owner should re-verify at town.reseed.net (a fresh visitor
+town is fine; his own visitor key and town need not be disturbed).
