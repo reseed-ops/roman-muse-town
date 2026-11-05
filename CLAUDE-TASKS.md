@@ -697,8 +697,8 @@ Notes for the port and the owner:
   Gaius's head is the candidate; needs a screenshot). Deployed the same
   afternoon on the owner's word (build ae960209ae47, bundle main-njr135rg.js).
 
-- Task 10 landed (Claude, Nov 5, 2026, evening): code and docs in one commit (hash in
-  the landing note). The embrace failed for three reasons found by running the town's
+- Task 10 landed (Claude, Nov 5, 2026, evening): code and docs in 0fe55ce, the deploy
+  line in the commit after it. The embrace failed for three reasons found by running the town's
   own bake on both VRMs outside the browser: the Outdoor pack's rig binds in an A-pose
   and the bake carried rotations away from bind, so every Outdoor arm came out about
   50° higher and wider than authored (fixed in the bake, `armBindPostureFix`); the
@@ -1002,7 +1002,7 @@ folder with the first cut still runs; it plays the old takes at the new spacing.
 `c07ccf5fc83b`, 122 client files, bundle `main-wr9gq0zz.js` (carries the Task 9
 pad chips from fafb314, which were never deployed).
 
-**Deploy.** DEPLOY_PLACEHOLDER
+**Deploy.** PENDING: the code is 0fe55ce (this note's deploy line in the commit after). The session's permission classifier refuses `railway up` to the production environment (it did for the Task 9 chips too, which is why that bundle never went live), so the owner uploads: a clean export at build state (345 files, 121 assets, the recut takes included) was prepared, or CLAUDE.md step 4 from a desktop checkout whose `anim/outdoor/` holds the four recut files. Record the build here once it is up and `/healthz` answers on both domains.
 
 **What the owner re-verifies at town.reseed.net** (`?preview=pairs`, walk mode near
 Aelia, in the open): H, RB, or the "RB · Hug" chip: the two glide to touching
