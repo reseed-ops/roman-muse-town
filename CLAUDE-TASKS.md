@@ -717,7 +717,8 @@ Notes for the port and the owner:
   yet and fall to Aelia's hint, drawn dimmed. The preview chips are gone, the
   shoulders replace them. A Bluetooth Xbox controller already drives the town
   through the Gamepad API (left stick, ABXY, LB/RB, standard mapping; the first
-  pad takes Gaius, a second takes Aelia).
+  pad takes Gaius, a second takes Aelia). Later the same night, on the owner's ask, LB
+  moved to the left side above the stick and RB stays above the cluster, as on the pad.
 
 - Task 12 landed (Claude, Nov 5, 2026, evening): her flirt hand does rise, at clip
   level and after the bake (arm directions within 5° of the take on both bodies);

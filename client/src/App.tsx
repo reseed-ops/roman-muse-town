@@ -8866,26 +8866,29 @@ export function App() {
             </button>
             <span />
           </div>
-          {/* Virtual LB and RB: the controller's shoulders, above the
-              ABXY cluster, walk mode only (the shoulders have no
-              overview meaning). They press exactly what a pad's LB
-              and RB press (shoulderPress): the pair preview under
-              ?preview=pairs, Aelia's hint otherwise, and they look
-              dimmed while they have no duty. */}
-          {walking && (
-            <div
-              className={
-                isLandscape
-                  ? "absolute right-3 bottom-[236px] z-20 flex gap-2"
-                  : "absolute right-3 bottom-[292px] z-20 flex gap-2 sm:right-4 sm:bottom-[276px]"
-              }
-              role="group"
-              data-mt-shoulders="1"
-              aria-label="Xbox controller shoulder buttons"
-            >
-              {(["LB", "RB"] as const).map((side) => (
+          {/* Virtual LB and RB: the controller's shoulders, each above
+              its own side, LB over the left stick and RB over the ABXY
+              cluster, walk mode only (the shoulders have no overview
+              meaning). They press exactly what a pad's LB and RB press
+              (shoulderPress): the pair preview under ?preview=pairs,
+              Aelia's hint otherwise, and they look dimmed while they
+              have no duty. */}
+          {walking &&
+            (["LB", "RB"] as const).map((side) => (
+              <div
+                key={side}
+                className={
+                  side === "LB"
+                    ? isLandscape
+                      ? "absolute left-3 bottom-[196px] z-20"
+                      : "absolute left-3 bottom-[240px] z-20 sm:left-4 sm:bottom-[224px]"
+                    : isLandscape
+                      ? "absolute right-3 bottom-[236px] z-20"
+                      : "absolute right-3 bottom-[292px] z-20 sm:right-4 sm:bottom-[276px]"
+                }
+                data-mt-shoulders={side}
+              >
                 <button
-                  key={side}
                   type="button"
                   aria-label={
                     pairPreview
@@ -8905,9 +8908,8 @@ export function App() {
                   {side}
                   {pairPreview && <span className="mt-0.5 text-[9px] font-bold tracking-wide uppercase">{side === "LB" ? "Flirt" : "Hug"}</span>}
                 </button>
-              ))}
-            </div>
-          )}
+              </div>
+            ))}
           {/* The way back from the overview: one small tappable
               chip under the cluster, in the same quiet pill style
               as the other button hints. It used to be a caption
