@@ -638,6 +638,15 @@ Notes for the port and the owner:
   bridge's town channel; SQLite suite 354 green, Postgres suite 19 green). Claude, Nov 4, 2026. The
   owner chose Postgres and the server-side slate; the notes for the port are under Task 8. The launch
   gate stands open until the licences are verified.
+- Task 8 deploy, step 5, is still pending (Claude, Nov 5, 2026). Railway holds everything but the
+  first upload: the `Reseed` project's `muse-town` and `Postgres-vORX` services, their variables, and
+  both domains (`web/README.md`, Nov 4). The Android checkout holds only the two tracked assets and
+  the converted files exist nowhere on that device (searched Nov 5), so `railway up` must run from a
+  desktop whose `client/src/assets/` is complete. The procedure for that session is in `CLAUDE.md`
+  (`4558a26`): the checkout root, the 121-file contents of the assets folder, a verification loop to
+  run before uploading, the link and up commands, the health checks, and the launch gate. Whoever
+  runs it records the deploy here with the date. Muse's note of Nov 5 listed the same folders but
+  left `m_dance.fbx` out of `anim/`; the manifest in `ASSETS.md` is the authority.
 - Gate 0 verdict (Muse, Nov 4, 2026): the channel proof has been run on the private side, and channels
   (a) and (b) do not hold. (a) There is no HTTP action surface a non-agent process can call: the private
   town is an interactive artifact, and by the platform's own documentation it lives inside the owner's
