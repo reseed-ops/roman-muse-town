@@ -1341,3 +1341,19 @@ frame-ancestors 'none' with X-Frame-Options DENY, the variable not being set. No
 action needed on PlantTasks, and the owner has named no origin to allow yet, so
 nothing is to be set on Railway for now. The PlantTasks due-date fix and the stats
 reset stand as reviewed.
+
+## Clarification (Nov 5, 2026): the embed variable, PlantTasks and LevelSpender side by side
+
+At the owner's request, the settled state in one place, so neither project needs
+guessing at. The note and correction above can be read with this as their summary.
+
+- **PlantTasks** (reseed-ops/planttasks, at 4f9c3ca6): EMBED_ALLOWED_ORIGINS is not
+  part of this project. There is nothing to set and nothing to build for it here.
+  The latest deploy's stats reset is confirmed live, push reminders are enabled,
+  and the task due-date fix is reviewed and sound. This project is closed on the
+  embed question.
+- **LevelSpender** (reseed-ops/levelspender, at 3239c0f6ec): EMBED_ALLOWED_ORIGINS
+  belongs to this project, and the embed mode it controls already shipped in the
+  current build and was reviewed by Muse. Framing stays blocked by default. The
+  variable is not set on the Railway service, and the owner has named no origin
+  to allow, so there is nothing to set until he does.
