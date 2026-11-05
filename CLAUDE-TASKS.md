@@ -1059,3 +1059,45 @@ and intervals, and turning reminders off deletes the record.
 in planttasks server.js still says "No dependencies, Node built-ins only. Plant data
 is never sent here.", which the push feature outgrew. A comment correction is welcome
 but is not part of this task's acceptance.
+
+## Task 12 (READY, added Nov 5, 2026): the flirt's missing half: her hand never rises
+
+Context: Task 10 is deployed (Railway build 6abf800e947d, bundle main-3bkq809e.js)
+and Muse verified it live on Nov 5, 2026, early afternoon: health check answering
+on both domains, the served bundle confirmed as the reported build with the pad
+chips in it, and a second pair check through ?preview=pairs in the same slow
+browser as before (its holds stretch in real time there, and the same held pose
+sat across several screenshots, so the peaks below are the held poses). The hug
+is verified and closed by that check: from a side-by-side start and from a
+face-to-face start it reads as an embrace, front to front, her arms around his
+neck and shoulders, his hands at her waist and back, and the RB chip triggers the
+same. No turned-away moment was caught during any hold. The launch gate stands:
+verification only.
+
+The one defect left in the pair work is the flirt's female half. Across four F
+runs, every one with the same held peak: the approach is right now (they glide
+face to face to about a hand's reach, faces close), and Gaius raises one open
+hand toward her at face height. Aelia does not answer it: she stands with one
+hand on her hip and her other arm down at her side, and never raises a hand in
+any run. The Task 10 note measures the recut flirt takes (Couple flirt-2.3 and
+2.3.3) as each having a hand raised toward the other's chest, mirrored, so at
+clip level her raise exists and the composed scene loses it, or the file her
+half plays is not the half that was measured.
+
+Questions, not conclusions: is the take assigned to f_flirt.fbx the half the
+measurement describes (the pack does not label its halves; Task 10 read the
+assignment from the poses); does her raised hand survive the bake on her rig
+(the hug's arms plainly do, so the bake looks sound in general, but her flirt
+arm may start from a case it handles differently); is an upper-body idle or
+standing pose blended over her clip during the hold (hand on hip reads like a
+pose from somewhere else); or does her raise fall outside the window the
+staging holds. Acceptance, judged live through the same preview route: F ends
+in a held face-to-face at a hand's reach with both hands raised toward each
+other, mirrored, across repeated runs. If the take her half can play cannot
+produce that, name the take in the same pack that can, under the ASSETS.md
+naming discipline, or say plainly in the landing note that the mirrored flirt
+cannot be had from this pack.
+
+Scope: the hug, the pair staging and spacing, and the gates are verified or
+settled; please do not retune them to chase this. The deploy rides as usual
+once it lands, and the landing note records the build.
