@@ -753,6 +753,13 @@ Notes for the port and the owner:
   night on the owner's word (build cf8005b2685a, bundle main-n6pj6x7h.js); asset paths
   verified 404 live, manifest and packs served.
 
+- Task 15 landed (Claude, Nov 5, 2026, night): the hug's pair camera is side-on from his
+  right (1.6 rad off his heading; the flirt keeps its 0.95 three-quarter and the boom
+  stays 5.5 m): touching, she was inside the taller, cloaked body at three-quarter.
+  The hold is static by authoring (her head over his right shoulder, hips 0.40 m
+  apart); the "front-to-front moment at the start" is the blend-in from the idle.
+  Nothing else changed. Deploy: see the landing note.
+
 ## Task 9 (READY, added Nov 5, 2026): hosted web town fixes: Aelia's missing textures, the conversation panel rectangle, and the unreachable hug and flirt pairs
 
 Context: the web town (Task 8) is deployed and live at town.reseed.net with its own
@@ -1534,3 +1541,38 @@ Scope: the hug's staging, spacing and takes, and the flirt's framing,
 stay untouched. The deploy rides as usual and the landing note records
 the build. The gate is already cleared; this is ordinary polish, and
 nothing about it holds the link.
+
+### Landing note (Claude, Nov 5, 2026, night)
+
+**The framing did engage; the angle was the flirt's.** The pair camera is one block
+for both kinds, and the hug got the flirt's 0.95 rad (54°) off his heading. At 54°,
+from 5.5 m, the flirt's two bodies at a hand's reach both clear his outline; the
+embrace does not: hips 0.40 m apart, her head over his right shoulder, she sits
+inside the taller body and its cloak from that angle, which is the foreshortened,
+part-hidden picture the check saw. Drawn from the pair camera at 55°, 80°, 95° and
+110° on the composed bodies (the Task 10 pipeline), the embrace reads side-on: at 80°
+to 95° her arms around his neck, his right hand at her waist and both heads are in
+frame, nothing behind anything. The hug's yaw is now 1.6 rad (92°), from his right,
+with the boom as it stands (`PAIR_CAM_YAW` is per kind; the flirt's 0.95 is
+untouched), and the console line says `framing the hug side-on from his right`.
+
+**The offset, gapped pose: the hold itself, by authoring.** The take (Couple flirt-4.3
+and 4.3.3) is a static hold: every frame is the same pose within 2 cm, so there is
+no peak followed by a settle. Composed, the two face each other within 0.3°, hips
+0.40 m apart, and her head passes his right shoulder as the take places it (the
+authored 167° facing is squared by the scene, the authored lateral lean is in the
+spine and head, not the hips); torsos at that distance touch, the gap in the stills
+is the angle and the cloak. The "brief front-to-front moment at the start" is the
+blend-in: for about a third of a second the bodies are still mostly the idle pose,
+square and arms down, before the take's weight reaches one. There is nothing to
+compose to "stay at the peak"; the hold is the embrace, and the camera now shows it.
+
+**Suites.** `bun run test`: 367 pass, 19 skip, 0 fail; `test:pg` 20 pass; client `tsc` 295 errors, the SDK baseline, nothing new; web build `2da3134bc226`, 18 client files, bundle `main-m5bsnsxe.js`.
+
+**Deploy.** PENDING at commit time; the line after this one records it.
+
+**What the owner re-verifies.** H through the preview route in the open: the glide
+to touching, the camera swinging to his right side and in to about five metres over
+a second, then the held embrace side-on: her arms around his neck and shoulders,
+his right hand at her waist, heads close, both bodies in frame; the console line on
+every run. F as before.

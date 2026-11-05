@@ -6723,16 +6723,21 @@ export function createTownScene(
         fz = Math.cos(camYawSmooth);
       }
     }
-    // Pair framing (Task 12): a staged pair moment is watched three-
-    // quarter on, from his right, so both bodies and both gestures
-    // stay in view. Straight behind him, she is his silhouette: the
-    // flirt's answering hand, raised in front of her at chest height,
-    // was hidden by his torso in every live still. The yaw eases over
-    // the hold and stays where it lands (the loose follow recenters
-    // once he walks again); a drag, a pinch or reduced motion leaves
-    // the camera alone. The staging, spacing and gates are untouched.
+    // Pair framing (Task 12): a staged pair moment is watched from
+    // his right, so both bodies and both gestures stay in view.
+    // Straight behind him, she is his silhouette: the flirt's
+    // answering hand, raised in front of her at chest height, was
+    // hidden by his torso in every live still. The flirt reads
+    // three-quarter on (0.95 rad); the embrace needs the side (Task
+    // 15, 1.6 rad): touching, she is still inside the taller body's
+    // cloak at three-quarter, and side-on her arms around his neck
+    // and his hands at her waist are both in frame. The yaw eases
+    // over the hold and stays where it lands (the loose follow
+    // recenters once he walks again); a drag, a pinch or reduced
+    // motion leaves the camera alone. Staging, spacing and gates are
+    // untouched.
     if (pairState && !pairState.glide && !opts.reducedMotion && walkDrag === null && camPointers.size === 0) {
-      camYawSmooth = angleLerp(camYawSmooth, walkHeading + PAIR_CAM_YAW, 1 - Math.exp(-dt * 1.6));
+      camYawSmooth = angleLerp(camYawSmooth, walkHeading + PAIR_CAM_YAW[pairState.kind], 1 - Math.exp(-dt * 1.6));
       fx = Math.sin(camYawSmooth);
       fz = Math.cos(camYawSmooth);
       // Close enough to read two hands (Task 13: at the walk's 10.5 m
@@ -6741,7 +6746,7 @@ export function createTownScene(
       boom = Math.min(boom, PAIR_CAM_DIST);
       if (!pairState.framed) {
         pairState.framed = true;
-        console.info(`[muse-town] pair camera: framing the ${pairState.kind} three-quarter from his right`);
+        console.info(`[muse-town] pair camera: framing the ${pairState.kind} ${pairState.kind === "hug" ? "side-on" : "three-quarter"} from his right`);
       }
     }
     if (opts.reducedMotion) {
@@ -9039,9 +9044,10 @@ export function createTownScene(
   // fixed 0.57 m hug (the He hugs take, hand on the shoulder, her
   // arms down) never read as an embrace: see Task 10's note.
   const PAIR_SPACING_M: Record<"flirt" | "hug", number> = { hug: 0.5, flirt: 0.55 };
-  // The pair camera's yaw off his heading: three-quarter from his right,
-  // and its boom for the hold (the rest distance is 10.5 m).
-  const PAIR_CAM_YAW = 0.95;
+  // The pair camera's yaw off his heading, from his right: three-quarter
+  // for the flirt, side-on for the embrace; and its boom for the hold
+  // (the rest distance is 10.5 m).
+  const PAIR_CAM_YAW: Record<"flirt" | "hug", number> = { flirt: 0.95, hug: 1.6 };
   const PAIR_CAM_DIST = 5.5;
   let talkAnimOpen = false;
   let pairState: { kind: "flirt" | "hug"; t: number; dur: number; glide: PairGlide | null; framed: boolean } | null = null;
