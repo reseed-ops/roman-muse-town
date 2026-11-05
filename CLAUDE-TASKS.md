@@ -1357,3 +1357,56 @@ guessing at. The note and correction above can be read with this as their summar
   current build and was reviewed by Muse. Framing stays blocked by default. The
   variable is not set on the Railway service, and the owner has named no origin
   to allow, so there is nothing to set until he does.
+
+## Task 14 (READY, added Nov 5, 2026): clearing the launch gate: correct the song's line, and pack the web build's assets
+
+Context: the launch gate review (Muse, Nov 5, 2026;
+workspace/goals/muse-town-public-edition/files/LICENCE-GATE-REVIEW-2026-11-05.md
+on Muse's side) went group by group through ASSETS.md. The owner adopted its
+recommendations on Nov 5, 2026: correct the song's provenance line, and pack
+the web build's assets before the town is publicly linked, so the licensed
+files stop being individually addressable downloads. Two parts, then a
+handoff back to Muse.
+
+**Part 1: correct ASSETS.md, section 11, the stars-fall-song.mp3 line.**
+The current line says the origin is not documented and the file was
+owner-supplied. That is superseded. The evidence (Muse, Nov 5, 2026): the
+file in use carries embedded metadata reading "AI Generated"; its timestamp
+is Nov 1, 2026, 00:07, in the middle of the build night of the summit scene
+it belongs to; the Nov 5 rebuild record in this same file lists the song as
+still missing from the owner's folder, so no supplied copy ever existed
+there; and no record shows the owner supplying a music file. Please rewrite
+the line to say, in substance: the summit scene's song, AI generated for the
+scene during the town's original build (Nov 1, 2026), provenance the
+project's own; the generating service and account are not recorded, so its
+output terms are the one residual unknown; a receiving town can substitute
+any quiet song file of its own. Keep the table's shape and the substitution
+note.
+
+**Part 2: pack the web build's assets.** Today the deployed service serves
+all 121 asset files individually (122 client files in the current build),
+and the Task 8 note verified a model file served byte-identical. Groups 3
+to 10 of ASSETS.md (about 106 files: the three Iglesias packs, Roman
+Empire, Greek, HONETi pets, Phoenix, Dire Wolf Lite) all sit under "embed
+in a shipped product, never redistribute as files" wording. Please change
+the web build so the licensed assets are delivered packed into the client
+payload (an asset pack or bundle the client unpacks, the exact mechanism
+yours to choose) and are no longer individually addressable at public URLs.
+Acceptance: (a) a request for a known licensed file path on
+town.reseed.net no longer returns that file; (b) a fresh visit still loads
+the whole scene, both bodies, the clips and the song, with no missing-piece
+errors; (c) the hug and flirt preview spot check still stages (the flirt's
+own open question is Task 13 and is not this task's problem; this task must
+not make the pairs worse); (d) the landing note records the mechanism, the
+before and after file counts and sizes, and the deploy build, as usual.
+The private town, the standalone APK, and the repo's two included binaries
+are untouched by this task. One deploy rides with it; if the classifier
+refuses the upload again, prepare the export and say so, and the owner
+uploads as before.
+
+**Handoff.** When the packed build is live and Claude's note records it,
+Muse verifies from her side (asset paths refused, scene and health whole),
+then records the gate as cleared in this file with the date and the owner's
+decision, and updates the public README with the web version section and
+the town.reseed.net link. The link does not precede the packed build; that
+ordering is the point of the gate.
