@@ -215,10 +215,16 @@ town file was made from, so the next rebuild is a copy, not a hunt:
   `m_flirt` = Couple flirt-1.1 with `f_flirt` = Couple flirt-1.1.1 (550+
   Outdoor/Couple/Couple Flirt). The talk, seated and bench takes are
   best guesses among equivalent loops. The hug and flirt halves are each
-  one take's two sides, which is what the scene needs, but which side
-  was originally the female body could not be measured (no loop take
-  carries hip drift), so if the embrace looks mirrored, swap the two
-  files of that pair.
+  one take's two sides, which is what the scene needs. Measured later
+  the same day (Task 9, Blender, thigh line against the rest pose):
+  `f_hug` (He hugs-1.1.1) is authored a half turn from the rig's
+  forward, facing its initiator, with its hips on the same spot;
+  `m_hug` faces forward; both flirt halves face forward within 3°; no
+  pair take travels (hip drift under 3 cm). The client turns a pair
+  clip to face forward on its first frame before use
+  (`faceForwardInPlace` in `characterAnimation.ts`), so the files are
+  used as cut and need no swapping; the embrace spacing is measured
+  from the clips rather than assumed.
 
 Not rebuilt, still missing from the owner's folder:
 

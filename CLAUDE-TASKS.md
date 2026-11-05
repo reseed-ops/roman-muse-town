@@ -686,6 +686,18 @@ Notes for the port and the owner:
   this director face when Task 6 is next touched; Muse ports the v60 client leg home to the private
   town once it lands here. The one-minute loop remains the ship configuration until then.
 
+- Task 9 landed (Claude, Nov 5, 2026): code 67874bb, docs in the commit after it.
+  Aelia's look is her file, not a defect (same bytes hosted and in git, unlit
+  MToon materials, near-white textures by design); the hug's female half was
+  authored facing away and is turned forward in the loader, the embrace spacing
+  is measured from the clips; keyboard Y now picks up and throws stones;
+  `?preview=pairs` gives H (hug) and F (flirt) in walk mode for verifying the
+  clips, gates untouched; the terrace card says Afternoon until the eleventh
+  Roman hour. The pale rectangle is not reproduced here (the 3D bubble over
+  Gaius's head is the candidate; needs a screenshot). The build is NOT yet on
+  Railway: the upload was blocked by the session's permission mode, so the
+  owner runs CLAUDE.md step 4, or re-runs me with the permission.
+
 ## Task 9 (READY, added Nov 5, 2026): hosted web town fixes: Aelia's missing textures, the conversation panel rectangle, and the unreachable hug and flirt pairs
 
 Context: the web town (Task 8) is deployed and live at town.reseed.net with its own
@@ -744,3 +756,101 @@ quality defaults are worth a glance while the client is open.
 Please land these as one task with the usual landing note: what changed, the suite
 results, and what the owner should re-verify at town.reseed.net (a fresh visitor
 town is fine; his own visitor key and town need not be disturbed).
+
+### Landing note (Claude, Nov 5, 2026): code in 67874bb, this note and ASSETS.md in the commit after it
+
+1. **Aelia's textures arrive; what the verification saw is her.** The hosted
+   `muse-avatar.vrm` is byte-identical to the repository's (so is
+   `centurion.vrm`); both bodies load through the one GLTFLoader, three 0.187.0
+   in both package.json files, the same `downscaleModelTextures` and
+   `prepareVrm`, so the standalone build draws her exactly the same way. Her
+   file is the AvatarSample model the owner restored in 39504f4: a white
+   sleeveless top and shorts, white shoes, silver-white hair, very pale skin
+   (average texture colours: skin 242/221/211, hair 199/188/179, top
+   247/245/247) and a dark necktie down the front, which is the "thin dark
+   vertical seam". Every material is MToon, exported as KHR_materials_unlit, so
+   three draws her with no lighting at all; Gaius's armour and cape carry their
+   own painted shading, hers do not. A Blender render of both files with their
+   embedded textures reproduces the description to the letter. No change made:
+   a textured Aelia and the Aelia on town.reseed.net are the same thing. If the
+   owner wants her to read with form, lit toon materials for both VRMs is a
+   design choice, not a repair; say the word and it gets built.
+
+2. **The pale rectangle: not reproduced, candidate named.** Nothing in the HTML
+   shell depends on an open conversation except the cream panel itself
+   (top-centre), and the scene's only conversation hook is the talk-gesture
+   mode. The one thing the code puts in the lower-centre band while a
+   conversation runs is the 3D speech bubble over Gaius's head: it shows his
+   typed message when a line is sent from the message box
+   (`showBubble("player", ...)` in App.tsx), and in walk mode
+   `clampBubbleToScreen` holds it just above the control band, about a third of
+   the stage tall, drawn over everything (`depthTest: false`). That is a white
+   rounded box with his words in dark text; whether the words failed to draw in
+   the verification browser cannot be seen from here: this device's headless
+   Chromium runs on software GL, which fails every one of the town's shader
+   programs, so the scene never painted locally (the UI did: walk mode on
+   arrival, the "Talk to Aelia" prompt, E opened the panel). To settle it in one
+   look: a screenshot with the rectangle showing, and in the console while it
+   shows, `document.elementFromPoint(innerWidth / 2, innerHeight * 0.8)`:
+   `CANVAS` means the 3D bubble (then the bubble drawing gets fixed), anything
+   else names the HTML element.
+
+3. **The pairs.** (a) They are wired to scripted triggers, not AI replies: the
+   rank-up scene at the next meeting (rank 3 plays the flirt, rank 4 and up the
+   hug; `RANK_SCENES` in App.tsx) and the first topic card of a kept date (hug
+   at rank 4 and up, flirt below). A fresh visitor town starts at rank 0 and
+   needs 300 affection points for rank 3; the per-day earn caps (walk 10,
+   wander 15, bench 12, row 16, water 8, talk 6, choice 16, note 8, quest 20,
+   postcard 10, game 8, gift 5, plus 15 per first landmark) make that two to
+   three real days of ordinary play, which is the gate working as designed. No
+   gate was touched. For verification only, `?preview=pairs` on the town URL
+   enables H (hug) and F (flirt) in walk mode near Aelia, through the scene's
+   ordinary staging (both bodies ready, within reach, nothing else under way);
+   it plays the two bodies and nothing more: no affection, no scene lines.
+   (b) Mirroring, measured in Blender on the cut files against the rig's rest
+   pose: `f_hug` is authored a half turn from the rig's forward (the pack's
+   partner half faces its initiator, hips on the same spot), `m_hug` faces
+   forward, both flirt halves face forward within 3°, and no pair take travels.
+   The retarget carries each clip's hips rotation, and the scene turns the two
+   bodies toward each other itself, so she hugged him facing away. Fixed in the
+   loader: `faceForwardInPlace` turns a pair clip to +Z on its first frame
+   (travel rotated with it), and the embrace glide now goes to contact distance
+   (0.57 m hip to hip) plus each clip's measured forward step (`pairStepIn`),
+   instead of the fixed 0.85 m that assumed the old cut's 0.27 m step-in; the
+   new cuts play in place and were hugging the air. The files stay as cut;
+   ASSETS.md records the measurement; `pairClips.test.ts` covers the turn.
+   **Stone pickup:** a pickup needs a loose stone within about 1.7 m (ten lie
+   about town, five of them within a few steps of the town tree), and the
+   prompt pill then reads "Pick up stone" under Y; with none in reach Y gives a
+   hint instead, which is what the verification got. The keyboard had no Y at
+   all (the pad keys are I/J/K/L and U/O/P; E or Enter, Space and C were the
+   only others), so the on-screen Y was the one way; keyboard Y now does the
+   same.
+
+4. **Small notes.** The terrace card said "Dusk" from the ninth Roman hour, the
+   last third of daylight; it now says "Afternoon on the terrace" for the ninth
+   and tenth hours and "Dusk" from the eleventh (parts, anchors and market hours
+   unchanged). Quality: the client already drops itself to the light settings
+   when it detects software GL or measures under 4 fps on its first frames, and
+   lights the Light toggle to match; 2 fps on that browser is the browser.
+
+**Suites:** `bun test server client/src`: 322 pass, 18 skip, 0 fail (340 tests
+across 48 files, 3 of them new); `bun run test:pg`: 19 pass, 0 fail. tsc: no
+new errors in the touched files (the 295 reported are the missing-SDK cascade
+plus one pre-existing unused variable at townScene.ts:6674). Web build: 122
+client files.
+
+**Deploy: not yet uploaded.** The `railway up` from the clean export (CLAUDE.md
+step 4) was blocked by this session's permission mode. The owner runs step 4
+from a checkout that holds the assets, or runs me again with that permission;
+until then town.reseed.net serves the Nov 5 morning build without these fixes.
+
+**Re-verify at town.reseed.net once deployed (a fresh visitor town is fine):**
+open `https://town.reseed.net/?preview=pairs`, walk Gaius up to Aelia (two
+metres or less, open ground, neither seated), press H: they glide to arm's
+length and embrace facing each other, her face toward him; press F: the flirt
+plays where they stand, facing each other. Stand on a stone (small grey
+pebbles, five within a few steps of the town tree): the pill reads "Y, Pick up
+stone"; press Y on the keyboard or on screen, and Give a gift then lists the
+smooth stone. Between 14:00 and 15:30 Rome time the card reads "Afternoon on
+the terrace". Aelia will look as before: that is her.
