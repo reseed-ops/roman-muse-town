@@ -725,7 +725,7 @@ Notes for the port and the owner:
   her hip) and from the follow camera, straight behind Gaius, every part of her
   was behind his torso, hug included. The walk camera now eases to a three-quarter
   view from his right for the hold of any pair moment (`PAIR_CAM_YAW`); nothing in
-  the takes, staging, spacing or gates changed. Deploy: see the landing note.
+  the takes, staging, spacing or gates changed. Deployed the same evening on the owner's word (build 7103f3a5784e, bundle main-p2p0xcpm.js).
 
 ## Task 9 (READY, added Nov 5, 2026): hosted web town fixes: Aelia's missing textures, the conversation panel rectangle, and the unreachable hug and flirt pairs
 
@@ -1150,7 +1150,7 @@ bigger gesture it is a different pack or a bespoke clip.
 
 **Suites.** `bun run test`: 361 pass, 18 skip, 0 fail; `test:pg` 19 pass; client `tsc` 295 errors, the SDK baseline, nothing new; web build `f7a650fa3a75`, 122 client files, bundle `main-7hf2hptp.js` (it also carries the LB/RB shoulder buttons from 5405915).
 
-**Deploy.** PENDING at commit time; the line after this one records it.
+**Deploy.** DONE, Nov 5, 2026, evening, on the owner's word in chat: Railway build `7103f3a5784e`, 122 client files, bundle `main-p2p0xcpm.js` (the pair framing, the LB/RB shoulders and everything from Task 10). The owner verifies `/healthz` and the served bundle themselves.
 
 **What the owner re-verifies.** F through the preview route: the glide to a hand's
 reach, then the camera swings to his right over about a second and holds; both
