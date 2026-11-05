@@ -59,7 +59,7 @@ the one thing the client learns is a meta tag saying it is hosted.
 
 What never enters this repository: `DATABASE_URL`, `DIRECTOR_TOKEN`, `TOWN_SECRET`, any visitor token.
 
-Done on Nov 4, 2026 from the owner's CLI session (Claude): steps 1 to 4 and 6 in the `Reseed` project, as the services `Postgres-vORX` (Railway ignored the requested name) and `muse-town`, with `DATABASE_URL`, `DIRECTOR_TOKEN`, `TOWN_SECRET` and `RAILWAY_DOCKERFILE_PATH` set, the generated domain `muse-town-production.up.railway.app`, and `town.reseed.net` waiting on its CNAME to `pkxqml5a.up.railway.app`. Step 5 waits: `railway up` must run from a checkout that holds the licensed assets, which this machine does not.
+Done on Nov 4, 2026 from the owner's CLI session (Claude): steps 1 to 4 and 6 in the `Reseed` project, as the services `Postgres-vORX` (Railway ignored the requested name) and `muse-town`, with `DATABASE_URL`, `DIRECTOR_TOKEN`, `TOWN_SECRET` and `RAILWAY_DOCKERFILE_PATH` set, the generated domain `muse-town-production.up.railway.app`, and `town.reseed.net` waiting on its CNAME to `pkxqml5a.up.railway.app`. Step 5 landed on Nov 5, 2026 (deployment e5ec4ea6, `/healthz` green on the Railway domain) after the assets were rebuilt from the owner's packs (`ASSETS.md`, rebuild record). Note for the next upload: `railway up` honours `.gitignore`, which excludes the assets, so upload a clean export of the tracked files plus `client/src/assets/` with `--no-gitignore` (the exact commands are in `CLAUDE.md`). `town.reseed.net` waits on the `_railway-verify.town` TXT record for its certificate.
 
 ## Run and test locally
 

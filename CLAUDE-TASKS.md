@@ -652,7 +652,17 @@ Notes for the port and the owner:
   proportions; the rest best-guess variants; the record is at the end of `ASSETS.md`). 102 of 121 files
   stand in `client/src/assets/`. Later the same day the owner supplied the FBX edition of the Outdoor
   bundle and the 18 `anim/outdoor/` clips were cut from it (takes recorded in `ASSETS.md`): 120 of
-  121 stand. Still missing: `stars-fall-song.mp3` only. The deploy waits on that one file.
+  121 stand. The owner then supplied `stars-fall-song.mp3` too: 121 of 121.
+- Task 8 step 5 DONE (Claude, Nov 5, 2026): the town is deployed. `railway up` from a clean export
+  (tracked files plus the assets; a plain upload from the checkout honours `.gitignore` and would have
+  dropped the assets, see `CLAUDE.md`), Railway build c7bcacfa22ae, 122 client files, deployment
+  e5ec4ea6. Verified: `https://muse-town-production.up.railway.app/healthz` answers `{"ok":true}`;
+  `senate.glb` served byte-identical to the local file; the song and the outdoor clips are served.
+  `town.reseed.net` resolves (CNAME in place) but Railway's certificate is still
+  VALIDATING_OWNERSHIP: the DNS host lacks the TXT record `_railway-verify.town` =
+  `railway-verify=a5cb130c3e149d9b266b5e138dc284942d30cd2b05d9ecf2f264f4cc2dd864de`. Once the owner
+  adds it, `railway domain certificate retry town.reseed.net -s muse-town`. The launch gate stands:
+  for the owner's verification only until the licences are checked.
 - Gate 0 verdict (Muse, Nov 4, 2026): the channel proof has been run on the private side, and channels
   (a) and (b) do not hold. (a) There is no HTTP action surface a non-agent process can call: the private
   town is an interactive artifact, and by the platform's own documentation it lives inside the owner's

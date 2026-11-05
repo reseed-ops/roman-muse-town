@@ -95,19 +95,43 @@ committed.
 
 ### 4. Link and upload
 
+The trap inside the trap: `railway up` honours `.gitignore`, and
+`.gitignore` is exactly what keeps the licensed assets out of git. A
+plain `railway up` from the checkout root uploads everything EXCEPT the
+assets, and the Railway build then fails on their imports (or, worse,
+ships a town that cannot load). `--no-gitignore` alone is no answer
+either: it would upload `node_modules`, `.bun-cache` and `web/dist`,
+over a gigabyte here. So upload a clean export instead: the tracked
+files plus the assets folder, nothing else, and tell the CLI to ignore
+`.gitignore` for that directory.
+
 Install the Railway CLI if missing (`npm i -g @railway/cli` or
-`brew install railway`), then:
+`brew install railway`), then, from the checkout root:
 
 ```bash
-railway login                                   # once; opens the browser
-railway link --project Reseed --service muse-town   # choose the production environment if asked
-railway status                                  # confirms project Reseed, service muse-town
-railway up -c                                   # uploads this checkout and builds web/Dockerfile; -c detaches after the upload
+railway login                                        # once; opens the browser
+railway link --project Reseed --service muse-town    # choose the production environment if asked
+railway status                                       # confirms project Reseed, service muse-town
+
+# A clean export: tracked files (minus .gitignore) + client/src/assets
+E=$(mktemp -d)/upload; mkdir -p "$E"
+git ls-files -z | grep -z -v -x '.gitignore' | tar --null -T - -cf - | tar -xf - -C "$E"
+cp -r client/src/assets/. "$E/client/src/assets/"
+echo "assets in export: $(find "$E/client/src/assets" -type f | wc -l) (expect 121)"
+
+# Upload from INSIDE the export (a path argument outside the working
+# directory fails with "prefix not found"); the link lives in the
+# checkout, so name the project, service and environment explicitly.
+(cd "$E" && railway up -c --no-gitignore \
+   -p 332e2d9a-3d77-48b8-9389-f70ebaed20dc -s muse-town -e production)
 ```
 
-Then watch the build and deploy in the Railway dashboard, or run
-`railway logs` until the health check passes. The service's start command
-and `/healthz` check come from `web/railway.toml`.
+The export is about 90 MB (343 files). The Dockerfile at
+`web/Dockerfile` builds from the upload root because `client/`,
+`server/` and `shared/` live outside `web/`; the service's
+`RAILWAY_DOCKERFILE_PATH` already points at it. The start command and
+the `/healthz` check come from `web/railway.toml`. If the build log
+ends without a deploy, `railway logs` shows the rest.
 
 ### 5. Verify the deployment
 
