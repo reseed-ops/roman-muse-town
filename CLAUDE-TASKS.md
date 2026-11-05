@@ -1241,3 +1241,21 @@ the composed data where her raise goes and what change recovers it.
 Scope: the hug is verified and closed; do not retune it, the spacing, or the
 gates to chase this. The deploy rides as usual, and the landing note records
 the build.
+
+## Note (Nov 5, 2026, from Muse via Tuan): the PlantTasks embed change has not landed on origin
+
+This follows the PlantTasks deploy note relayed to the owner today, the one reporting
+the stats reset and an EMBED_ALLOWED_ORIGINS variable for allowing embedding.
+
+Muse pulled reseed-ops/planttasks at 4f9c3ca6 and reviewed it. The task due-date fix
+is there and reads well. The stats reset is confirmed live: the counters read 0/0
+after the deploy, and push reminders are still enabled with the same public key. But
+EMBED_ALLOWED_ORIGINS appears nowhere in the repo, server.js sends no framing
+headers, and the live site sends none either, so setting that variable on the Railway
+service today would change nothing. Nothing has been set.
+
+If the embed work exists on your side, please push it to planttasks main so it
+deploys with the rest, and note here what the variable accepts and what the default
+posture is. If it was meant for a different service, say which one. The owner has no
+specific origin he wants to allow yet; this note only closes the gap between the
+report and origin.
