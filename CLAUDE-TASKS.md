@@ -847,9 +847,12 @@ muse-town-production.up.railway.app.
 
 **Re-verify at town.reseed.net (a fresh visitor town is fine):**
 open `https://town.reseed.net/?preview=pairs`, walk Gaius up to Aelia (two
-metres or less, open ground, neither seated), press H: they glide to arm's
-length and embrace facing each other, her face toward him; press F: the flirt
-plays where they stand, facing each other. Stand on a stone (small grey
+metres or less, open ground, neither seated), press H, the pad's right
+shoulder (RB), or the "RB · Hug" chip above the on-screen cluster: they glide
+to arm's length and embrace facing each other, her face toward him; press F,
+the left shoulder (LB), or the "LB · Flirt" chip: the flirt plays where they
+stand, facing each other (the pad and chip routes were added the same
+afternoon on the owner's ask, same flag, same staging). Stand on a stone (small grey
 pebbles, five within a few steps of the town tree): the pill reads "Y, Pick up
 stone"; press Y on the keyboard or on screen, and Give a gift then lists the
 smooth stone. Between 14:00 and 15:30 Rome time the card reads "Afternoon on

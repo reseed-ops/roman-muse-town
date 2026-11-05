@@ -356,6 +356,19 @@ export function App() {
   const readyRef = useRef(false);
   const [walking, setWalking] = useState(false);
   const walkingRef = useRef(false);
+  // Pair-clip preview for the owner's verification only, behind
+  // ?preview=pairs: H or F on the keyboard, the pad's left and right
+  // shoulders, or two chips beside the on-screen cluster stage the
+  // flirt and the hug through the scene's ordinary staging (walk
+  // mode, both bodies ready, within reach, nothing else under way).
+  // It plays the two bodies and nothing more: no affection, no scene
+  // lines, every rank gate exactly as it is.
+  const pairPreview = useMemo(() => /[?&]preview=pairs(?:&|$)/.test(typeof window !== "undefined" ? window.location.search : ""), []);
+  const stagePairPreview = useCallback((kind: "flirt" | "hug") => {
+    if (!walkingRef.current) return;
+    const staged = sceneRef.current?.playPairMoment(kind) ?? false;
+    console.info(`[muse-town] pair preview: ${kind} ${staged ? "staged" : "refused (stand a few steps from Aelia, in the open, both bodies ready)"}`);
+  }, []);
   // Walk-mode interaction prompt: the nearest promptable interactable
   // the scene reports. Walking up shows ONLY this prompt, panels open
   // when the visitor presses the interact control (Xbox A, keyboard E
@@ -4943,13 +4956,6 @@ export function App() {
       const el = target as HTMLElement | null;
       return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
     };
-    // Pair-clip preview for the owner's verification only, behind
-    // ?preview=pairs: H stages the hug, F the flirt, through the
-    // scene's ordinary staging (walk mode, both bodies ready, within
-    // reach, nothing else under way). It plays the two bodies and
-    // nothing more: no affection, no scene lines, every rank gate
-    // exactly as it is.
-    const pairPreview = /[?&]preview=pairs(?:&|$)/.test(window.location.search);
     const onKeyDown = (e: KeyboardEvent) => {
       if (typing(e.target)) return;
       const key = e.key.toLowerCase();
@@ -4960,10 +4966,8 @@ export function App() {
         xboxStoneRef.current();
         return;
       }
-      if (pairPreview && (key === "h" || key === "f") && !e.repeat && walkingRef.current) {
-        const kind = key === "h" ? "hug" : "flirt";
-        const staged = sceneRef.current?.playPairMoment(kind) ?? false;
-        console.info(`[muse-town] pair preview: ${kind} ${staged ? "staged" : "refused (stand a few steps from Aelia, in the open, both bodies ready)"}`);
+      if (pairPreview && (key === "h" || key === "f") && !e.repeat) {
+        stagePairPreview(key === "h" ? "hug" : "flirt");
         return;
       }
       if (!isPad2Key(key)) return;
@@ -4992,12 +4996,19 @@ export function App() {
         if ((live || p1Live) && walkingRef.current) setPad(stick.x, stick.y);
         p1Live = live;
         const now = g1.buttons.map((b) => b.pressed);
-        for (const button of pressedButtons(prevButtons.get(g1.index) ?? [], now)) {
+        const was = prevButtons.get(g1.index) ?? [];
+        for (const button of pressedButtons(was, now)) {
           if (!walkingRef.current) continue;
           if (button === "a") scene.jump();
           else if (button === "b") xboxBackRef.current();
           else if (button === "x") xboxInteractRef.current();
           else xboxStoneRef.current();
+        }
+        // The preview's shoulders (standard mapping: LB 4, RB 5), the
+        // only pad buttons the walk leaves free.
+        if (pairPreview) {
+          if (now[4] && !was[4]) stagePairPreview("flirt");
+          if (now[5] && !was[5]) stagePairPreview("hug");
         }
         prevButtons.set(g1.index, now);
       }
@@ -8833,6 +8844,29 @@ export function App() {
             </button>
             <span />
           </div>
+          {pairPreview && walking && (
+            <div
+              className={
+                isLandscape
+                  ? "absolute right-3 bottom-[236px] z-20 flex gap-1.5"
+                  : "absolute right-3 bottom-[292px] z-20 flex gap-1.5 sm:right-4 sm:bottom-[276px]"
+              }
+              role="group"
+              aria-label="Pair clip preview, verification only"
+            >
+              {(["flirt", "hug"] as const).map((kind) => (
+                <button
+                  key={kind}
+                  type="button"
+                  aria-label={`Preview the ${kind} clip (also the pad's ${kind === "flirt" ? "left" : "right"} shoulder, or ${kind === "flirt" ? "F" : "H"})`}
+                  className="pointer-events-auto rounded-full border border-white/25 bg-[#1b1b1b]/55 px-3 py-1.5 text-[11px] font-bold text-white/90 backdrop-blur transition active:scale-95"
+                  onClick={() => stagePairPreview(kind)}
+                >
+                  {kind === "flirt" ? "LB · Flirt" : "RB · Hug"}
+                </button>
+              ))}
+            </div>
+          )}
           {/* The way back from the overview: one small tappable
               chip under the cluster, in the same quiet pill style
               as the other button hints. It used to be a caption
