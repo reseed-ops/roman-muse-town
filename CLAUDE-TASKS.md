@@ -709,6 +709,16 @@ Notes for the port and the owner:
   by time, done with the glide, which both pairs now make to the take's spacing). The
   facing pipeline itself was right. Deploy: see the landing note.
 
+- Owner ask in chat (Claude, Nov 5, 2026, evening, after Task 10): the virtual Xbox
+  controller gained LB and RB, two shoulder buttons above the ABXY cluster in walk
+  mode, and a physical pad's LB/RB and the on-screen pair now take one route
+  (`shoulderPress` in App.tsx, `pressedShoulders` in padRouting.ts): under
+  `?preview=pairs` they stage the flirt and the hug, otherwise they have no duty
+  yet and fall to Aelia's hint, drawn dimmed. The preview chips are gone, the
+  shoulders replace them. A Bluetooth Xbox controller already drives the town
+  through the Gamepad API (left stick, ABXY, LB/RB, standard mapping; the first
+  pad takes Gaius, a second takes Aelia).
+
 ## Task 9 (READY, added Nov 5, 2026): hosted web town fixes: Aelia's missing textures, the conversation panel rectangle, and the unreachable hug and flirt pairs
 
 Context: the web town (Task 8) is deployed and live at town.reseed.net with its own

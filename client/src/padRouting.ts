@@ -46,6 +46,20 @@ export function stickVector(ax: number, ay: number, deadZone = STICK_DEAD_ZONE):
   return { x: (ax / mag) * scaled, y: (-ay / mag) * scaled };
 }
 
+/** The shoulders, standard mapping: LB is button 4, RB is 5. */
+export const PAD_SHOULDERS = { LB: 4, RB: 5 } as const;
+export type PadShoulder = keyof typeof PAD_SHOULDERS;
+
+/** The shoulders that are down now and were not a frame ago. */
+export function pressedShoulders(prev: readonly boolean[], now: readonly boolean[]): PadShoulder[] {
+  const out: PadShoulder[] = [];
+  for (const name of Object.keys(PAD_SHOULDERS) as PadShoulder[]) {
+    const i = PAD_SHOULDERS[name];
+    if (now[i] && !prev[i]) out.push(name);
+  }
+  return out;
+}
+
 /** The face buttons that are down now and were not a frame ago. */
 export function pressedButtons(prev: readonly boolean[], now: readonly boolean[]): PadButton[] {
   const out: PadButton[] = [];

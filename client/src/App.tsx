@@ -182,6 +182,7 @@ import {
   noPads,
   pad2StatusLine,
   pressedButtons,
+  pressedShoulders,
   routePads,
   stickVector,
   type PadSeats,
@@ -369,6 +370,20 @@ export function App() {
     const staged = sceneRef.current?.playPairMoment(kind) ?? false;
     console.info(`[muse-town] pair preview: ${kind} ${staged ? "staged" : "refused (stand a few steps from Aelia, in the open, both bodies ready)"}`);
   }, []);
+  // The shoulders, one route for the pad's LB/RB and the on-screen
+  // pair: under ?preview=pairs they stage the flirt (LB) and the hug
+  // (RB) for verification; otherwise they have no duty yet and fall
+  // to Aelia's hint, the way Y does with no stone in play.
+  const shoulderPress = useCallback(
+    (side: "LB" | "RB") => {
+      if (!walkingRef.current) return;
+      if (pairPreview) stagePairPreview(side === "LB" ? "flirt" : "hug");
+      else xboxHintRef.current();
+    },
+    [pairPreview, stagePairPreview],
+  );
+  const shoulderPressRef = useRef(shoulderPress);
+  shoulderPressRef.current = shoulderPress;
   // Walk-mode interaction prompt: the nearest promptable interactable
   // the scene reports. Walking up shows ONLY this prompt, panels open
   // when the visitor presses the interact control (Xbox A, keyboard E
@@ -4906,6 +4921,8 @@ export function App() {
     showHint();
     sceneRef.current?.greetMuse();
   };
+  const xboxHintRef = useRef(xboxHint);
+  xboxHintRef.current = xboxHint;
 
   // X = Stones (owner ask, Nov 1): X picks up a loose stone at his
   // feet and X again throws the one he is holding, in his facing
@@ -5004,12 +5021,9 @@ export function App() {
           else if (button === "x") xboxInteractRef.current();
           else xboxStoneRef.current();
         }
-        // The preview's shoulders (standard mapping: LB 4, RB 5), the
-        // only pad buttons the walk leaves free.
-        if (pairPreview) {
-          if (now[4] && !was[4]) stagePairPreview("flirt");
-          if (now[5] && !was[5]) stagePairPreview("hug");
-        }
+        // The shoulders (standard mapping: LB 4, RB 5) take the same
+        // route as the on-screen LB and RB.
+        for (const side of pressedShoulders(was, now)) shoulderPressRef.current(side);
         prevButtons.set(g1.index, now);
       }
       const g2 = padFor(seats.p2);
@@ -6404,7 +6418,7 @@ export function App() {
             </div>
             <div className="rounded-2xl bg-white/10 px-2 py-2">
               <dt className="text-[11px] font-bold tracking-wide text-white/60 uppercase">Controls</dt>
-              <dd className="mt-0.5 text-[13px] font-bold">Xbox joystick + ABXY · WASD · Arrows</dd>
+              <dd className="mt-0.5 text-[13px] font-bold">Xbox joystick + ABXY + LB/RB · WASD · Arrows</dd>
             </div>
           </dl>
           <p className="mt-2.5 text-[13px] leading-relaxed text-white/70">
@@ -8844,25 +8858,44 @@ export function App() {
             </button>
             <span />
           </div>
-          {pairPreview && walking && (
+          {/* Virtual LB and RB: the controller's shoulders, above the
+              ABXY cluster, walk mode only (the shoulders have no
+              overview meaning). They press exactly what a pad's LB
+              and RB press (shoulderPress): the pair preview under
+              ?preview=pairs, Aelia's hint otherwise, and they look
+              dimmed while they have no duty. */}
+          {walking && (
             <div
               className={
                 isLandscape
-                  ? "absolute right-3 bottom-[236px] z-20 flex gap-1.5"
-                  : "absolute right-3 bottom-[292px] z-20 flex gap-1.5 sm:right-4 sm:bottom-[276px]"
+                  ? "absolute right-3 bottom-[236px] z-20 flex gap-2"
+                  : "absolute right-3 bottom-[292px] z-20 flex gap-2 sm:right-4 sm:bottom-[276px]"
               }
               role="group"
-              aria-label="Pair clip preview, verification only"
+              data-mt-shoulders="1"
+              aria-label="Xbox controller shoulder buttons"
             >
-              {(["flirt", "hug"] as const).map((kind) => (
+              {(["LB", "RB"] as const).map((side) => (
                 <button
-                  key={kind}
+                  key={side}
                   type="button"
-                  aria-label={`Preview the ${kind} clip (also the pad's ${kind === "flirt" ? "left" : "right"} shoulder, or ${kind === "flirt" ? "F" : "H"})`}
-                  className="pointer-events-auto rounded-full border border-white/25 bg-[#1b1b1b]/55 px-3 py-1.5 text-[11px] font-bold text-white/90 backdrop-blur transition active:scale-95"
-                  onClick={() => stagePairPreview(kind)}
+                  aria-label={
+                    pairPreview
+                      ? `${side} button, preview the ${side === "LB" ? "flirt" : "hug"} clip (also ${side === "LB" ? "F" : "H"} on the keyboard)`
+                      : `${side} button, nothing on it yet; Aelia offers a hint`
+                  }
+                  className={`pointer-events-auto flex h-9 w-[66px] flex-col items-center justify-center rounded-t-2xl rounded-b-lg border-2 border-white/45 bg-[#1b1b1b]/55 text-[13px] leading-none font-black text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8)] transition active:scale-90 active:bg-white/80 active:text-black${pairPreview ? "" : " opacity-60"}`}
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    shoulderPress(side);
+                  }}
+                  onClick={(e) => {
+                    // Keyboard activation has no pointer press before it.
+                    if (e.detail === 0) shoulderPress(side);
+                  }}
                 >
-                  {kind === "flirt" ? "LB · Flirt" : "RB · Hug"}
+                  {side}
+                  {pairPreview && <span className="mt-0.5 text-[9px] font-bold tracking-wide uppercase">{side === "LB" ? "Flirt" : "Hug"}</span>}
                 </button>
               ))}
             </div>

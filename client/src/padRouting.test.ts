@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
   PAD2_IDLE_SEC,
   PAD2_KEYS,
@@ -11,6 +11,7 @@ import {
   pressedButtons,
   routePads,
   stickVector,
+  pressedShoulders,
 } from "./padRouting";
 
 // Player 2 routing (Task 3): which pad maps to whom, how a stick and
@@ -94,4 +95,15 @@ test("the menu line names who drives her, then the second pad's connection", () 
   expect(pad2StatusLine({ ...base, driver: "harness", harness: "beside" })).toContain("beside Gaius");
   expect(pad2StatusLine({ ...base, driver: "self" })).toStartWith("Aelia: walking with you on her own.");
   expect(pad2StatusLine({ ...base, driver: "self", following: false })).toStartWith("Aelia: keeping her own routine.");
+});
+
+describe("pressedShoulders", () => {
+  test("reports LB (4) and RB (5) on their press frame only", () => {
+    const up = [false, false, false, false, false, false];
+    expect(pressedShoulders(up, [false, false, false, false, true, false])).toEqual(["LB"]);
+    expect(pressedShoulders(up, [false, false, false, false, false, true])).toEqual(["RB"]);
+    expect(pressedShoulders([false, false, false, false, true, true], [false, false, false, false, true, true])).toEqual([]);
+    // A face button press is not a shoulder.
+    expect(pressedShoulders(up, [true, false, false, false, false, false])).toEqual([]);
+  });
 });
