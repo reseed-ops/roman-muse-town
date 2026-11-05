@@ -650,9 +650,9 @@ Notes for the port and the owner:
 - Assets rebuilt (Claude, Nov 5, 2026): the owner supplied the raw store packages on the device and
   the folder was remade from them with Blender (the buildings verified against the scene's own recorded
   proportions; the rest best-guess variants; the record is at the end of `ASSETS.md`). 102 of 121 files
-  stand in `client/src/assets/`. Still missing: the 18 `anim/outdoor/` clips, because the owner's
-  Outdoor package is the `.anim` edition, not the FBX edition, and `stars-fall-song.mp3`. The deploy
-  waits on those two.
+  stand in `client/src/assets/`. Later the same day the owner supplied the FBX edition of the Outdoor
+  bundle and the 18 `anim/outdoor/` clips were cut from it (takes recorded in `ASSETS.md`): 120 of
+  121 stand. Still missing: `stars-fall-song.mp3` only. The deploy waits on that one file.
 - Gate 0 verdict (Muse, Nov 4, 2026): the channel proof has been run on the private side, and channels
   (a) and (b) do not hold. (a) There is no HTTP action surface a non-agent process can call: the private
   town is an interactive artifact, and by the platform's own documentation it lives inside the owner's

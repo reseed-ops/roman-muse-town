@@ -200,13 +200,28 @@ town file was made from, so the next rebuild is a copy, not a hunt:
   Dire_Wolf_Lite.glb from the itch.io zip, unchanged (clips `idle_loop`,
   `walk_loop`, `run_loop`, `bite`).
 
+- **Outdoor clips** (BUNDLE Outdoor Animations, FBX edition, supplied by
+  the owner later on Nov 5): every take in the pack is a 3.33 s loop
+  (`X.1`, `X.3`) with short transitions (`X.2`, `X.4`), and the `X.Y.Y`
+  file is the partner's half of the same take. Blender confirmed the
+  71-bone rig with a `Hips` track on every file. Chosen: `f_talk1/2/3` =
+  She communicates-1.1, -1.3, -2.1 and `m_talk1/2/3` = He communicates
+  -1.1, -1.3, -2.1 (Couples/Stand/Communication); `f_sittalk1/2` = She
+  communicates sitting-1.1, -1.3 and `m_sittalk1/2` = He communicates
+  sitting-1.1, -1.3 (Couples/Sit/Communication); `f_bench1/2` = She is
+  sitting on a bench-1.1, -1.3 and `m_bench1/2` = He is sitting on a
+  bench-1.1, -1.3 (250+ Outdoor SD/Bench/Sitting_on_a_bench); `m_hug` =
+  He hugs-1.1 with `f_hug` = He hugs-1.1.1 (Couples/Stand/Hugs);
+  `m_flirt` = Couple flirt-1.1 with `f_flirt` = Couple flirt-1.1.1 (550+
+  Outdoor/Couple/Couple Flirt). The talk, seated and bench takes are
+  best guesses among equivalent loops. The hug and flirt halves are each
+  one take's two sides, which is what the scene needs, but which side
+  was originally the female body could not be measured (no loop take
+  carries hip drift), so if the embrace looks mirrored, swap the two
+  files of that pair.
+
 Not rebuilt, still missing from the owner's folder:
 
-- The 18 **Outdoor** clips: the BUNDLE Outdoor Animations package in the
-  owner's library is the Unity `.anim` edition (1,145 `.anim` clips and
-  demo armatures only), not the FBX edition this town was built against
-  (section 4 warned of exactly this). The FBX edition is needed; the
-  `.anim` curves cannot be turned into FBX clips here.
 - `stars-fall-song.mp3`: no candidate on the device; owner-supplied.
 
 `townScene.ts` and `App.tsx` import every one of these files statically,
