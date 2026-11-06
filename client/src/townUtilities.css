@@ -14,7 +14,10 @@
 .town-file input { display:block; max-width:100%; margin-top:8px; }
 .town-tools .town-field { display:block; margin:12px 0; }
 .town-field input { display:block; width:100%; margin-top:6px; padding:8px 10px; border-radius:10px; border:1px solid #ffffff3d; background:#16241e; color:#fff8df; font-size:14px; }
-.town-tools .town-visitor-key code { font:12px/1.4 ui-monospace,monospace; word-break:break-all; color:#ffd34e; }
+.town-tools .town-key-row { display:flex; gap:8px; align-items:center; margin:6px 0 12px; }
+.town-key-row input { flex:1; min-width:0; padding:8px 10px; border-radius:10px; border:1px solid #ffd34e66; background:#16241e; color:#ffd34e; font:12px/1.4 ui-monospace,monospace; -webkit-user-select:text; user-select:text; }
+.town-key-row button { flex:none; }
+.town-tools .town-quiet-note { font-size:12px; color:#fff8dfb3; margin-top:-6px; }
 .town-restore-preview { padding:12px; margin-top:12px; border:1px solid #ffd34e66; border-radius:12px; }
 .town-tools .town-error { color:#ffd0bd; }
 .town-arrival { position:absolute; z-index:35; top:80px; right:14px; width:min(320px,calc(100% - 28px)); padding:18px; border-radius:20px; background:#22332bf5; color:#fff8df; box-shadow:0 10px 30px #0004; }

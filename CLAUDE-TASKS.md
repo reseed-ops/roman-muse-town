@@ -885,6 +885,7 @@ Notes for the port and the owner:
   seconds) with no leg blend; every seated take now carries the sit clip's own legs.
   Deploy: see the landing note.
 
+- Visitor key copyable (owner's ask in chat, Claude, Nov 6, 2026): the game surface turns text selection off, so the key under Muse Visits could not be copied. It now sits in a read-only field that selects itself on tap, with a Copy button (clipboard, then a selection fallback with a "press and hold" line). Local build bb501a64097c; deploy pending the owner's word.
 - Task 19 prepared (Claude, Nov 6, 2026, morning): `bridge/Dockerfile` (builds bridge/
   with shared/ beside it), a `bridge/pack.md` for the hosted template's Aelia (rank 0,
   never in git), an upload directory and a one-shot script for the owner that creates

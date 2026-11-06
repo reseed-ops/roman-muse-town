@@ -16,6 +16,31 @@ function preference(key: string, fallback: boolean): boolean {
   try { const value = localStorage.getItem(key); return value === null ? fallback : value === "1"; } catch { return fallback; }
 }
 function storePreference(key: string, on: boolean) { try { localStorage.setItem(key, on ? "1" : "0"); } catch { /* optional preferences */ } }
+/** The owner's visitor key, selectable and copyable: the game surface turns
+ *  text selection off everywhere, so the key sits in a read-only field that
+ *  selects itself on tap, with a Copy button beside it. */
+function VisitorKey() {
+  const key = visitorToken();
+  const field = useRef<HTMLInputElement>(null);
+  const [copied, setCopied] = useState<"" | "copied" | "selected">("");
+  const selectAll = () => { const el = field.current; if (!el) return; el.focus(); el.setSelectionRange(0, el.value.length); };
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(key); setCopied("copied"); }
+    catch {
+      selectAll();
+      let ok = false; try { ok = document.execCommand("copy"); } catch { /* selection left for a long-press */ }
+      setCopied(ok ? "copied" : "selected");
+    }
+  };
+  return <div className="town-visitor-key">
+    <p>Your visitor key, the one thing that names this town. Share it with Muse once so she can direct a visit here; it never leaves this device otherwise.</p>
+    <div className="town-key-row">
+      <input ref={field} readOnly value={key} aria-label="Your visitor key" spellCheck={false} onFocus={selectAll} onClick={selectAll} />
+      <button type="button" onClick={copy}>{copied === "copied" ? "Copied" : "Copy"}</button>
+    </div>
+    {copied === "selected" && <p className="town-quiet-note">Selected. Press and hold the key to copy it.</p>}
+  </div>;
+}
 function readMarker(): ArrivalMarker | null {
   try {
     const marker: unknown = JSON.parse(localStorage.getItem("muse-town-arrival-v1") ?? "null");
@@ -186,7 +211,7 @@ export function TownUtilities({ open, onClose, scene, state, ready, holdArrival,
               onChange={(event) => setBridgeDraft((d) => ({ ...d, url: event.target.value }))} onBlur={commitBridge}
               onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); commitBridge(); } }} />
           </label>
-          {hosted && <p className="town-visitor-key">Your visitor key, the one thing that names this town: <code>{visitorToken()}</code>. Share it with Muse once so she can direct a visit here; it never leaves this device otherwise.</p>}
+          {hosted && <VisitorKey />}
           <label className="town-field">Bridge token
             <input type="password" autoComplete="off" placeholder="the token set in the bridge's service" value={bridgeDraft.token}
               onChange={(event) => setBridgeDraft((d) => ({ ...d, token: event.target.value }))} onBlur={commitBridge}
