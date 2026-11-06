@@ -1580,3 +1580,66 @@ to touching, the camera swinging to his right side and in to about five metres o
 a second, then the held embrace side-on: her arms around his neck and shoulders,
 his right hand at her waist, heads close, both bodies in frame; the console line on
 every run. F as before.
+
+## Task 16 (READY, added Nov 5, 2026): the hug, finished: closeness, her face, the trees, and the camera coming home
+
+Context: Task 15 landed and deployed (build 37dd558c6d88), and two small
+touch-chip deploys followed it the same night (the virtual LB and RB placed
+as on a pad, then levelled; live bundle main-fwgwwx19.js). The fifth pair
+verification (Nov 5, 2026, early evening, fresh visitor, preview route, the
+usual slow browser) found Task 15's azimuth fix GOOD: the hug's pair camera
+settles side-on from his right, the behind-him view surviving only in the
+first second or two of blend-in, repeatable across runs, and in open ground
+the embrace reads in profile: her hands at his neck and upper chest, his
+hand at her waist, upper torsos touching, hips at their authored spacing.
+The flirt passed its regression unchanged and the levelled chips verified
+live, RB firing a hug. Four things remain, all in the hug's camera and one
+small prop; the pairs themselves, their staging, spacing and takes are not
+in question except where item 3 asks for a measurement.
+
+1. **The hug's camera is high and far.** It settles about 4.2 m up, looking
+   down roughly 30 degrees at the 5.5 m boom, and the pair fill only about
+   a third of the frame's height: a correct profile, but a distant one,
+   where the flirt's framing reads close. Bring the hug's pair camera to
+   the flirt's closeness (comparable on-screen height for the pair, lower
+   and more level), keeping Task 15's side-on azimuth.
+
+2. **A gold gem covers her face in the hug's profile.** A small gold
+   octahedron rides attached to Aelia about 0.46 m to her side at head
+   height (her marker, presumably). In the flirt's three-quarter it hovers
+   clear of her face; in the hug's true profile it sits exactly across her
+   face for the whole hold. Identify it in the landing note, and keep it
+   off her face during pair holds (fading or hiding attachments for the
+   hold's duration is acceptable), without breaking what it signals in
+   ordinary play.
+
+3. **Reconcile the heads.** The Task 15 landing note describes the hold as
+   her head over his right shoulder; the verification's enlarged frames,
+   twice, show the heads face to face in profile, side by side. Measure
+   the composed hold as rendered, in the manner of the Task 13 settling
+   measurement, and report what the hold actually is. If the take truly
+   reads face to face, correct the record and leave the take alone (face
+   to face is good composition); if the authored intent is head on
+   shoulder and the render departs from it, compose it to match, within
+   this task.
+
+4. **The cypresses and the way home.** At ordinary avenue spots the 5.5 m
+   side boom settles inside or behind a cypress trunk (one run a sliver,
+   one losing the pair entirely); only the wide plaza read clean. Give the
+   pair camera collision sense at the side azimuth, as the boom already
+   has among trees elsewhere, so a hug on the avenue can be seen. And
+   after every hug the camera stayed in its high perch instead of
+   returning to the normal walk follow view; restore the walk camera when
+   a pair hold ends, and say in the note whether that rode in with Task 15
+   or predates it.
+
+Acceptance, judged live through the preview route: a hug on the avenue
+and a hug in the plaza both read close (the pair at the flirt's scale),
+her face visible at the held peak, the heads as the corrected note
+describes them, and the camera back at the walk follow when the hold
+ends, across repeated runs; the flirt and the chips unchanged.
+
+Scope: Task 15's azimuth, both pairs' staging, spacing and takes (item
+3's reconciliation excepted), the gates, and tonight's chip placement all
+stay as they are. The deploy rides as usual and the landing note records
+the build. Ordinary polish on a cleared gate; nothing here holds the link.
