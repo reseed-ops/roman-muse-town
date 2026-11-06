@@ -2725,9 +2725,72 @@ export function createTownScene(
   // benchSeatWorldY in the benches section) instead of trusting a
   // terrain sample at a possibly different point.
   const benchGroups = new Map<string, THREE.Group>();
+  // The stone bench's backrest (owner's report, Nov 6, 2026: the plaza
+  // bench offered "Sit" from behind and seated the pair facing its own
+  // back). The scene's rule is backrest on local +Z, a sitter faces
+  // -Z; the GLB rebuilt from the pack on Nov 5 carries its backrest on
+  // -Z. Measured rather than assumed, so either edition of the file
+  // sits right: the model's top third says where the back is, and a
+  // back on -Z turns the model half round inside its wrap, recentred.
+  // The wrap's own rotY, the seat slots and the prompt point are the
+  // design's and stay.
+  const faceBackrestPlusZ = (wrap: THREE.Group) => {
+    const inner = wrap.children[0];
+    if (!inner) return;
+    wrap.updateWorldMatrix(true, true);
+    const v = new THREE.Vector3();
+    const local: { y: number; z: number }[] = [];
+    wrap.traverse((o) => {
+      if (!(o instanceof THREE.Mesh)) return;
+      const pos = o.geometry.getAttribute("position");
+      if (!pos) return;
+      for (let i = 0; i < pos.count; i++) {
+        v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld);
+        wrap.worldToLocal(v);
+        local.push({ y: v.y, z: v.z });
+      }
+    });
+    if (local.length === 0) return;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (const q of local) {
+      if (q.y < minY) minY = q.y;
+      if (q.y > maxY) maxY = q.y;
+    }
+    const top = minY + (maxY - minY) * 0.7;
+    let zSum = 0;
+    let n = 0;
+    for (const q of local) if (q.y >= top) { zSum += q.z; n++; }
+    if (n === 0 || zSum / n >= 0) return;
+    inner.rotation.y += Math.PI;
+    inner.updateMatrix();
+    wrap.updateWorldMatrix(true, true);
+    // Recentre: the half turn swung the box about the inner origin.
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    wrap.traverse((o) => {
+      if (!(o instanceof THREE.Mesh)) return;
+      const pos = o.geometry.getAttribute("position");
+      if (!pos) return;
+      for (let i = 0; i < pos.count; i++) {
+        v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld);
+        wrap.worldToLocal(v);
+        if (v.x < minX) minX = v.x;
+        if (v.x > maxX) maxX = v.x;
+        if (v.z < minZ) minZ = v.z;
+        if (v.z > maxZ) maxZ = v.z;
+      }
+    });
+    inner.position.x -= (minX + maxX) / 2;
+    inner.position.z -= (minZ + maxZ) / 2;
+    inner.updateMatrix();
+    wrap.updateWorldMatrix(true, true);
+  };
   void placeWorld(benchStoneUrl, { x: 8.8, z: 4.6, rotY: -Math.PI / 2, width: 1.9 }).then((g) => {
     if (disposed) return null;
-    if (g) benchGroups.set("bench-stone", g);
+    if (g) {
+      faceBackrestPlusZ(g);
+      benchGroups.set("bench-stone", g);
+    }
   });
 
   // A floating text sign (the same canvas-sprite trick as the character
@@ -2845,7 +2908,9 @@ export function createTownScene(
     roof.castShadow = true;
     house.add(roof);
     // The porch bench, and the sealed letter waiting on it.
-    void placeModel(benchStoneUrl, house, { x: -2.3, z: 2.62, y: 0.14, rotY: 0.35, width: 1.9 });
+    void placeModel(benchStoneUrl, house, { x: -2.3, z: 2.62, y: 0.14, rotY: 0.35, width: 1.9 }).then((g) => {
+      if (g && !disposed) faceBackrestPlusZ(g);
+    });
     const letter = box(0.36, 0.05, 0.25, 0xf5efe0, -2.28, 0.64, 2.6, { rough: 0.7 });
     letter.rotation.y = 0.5;
     house.add(letter);
@@ -4504,8 +4569,10 @@ export function createTownScene(
   // Every seatable bench in town, with its seat height measured from
   // the shipped models (stone: seat top ≈ 0.47 over its 0.60 frame;
   // wooden: ≈ 0.33 over 0.37; the terrace bench is the wooden model
-  // at width 1.7, so ≈ 0.30). Both models carry their backrest on
-  // local +Z, so a sitter faces local -Z: world facing =
+  // at width 1.7, so ≈ 0.30). The rule: a backrest sits on local +Z
+  // (faceBackrestPlusZ measures the stone bench's and turns the model
+  // if its file says otherwise; the wooden and Greek benches have
+  // none), so a sitter faces local -Z: world facing =
   // (-sin rotY, -cos rotY), i.e. heading rotY + PI. Two seat slots
   // per bench, local x ±0.42, benches seat two.
   interface BenchDef {

@@ -755,6 +755,17 @@ Notes for the port and the owner:
   the walk's distance, over about a third of a second (`recenterCamera`). The on-screen
   controls are unchanged. Deploy: pending the owner's word (local build c449af46ae7e).
 
+- Owner report in chat (Claude, Nov 6, 2026, small hours): the plaza's stone bench (the
+  pale one) offered "Sit" from behind and seated the pair facing its own back. The scene
+  seats by the rule "backrest on local +Z", and the `bench_stone.glb` rebuilt from the
+  pack on Nov 5 carries its backrest on local -Z (measured: the top third of its
+  vertices sit at z -0.32 of a 0.79 m depth); the wooden and Greek benches have no
+  backrest, so they were never affected. The scene now measures the stone bench's back
+  at load (`faceBackrestPlusZ`) and turns the model half round inside its wrap when the
+  file disagrees, for the plaza bench and the porch bench alike; placement, seat slots
+  and the prompt point are untouched, and an original-edition file sits right too.
+  Deploy: pending the owner's word (local build 0527c9f1b2ff, with the right stick above).
+
 - Task 12 landed (Claude, Nov 5, 2026, evening): her flirt hand does rise, at clip
   level and after the bake (arm directions within 5° of the take on both bodies);
   it is authored modest (a forearm fold to the partner's chest, the other hand on

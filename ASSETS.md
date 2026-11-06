@@ -170,6 +170,13 @@ town file was made from, so the next rebuild is a copy, not a hunt:
   `pavilion_stars` = SM_pavillion, `colosseum` = SM_colosseum,
   `booth_a/b/c` = the `_2x1` variants (the scene's measured 1.73 × 0.86
   booth footprint is 2:1).
+- **Orientation note (Nov 6, 2026):** the rebuilt `bench_stone.glb`
+  carries its backrest on local -Z (the top third of its vertices sit at
+  z -0.32 of a 0.79 m depth), the opposite of the original edition the
+  scene was written against (backrest on +Z). The scene measures the
+  side at load and turns the model when needed (`faceBackrestPlusZ` in
+  townScene.ts), so neither edition needs re-exporting. The wooden and
+  Greek benches have no backrest.
 - **Props and nature**, best guess where the pack offers variants (the
   scene scales every model to a placed width or height, so a different
   variant changes the look, never the layout): `bush_a..e` =
