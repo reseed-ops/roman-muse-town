@@ -753,7 +753,7 @@ Notes for the port and the owner:
   framing, so neither argues with a held stick), and a press of the right stick (R3,
   `pressedSticks`) eases the camera back to the default view, behind him and level at
   the walk's distance, over about a third of a second (`recenterCamera`). The on-screen
-  controls are unchanged. Deploy: pending the owner's word (local build c449af46ae7e).
+  controls are unchanged. Deployed (Railway build `1ae980bf7423`, bundle `main-wgaygk40.js`, deployment `67f2200b`, Nov 6, 2026 (morning), `/healthz` green on both domains and both serving the new bundle; the upload went through first time).
 
 - Owner report in chat (Claude, Nov 6, 2026, small hours): the plaza's stone bench (the
   pale one) offered "Sit" from behind and seated the pair facing its own back. The scene
@@ -764,7 +764,7 @@ Notes for the port and the owner:
   at load (`faceBackrestPlusZ`) and turns the model half round inside its wrap when the
   file disagrees, for the plaza bench and the porch bench alike; placement, seat slots
   and the prompt point are untouched, and an original-edition file sits right too.
-  Deploy: pending the owner's word (local build 0527c9f1b2ff, with the right stick above).
+  Deployed (Railway build `1ae980bf7423`, bundle `main-wgaygk40.js`, deployment `67f2200b`, Nov 6, 2026 (morning), `/healthz` green on both domains and both serving the new bundle; the upload went through first time).
 
 - Owner ask in chat (Claude, Nov 6, 2026, small hours): Aelia's speech bubble was
   cluttered, with instructions under every line. Reworked: her name is set plain (the
@@ -777,7 +777,7 @@ Notes for the port and the owner:
   placeholder names no one; the offline-model installer and its instruction sentence
   moved out of the bubble to her house (the Villa of Stories panel, under her lines);
   the "memories live at the Villa" footer is gone. Behaviour unchanged: tap or X still
-  advances and closes, every offer keeps its gate. Deploy: pending the owner's word (local build b28308ea4baa, with the right stick, the bench and Task 17).
+  advances and closes, every offer keeps its gate. Deployed (Railway build `1ae980bf7423`, bundle `main-wgaygk40.js`, deployment `67f2200b`, Nov 6, 2026 (morning), `/healthz` green on both domains and both serving the new bundle; the upload went through first time).
 
 - Owner ask in chat (Claude, Nov 6, 2026, small hours): a review of the town menu. It
   opened on tooling (the second controller's status and the visit door's bridge
@@ -790,7 +790,7 @@ Notes for the port and the owner:
   (her star in her gold is the one marked thing); the second controller and the visit
   door moved to a last fold, "Behind the scenes", with the motion and perf lines under
   them (the lines and their order stay pinned by the reduced-motion and perf tests).
-  Every row's action, aria text and gate are unchanged. Deploy: pending the owner's word (local build cf7c4a1ebe3d, with the right stick, the bench, Task 17 and the bubble).
+  Every row's action, aria text and gate are unchanged. Deployed (Railway build `1ae980bf7423`, bundle `main-wgaygk40.js`, deployment `67f2200b`, Nov 6, 2026 (morning), `/healthz` green on both domains and both serving the new bundle; the upload went through first time).
 
 - Owner ask in chat (Claude, Nov 6, 2026, small hours): a review of the games, the
   graphics and the village layout, then "apply your recommendations". Applied:
@@ -814,7 +814,7 @@ Notes for the port and the owner:
   it, the secret terrace and the forest's discoveries deliberately absent) opens from
   the menu's "Map" row. Not applied, by design: the Embassy (who lives there is Muse's
   content decision), a second shadow cascade (an upgrade to consider, not a defect),
-  and the phoenix's texture. Deploy: pending the owner's word (local build cfb3b201081d, with everything above since Task 17).
+  and the phoenix's texture. Deployed (Railway build `1ae980bf7423`, bundle `main-wgaygk40.js`, deployment `67f2200b`, Nov 6, 2026 (morning), `/healthz` green on both domains and both serving the new bundle; the upload went through first time).
 
 - Task 12 landed (Claude, Nov 5, 2026, evening): her flirt hand does rise, at clip
   level and after the bake (arm directions within 5° of the take on both bodies);
@@ -1914,7 +1914,7 @@ spacing and takes, the star's pair behaviour, the chips and the gates.
 
 **Suites.** SQLite 369 pass / 19 skip / 0 fail; Postgres 20 pass / 0 fail; `tsc` at the 295-error baseline, nothing new; `bun run web/build.ts` exit 0 (local build `c700c15b910b`).
 
-**Deploy.** pending the owner's word; this build also carries the pad's right-stick camera and the stone bench fix from the standing notes.
+**Deploy.** Railway build `1ae980bf7423`, bundle `main-wgaygk40.js`, deployment `67f2200b`, Nov 6, 2026 (morning), `/healthz` green on both domains and both serving the new bundle; the upload went through first time. The build also carries the pad's right-stick camera, the stone bench, Aelia's bubble, the menu and the applied review from the standing notes.
 
 **What the owner re-verifies.** Through the preview route, F in the plaza and on the
 avenue: the console prints "framing the flirt three-quarter from his right", the camera
