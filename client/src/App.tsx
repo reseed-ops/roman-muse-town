@@ -427,6 +427,16 @@ export function App() {
     /* storage unavailable, the hint simply may show once per visit */
   }
   const [menuOpen, setMenuOpen] = useState(false);
+  // A physical pad in use (owner's ask, Nov 6, 2026): once a pad has
+  // given input in the last ten seconds the on-screen stick, cluster
+  // and shoulders stand down, so the town is unobstructed while a
+  // controller drives; a tap or click anywhere brings them straight
+  // back. The poll below keeps the clock; the ref mirrors the state
+  // so the poll writes it only on a change.
+  const PAD_HIDE_MS = 10000;
+  const [padDriving, setPadDriving] = useState(false);
+  const padDrivingRef = useRef(false);
+  const lastPadInputRef = useRef(0);
   // Player 2 (Task 3, Nov 3 2026): the town menu's status line for the
   // second channel, and the natural-motion driver's follow harness
   // mode. Runtime only, never saved.
@@ -5071,6 +5081,9 @@ export function App() {
       if (g1) {
         const stick = stickVector(g1.axes[0] ?? 0, g1.axes[1] ?? 0);
         const live = stick.x !== 0 || stick.y !== 0;
+        if (live || g1.buttons.some((b) => b.pressed) || rightStickVector(g1.axes).x !== 0 || rightStickVector(g1.axes).y !== 0) {
+          lastPadInputRef.current = performance.now();
+        }
         if ((live || p1Live) && walkingRef.current) setPad(stick.x, stick.y);
         p1Live = live;
         const now = g1.buttons.map((b) => b.pressed);
@@ -5107,6 +5120,11 @@ export function App() {
         }
         prevButtons.set(g2.index, now);
       }
+      const driving = performance.now() - lastPadInputRef.current < PAD_HIDE_MS;
+      if (driving !== padDrivingRef.current) {
+        padDrivingRef.current = driving;
+        setPadDriving(driving);
+      }
       const kb = keyboardStick(keys);
       const kbNow = kb.x !== 0 || kb.y !== 0;
       if (kbNow || kbLive) scene.setPad2Move(kb.x, kb.y, "keyboard");
@@ -5123,10 +5141,16 @@ export function App() {
       }
     };
     raf = window.requestAnimationFrame(poll);
+    // A touch or click brings the on-screen controls back at once.
+    const onAnyPointer = () => {
+      lastPadInputRef.current = 0;
+    };
+    window.addEventListener("pointerdown", onAnyPointer, true);
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
     return () => {
       window.cancelAnimationFrame(raf);
+      window.removeEventListener("pointerdown", onAnyPointer, true);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
@@ -6510,7 +6534,7 @@ export function App() {
                 ? "You're in landscape. The town is framed wide, panels dock to the side, and the walk camera pulls back a little so you and Aelia both stay in view."
                 : "Tip: this app's window doesn't turn when you rotate your phone, use Landscape in the ☰ menu and the town turns itself sideways instead. Panels dock to the side, and walking feels more cinematic."}{" "}
             Walk up to Aelia by the town tree and you&apos;ll both wave; walk up to a house or the tree and press X when the prompt appears to interact, the garden key you simply walk over.
-            In walk mode the virtual Xbox controller appears: left joystick to walk, A or the space bar to jump, B or C to slide while moving (B goes back when you're still), X to talk and interact, Y for stones and hints, and dragging anywhere on the open view swings the camera around you.
+            In walk mode the virtual Xbox controller appears: left joystick to walk, A or the space bar to jump, B or C to slide while moving (B goes back when you're still), X to talk and interact, Y for stones and hints, and dragging anywhere on the open view swings the camera around you. While a physical controller is driving, the on-screen controls hide; tap the screen to bring them back.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {walking && (
@@ -8882,7 +8906,7 @@ export function App() {
               only its dismiss, step-out and slide duties there; it
               no longer leaves the overview, the town menu and the
               Back to Gaius chip own the way back. */}
-          {!anyFullPanelOpen && (
+          {!anyFullPanelOpen && !padDriving && (
           <>
           {walking && (
           <div

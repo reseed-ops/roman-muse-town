@@ -816,6 +816,12 @@ Notes for the port and the owner:
   content decision), a second shadow cascade (an upgrade to consider, not a defect),
   and the phoenix's texture. Deployed (Railway build `1ae980bf7423`, bundle `main-wgaygk40.js`, deployment `67f2200b`, Nov 6, 2026 (morning), `/healthz` green on both domains and both serving the new bundle; the upload went through first time).
 
+- Owner ask in chat (Claude, Nov 6, 2026, morning): with a physical controller in use,
+  the on-screen stick, ABXY cluster and LB/RB stand down. Rule (App.tsx, the pad poll):
+  any input from the first pad (either stick or any button) starts a ten-second clock;
+  while it runs the three are unmounted; a tap or click anywhere resets the clock and
+  they return at once. The overview's controls paragraph says so. Deploy: pending the owner's word (local build 482c7174a891).
+
 - Task 12 landed (Claude, Nov 5, 2026, evening): her flirt hand does rise, at clip
   level and after the bake (arm directions within 5° of the take on both bodies);
   it is authored modest (a forearm fold to the partner's chest, the other hand on
