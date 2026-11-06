@@ -213,6 +213,30 @@ Rung 3 of its visits design, so this task inherits a proven shape):
 When the hold lifts, Muse will adapt this spec to Task 4's landed seam
 shapes and the private bridge's proven pack format.
 
+Amendment (owner's decision, Nov 5, 2026, evening): voice belongs to this
+task. The owner was offered voice input for the hosted town as its own
+small brief (speech in at the client, her lines spoken back by the device
+voice, the scripted Aelia answering) and chose instead to fold voice in
+here, so it is not built separately and should not be re-offered as a
+standalone. When this hold lifts and the task is briefed for real, the
+brief covers voice across the director's door as a first-class channel:
+the visitor talks instead of typing (typing on a pad or a phone keyboard
+is the friction this answers); speech is recognised at the client where
+the browser supports it, with the visitor's microphone consent; the words
+reach the director as visit messages on the same channel as typed panel
+text; and the director's lines are spoken back at the client by the
+device voice, the one that already reads her lines aloud, unless the
+brief chooses a streamed voice for cause. Push-to-talk versus an open
+microphone, and how pauses and interruptions behave, are the brief's to
+settle. Two limits are settled already and are not the brief's to
+relitigate: a stranger's hosted town is directed only by their own Muse
+under their own key, this task's standing rule; and a chat app's live
+voice session cannot be piped into the town page, so an in-town voice
+conversation is always the town's own road to a director, never a window
+into an app session. The brief also inherits the hosted shape this
+section predates: per-visitor towns on the web, and a pairing secret of
+the visitor's own in place of any single shared director token.
+
 ## Task 6 (READY, added Nov 3, 2026): the Live Bridge — a resident director, built here, deployed to the owner's Railway bridge
 
 Background in brief: the first listening visit (Nov 3, 2026) was directed by
