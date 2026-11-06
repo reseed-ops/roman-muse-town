@@ -1928,3 +1928,45 @@ swings to the three-quarter and comes in to about 5.5 m, the hands meeting reada
 and the hold's end line reports about 0.95 rad off his heading at about 5.5 m; after
 the hold the camera is home behind him. If the framing line is missing, the console
 now says why. H re-verified unchanged: close, level, side-on, her face clear.
+
+## Task 18 (READY, added Nov 6, 2026): the stone bench: face it the other way, sit on it not in it, and still the kicking
+
+Source: the owner, on his phone in the hosted town (Chrome on Android,
+town.reseed.net), with a screenshot, Nov 6, 2026, morning. The bench is
+the white stone bench from the review build (it rode in with the
+Task 17 deploy, build 1ae980bf7423), the one standing among the flower
+beds at the south edge of the tree plaza. Three defects, all visible in
+his one photograph:
+
+1. **It faces the wrong way.** The pair sit with their backs to the
+   plaza, the tree and the view the bench exists to overlook. Turn this
+   bench around, 180 degrees, so sitters face the plaza and the tree.
+   If the same bench is placed elsewhere in the town, the sit fixes
+   below apply to every instance (they live in the sit system), but the
+   facing change is for the pictured bench; use judgement on any other
+   placement whose sitters likewise face away from what it overlooks,
+   and say in the note what was turned.
+
+2. **Sitters sit inside the bench, not on it.** In the photograph her
+   body is sunk into the bench, hips swallowed by the seat instead of
+   resting on top of it, and the second sitter is half off the bench's
+   end and inside the shrub beside it. Set the sit anchors so a seated
+   body rests ON the seat (hips at the seat's top, feet toward the
+   ground) and both sit points land on the bench itself.
+
+3. **Seated figures keep randomly kicking.** While seated, their legs
+   kick at random, as if a leg animation from another state leaks into
+   the sit. Find what plays over the seated pose and still it: a seated
+   figure's legs should hang or rest as the sit pose intends. If an
+   idle fidget is deliberately authored somewhere in there, it should
+   not read as kicking; say in the note what it was.
+
+Acceptance, judged on the owner's phone and in Muse's browser checks:
+the pictured bench faces the plaza; two sitters rest on top of the
+seat, both of them on the bench, at its proper height; and a seated
+pair watched for a minute shows no kicking. Nothing else about the
+bench, the sit system's entry and exit, or the pairs is in scope.
+
+The deploy rides as usual, with the standing uplink rule (a failed
+record with no build is a dropped upload, retried; a failed record
+with a log is read first), and the landing note records the build.
