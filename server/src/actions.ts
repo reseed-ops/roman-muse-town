@@ -571,6 +571,10 @@ export const UPGRADE_PRICES: Record<string, number> = {
 /** Stall ingredient lists: buying one unlocks its dish at the Culina. */
 export const INGREDIENT_PRICES: Record<string, number> = {
   "market-basket": 12,
+  // A posy for Aelia (Nov 6, 2026): the one thing denarii buy that is
+  // for her, not the kitchen; giving it consumes it, so it can be
+  // bought again.
+  "posy-for-aelia": 18,
   "fishermans-bundle": 14,
   "bakers-sack": 10,
 };
@@ -606,6 +610,7 @@ export const FORAGE_ITEMS: Record<string, string> = {
   "herbs-glade": "forest-herbs",
   "mushrooms-den": "wild-mushrooms",
   "mushrooms-spring": "wild-mushrooms",
+  "herbs-temple": "forest-herbs",
 };
 
 export const FISH_PRICES: Record<string, number> = {

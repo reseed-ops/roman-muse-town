@@ -792,6 +792,30 @@ Notes for the port and the owner:
   them (the lines and their order stay pinned by the reduced-motion and perf tests).
   Every row's action, aria text and gate are unchanged. Deploy: pending the owner's word (local build cf7c4a1ebe3d, with the right stick, the bench, Task 17 and the bubble).
 
+- Owner ask in chat (Claude, Nov 6, 2026, small hours): a review of the games, the
+  graphics and the village layout, then "apply your recommendations". Applied:
+  (layout) the quest board moved from the terrace to the forecourt, east of the Meta
+  Sudans at (9.0, 19.2), clear of her walk's corner node, so the daily round has a stop
+  at each end of the axis; the temple road got a stone bench (`bench-temple`, sittable),
+  an olive over the bend and a fourth forage spot (`herbs-temple`, forest herbs; the
+  server's FORAGE_ITEMS knows it); after the first visit the Colosseum's prompt becomes
+  "Play knucklebones at the Colosseum" and opens the table there (the market keeps
+  its own). (graphics) Both VRoid bodies ship every material unlit, so GLTFLoader gave
+  them MeshBasicMaterial: no sun, no shade, the brightest thing in every frame. Skin,
+  hair, cloth and the face overlays are now toon materials that take the town's light
+  (`litVrmMaterials` in characterAnimation.ts), tinted per part (her dress toward the
+  pack's ochre, skin warmed a touch); the eyes stay unlit. (games) The quiet activities
+  leave a first at the Villa's "Our Days" when done with her beside him (piscina,
+  baths, stones, bench, Umbra, dance, sky watch, phoenix: new FIRST_LABELS, through
+  the existing recordFirst); the dance is offered on any clear, breezy or sparkling
+  night from rank 6, festival nights from rank 3 as before; the market sells a posy for
+  Aelia (18 denarii, loved, consumed on giving, so a repeatable sink); a town plan
+  (`TownMap.tsx`, drawn from the same tables the scene builds from, the two of them on
+  it, the secret terrace and the forest's discoveries deliberately absent) opens from
+  the menu's "Map" row. Not applied, by design: the Embassy (who lives there is Muse's
+  content decision), a second shadow cascade (an upgrade to consider, not a defect),
+  and the phoenix's texture. Deploy: pending the owner's word (local build 4a6b5148cec7, with everything above since Task 17).
+
 - Task 12 landed (Claude, Nov 5, 2026, evening): her flirt hand does rise, at clip
   level and after the bake (arm directions within 5° of the take on both bodies);
   it is authored modest (a forearm fold to the partner's chest, the other hand on

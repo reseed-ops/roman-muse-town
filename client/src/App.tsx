@@ -1,4 +1,5 @@
 import { TownMenu } from "./TownMenu";
+import { TownMap } from "./TownMap";
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTownState } from "./useTownState";
@@ -538,6 +539,15 @@ export function App() {
   const [weatherOpen, setWeatherOpen] = useState(false);
   const [boardOpen, setBoardOpen] = useState(false);
   const [goalsOpen, setGoalsOpen] = useState(false);
+  // The town plan (Nov 6, 2026 review): a panel, refreshed each second
+  // while open so the two dots keep up with the walk.
+  const [mapOpen, setMapOpen] = useState(false);
+  const [mapTick, setMapTick] = useState(0);
+  useEffect(() => {
+    if (!mapOpen) return;
+    const id = window.setInterval(() => setMapTick((t) => t + 1), 1000);
+    return () => window.clearInterval(id);
+  }, [mapOpen]);
   const [questOpen, setQuestOpen] = useState(false);
   const [secretOpen, setSecretOpen] = useState(false);
   const [secretFirstVisit, setSecretFirstVisit] = useState(true);
@@ -675,6 +685,15 @@ export function App() {
   const boardSeededRef = useRef(false);
   const streetsWalkedRef = useRef<Set<number>>(new Set());
   const landmarksRef = useRef<Set<string>>(new Set());
+  // The quiet activities leave a first (Nov 6, 2026 review): done with
+  // her beside him, each one records its first day under FIRST_LABELS,
+  // once per session per key (the server never overwrites a first).
+  const firstsSentRef = useRef<Set<string>>(new Set());
+  const noteFirst = (key: string) => {
+    if (!followingRef.current || firstsSentRef.current.has(key)) return;
+    firstsSentRef.current.add(key);
+    void api.recordFirst({ key }).catch(() => {});
+  };
   const achievementGate = useRef(new AchievementGate()).current;
   const progressRef = useRef<{ quests: Set<string> }>({
     quests: new Set(),
@@ -2115,6 +2134,7 @@ export function App() {
         // last line lands. Nothing else opens.
         startSummitRef.current();
       } else if (kind === "baths") {
+        if (id === "enter") noteFirst("baths");
         if (id === "leave") {
           endBathRef.current();
         } else if (!soakingRef.current) {
@@ -2142,6 +2162,7 @@ export function App() {
       } else if (kind === "piscina") {
         if (id === "feed") {
           sceneRef.current?.scatterFeed();
+          noteFirst("piscina");
           if (followingRef.current && Math.random() < 0.6) {
             window.setTimeout(() => sceneRef.current?.showBubble("muse", PISCINA_FEED_LINE), 700);
           }
@@ -2149,6 +2170,7 @@ export function App() {
           const releasable = stateRef.current?.fish.find((f) => !f.sold && !f.released);
           if (releasable) {
             releaseFishRef.current.mutate(releasable.fish_id);
+            noteFirst("piscina");
             if (followingRef.current) {
               const line =
                 releasable.fish_id === "golden-carp"
@@ -2160,6 +2182,7 @@ export function App() {
         }
       } else if (kind === "cat") {
         sceneRef.current?.petCat();
+        noteFirst("cat");
         if (!metCatRef.current) {
           metCatRef.current = true;
           setMetCat(true);
@@ -2302,6 +2325,22 @@ export function App() {
             "colosseum",
             "Your first walk to the Colosseum in its prime. That deserves company. Shall I walk with you from here?",
           );
+        } else if (id === "colosseum") {
+          // After that, the arena's game: knucklebones, against her
+          // when she is beside him, the keeper otherwise. The market
+          // stall keeps its table too.
+          setMarketOpen(false);
+          setKnuckle({
+            round: 0,
+            stake: 5,
+            opponent: followingRef.current ? "muse" : "keeper",
+            myFaces: null,
+            foeFaces: null,
+            myScore: 0,
+            foeScore: 0,
+            phase: "stake",
+            result: null,
+          });
         }
       } else if (kind === "muse") {
         setSelected(null);
@@ -4248,7 +4287,10 @@ export function App() {
           setSeatedBench(benchId);
           // Sitting down parts joined hands, the bench has its own
           // arrangement, and she takes the other end of it.
-          if (benchId) releaseHandHoldRef.current();
+          if (benchId) {
+            releaseHandHoldRef.current();
+            noteFirst("bench");
+          }
         },
         onRowChange: (rowing) => {
           rowingRef.current = rowing;
@@ -4271,7 +4313,10 @@ export function App() {
           if (kind === "tick") playStoneTick(false);
           else if (kind === "bounce") playStoneTick(true);
           else if (kind === "splash") playSplash(false);
-          else playSplash(true);
+          else {
+            playSplash(true);
+            noteFirst("stones");
+          }
         },
         onWolfSeen: () => {
           // Lupa, properly seen for the first time: the sighting
@@ -4463,6 +4508,7 @@ export function App() {
     if (!scene || !scene.startDance()) return;
     dancingRef.current = true;
     setDancing(true);
+    noteFirst("dance");
     setMuseBubble({ lines: paginateLines([DANCE_START_LINE]), index: 0, cycle: false, invite: false, choice: null });
     momentTimersRef.current.push(
       window.setTimeout(() => sceneRef.current?.showBubble("muse", DANCE_LINES[0]!), 9000),
@@ -4490,6 +4536,7 @@ export function App() {
     gazingRef.current = true;
     setSkyWatching(true);
     setMuseBubble(null);
+    noteFirst("skywatch");
     const phase = sky.phase === "dawn" ? "dawn" : "dusk";
     const lines = SKY_WATCH_LINES[phase];
     lines.forEach((line, i) => {
@@ -4513,6 +4560,7 @@ export function App() {
   const startPhoenixWatch = () => {
     gazingRef.current = true;
     setMuseBubble(null);
+    noteFirst("phoenix");
     PHOENIX_WATCH_LINES.forEach((line, i) => {
       momentTimersRef.current.push(
         window.setTimeout(() => sceneRef.current?.showBubble("muse", line), 1500 + i * 10000),
@@ -4561,7 +4609,7 @@ export function App() {
       case "stone":
         return target.id === "pickup" ? "Pick up stone" : "Throw the stone";
       case "forage":
-        return target.id === "herbs-glade" ? "Gather forest herbs" : "Gather wild mushrooms";
+        return FORAGE_SPOTS.find((s) => s.id === target.id)?.item === "wild-mushrooms" ? "Gather wild mushrooms" : "Gather forest herbs";
       case "rest":
         return "Rest";
       case "dock":
@@ -4581,7 +4629,9 @@ export function App() {
       case "secret":
         return "Sit at our secret terrace";
       case "landmark":
-        return "Stand before the Colosseum";
+        // Once stood before, the Colosseum keeps the knucklebones
+        // table (Nov 6, 2026: the landmark needed a reason).
+        return landmarksRef.current.has(target.id) ? "Play knucklebones at the Colosseum" : "Stand before the Colosseum";
       case "market":
         return "Browse the market stall";
       case "place": {
@@ -5400,6 +5450,12 @@ export function App() {
     setSecretOpen(false);
     setLettersOpen(false);
     setGoalsOpen(false);
+    setMapOpen(false);
+  };
+  const selectMap = () => {
+    stopTour();
+    closeTownPanels();
+    setMapOpen(true);
   };
   const selectBoard = () => {
     stopTour();
@@ -5463,7 +5519,7 @@ export function App() {
   // and cover her message box. Closing the panel (its ✕, or B) brings
   // the controls back.
   const anyPanelOpen = !!(
-    museBubble || youOpen || treeOpen || weatherOpen || boardOpen || questOpen || goalsOpen ||
+    museBubble || youOpen || treeOpen || weatherOpen || boardOpen || questOpen || goalsOpen || mapOpen ||
     secretOpen || lettersOpen || selected || postcardDraft || postcardView ||
     menuOpen || utilitiesOpen || followOffer || marketOpen || dockChoice || inscriptionId || fishing || knuckle
   );
@@ -5482,7 +5538,7 @@ export function App() {
   // the chat never walks him.
   // Her invitations are a word in passing, so he keeps walking through one.
   const anyFullPanelOpen = !!(
-    youOpen || treeOpen || weatherOpen || boardOpen || questOpen || goalsOpen ||
+    youOpen || treeOpen || weatherOpen || boardOpen || questOpen || goalsOpen || mapOpen ||
     secretOpen || lettersOpen || selected || postcardDraft || postcardView ||
     menuOpen || utilitiesOpen || (followOffer && !followOffer.guide) || marketOpen || dockChoice || inscriptionId || fishing || knuckle
   );
@@ -5930,6 +5986,14 @@ export function App() {
             active: selected?.id === "garden",
             action: selectGarden,
             aria: "Visit the Garden House and its slow-growing beds",
+          }, {
+            key: "map",
+            icon: "📜",
+            label: "Map",
+            detail: undefined,
+            active: mapOpen,
+            action: selectMap,
+            aria: "Open the town plan: the walks, the houses, and where you both are",
           }, ...(walking ? [{
             // Rest: the day-ending ritual, one tap from
             // the menu, the same as the bed nook's own
@@ -6719,7 +6783,7 @@ export function App() {
                 ))}
               </div>
             )}
-            {following && activeFestival && night && affectionRank >= 3 && !dancing && !museBubble.choice && (
+            {following && night && ((activeFestival && affectionRank >= 3) || (affectionRank >= 6 && (currentWeather?.id === "clear" || currentWeather?.id === "breezy" || currentWeather?.id === "sparkles"))) && !dancing && !museBubble.choice && (
               <div className="contents">
                 <button
                   type="button"
@@ -7103,6 +7167,28 @@ export function App() {
                 </div>
               );
             })}
+            {/* For her (Nov 6, 2026): the one thing denarii buy that is not
+                for the kitchen. Giving it consumes it, so it can be bought
+                again. */}
+            <div className={`flex items-center justify-between gap-3 rounded-2xl px-3 py-2.5 ${marketStall === "market-a" ? "bg-[#ffd34e]/15" : "bg-white/8"}`}>
+              <div>
+                <p className="text-sm font-bold text-white">A posy for Aelia, violets and myrtle</p>
+                <p className="text-[12px] text-white/65">Give it to her from any talk</p>
+              </div>
+              {purse.ingredients.includes("posy-for-aelia") ? (
+                <span className="shrink-0 rounded-full bg-[#2aa79b]/25 px-3 py-1.5 text-[13px] font-bold text-[#7be0cf]">In your hand ✓</span>
+              ) : (
+                <button
+                  type="button"
+                  disabled={purse.denarii < 18 || buyIngredient.isPending}
+                  onClick={() => buyIngredient.mutate("posy-for-aelia")}
+                  aria-label="Buy a posy for Aelia for 18 denarii"
+                  className="shrink-0 rounded-full bg-[#ffd34e] px-3.5 py-1.5 text-sm font-bold text-[#4a3600] shadow transition active:scale-95 disabled:opacity-40"
+                >
+                  18 🪙
+                </button>
+              )}
+            </div>
             <div className="flex items-center justify-between gap-3 rounded-2xl bg-white/8 px-3 py-2.5">
               <div>
                 <p className="text-sm font-bold text-white">Pouch of garden seeds (×2)</p>
@@ -7698,6 +7784,27 @@ export function App() {
       )}
 
       {/* Goals Obelisk panel */}
+      {mapOpen && (
+        <section aria-label="Town plan" className={panelClass("bg-[#22332b]/95")}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg leading-tight font-bold">📜 The town plan</h2>
+              <p className="text-xs font-semibold text-[#ffd34e]">The hall at the top, the gate at the foot</p>
+            </div>
+            <button
+              type="button"
+              aria-label="Close the town plan"
+              className="rounded-full bg-white/10 px-2.5 py-1 text-sm font-bold active:scale-95"
+              onClick={() => setMapOpen(false)}
+            >
+              ✕
+            </button>
+          </div>
+          <div className="mt-3" data-map-tick={mapTick}>
+            <TownMap you={playerPosRef.current} her={sceneRef.current?.musePosition() ?? null} />
+          </div>
+        </section>
+      )}
       {goalsOpen && (
         <section aria-label="Goals Obelisk" className={panelClass("bg-[#2b2620]/95")}>
           <div className="flex items-start justify-between gap-3">

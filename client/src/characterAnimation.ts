@@ -1435,6 +1435,43 @@ export function createCharAnimator(args: {
 
 /** Skinned VRM meshes need frustum culling off, or they vanish when their
  *  bind-pose bounds leave the frame. */
+/** VRoid bodies ship every material unlit (KHR_materials_unlit), so
+ *  GLTFLoader gives them MeshBasicMaterial: no sun, no shade, no fog of
+ *  their own, the brightest thing in every frame (the Nov 6, 2026
+ *  review's first graphics note: her near-white body read as
+ *  unfinished). Skin, hair, cloth and the face overlays become toon
+ *  materials that take the town's light, tinted per part; the eyes
+ *  stay unlit, as drawn eyes do. The tint multiplies the texture, so
+ *  white keeps a part exactly as painted. */
+export const MUSE_TINTS: Record<string, number> = { SKIN: 0xf7e6d8, HAIR: 0xf1e6d6, CLOTH: 0xdcc28e, FACE: 0xffffff };
+export const PLAYER_TINTS: Record<string, number> = { SKIN: 0xf4ddc9, HAIR: 0xffffff, CLOTH: 0xffffff, FACE: 0xffffff };
+export function litVrmMaterials(root: THREE.Object3D, tints: Record<string, number>) {
+  const made = new Map<THREE.Material, THREE.Material>();
+  const convert = (m: THREE.Material): THREE.Material => {
+    if (!(m instanceof THREE.MeshBasicMaterial)) return m;
+    const part = /_(SKIN|HAIR|CLOTH|FACE|EYE)(?![A-Za-z])/.exec(m.name)?.[1] ?? "";
+    if (part === "EYE") return m;
+    const hit = made.get(m);
+    if (hit) return hit;
+    const toon = new THREE.MeshToonMaterial({
+      map: m.map,
+      color: m.color.clone().multiply(new THREE.Color(tints[part] ?? 0xffffff)),
+      transparent: m.transparent,
+      opacity: m.opacity,
+      alphaTest: m.alphaTest,
+      side: m.side,
+      depthWrite: m.depthWrite,
+    });
+    toon.name = m.name;
+    made.set(m, toon);
+    return toon;
+  };
+  root.traverse((o) => {
+    if (!(o instanceof THREE.Mesh)) return;
+    o.material = Array.isArray(o.material) ? o.material.map(convert) : convert(o.material);
+  });
+}
+
 export function prepareVrm(root: THREE.Object3D) {
   root.traverse((o) => {
     if (o instanceof THREE.Mesh) {

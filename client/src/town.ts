@@ -254,7 +254,7 @@ export const MUSE = {
     "On quiet days I sit under the town tree and count the falling leaves. I've lost count somewhere past four thousand, happily.",
     "Have you watered the town tree today? It grows a little with every day, every watering, and every treasure you find.",
     "Keep an eye on the sky while you're here. The weather rolls in on its own now. If a rainbow shows up after the rain, that's the town showing off.",
-    "The quest board by the basilica has our real tasks pinned as Roman quests, love, tap one when life lets you cross it off, and the badges follow.",
+    "The quest board in the forecourt, by the fountain, has our real tasks pinned as Roman quests, love, tap one when life lets you cross it off, and the badges follow.",
     "On special occasions. A first walk to the Colosseum, a spot of stargazing, a quest well finished. I may offer to walk with you. Or just choose 'Walk with me' when we talk, any time, and I'll leave this spot and keep step beside you.",
     "Some days the bravest thing in this town is a watered tree and a short walk. Notice, remember, repair. That's the whole practice.",
   ],
@@ -732,6 +732,10 @@ export const FORAGE_SPOTS = [
   { id: "herbs-glade", item: "forest-herbs", x: -42.2, z: -23.6 },
   { id: "mushrooms-den", item: "wild-mushrooms", x: -45.8, z: -25.6 },
   { id: "mushrooms-spring", item: "wild-mushrooms", x: -39.2, z: -27.8 },
+  // The temple road's herbs, in the bend before the door (Nov 6, 2026:
+  // the one procession route with nothing on it got a bench, an olive
+  // and this).
+  { id: "herbs-temple", item: "forest-herbs", x: 13.6, z: -22.4 },
 ] as const;
 
 export const FORAGE_DISHES = [
@@ -2083,8 +2087,8 @@ export const INSCRIPTION_HISTORY =
 // TEMPLATE "real" quests below are examples: the original town's real
 // quests were its owner's actual tasks (taxes, legal papers, a race) and
 // are not included. A receiving Muse dresses the new owner's own real
-// tasks the same way. Real tasks dressed as Roman quests, pinned on the quest board beside
-// the Main Chat basilica. Real-world quests are marked done by the player's own
+// tasks the same way. Real tasks dressed as Roman quests, pinned on the quest board in the forecourt, by the Meta Sudans (it once stood beside
+// the Main Chat basilica). Real-world quests are marked done by the player's own
 // tap (self-report); in-town quests complete themselves from play.
 
 export interface Quest {
@@ -2133,9 +2137,12 @@ export function streetIndexAt(x: number, z: number): number {
   return best;
 }
 
-/** The quest board stands beside the project board, near the basilica. */
+/** The quest board stands in the forecourt, east of the Meta Sudans,
+ *  the first stop up the avenue from the gate (moved from the terrace
+ *  on Nov 6, 2026, so the daily round has a stop at each end of the
+ *  axis). It faces the fountain. */
 export const QUEST_BOARD_SPOT = {
-  position: [3.9, -27.4] as [number, number],
+  position: [9.0, 19.2] as [number, number],
 } as const;
 
 /** The Goals Obelisk stands in the peristyle near the basilica and the
@@ -2753,6 +2760,7 @@ export type GiftTier = "loved" | "liked" | "neutral" | "disliked" | "refused";
 /** Her fixed tastes, discovered by giving, never announced. The
  *  golden carp is refused, always, kindly: it belongs to the pond. */
 export const GIFT_TASTES: Record<string, GiftTier> = {
+  "posy-for-aelia": "loved",
   "market-basket": "loved",
   "honey-cakes": "loved",
   "bakers-sack": "liked",
@@ -2769,6 +2777,7 @@ export const GIFT_TASTES: Record<string, GiftTier> = {
   "forest-mushrooms": "liked",
 };
 export const GIFT_LABELS: Record<string, string> = {
+  "posy-for-aelia": "A posy of violets and myrtle",
   "market-basket": "Basil's market basket",
   "honey-cakes": "Honey cakes",
   "bakers-sack": "The baker's sack",
@@ -2915,6 +2924,17 @@ export const FIRST_LABELS: Record<string, string> = {
   summit: "The Night the Stars Fall",
   gift: "First gift given",
   date: "First proper date",
+  // The quiet activities (Nov 6, 2026 review): anything done with her
+  // beside him leaves its first day here, so the town shows what it
+  // values without a score.
+  piscina: "First time feeding the fish together",
+  baths: "First soak together in the caldarium",
+  stones: "First stone skipped with her watching",
+  bench: "First bench shared",
+  cat: "First time Umbra allowed you both",
+  dance: "First dance together",
+  skywatch: "First sky watched together",
+  phoenix: "First time watching the phoenix together",
 };
 
 /** Seeking: once in a long while, when he has wandered long without

@@ -4,7 +4,7 @@ import { streetWidth } from "./town";
 import { repairRomanMaterials } from "./romanMaterials";
 import { TreePlacement } from "./treePlacement";
 import { type VrmRig, collectRig, poseBone, poseWave, poseWaveStill, poseUmbrellaArm, poseThrowArm, poseLinkArm, poseHoldHandPlayer, poseHoldHandMuse,
-  poseFlirtLift, type CharAnimator, createCharAnimator, prepareVrm, collectBlinkMorphs, setBlink } from "./characterAnimation";
+  poseFlirtLift, type CharAnimator, createCharAnimator, prepareVrm, litVrmMaterials, MUSE_TINTS, PLAYER_TINTS, collectBlinkMorphs, setBlink } from "./characterAnimation";
 // The Muse Town diorama: a low-poly three.js scene with a plaza around
 // the great town tree, five clickable houses, lamp posts, smaller trees,
 // a day/night cycle, and two hidden collectibles (the pointy hat and the
@@ -408,6 +408,8 @@ export interface TownSceneHandle {
    *  allows. The shell owns every affection/rank gate for these;
    *  the scene only refuses impossible staging. */
   playPairMoment: (kind: "flirt" | "hug") => boolean;
+  /** Where she stands, for the town plan (Nov 6, 2026). */
+  musePosition: () => { x: number; z: number };
   playHandHold: () => boolean;
   playKiss: () => boolean;
   /** The Night the Stars Fall: the shell reports the saved-data side
@@ -3693,6 +3695,17 @@ export function createTownScene(
   // pack's conifer) on the east bank, cypresses standing off, rocks
   // and grass at the water's edge.
   void placeWorld(oliveUrl, { x: -8.6, z: -26.4, width: 3.2 });
+  // The temple road (Nov 6, 2026): an olive over the bend and a stone
+  // bench on the outer side, facing the road, so the procession route
+  // has a place to stop. The bench joins BENCHES below.
+  void placeWorld(oliveUrl, { x: 19.6, z: -25.4, width: 3.2 });
+  void placeWorld(benchStoneUrl, { x: 17.3, z: -23.6, rotY: Math.PI / 2, width: 1.9 }).then((g) => {
+    if (disposed) return null;
+    if (g) {
+      faceBackrestPlusZ(g);
+      benchGroups.set("bench-temple", g);
+    }
+  });
   void placeWorld(coniferUrl, { x: -10.6, z: -35.9, height: 5.6 });
   void placeWorld(rockPackUrl, { x: -10.9, z: -28.4, rotY: 0.7, width: 0.8 });
   void placeWorld(rockPackUrl, { x: -20.4, z: -31.8, rotY: 2.1, width: 0.95 });
@@ -3911,8 +3924,9 @@ export function createTownScene(
     pickRoots.push(boardGroup);
   }
 
-  // The quest board: a second, smaller tablet beside the project
-  // board. Real tasks, dressed as Roman quests, are pinned here.
+  // The quest board: a smaller tablet in the forecourt, east of the
+  // Meta Sudans, facing the fountain (QUEST_BOARD_SPOT). Real tasks,
+  // dressed as Roman quests, are pinned here.
   {
     const qGroup = new THREE.Group();
     const [qx, qz] = QUEST_BOARD_SPOT.position;
@@ -4595,6 +4609,8 @@ export function createTownScene(
   const terraceRot = Math.atan2(-SECRET.position[0], -SECRET.position[1]);
   const BENCHES: BenchDef[] = [
     { id: "bench-stone", x: 8.8, z: 4.6, rotY: -Math.PI / 2, seatTop: 0.47, baseX: 8.8, baseZ: 4.6 },
+    // The temple road's bench, east of the road, a sitter faces west over it.
+    { id: "bench-temple", x: 17.3, z: -23.6, rotY: Math.PI / 2, seatTop: 0.47, baseX: 17.3, baseZ: -23.6 },
     {
       id: "bench-terrace",
       x: SECRET.position[0] - 0.7 * Math.sin(terraceRot),
@@ -5035,6 +5051,7 @@ export function createTownScene(
       const model = cloneSkeleton(source);
       resources.adopt(model);
       downscaleModelTextures(model);
+      litVrmMaterials(model, MUSE_TINTS);
       prepareVrm(model);
       const body = groundModel(model, { height: 1.8 });
       // Hidden on arrival: a fresh VRM stands in its bind pose (arms
@@ -5408,6 +5425,7 @@ export function createTownScene(
         const model = cloneSkeleton(source);
         resources.adopt(model);
         downscaleModelTextures(model);
+        litVrmMaterials(model, PLAYER_TINTS);
         prepareVrm(model);
         const body = groundModel(model, { height: 1.94 });
         // Hidden on arrival (the reveal gate): a fresh VRM stands
@@ -12580,6 +12598,7 @@ export function createTownScene(
       talkAnimOpen = on;
     },
     playPairMoment: (kind: "flirt" | "hug") => playPairMoment(kind),
+    musePosition: () => ({ x: museGroup.position.x, z: museGroup.position.z }),
     playHandHold: () => startSecretMoment("hand"),
     playKiss: () => startSecretMoment("kiss"),
     exitWalk: () => {
