@@ -779,6 +779,19 @@ Notes for the port and the owner:
   the "memories live at the Villa" footer is gone. Behaviour unchanged: tap or X still
   advances and closes, every offer keeps its gate. Deploy: pending the owner's word (local build b28308ea4baa, with the right stick, the bench and Task 17).
 
+- Owner ask in chat (Claude, Nov 6, 2026, small hours): a review of the town menu. It
+  opened on tooling (the second controller's status and the visit door's bridge
+  sentence as rows two and three, the motion verdict and the fps line at the foot),
+  used three components for one level (tracked uppercase headings, hairlined folds, a
+  grey card for Settings), and explained rows whose labels already said it. Reworked
+  (`TownMenu.tsx`, the groups in App.tsx): one row style for every line, folds and
+  Settings included; details are states only (1 unread, Sapling, Watered on N days,
+  Walking with you, On foot now); headings in quiet sentence case, none over her rows
+  (her star in her gold is the one marked thing); the second controller and the visit
+  door moved to a last fold, "Behind the scenes", with the motion and perf lines under
+  them (the lines and their order stay pinned by the reduced-motion and perf tests).
+  Every row's action, aria text and gate are unchanged. Deploy: pending the owner's word (local build cf7c4a1ebe3d, with the right stick, the bench, Task 17 and the bubble).
+
 - Task 12 landed (Claude, Nov 5, 2026, evening): her flirt hand does rise, at clip
   level and after the bake (arm directions within 5° of the take on both bodies);
   it is authored modest (a forearm fold to the partner's chest, the other hand on

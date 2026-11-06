@@ -5830,16 +5830,7 @@ export function App() {
         footerNote={motionStatus ?? undefined}
         perfNote={perfLine ?? undefined}
         className={`mt-scrollable absolute right-3 z-30 w-[min(320px,86vw)] overflow-y-auto rounded-3xl bg-[#22332b]/97 p-2 shadow-2xl backdrop-blur ${forcedLandscape ? "top-[60px] max-h-[calc(100%-118px)]" : isLandscape ? "top-[60px] max-h-[calc(100dvh-130px)]" : "top-[76px] max-h-[62vh] sm:right-4"}`}
-        groups={[{
-          heading: "Aelia", items: [{
-            key: "muse",
-            icon: "✦",
-            label: "Aelia",
-            detail: following ? "Walking with you" : "Talk with your companion",
-            active: !!museBubble,
-            action: selectMuse,
-            aria: "Meet Aelia, your host in Muse Town",
-          }, {
+        backstage={[{
             // Player 2 (Task 3): the second channel's status, and
             // the natural-motion driver's follow harness, a test
             // toggle on this line: off, beside him, behind him.
@@ -5870,6 +5861,17 @@ export function App() {
             active: visitUi.active,
             action: () => (visitUi.active ? endVisitNow() : beginVisitNow()),
             aria: visitUi.active ? "End Muse's visit; Aelia returns to her own voice" : "Open a visit for Muse; a director may then move Aelia and speak through her",
+          }]}
+        groups={[{
+          heading: "Aelia", hideHeading: true, items: [{
+            key: "muse",
+            icon: "✦",
+            tint: "#ffd34e",
+            label: "Aelia",
+            detail: following ? "Walking with you" : undefined,
+            active: !!museBubble,
+            action: selectMuse,
+            aria: "Meet Aelia, your host in Muse Town",
           }, {
             // The follow control lives here (Nov 1): the
             // floating walk-screen chip and the speech-bubble
@@ -5878,7 +5880,6 @@ export function App() {
             key: "follow",
             icon: "🚶",
             label: following ? "Ask Aelia to stay here" : "Walk with Aelia",
-            detail: following ? "She'll keep her own day until you call her" : "She'll fall in beside you",
             active: following,
             action: () => {
               if (following) {
@@ -5925,7 +5926,7 @@ export function App() {
             key: "garden",
             icon: "🌱",
             label: "Garden House",
-            detail: state.data?.garden.planted_on ? `Watered on ${state.data.garden.water_days} day${state.data.garden.water_days === 1 ? "" : "s"}` : "The beds",
+            detail: state.data?.garden.planted_on ? `Watered on ${state.data.garden.water_days} day${state.data.garden.water_days === 1 ? "" : "s"}` : undefined,
             active: selected?.id === "garden",
             action: selectGarden,
             aria: "Visit the Garden House and its slow-growing beds",
@@ -5936,7 +5937,6 @@ export function App() {
             key: "rest",
             icon: "🛏️",
             label: "Rest",
-            detail: "End the day at the basilica's bed nook",
             active: false,
             action: restInTown,
             aria: "Rest at the basilica's bed nook, end the town day",
@@ -6036,7 +6036,7 @@ export function App() {
             key: "landscape",
             icon: "🔄",
             label: forcedLandscape ? "Portrait" : "Landscape",
-            detail: forcedLandscape ? "Town is turned sideways" : "Turn the town sideways",
+            detail: forcedLandscape ? "Sideways now" : undefined,
             active: forcedLandscape,
             action: toggleForcedLandscape,
             aria: forcedLandscape
@@ -6054,7 +6054,6 @@ export function App() {
             key: "sky-auto",
             icon: "🕰️",
             label: "Real time",
-            detail: "Follow your local time again",
             active: false,
             action: setSkyAuto,
             aria: "Let the town sky follow real local time again",
@@ -6080,7 +6079,7 @@ export function App() {
           }, {
             key: "you",
             icon: "🧍",
-            label: "You · Gaius",
+            label: "Gaius, you",
             detail: walking ? "On foot now" : undefined,
             active: youOpen || walking,
             action: selectYou,
