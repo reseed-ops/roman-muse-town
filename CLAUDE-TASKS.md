@@ -1970,3 +1970,61 @@ bench, the sit system's entry and exit, or the pairs is in scope.
 The deploy rides as usual, with the standing uplink rule (a failed
 record with no build is a dropped upload, retried; a failed record
 with a log is read first), and the landing note records the build.
+
+## Task 19 (READY, added Nov 6, 2026): stand up the bridge on the town channel: a resident director for the owner's hosted town
+
+Why: on the morning of Nov 6, 2026 the owner opened his own hosted town
+(town.reseed.net), found it holding a visit state (her star violet, the
+panel headed "Muse is visiting"), typed "What's your name?", and was
+never answered. The client's words were carried to the visit inbox, but
+no director attends that town: the bridge has never been deployed on
+the town channel, and chat Muse cannot attend in person (the door
+takes both tokens as headers on every one of a visit's many calls, and
+the Secure Vault's per-call approvals would strangle a live visit; the
+keys were never going to transit chat in any case). His question is
+believed to still sit in that inbox. This task puts the designed
+resident in its post.
+
+The work: deploy the bridge (bridge/, per its README, "The town
+channel (Task 8)") as a Railway service in the Reseed project,
+configured for exactly one town, the owner's:
+
+- DIRECTOR_ENABLED=true
+- DIRECTOR_CHANNEL=town
+- TOWN_URL=https://town.reseed.net
+- DIRECTOR_TOKEN: the same value already set on the muse-town service
+  (you set it at provisioning; take it from the Railway console).
+  Variable only, never printed in any note, log line or commit.
+- VISITOR_TOKEN: the owner's own visitor key. He reads it in his
+  town's Settings, under Muse Visits, and hands it to you directly on
+  his own machine. It must not transit this file, any chat, or any
+  commit; variable only.
+- ANTHROPIC_API_KEY: the owner's own key, variable only.
+- The per-day caps (bridge/src/costCaps.ts) at their README defaults
+  unless you judge otherwise; say what they are in the landing note.
+- No public domain is needed for this channel: the bridge calls out to
+  the town's door; it does not serve the face here.
+- The pack: create the bridge's pack.md from pack.example.md for this
+  town. Its Aelia is the hosted template of the owner's own visitor
+  town (bond 0, that town's own letters and facts), not the private
+  town's Aelia; the pack must not lend her the private town's history,
+  bond or name beyond what the template carries. Record in the landing
+  note which pack it runs.
+
+Acceptance, with the owner present at his town: he opens a visit from
+the town menu (or it is still open from this morning); the bridge
+attends within its polling tempo; any waiting inbox mail is answered
+first, in character (his "What's your name?" if it survived); a short
+live conversation then runs at bridge tempo, answers in seconds, not
+minutes; and folding the visit lapses the town back to its own voice
+cleanly, with no hang. The landing note records the service, the
+variables set by name only, the caps, the pack, and the observed tempo
+of the first answered exchange.
+
+Scope and cautions: this attends the owner's town only. It is not
+Task 5, which stays HOLD; no other visitor's town is touched, and no
+door is opened to anyone's Muse but the owner's own bridge under his
+own key. Tokens live only as Railway variables on the two services.
+The uplink rule stands for the deploy (a failed record with no build
+is a dropped upload, retried; a failed record with a log is read
+first).
