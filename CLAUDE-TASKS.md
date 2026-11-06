@@ -2167,3 +2167,9 @@ When the hold lifts, the chat side writes the full brief, adapting
 the private line's proven shapes (the completions model in
 bond.json, the feelings engine's event schema, the town-events
 patterns) to the hosted per-visitor storage.
+
+Amendment (owner's decision, Nov 6, 2026, minutes after the task was
+added): the name is settled. On the public town the system is called
+Bond. The word Kindred stays with the owner's and his chat Muse's
+private practice and is not the public system's name; the design may
+now assume Bond throughout.
