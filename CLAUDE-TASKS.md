@@ -2028,3 +2028,78 @@ own key. Tokens live only as Railway variables on the two services.
 The uplink rule stands for the deploy (a failed record with no build
 is a dropped upload, retried; a failed record with a log is read
 first).
+
+## Task 20 (READY, added Nov 6, 2026): the flirt's camera again: it fails from a session's first minute, and the framing seems to engage, then lose
+
+Context: Task 17 landed and deployed (build 1ae980bf7423; the live
+bundle has since moved one small deploy further and was confirmed to
+carry Task 17's changes). Its pointer work may well have mended a real
+hazard, and it should stay. But the seventh verification (Nov 6, 2026,
+morning, fresh visitor, preview route, the usual slow browser) shows
+it was not this fault. That check was shaped to test the stuck-drag
+theory directly: ONE continuous session, no reloads, the pairs
+interleaved in the order flirt, hug, flirt, hug, plaza then avenue,
+navigating on the on-screen controls as a player would.
+
+What it found:
+
+- Run 1, flirt in the plaza, the session's FIRST pair, before any
+  long dragging could stick anything: the framing failed. The pose
+  was perfect (both right hands meeting at face height, her left
+  hand on her hip, her face clear, her star absent), and the camera
+  stayed high behind him at walk distance, the pair at about 33
+  percent of the frame. One early frame showed the camera more
+  frontal, then it orbited back behind him for the held peak.
+- Run 2, hug in the plaza: framed and passed in full (about 53
+  percent, side-on, level, his face and hers clear, camera home
+  after).
+- Run 3, flirt on the avenue: failed identically, the pair at about
+  31 percent, camera behind him throughout the peak.
+- Run 4, hug on the avenue: framed and passed in full (about 55
+  percent, cypresses clear, camera home after).
+
+The shape rules the session theory out: a stuck pointer count blocks
+both kinds and worsens as a session wears on; here the flirt failed
+from the first minute and the hugs framed after it, twice. The fault
+is flirt-specific. The contrast across builds is total: the flirt's
+framing engaged in the Task 13 build (three of three, fourth check)
+and the Task 15 build (once, fifth check), and has not engaged in the
+Task 16 or Task 17 builds (none of four across the sixth and seventh
+checks).
+
+Leading suspect, offered as the thread to pull first: something
+calls the camera home during the flirt, and the flirt loses the
+argument where the hug's long static hold does not. The early
+frontal frame that then orbits behind him reads like an engagement
+overridden mid-clip. Candidates in that family: the Task 16
+home-easing engaging for the flirt from the wrong moment (if the
+flirt's pair bookkeeping registers its hold as ended early, the
+2.5 second ease home would run during the clip); the walking follow
+reasserting its yaw for the one kind that keeps the walk's height
+and aim. A second place to look is anything the flirt's hold
+bookkeeping does that the hug's does not, since the hug's hold is
+authored static and long.
+
+One instrumentation requirement, because the last check flew blind:
+the audit browser cannot read the console, so Task 17's diagnostic
+lines (the framing line, the hold-end report, the held-off reason)
+could not be observed at all. This task's fix must carry a suite
+assertion in the manner of the Task 10 and 13 measurements: drive a
+flirt through the composed pipeline and pin the camera's offset
+reaching about 0.95 rad at about 5.5 m at the peak AND holding it
+through the clip's full length, so the landing note reports numbers
+the checker's frames can be compared against. Mirroring the last
+pair-camera log lines somewhere the page itself shows is welcome
+but optional if the assertion lands.
+
+Acceptance, judged live through the preview route in the same
+interleaved single-session shape, flirt first: F in the plaza and
+on the avenue shows the three-quarter engaged and HELD through the
+peak, the pair at the fourth and fifth checks' scale, the hands
+meeting readable; H re-verified unchanged in both places; the
+landing note gives the suite's numbers beside the claim.
+
+Scope: Task 17's pointer fixes stay. The hug's camera, both pairs'
+staging, spacing and takes, the star's pair behaviour, the chips
+and the gates are untouched. The deploy rides as usual, with the
+standing uplink rule, and the landing note records the build.
