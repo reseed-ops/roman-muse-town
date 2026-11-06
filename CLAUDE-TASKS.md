@@ -772,7 +772,7 @@ Notes for the port and the owner:
   gold star (the octahedron on `museInner`, her marker) shrinks away for pair
   moments. The hold's heads are face to face in profile; the Task 15 note's "over
   his right shoulder" was wrong and is corrected. Flirt, chips, staging, spacing and
-  takes untouched. Deploy: see the landing note.
+  takes untouched. Deployed to Railway (build `2899a29c703f`, bundle `main-yzbnh2jv.js`).
 
 ## Task 9 (READY, added Nov 5, 2026): hosted web town fixes: Aelia's missing textures, the conversation panel rectangle, and the unreachable hug and flirt pairs
 
@@ -1693,7 +1693,7 @@ the build. Ordinary polish on a cleared gate; nothing here holds the link.
 
 **Suites.** SQLite 367 pass / 19 skip / 0 fail; Postgres 20 pass / 0 fail; `tsc` at the 295-error baseline, nothing new; `bun run web/build.ts` exit 0 (local build `373646374458`).
 
-**Deploy.** pending the owner's word; the build and bundle are recorded here once it is up.
+**Deploy.** Nov 6, 2026 (small hours), on the owner's word: Railway build `2899a29c703f`, bundle `main-yzbnh2jv.js`, deployment `e2e7a54f`, `/healthz` green on both domains and both serving the new bundle. Five uploads before it timed out mid-transfer (each left a FAILED deployment record with no build; the service kept running the previous deploy); the sixth went through.
 
 **What the owner re-verifies.** H on the avenue and in the plaza: the camera swings to
 his right side and comes in to a few metres, level with the pair, who fill about half
