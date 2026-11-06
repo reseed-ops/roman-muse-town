@@ -785,23 +785,47 @@ function stripArmTracks(clip: THREE.AnimationClip) {
   clip.tracks = clip.tracks.filter((t) => !ARM_TRACK_BONES.has(t.name.split(".")[0] ?? ""));
 }
 
-/** Pin a baked clip's hip XZ to its first frame, keeping the Y
- *  profile. The Outdoor SEATED clips were authored with the sitter
- *  travelling to an imagined bench (≈0.4 m of root drift, measured);
- *  the town's own sit clip carries zero XZ drift because the SCENE
- *  owns seat placement. Pinning makes the library's seated clips
- *  behave the same way: the pose (legs, spine, gesture) is theirs,
- *  the placement stays the bench slot's. */
+/** Pin a baked clip's hip XZ to the root, keeping the Y profile. The
+ *  SCENE owns seat placement: a seated body's root stands at the bench
+ *  slot, so the hips must sit over it. The Outdoor SEATED clips were
+ *  authored with the sitter travelling to an imagined bench (≈0.4 m of
+ *  root drift, measured), and the town's own sit clip, cut from the
+ *  Human Basic Motions pack on Nov 5, 2026, carries its hips a constant
+ *  0.33 m behind the root (measured Nov 6, Task 18: the sitter was
+ *  swallowed by the backrest). Pinning to zero puts every seated pose
+ *  on the slot: the pose (legs, spine, gesture) is the clip's, the
+ *  placement is the bench's. */
 function pinHipXZInPlace(clip: THREE.AnimationClip) {
   const track = clip.tracks.find((t) => t.name === `${ANIM_HIPS_T}.position`);
   if (!track) return;
   const v = track.values as ArrayLike<number> as Float32Array;
-  const x0 = v[0] ?? 0;
-  const z0 = v[2] ?? 0;
   for (let i = 0; i + 2 < v.length; i += 3) {
-    v[i] = x0;
-    v[i + 2] = z0;
+    v[i] = 0;
+    v[i + 2] = 0;
   }
+}
+
+const LEG_TRACK_BONES = new Set([
+  "J_Bip_L_UpperLeg",
+  "J_Bip_R_UpperLeg",
+  "J_Bip_L_LowerLeg",
+  "J_Bip_R_LowerLeg",
+  "J_Bip_L_Foot",
+  "J_Bip_R_Foot",
+  "J_Bip_L_ToeBase",
+  "J_Bip_R_ToeBase",
+]);
+/** Give a seated take the sit clip's legs (Task 18). The bench and
+ *  seated-talk takes each carry their own leg pose, and the animator
+ *  swaps takes at random (a bench take every 12 to 18 s, a talk take
+ *  every few seconds) with no leg blend between them, so seated
+ *  figures seemed to kick. With the sit clip's near-still legs (under
+ *  2° of motion) grafted into every seated take, a swap moves the
+ *  spine and the hands and nothing below the hips. */
+export function graftLegTracks(from: THREE.AnimationClip, to: THREE.AnimationClip) {
+  const legs = from.tracks.filter((t) => LEG_TRACK_BONES.has(t.name.split(".")[0] ?? ""));
+  if (legs.length === 0) return;
+  to.tracks = [...to.tracks.filter((t) => !LEG_TRACK_BONES.has(t.name.split(".")[0] ?? "")), ...legs.map((t) => t.clone())];
 }
 
 /** Turn a retargeted clip so its body faces the rig's own forward
@@ -1093,6 +1117,7 @@ export function createCharAnimator(args: {
         useSit =
           sm.length > 0 && sm.every((m) => m.finite && m.legL > -0.45 && m.legR > -0.45);
         if (!useSit) sit = null;
+        else pinHipXZInPlace(sitClip);
       }
       const walkTown = ANIM_WALK_MPS * (displayedHip / srcHipMeters);
       const runTown = ANIM_RUN_MPS * (displayedHip / srcHipMeters);
@@ -1405,11 +1430,15 @@ export function createCharAnimator(args: {
           if (a) talkActs.push(a);
         }
         for (const u of urls.outdoor.sitTalk) {
-          const a = mkOnce(await lenientOutdoor(u, true), false);
+          const clip = await lenientOutdoor(u, true);
+          if (clip && sit) graftLegTracks(sit, clip);
+          const a = mkOnce(clip, false);
           if (a) sitTalkActs.push(a);
         }
         for (const u of urls.outdoor.benchSit) {
-          const a = mk(await lenientOutdoor(u, true));
+          const clip = await lenientOutdoor(u, true);
+          if (clip && sit) graftLegTracks(sit, clip);
+          const a = mk(clip);
           if (a) benchActs.push(a);
         }
         flirtClip = await lenientOutdoor(urls.outdoor.flirt, false, true);

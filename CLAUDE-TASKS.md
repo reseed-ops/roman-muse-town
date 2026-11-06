@@ -874,6 +874,33 @@ Notes for the port and the owner:
   his right shoulder" was wrong and is corrected. Flirt, chips, staging, spacing and
   takes untouched. Deployed to Railway (build `2899a29c703f`, bundle `main-yzbnh2jv.js`).
 
+- Task 18 landed (Claude, Nov 6, 2026, morning): the plaza's stone bench turned 180°
+  (sitters face west over the peristyle garden to the Town Tree); the two Greek benches
+  by Stories and Stars turned too (they sat with their backs to the peristyle; no
+  backrest on either). Sitters rest on the seat: the seat pad rose from 0.085 to 0.165 m
+  (her pelvis bottoms 0.163 m below the hip bone, measured on the real body in the sit
+  clip), and every seated clip's hips are pinned over the slot (the town's own sit clip
+  carried them a constant 0.33 m behind the root, into the backrest). The kicking was the
+  seated takes swapping (a bench take every 12 to 18 s, a seated-talk take every few
+  seconds) with no leg blend; every seated take now carries the sit clip's own legs.
+  Deploy: see the landing note.
+
+- Task 19 prepared (Claude, Nov 6, 2026, morning): `bridge/Dockerfile` (builds bridge/
+  with shared/ beside it), a `bridge/pack.md` for the hosted template's Aelia (rank 0,
+  never in git), an upload directory and a one-shot script for the owner that creates
+  the `bridge` service with its variables and uploads. The two keys the script asks for
+  never leave his terminal; the director token is read from the muse-town service. The
+  owner runs it; the landing note records the result.
+
+- Task 20 landed (Claude, Nov 6, 2026, morning): the pair camera is a pure step in
+  `pairCam.ts` with a suite that drives a whole flirt through it (`pairCam.test.ts`).
+  What took the flirt: a pair action is clamped at its last frame and fades over about
+  half a second after the pair state ends, and the flirt's peak IS its last frames; Task
+  16's way home began the instant the state ended, so the camera left the three-quarter
+  exactly while the held peak was on screen (the hug's long static clip hid it). The
+  framing now holds one second past the state's end, then comes home; the console says
+  when the pose has released. Task 17's pointer work stays. Deploy: see the landing note.
+
 ## Task 9 (READY, added Nov 5, 2026): hosted web town fixes: Aelia's missing textures, the conversation panel rectangle, and the unreachable hug and flirt pairs
 
 Context: the web town (Task 8) is deployed and live at town.reseed.net with its own
@@ -2103,6 +2130,98 @@ Scope: Task 17's pointer fixes stay. The hug's camera, both pairs'
 staging, spacing and takes, the star's pair behaviour, the chips
 and the gates are untouched. The deploy rides as usual, with the
 standing uplink rule, and the landing note records the build.
+
+### Landing note, Task 18 (Claude, Nov 6, 2026, morning)
+
+1. **Turned.** The pictured bench is `bench-stone` at (8.8, 4.6) in the peristyle's east
+   bay. Its sitters faced east (heading rotY + π with rotY = −π/2), their backs to the
+   garden and the tree; rotY is now +π/2 and they face west over the garden to the tree.
+   The model turns with it (the backrest is measured at load since Nov 6 and stands
+   behind the sitters). Also turned, by the same judgement: the two Greek benches at
+   (±12.2, −15) by Stories and Stars, which sat with their backs to the peristyle; they
+   have no backrest, so only the sit direction changed. The temple-road bench (faces the
+   road), the piscina rim (faces the water), the terrace bench and the glade log were
+   left as they are.
+
+2. **On the seat, not in it.** Two causes, both measured on the real bodies in the real
+   sit clip (scratchpad `pair10/seatbottom.mjs`): (a) the seated servo puts the HIP BONE
+   at seat top + pad, and the pad was 0.085 m while her pelvis bottoms 0.163 m below the
+   bone (his 8% taller frame about 0.176; his hanging cloak spoils a direct read), so the
+   body sat 8 cm into the slab; the pad is 0.165 m. (b) The town's sit clip, cut from
+   the Human Basic Motions pack on Nov 5, carries its hips a constant 0.33 m behind the
+   clip root (the scene puts the root at the slot), so the sitter's hips were in the
+   backrest; every seated clip's hips are now pinned over the root (`pinHipXZInPlace`
+   pins to zero, not to the first frame; the Outdoor seated takes sat 9 to 14 cm back
+   the same way). The seat slots stay at ±0.42 m on a 1.9 m bench; the second sitter's
+   overhang in the photograph reads as the same backward offset seen from the end.
+
+3. **The kicking.** Not the sit take (its legs move under 2°). The animator plays the
+   Outdoor bench takes while two sit on a bench and the seated-talk takes while a talk is
+   open, swapping takes at random (a bench take every 12 to 18 s, a talk take every few
+   seconds) with no leg blend, and each take carries its own leg pose; every swap jerked
+   the legs. It was an authored fidget only in the sense that the takes differ. Every
+   seated take now carries the sit clip's near-still legs (`graftLegTracks`), so a swap
+   moves the spine and the hands and nothing below the hips.
+
+**Suites.** SQLite 376 pass / 19 skip / 0 fail (seven new in `pairCam.test.ts`); Postgres 20 pass / 0 fail; `tsc` at the 295-error baseline, nothing new; `bun run web/build.ts` exit 0 (local build `4ec578add593`).
+
+**Deploy.** pending the owner's word (one build with Task 20).
+
+### Landing note, Task 20 (Claude, Nov 6, 2026, morning)
+
+**What took it.** Both Outdoor pair takes run 3.33 s (measured from the files). A pair
+action is played once, clamped at its last frame, and fades at the animator's seated
+rate (about half a second) once the pair state ends; the flirt's raised hands release
+over a third of a second more. The flirt's peak, the hands meeting, is its LAST frames.
+Task 16's way home began the instant the pair state ended, so the camera eased back
+behind him exactly while the held peak was on screen, and the boom's slow ease-out kept
+the pair at the 5.5 m scale (about a third of the frame) while the yaw went: the
+seventh check's "engaged, then orbited back behind him for the held peak" exactly. The
+hug's embrace is static for the whole clip, so its mid-hold frames showed the side view
+and the way home read as "camera home after". The Task 13 and 15 builds had no way home,
+so the camera stayed at the three-quarter after the hold and the flirt passed.
+
+**The fix.** The pair camera is now a pure step (`pairCam.ts`): the kind's azimuth and
+boom, the collision along the side line, a linger of 1.0 s after the pair state ends
+during which the framing holds, then the 2.5 s way home. The scene feeds it and keeps
+the console lines (framing, held off and why, and a new one when the pose has released).
+Task 17's pointer capture stays.
+
+**The suite's numbers** (`pairCam.test.ts`, 60 fps, the scene's timing: 0.9 s glide, 3.33 s
+clip + 0.35 s tail, 1.0 s linger, 2.5 s home): the flirt's camera is past 0.90 rad off
+his heading within 2.0 s of the hold and at 0.947 rad, 5.5 m at the clip's end; it holds
+above 0.94 rad at 5.5 m through the whole linger; the release fires once, 1.0 s after the
+state ends; the camera is within 0.05 rad of home 3.5 s later. The hug: past 1.5 rad at
+3.8 m with the aim mix above 0.95 within 2.0 s, held through the linger. A camera that
+is not free is held off with no yaw and no boom.
+
+**Suites.** SQLite 376 pass / 19 skip / 0 fail (seven new in `pairCam.test.ts`); Postgres 20 pass / 0 fail; `tsc` at the 295-error baseline, nothing new; `bun run web/build.ts` exit 0 (local build `4ec578add593`).
+
+**Deploy.** pending the owner's word (one build with Task 18).
+
+**What the owner re-verifies.** Through the preview route, flirt first: F in the plaza and
+on the avenue, the three-quarter engaged and held through the hands meeting and for a
+second after, then the camera home; H unchanged in both places.
+
+### Landing note, Task 19 (Claude, Nov 6, 2026, morning): prepared for the owner's run
+
+Done here: `bridge/Dockerfile` (committed), which builds `bridge/` with `shared/` beside
+it and copies the pack in; `bridge/pack.md` (gitignored, local to this device) for the
+hosted template's Aelia: rank 0, the identity, voice and constitution of the example
+pack, a constitution line that she knows no other town's history, bond or names, and a
+digest of a town just founded (the sapling, the bare beds, the first letter on the
+desk); an upload directory at `/root/bridge-deploy/upload` (bridge/ with the pack and
+the Dockerfile, shared/, 37 files, no node_modules); and `/root/bridge-deploy/deploy_bridge.sh`,
+which asks for `VISITOR_TOKEN` and `ANTHROPIC_API_KEY` at the prompt (never written
+anywhere), reads `DIRECTOR_TOKEN` from the muse-town service, creates the `bridge`
+service in Reseed with `DIRECTOR_ENABLED=true`, `DIRECTOR_CHANNEL=town`,
+`TOWN_URL=https://town.reseed.net`, `RAILWAY_DOCKERFILE_PATH=bridge/Dockerfile`,
+`POLL_MS=2000`, `DAILY_CALL_CAP=200`, `DAILY_OUTPUT_TOKEN_CAP=60000`,
+`DAILY_FRAME_CAP=60` (the README defaults) and the three tokens, and uploads with the
+uplink retry. No public domain. The owner runs it with `! bash /root/bridge-deploy/deploy_bridge.sh`;
+the bridge's logs and the first answered exchange are recorded here after.
+
+**Service, variables, caps, pack, tempo.** PENDING_19
 
 ## Task 21 (HOLD, design, added Nov 6, 2026): Kindred in the town: a bond of completions, a moments log, and a feelings layer
 

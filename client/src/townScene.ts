@@ -38,6 +38,7 @@ import {
   type FollowOffset,
 } from "./padDriver";
 import { pad2Live, type AeliaDriver, type Pad2Source } from "./padRouting";
+import { PAIR_CAM, newPairCamState, stepPairCam } from "./pairCam";
 import {
   PAD_VERB_MAX_MS,
   VISIT_STAR_COLOR,
@@ -2787,7 +2788,7 @@ export function createTownScene(
     inner.updateMatrix();
     wrap.updateWorldMatrix(true, true);
   };
-  void placeWorld(benchStoneUrl, { x: 8.8, z: 4.6, rotY: -Math.PI / 2, width: 1.9 }).then((g) => {
+  void placeWorld(benchStoneUrl, { x: 8.8, z: 4.6, rotY: Math.PI / 2, width: 1.9 }).then((g) => {
     if (disposed) return null;
     if (g) {
       faceBackrestPlusZ(g);
@@ -4608,7 +4609,9 @@ export function createTownScene(
   }
   const terraceRot = Math.atan2(-SECRET.position[0], -SECRET.position[1]);
   const BENCHES: BenchDef[] = [
-    { id: "bench-stone", x: 8.8, z: 4.6, rotY: -Math.PI / 2, seatTop: 0.47, baseX: 8.8, baseZ: 4.6 },
+    // Turned on Nov 6, 2026 (Task 18): sitters face west, over the
+    // peristyle garden to the Town Tree, not the east wall.
+    { id: "bench-stone", x: 8.8, z: 4.6, rotY: Math.PI / 2, seatTop: 0.47, baseX: 8.8, baseZ: 4.6 },
     // The temple road's bench, east of the road, a sitter faces west over it.
     { id: "bench-temple", x: 17.3, z: -23.6, rotY: Math.PI / 2, seatTop: 0.47, baseX: 17.3, baseZ: -23.6 },
     {
@@ -5617,7 +5620,7 @@ export function createTownScene(
     ...bathColliders, // the thermae: walls, caldarium water, columns
     circ(0, 0, 2.45), // town tree: the stone ring around its mound (stones reach r ≈ 2.54; the trunk alone is ≤ 0.9)
     { kind: "circle", x: MUSE.position[0], z: MUSE.position[1], r: 0.55, ghost: true }, // Muse's home spot: never blocks; her live body does (checked separately)
-    obb(8.8, 4.6, 0.95, 0.3, -Math.PI / 2), // stone bench, in the peristyle garden
+    obb(8.8, 4.6, 0.95, 0.3, Math.PI / 2), // stone bench, in the peristyle garden
     obb(8.8, -5.2, 1.05, 0.5, 0), // the table in the peristyle's east bay
     templeFootprint, // temple
     circ(VILLA.statueMars[0], VILLA.statueMars[1], 0.5), // statue of Mars (its pedestal, measured)
@@ -6862,45 +6865,42 @@ export function createTownScene(
     // motion leaves the camera alone. Staging, spacing and gates are
     // untouched.
     const camFree = !opts.reducedMotion && walkDrag === null && camPointers.size === 0 && !padOrbitLive;
-    const pairCam = pairState && !pairState.glide ? PAIR_CAM[pairState.kind] : null;
-    if (pairCam && pairState && camFree) {
-      camYawSmooth = angleLerp(camYawSmooth, walkHeading + pairCam.yaw, 1 - Math.exp(-dt * 1.6));
+    // The pair camera's step (pairCam.ts, Task 20): the yaw toward the
+    // kind's azimuth, the boom to the kind's own or the nearest trunk
+    // on the side line (every trunk counting, Task 16), held through
+    // the pose's release, then the way home. Its log lines stay: the
+    // framing, the reason it is held off (Task 17), and the release.
+    const pairStep = stepPairCam(pairCamState, {
+      dt,
+      pair: pairState ? { kind: pairState.kind, glide: pairState.glide !== null } : null,
+      walkHeading,
+      camYaw: camYawSmooth,
+      camFree,
+      reducedMotion: opts.reducedMotion,
+      sideBoom: (yaw) => boomAlong(-Math.sin(yaw), -Math.cos(yaw), 0.25, walkRestDist()),
+    });
+    if (pairStep.camYaw !== camYawSmooth) {
+      camYawSmooth = pairStep.camYaw;
       fx = Math.sin(camYawSmooth);
       fz = Math.cos(camYawSmooth);
-      // Close enough to read two hands (Task 13: at the walk's 10.5 m
-      // rest the three-quarter view was taken for a distant profile),
-      // and the collision scanned again along the side line, every
-      // trunk counting (Task 16).
-      boom = Math.min(boomAlong(-fx, -fz, 0.25, walkRestDist()), pairCam.boom);
-      pairCamHome = 2.5;
-      if (!pairState.framed) {
+    }
+    if (pairStep.boom !== null) boom = pairStep.boom;
+    if (pairState && !pairState.glide) {
+      if (pairStep.framing && !pairState.framed) {
         pairState.framed = true;
         console.info(`[muse-town] pair camera: framing the ${pairState.kind} ${pairState.kind === "hug" ? "side-on, close" : "three-quarter"} from his right`);
-      }
-    } else if (pairCam && pairState && !pairState.framed && !pairState.heldOff) {
-      // Held off (Task 17): the framing has a reason not to run and
-      // says so once, so a verification that sees no framing has the
-      // cause in the console beside the pose.
-      pairState.heldOff = true;
-      const why = opts.reducedMotion
-        ? "reduced motion"
-        : padOrbitLive
-          ? "the pad's right stick is held"
-          : `a drag is in progress (${camPointers.size} pointer${camPointers.size === 1 ? "" : "s"} down)`;
-      console.info(`[muse-town] pair camera: not framing the ${pairState.kind}: ${why}`);
-    } else if (pairCamHome > 0 && !pairState) {
-      // The way home (Task 16): after a hold the yaw eases back behind
-      // him over a couple of seconds, instead of staying at the side
-      // until the loose follow's next sustained walk. A drag takes over.
-      pairCamHome = Math.max(0, pairCamHome - dt);
-      if (camFree) {
-        camYawSmooth = angleLerp(camYawSmooth, walkHeading, 1 - Math.exp(-dt * 1.6));
-        fx = Math.sin(camYawSmooth);
-        fz = Math.cos(camYawSmooth);
+      } else if (pairStep.heldOff && !pairState.framed && !pairState.heldOff) {
+        pairState.heldOff = true;
+        const why = opts.reducedMotion
+          ? "reduced motion"
+          : padOrbitLive
+            ? "the pad's right stick is held"
+            : `a drag is in progress (${camPointers.size} pointer${camPointers.size === 1 ? "" : "s"} down)`;
+        console.info(`[muse-town] pair camera: not framing the ${pairState.kind}: ${why}`);
       }
     }
-    pairCamMix += ((pairCam?.aimMid && camFree ? 1 : 0) - pairCamMix) * (opts.reducedMotion ? 1 : 1 - Math.exp(-dt * 3));
-    if (pairCamMix < 0.01) pairCamMix = 0;
+    if (pairStep.released) console.info(`[muse-town] pair camera: the ${pairCamState.kind}'s pose has released, coming home`);
+    const pairCamMix = pairStep.mix;
     if (opts.reducedMotion) {
       camDistSmooth = boom;
     } else {
@@ -6928,7 +6928,8 @@ export function createTownScene(
       camX = (camX / camRad) * 62;
       camZ = (camZ / camRad) * 62;
     }
-    const holdHeight = pairCam?.height ?? PAIR_CAM.hug.height ?? framing.height;
+    const holdKind = pairStep.framing ?? pairCamState.kind;
+    const holdHeight = (holdKind ? PAIR_CAM[holdKind].height : null) ?? PAIR_CAM.hug.height ?? framing.height;
     let camY = camGroundY + THREE.MathUtils.lerp(framing.height, holdHeight, pairCamMix) + camPitchSmooth;
     const minCamY = terrainHeight(camX, camZ) + 0.55;
     if (camY < minCamY) camY = minCamY;
@@ -8814,8 +8815,10 @@ export function createTownScene(
         BENCHES.push({ id, x, z, rotY, seatTop, baseX: x, baseZ: z });
       });
     };
-    greekBench(greekBench1Url, "bench-greek-stone", 12.2, -15, -Math.PI / 2);
-    greekBench(greekBench2Url, "bench-greek-wood", -12.2, -15, Math.PI / 2);
+    // Turned on Nov 6, 2026 (Task 18): both sat with their backs to
+    // the peristyle; sitters now face it (no backrest on either).
+    greekBench(greekBench1Url, "bench-greek-stone", 12.2, -15, Math.PI / 2);
+    greekBench(greekBench2Url, "bench-greek-wood", -12.2, -15, -Math.PI / 2);
   }
 
   // --- The forest: landmarks, forage, birds -----------------------
@@ -9203,21 +9206,11 @@ export function createTownScene(
   // fixed 0.57 m hug (the He hugs take, hand on the shoulder, her
   // arms down) never read as an embrace: see Task 10's note.
   const PAIR_SPACING_M: Record<"flirt" | "hug", number> = { hug: 0.5, flirt: 0.55 };
-  // The pair camera, per kind, from his right: the flirt three-quarter
-  // (0.95 rad) at the walk's height and aim; the embrace side-on (1.6
-  // rad, Task 15) and, since Task 16, close and level: a 3.8 m boom from
-  // 2.1 m up, aimed at the pair's midpoint at chest height, so the two
-  // fill about half the frame instead of a third. The walk's rest
-  // distance is 10.5 m from 4.2 m up.
-  const PAIR_CAM: Record<"flirt" | "hug", { yaw: number; boom: number; height: number | null; aimMid: boolean }> = {
-    flirt: { yaw: 0.95, boom: 5.5, height: null, aimMid: false },
-    hug: { yaw: 1.6, boom: 3.8, height: 2.1, aimMid: true },
-  };
-  // After a hold the camera comes home: the yaw eases back behind him
-  // for this long (seconds), the boom and height ease back on their own.
-  let pairCamHome = 0;
-  // 0 = the walk's height and aim, 1 = the hold's (eased, both ways).
-  let pairCamMix = 0;
+  // The pair camera lives in pairCam.ts (Task 20): per kind, from his
+  // right, the flirt three-quarter at the walk's height and aim, the
+  // embrace side-on, close and level; the framing holds through the
+  // pose's release, then the camera comes home. This is its state.
+  const pairCamState = newPairCamState();
   let talkAnimOpen = false;
   let pairState: { kind: "flirt" | "hug"; t: number; dur: number; glide: PairGlide | null; framed: boolean; heldOff: boolean } | null = null;
   function playPairMoment(kind: "flirt" | "hug"): boolean {
@@ -11459,7 +11452,11 @@ export function createTownScene(
   const umbElbowW = new THREE.Vector3();
   const umbHandW = new THREE.Vector3();
   const seatHipsWorld = new THREE.Vector3();
-  const SEAT_PELVIS_PAD = 0.085;
+  // The hips bone sits above the seated body's underside: measured on
+  // the real bodies in the sit clip (Nov 6, 2026, Task 18), her pelvis
+  // bottoms 0.163 m below the bone (his 8% taller frame about 0.176;
+  // his hanging cloak spoils a direct read). 0.085 sank them 8 cm in.
+  const SEAT_PELVIS_PAD = 0.165;
   function applySeatedServo(
     inner: THREE.Group,
     body: THREE.Object3D | null,
