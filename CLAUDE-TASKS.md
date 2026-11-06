@@ -890,8 +890,8 @@ Notes for the port and the owner:
   with shared/ beside it), a `bridge/pack.md` for the hosted template's Aelia (rank 0,
   never in git), an upload directory and a one-shot script for the owner that creates
   the `town-bridge` service (Reseed already has an unrelated `bridge`) with its variables and uploads. The two keys the script asks for
-  never leave his terminal; the director token is read from the muse-town service. The
-  owner runs it; the landing note records the result.
+  never leave his terminal; the director token is read from the muse-town service.
+  Deployed Nov 6 (town-bridge, SUCCESS, pack rank 0 loaded); tempo pending the first visit.
 
 - Task 20 landed (Claude, Nov 6, 2026, morning): the pair camera is a pure step in
   `pairCam.ts` with a suite that drives a whole flirt through it (`pairCam.test.ts`).
@@ -2224,7 +2224,13 @@ the bridge's logs and the first answered exchange are recorded here after.
 
 **First build (Nov 6).** The owner's script created `town-bridge` with its variables; the build then failed with TS1287 in `shared/visitProtocol.ts` (a build log, so read, not retried): in the image nothing above `shared/` declares ES modules, so tsc compiled it as CommonJS. `bridge/Dockerfile` now writes `{"type":"module"}` at `/app` before copying `shared/`; the same layout compiled locally shows the 36 TS1287 errors without that line and none with it. The upload is rerun by the owner with `bash /root/bridge-deploy/upload_bridge.sh` (no keys asked).
 
-**Service, variables, caps, pack, tempo.** PENDING_19
+**Deployed (Nov 6, 2026, 15:20 UTC).** The owner reran the upload with `bash /root/bridge-deploy/upload_bridge.sh`; first attempt, build passed, deployment SUCCESS.
+
+- **Service:** `town-bridge` in Reseed, production, no public domain (an unrelated `bridge` service in Reseed was left untouched).
+- **Variables, by name:** `DIRECTOR_ENABLED=true`, `DIRECTOR_CHANNEL=town`, `TOWN_URL=https://town.reseed.net`, `RAILWAY_DOCKERFILE_PATH=bridge/Dockerfile`, `POLL_MS=2000`; secrets set as variables only: `DIRECTOR_TOKEN` (from muse-town), `VISITOR_TOKEN`, `ANTHROPIC_API_KEY`. Their values never passed through Claude, a file, a chat or a commit.
+- **Caps:** README defaults, `DAILY_CALL_CAP=200`, `DAILY_OUTPUT_TOKEN_CAP=60000`, `DAILY_FRAME_CAP=60`.
+- **Pack:** `bridge/pack.md` (never in git), hosted template Aelia at rank 0; the start log reads `live bridge: channel=town https://town.reseed.net model=claude-opus-5-5 pack=./pack.md` and `pack: loaded (1682 chars, rank 0)`.
+- **Tempo:** PENDING_19_TEMPO (the first answered exchange, once the owner opens a visit).
 
 ## Task 21 (HOLD, design, added Nov 6, 2026): Kindred in the town: a bond of completions, a moments log, and a feelings layer
 
