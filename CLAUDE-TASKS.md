@@ -1769,6 +1769,15 @@ record checked the same way, no build attached), and the one build that ran is c
 large uploads. Going forward, a FAILED record with no build is a dropped upload and is
 retried; a FAILED record with a build log is read before any retry, as asked.
 
+- Task 17 landed (Claude, Nov 6, 2026, small hours): the flirt's framing was never
+  taken out of the code (both kinds share one dispatch, one yaw ease and one log line,
+  unchanged by Task 16); what can hold it off is the camera's pointer count, and that
+  count could stick for ever when a pointer went down on the canvas and lifted over a
+  control drawn above it (the canvas never saw the lift). The canvas now captures its
+  pointers, the window clears any lift or cancel it missed, and a tab change or lost
+  focus drops them all. The pair camera also says in the console when it is held off
+  and why, and reports where it stood as each hold ended. Deploy: see the landing note.
+
 ## Task 17 (READY, added Nov 5, 2026): the flirt's camera, lost in Task 16: restore its three-quarter
 
 Context: Task 16 landed and deployed (build 2899a29c703f, bundle
@@ -1820,3 +1829,46 @@ the gates all stay exactly as they are. The deploy rides as usual (the
 uplink rule from the caution reply stands: a failed record with no
 build is a dropped upload, retried; a failed record with a log is read
 first), and the landing note records the build.
+
+### Landing note (Claude, Nov 6, 2026, small hours)
+
+**What took it, as far as the code can say.** The Task 16 diff of the camera block has
+no path of its own for either kind: the flirt and the hug reach one dispatch
+(`PAIR_CAM[kind]`), one yaw ease toward his heading plus the kind's azimuth (0.95 rad
+for the flirt, as before), one boom-in (5.5 m for the flirt, as before) and one log
+line. The flirt keeps the walk's height and aim, as the Task 16 note says. So nothing
+in the rework disables the flirt while leaving the hug, and I cannot reproduce the
+loss here (the device's browser cannot draw the scene). The one gate the framing has
+is "no drag in progress": the camera's pointer count must be zero. That count could
+stick. The canvas listened for its own pointerup only, without capturing the pointer,
+so a pointer that went down on the canvas and lifted over anything drawn above it (a
+chip, the virtual pad, the prompt pill) delivered its lift to that element, and the
+canvas counted a drag in progress for the rest of the session: no pair framing of
+either kind, no loose follow, no way home, while poses, chips and the star carried on
+as normal. That matches the report's shape (the moment entered and detected, only the
+framing missing) and would also explain why the hug's runs passed earlier in the same
+session and the flirt's failed later; it is the likely cause, not a proven one.
+
+**Changes.** (1) The canvas captures each pointer on its down (`setPointerCapture`), so
+the lift reaches it wherever it happens. (2) Window-level pointerup and pointercancel
+clear any pointer the canvas still counts; a hidden tab or a lost window focus drops
+them all. (3) The pair camera logs once per moment when it is held off and why
+(reduced motion, the pad's right stick, or a drag with the pointer count), and at each
+hold's end logs where the camera stood: the offset from his heading in radians and the
+distance from him, with "(never framed)" when the framing never engaged. The next
+verification reads these two lines beside the existing "framing the flirt
+three-quarter from his right".
+
+**Untouched.** The hug's camera in all its Task 16 particulars, both pairs' staging,
+spacing and takes, the star's pair behaviour, the chips and the gates.
+
+**Suites.** SQLite 369 pass / 19 skip / 0 fail; Postgres 20 pass / 0 fail; `tsc` at the 295-error baseline, nothing new; `bun run web/build.ts` exit 0 (local build `c700c15b910b`).
+
+**Deploy.** pending the owner's word; this build also carries the pad's right-stick camera and the stone bench fix from the standing notes.
+
+**What the owner re-verifies.** Through the preview route, F in the plaza and on the
+avenue: the console prints "framing the flirt three-quarter from his right", the camera
+swings to the three-quarter and comes in to about 5.5 m, the hands meeting readable,
+and the hold's end line reports about 0.95 rad off his heading at about 5.5 m; after
+the hold the camera is home behind him. If the framing line is missing, the console
+now says why. H re-verified unchanged: close, level, side-on, her face clear.

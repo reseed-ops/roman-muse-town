@@ -6859,6 +6859,17 @@ export function createTownScene(
         pairState.framed = true;
         console.info(`[muse-town] pair camera: framing the ${pairState.kind} ${pairState.kind === "hug" ? "side-on, close" : "three-quarter"} from his right`);
       }
+    } else if (pairCam && pairState && !pairState.framed && !pairState.heldOff) {
+      // Held off (Task 17): the framing has a reason not to run and
+      // says so once, so a verification that sees no framing has the
+      // cause in the console beside the pose.
+      pairState.heldOff = true;
+      const why = opts.reducedMotion
+        ? "reduced motion"
+        : padOrbitLive
+          ? "the pad's right stick is held"
+          : `a drag is in progress (${camPointers.size} pointer${camPointers.size === 1 ? "" : "s"} down)`;
+      console.info(`[muse-town] pair camera: not framing the ${pairState.kind}: ${why}`);
     } else if (pairCamHome > 0 && !pairState) {
       // The way home (Task 16): after a hold the yaw eases back behind
       // him over a couple of seconds, instead of staying at the side
@@ -9190,7 +9201,7 @@ export function createTownScene(
   // 0 = the walk's height and aim, 1 = the hold's (eased, both ways).
   let pairCamMix = 0;
   let talkAnimOpen = false;
-  let pairState: { kind: "flirt" | "hug"; t: number; dur: number; glide: PairGlide | null; framed: boolean } | null = null;
+  let pairState: { kind: "flirt" | "hug"; t: number; dur: number; glide: PairGlide | null; framed: boolean; heldOff: boolean } | null = null;
   function playPairMoment(kind: "flirt" | "hug"): boolean {
     if (!walking || pairState || danceState || bathState || boatState || seatPlayer || seatMuse || skyWatchState || secretMoment) return false;
     if (!museAnim?.ready || !playerAnim?.ready) return false;
@@ -9218,7 +9229,7 @@ export function createTownScene(
         tm: new THREE.Vector3(mx + ux * half, museGroup.position.y, mz + uz * half),
       };
     }
-    pairState = { kind, t: 0, dur: dur + (glide ? 0.9 : 0) + 0.35, glide, framed: false };
+    pairState = { kind, t: 0, dur: dur + (glide ? 0.9 : 0) + 0.35, glide, framed: false, heldOff: false };
     return true;
   }
 
@@ -10632,7 +10643,13 @@ export function createTownScene(
         walkHeading = Math.atan2(museGroup.position.x - walkPos.x, museGroup.position.z - walkPos.z);
         avatar.rotation.y = walkHeading;
       }
-      if (pairState.t >= pairState.dur) pairState = null;
+      if (pairState.t >= pairState.dur) {
+        // The numbers a verification needs (Task 17): where the camera
+        // stood as the hold ended, off his heading and from him.
+        const off = Math.atan2(Math.sin(camYawSmooth - walkHeading), Math.cos(camYawSmooth - walkHeading));
+        console.info(`[muse-town] pair camera: the ${pairState.kind} ended with the camera ${off.toFixed(2)} rad off his heading, ${camDistSmooth.toFixed(1)} m from him${pairState.framed ? "" : " (never framed)"}`);
+        pairState = null;
+      }
     }
     // The sky watch: they keep turning with the sun, slowly, the
     // way people at a rail do.
@@ -10861,6 +10878,17 @@ export function createTownScene(
   let pinchSeen = false;
   function onPointerDown(e: PointerEvent) {
     camPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    // Capture (Task 17): a pointer that goes down on the canvas and
+    // lifts over a control drawn above it (a chip, the pad, the
+    // prompt pill) used to deliver its pointerup to that element, and
+    // the canvas kept counting it: a drag in progress for ever, which
+    // gates the pair framing, the loose follow and the way home. With
+    // capture the lift reaches the canvas wherever it happens.
+    try {
+      canvas.setPointerCapture(e.pointerId);
+    } catch {
+      /* capture is a nicety; the window fallbacks below still clear */
+    }
     if (camPointers.size === 2) {
       const [pa, pb] = [...camPointers.values()];
       pinchSpread = Math.hypot(pa!.x - pb!.x, pa!.y - pb!.y);
@@ -10973,6 +11001,24 @@ export function createTownScene(
   canvas.addEventListener("pointermove", onPointerMove);
   canvas.addEventListener("pointerup", onPointerUp);
   canvas.addEventListener("pointercancel", onPointerCancel);
+  // Fallbacks (Task 17): a lift the canvas never saw still leaves the
+  // count, and a tab change or a lost focus drops every pointer.
+  const onWindowPointerEnd = (e: PointerEvent) => {
+    if (camPointers.has(e.pointerId)) onPointerCancel(e);
+  };
+  const dropAllPointers = () => {
+    camPointers.clear();
+    walkDrag = null;
+    pinchSeen = false;
+    downAt = null;
+  };
+  const onVisibility = () => {
+    if (document.visibilityState === "hidden") dropAllPointers();
+  };
+  window.addEventListener("pointerup", onWindowPointerEnd);
+  window.addEventListener("pointercancel", onWindowPointerEnd);
+  window.addEventListener("blur", dropAllPointers);
+  document.addEventListener("visibilitychange", onVisibility);
 
   // Pull-to-refresh guard: a finger held down or dragged on the town
   // view (an orbit drag in walk mode, a plain drag in overview) must
@@ -12884,6 +12930,10 @@ export function createTownScene(
       canvas.removeEventListener("pointerup", onPointerUp);
       canvas.removeEventListener("pointermove", onPointerMove);
       canvas.removeEventListener("pointercancel", onPointerCancel);
+      window.removeEventListener("pointerup", onWindowPointerEnd);
+      window.removeEventListener("pointercancel", onWindowPointerEnd);
+      window.removeEventListener("blur", dropAllPointers);
+      document.removeEventListener("visibilitychange", onVisibility);
       canvas.removeEventListener("wheel", onWheelZoom);
       canvas.removeEventListener("touchstart", blockTouchGesture);
       canvas.removeEventListener("touchmove", blockTouchGesture);
