@@ -5013,6 +5013,7 @@ export function createTownScene(
   );
   museStar.position.set(0.46, 1.8, 0.1);
   museInner.add(museStar);
+  let museStarShow = 1;
   // Muse's umbrella: navy with a gold tip, matching her star.
   {
     const museUmbrella = makeUmbrella(0x2b3a67);
@@ -6680,19 +6681,22 @@ export function createTownScene(
     // building. Computed on the pre-recenter yaw; the recenter moves
     // at most a third of a degree per frame, so the boom is never
     // meaningfully stale, and it is recomputed next frame anyway.
-    let boom = walkRestDist();
-    {
-      const dirX = -fx;
-      const dirZ = -fz;
+    // The boom along a direction: the nearest structure on the camera's
+    // line shortens it. On the walk, rocks, posts and saplings pass the
+    // lens (lensR 0.9): a dolly for each one would pump the camera all
+    // the way down a street. A pair hold's camera stands still at the
+    // side, so there every trunk counts (Task 16: the 5.5 m side boom
+    // settled inside the avenue's cypresses, r 0.3).
+    const boomAlong = (dirX: number, dirZ: number, lensR: number, max: number): number => {
+      let b = max;
       for (const ob of obstacles) {
-        // Rocks, posts and saplings pass the lens; a dolly for each one
-        // would pump the camera all the way down a street.
-        if (ob.ghost || (ob.kind === "circle" && ob.r < 0.9)) continue;
+        if (ob.ghost || (ob.kind === "circle" && ob.r < lensR)) continue;
         const hit = rayObstacleEntry(walkPos.x, walkPos.z, dirX, dirZ, ob, 0.55);
-        if (hit < boom) boom = hit;
+        if (hit < b) b = hit;
       }
-      boom = THREE.MathUtils.clamp(boom, 1.7, walkRestDist());
-    }
+      return THREE.MathUtils.clamp(b, 1.7, max);
+    };
+    let boom = boomAlong(-fx, -fz, 0.9, walkRestDist());
     // Loose follow recenter (followCam.ts holds the numbers and the
     // unit-tested decision): the target is his heading, the gates
     // are genuine sustained displacement, no recent drag, no screen
@@ -6736,19 +6740,35 @@ export function createTownScene(
     // recenters once he walks again); a drag, a pinch or reduced
     // motion leaves the camera alone. Staging, spacing and gates are
     // untouched.
-    if (pairState && !pairState.glide && !opts.reducedMotion && walkDrag === null && camPointers.size === 0) {
-      camYawSmooth = angleLerp(camYawSmooth, walkHeading + PAIR_CAM_YAW[pairState.kind], 1 - Math.exp(-dt * 1.6));
+    const camFree = !opts.reducedMotion && walkDrag === null && camPointers.size === 0;
+    const pairCam = pairState && !pairState.glide ? PAIR_CAM[pairState.kind] : null;
+    if (pairCam && pairState && camFree) {
+      camYawSmooth = angleLerp(camYawSmooth, walkHeading + pairCam.yaw, 1 - Math.exp(-dt * 1.6));
       fx = Math.sin(camYawSmooth);
       fz = Math.cos(camYawSmooth);
       // Close enough to read two hands (Task 13: at the walk's 10.5 m
-      // rest the three-quarter view was taken for a distant profile);
-      // the boom collision above still shortens it among the trees.
-      boom = Math.min(boom, PAIR_CAM_DIST);
+      // rest the three-quarter view was taken for a distant profile),
+      // and the collision scanned again along the side line, every
+      // trunk counting (Task 16).
+      boom = Math.min(boomAlong(-fx, -fz, 0.25, walkRestDist()), pairCam.boom);
+      pairCamHome = 2.5;
       if (!pairState.framed) {
         pairState.framed = true;
-        console.info(`[muse-town] pair camera: framing the ${pairState.kind} ${pairState.kind === "hug" ? "side-on" : "three-quarter"} from his right`);
+        console.info(`[muse-town] pair camera: framing the ${pairState.kind} ${pairState.kind === "hug" ? "side-on, close" : "three-quarter"} from his right`);
+      }
+    } else if (pairCamHome > 0 && !pairState) {
+      // The way home (Task 16): after a hold the yaw eases back behind
+      // him over a couple of seconds, instead of staying at the side
+      // until the loose follow's next sustained walk. A drag takes over.
+      pairCamHome = Math.max(0, pairCamHome - dt);
+      if (camFree) {
+        camYawSmooth = angleLerp(camYawSmooth, walkHeading, 1 - Math.exp(-dt * 1.6));
+        fx = Math.sin(camYawSmooth);
+        fz = Math.cos(camYawSmooth);
       }
     }
+    pairCamMix += ((pairCam?.aimMid && camFree ? 1 : 0) - pairCamMix) * (opts.reducedMotion ? 1 : 1 - Math.exp(-dt * 3));
+    if (pairCamMix < 0.01) pairCamMix = 0;
     if (opts.reducedMotion) {
       camDistSmooth = boom;
     } else {
@@ -6776,11 +6796,18 @@ export function createTownScene(
       camX = (camX / camRad) * 62;
       camZ = (camZ / camRad) * 62;
     }
-    let camY = camGroundY + framing.height + camPitchSmooth;
+    const holdHeight = pairCam?.height ?? PAIR_CAM.hug.height ?? framing.height;
+    let camY = camGroundY + THREE.MathUtils.lerp(framing.height, holdHeight, pairCamMix) + camPitchSmooth;
     const minCamY = terrainHeight(camX, camZ) + 0.55;
     if (camY < minCamY) camY = minCamY;
     camera.position.set(camX, camY, camZ);
     controls.target.set(camFollowX + fx * 1.2, camGroundY + 1.15, camFollowZ + fz * 1.2);
+    if (pairCamMix > 0) {
+      // The hold's aim: the pair's midpoint at chest height.
+      const midX = (walkPos.x + museGroup.position.x) / 2;
+      const midZ = (walkPos.z + museGroup.position.z) / 2;
+      controls.target.lerp(new THREE.Vector3(midX, camGroundY + 1.25, midZ), pairCamMix);
+    }
     camera.lookAt(controls.target);
 
     // Proximity prompts: walking near an interactable no longer opens
@@ -9044,11 +9071,21 @@ export function createTownScene(
   // fixed 0.57 m hug (the He hugs take, hand on the shoulder, her
   // arms down) never read as an embrace: see Task 10's note.
   const PAIR_SPACING_M: Record<"flirt" | "hug", number> = { hug: 0.5, flirt: 0.55 };
-  // The pair camera's yaw off his heading, from his right: three-quarter
-  // for the flirt, side-on for the embrace; and its boom for the hold
-  // (the rest distance is 10.5 m).
-  const PAIR_CAM_YAW: Record<"flirt" | "hug", number> = { flirt: 0.95, hug: 1.6 };
-  const PAIR_CAM_DIST = 5.5;
+  // The pair camera, per kind, from his right: the flirt three-quarter
+  // (0.95 rad) at the walk's height and aim; the embrace side-on (1.6
+  // rad, Task 15) and, since Task 16, close and level: a 3.8 m boom from
+  // 2.1 m up, aimed at the pair's midpoint at chest height, so the two
+  // fill about half the frame instead of a third. The walk's rest
+  // distance is 10.5 m from 4.2 m up.
+  const PAIR_CAM: Record<"flirt" | "hug", { yaw: number; boom: number; height: number | null; aimMid: boolean }> = {
+    flirt: { yaw: 0.95, boom: 5.5, height: null, aimMid: false },
+    hug: { yaw: 1.6, boom: 3.8, height: 2.1, aimMid: true },
+  };
+  // After a hold the camera comes home: the yaw eases back behind him
+  // for this long (seconds), the boom and height ease back on their own.
+  let pairCamHome = 0;
+  // 0 = the walk's height and aim, 1 = the hold's (eased, both ways).
+  let pairCamMix = 0;
   let talkAnimOpen = false;
   let pairState: { kind: "flirt" | "hug"; t: number; dur: number; glide: PairGlide | null; framed: boolean } | null = null;
   function playPairMoment(kind: "flirt" | "hug"): boolean {
@@ -11710,6 +11747,13 @@ export function createTownScene(
         museStar.rotation.y = t * 1.6;
         museStar.position.x = 0.46 + Math.sin(t * 0.9) * 0.08;
         museStar.position.y = 1.8 + Math.sin(t * 1.7) * 0.07;
+        // Her star stands down for a pair moment (Task 16): it rides
+        // 0.46 m to her side at head height, which in the hug's profile
+        // is exactly across her face. It shrinks away as the glide
+        // starts and is back once the hold ends.
+        museStarShow += ((pairState ? 0 : 1) - museStarShow) * Math.min(1, dt * 6);
+        museStar.scale.setScalar(Math.max(0.001, museStarShow));
+        museStar.visible = museStarShow > 0.02;
         const sinceWave = t - museWaveStart;
         const museWaving = sinceWave >= 0 && sinceWave < 2.2 && !museIsMoving;
         if (museIsMoving) {

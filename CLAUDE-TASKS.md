@@ -764,6 +764,16 @@ Notes for the port and the owner:
   Nothing else changed. Deployed the same night on the owner's word (build
   37dd558c6d88, bundle main-kthp3a5t.js).
 
+- Task 16 landed (Claude, Nov 6, 2026, small hours): the hug's pair camera is close and
+  level (3.8 m boom from 2.1 m up, aimed at the pair's midpoint at chest height; the
+  pair fill about half the frame, was a third), scans its own side line for trunks
+  (every trunk counts there), and comes home behind him over two seconds after any
+  hold (the stay-at-the-side rode in with Task 12's first framing, not Task 15). Her
+  gold star (the octahedron on `museInner`, her marker) shrinks away for pair
+  moments. The hold's heads are face to face in profile; the Task 15 note's "over
+  his right shoulder" was wrong and is corrected. Flirt, chips, staging, spacing and
+  takes untouched. Deploy: see the landing note.
+
 ## Task 9 (READY, added Nov 5, 2026): hosted web town fixes: Aelia's missing textures, the conversation panel rectangle, and the unreachable hug and flirt pairs
 
 Context: the web town (Task 8) is deployed and live at town.reseed.net with its own
@@ -1643,3 +1653,50 @@ Scope: Task 15's azimuth, both pairs' staging, spacing and takes (item
 3's reconciliation excepted), the gates, and tonight's chip placement all
 stay as they are. The deploy rides as usual and the landing note records
 the build. Ordinary polish on a cleared gate; nothing here holds the link.
+
+### Landing note (Claude, Nov 6, 2026, small hours)
+
+1. **Close and level.** The hold had the walk's height (4.2 m) and aim (1.2 m ahead
+   of him at 1.15 m), so from the side at 5.5 m the pair stood about 30% of a 46°
+   frame tall, looking down 29°. The hug's pair camera now has its own boom, height
+   and aim (`PAIR_CAM.hug`): 3.8 m from 2.1 m up, aimed at the pair's midpoint at
+   chest height, which the Task 10 pipeline draws at about 51% of the frame, looking
+   down 13°. Both ease in with the hold (height and aim over about a third of a
+   second, the boom at the dolly's pace) and ease out after it. Task 15's side-on
+   azimuth is unchanged, and the flirt keeps the walk's height, aim and 5.5 m.
+
+2. **The gem is her star.** It is `museStar`, the gold octahedron on `museInner`, her
+   marker since the first build (it orbits 0.46 m to her side at 1.8 m and marks her
+   spot while her body loads). For any pair moment, glide included, it shrinks away
+   over about a sixth of a second and is back the same way once the hold ends; it
+   keeps every ordinary duty.
+
+3. **The heads: face to face, and the record corrected.** Measured on the composed
+   hold (the Task 10 pipeline, t = 2 s, the pose static): her head is 0.53 m straight
+   in front of his, 3 cm off his centre line, 12 cm lower; her neck, chest and both
+   shoulders sit within 4 cm of his centre line too. The hold is face to face in
+   profile, side by side, exactly as the enlarged frames showed; the Task 15 note's
+   "her head over his right shoulder" was an inference from the take's authored 167°
+   facing, which the scene squares to 180°, and it was wrong. The take is left alone:
+   face to face is the composition.
+
+4. **The cypresses, and the way home.** The boom scan ran on the walk camera's line
+   before the pair block turned the yaw, so the side boom was never scanned, and the
+   avenue's cypresses are 0.3 m circles, which the walk's lens lets pass on purpose
+   (a dolly for every sapling would pump the camera down a street). The pair camera
+   now scans its own side line, every trunk counting (`boomAlong` with a 0.25 m lens),
+   so on the avenue it dollies in short of a cypress rather than inside it. After a
+   hold the yaw now eases back behind him over 2.5 s (`pairCamHome`), the boom and
+   height ease back on their own; a drag during that takes over. The stay-at-the-side
+   rode in with Task 12's first framing ("stays where it lands; the loose follow
+   recenters once he walks on"), not with Task 15.
+
+**Suites.** SQLite 367 pass / 19 skip / 0 fail; Postgres 20 pass / 0 fail; `tsc` at the 295-error baseline, nothing new; `bun run web/build.ts` exit 0 (local build `373646374458`).
+
+**Deploy.** pending the owner's word; the build and bundle are recorded here once it is up.
+
+**What the owner re-verifies.** H on the avenue and in the plaza: the camera swings to
+his right side and comes in to a few metres, level with the pair, who fill about half
+the frame; her face clear, no gem; the heads face to face in profile; on the avenue
+the camera stops short of the nearest cypress; and two to three seconds after the hold
+the camera is back behind him at the walk's distance. F and the chips unchanged.
