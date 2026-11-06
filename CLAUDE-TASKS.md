@@ -722,6 +722,15 @@ Notes for the port and the owner:
   (deployed the same night on the owner's word, build 1db5765066ba, bundle main-59m0crpv.js;
   LB levelled with RB and deployed again, build d100afe858cd, bundle main-fwgwwx19.js).
 
+- Owner ask in chat (Claude, Nov 6, 2026, small hours, after Task 16): a physical pad's
+  right stick orbits the follow camera in walk mode (`rightStickVector` in
+  padRouting.ts, `orbitCamera` in the scene: left and right swing the yaw, up and down
+  tilt, at a drag's rates; it counts as a drag for the loose follow and the pair
+  framing, so neither argues with a held stick), and a press of the right stick (R3,
+  `pressedSticks`) eases the camera back to the default view, behind him and level at
+  the walk's distance, over about a third of a second (`recenterCamera`). The on-screen
+  controls are unchanged. Deploy: pending the owner's word (local build c449af46ae7e).
+
 - Task 12 landed (Claude, Nov 5, 2026, evening): her flirt hand does rise, at clip
   level and after the bake (arm directions within 5° of the take on both bodies);
   it is authored modest (a forearm fold to the partner's chest, the other hand on

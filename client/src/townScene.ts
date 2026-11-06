@@ -257,6 +257,13 @@ export interface TownSceneHandle {
    *  like his; the source names who holds it, for the menu's status.
    *  Runtime only, never persisted. */
   setPad2Move: (x: number, y: number, source: Pad2Source) => void;
+  /** The pad's right stick (owner's ask, Nov 6, 2026): orbits the
+   *  follow camera while held, like a drag (x swings the yaw, right
+   *  looks right; y tilts, up looks up). Zero releases it. */
+  orbitCamera: (x: number, y: number) => void;
+  /** R3: the follow camera eases back to its default view, behind him
+   *  and level, at the walk's distance. */
+  recenterCamera: () => void;
   /** A = jump, B = slide (or stand up from a bench), X = sit on a seat
    *  within reach, stand if seated, otherwise wave. */
   pad2Press: (button: "a" | "b" | "x", source: Pad2Source) => void;
@@ -5718,6 +5725,14 @@ export function createTownScene(
   // default view's orbit drag. The drag writes the camera yaw directly.
   let camPitchOffset = 0;
   let walkDrag: { x: number; y: number } | null = null;
+  // The pad's right stick (owner's ask, Nov 6, 2026): a held vector
+  // that orbits the follow camera at these rates at full tilt, and R3's
+  // recenter, a short ease back to the default view (seconds left).
+  const PAD_ORBIT_YAW_RATE = 2.4;
+  const PAD_ORBIT_PITCH_RATE = 1.8;
+  let padOrbitX = 0;
+  let padOrbitY = 0;
+  let camRecenter = 0;
   // The follow camera's yaw belongs to the PLAYER: their drag writes
   // it directly, and it is set once from his heading when walk mode
   // starts. On top of that sits the loose follow (Nov 2, owner's
@@ -6661,6 +6676,27 @@ export function createTownScene(
     // declaration for the spinning-circle loop the old heading chase
     // produced and why this design cannot bring it back.
     const framing = walkCamFraming();
+    // The right stick writes the yaw and the pitch offset exactly as a
+    // drag does (the input reference moves with it, so the next left
+    // stick push reads against the view just chosen), and counts as a
+    // drag for the loose follow and the pair framing. R3's recenter
+    // eases both home over about a third of a second; any stick or
+    // drag cancels it.
+    const padOrbitLive = padOrbitX !== 0 || padOrbitY !== 0;
+    if (padOrbitLive) {
+      camRecenter = 0;
+      camYawSmooth -= padOrbitX * PAD_ORBIT_YAW_RATE * dt;
+      inputYawRef = camYawSmooth;
+      camPitchOffset = THREE.MathUtils.clamp(camPitchOffset - padOrbitY * PAD_ORBIT_PITCH_RATE * dt, -1.1, 2.6);
+      lastDragT = t;
+    } else if (camRecenter > 0) {
+      camRecenter = walkDrag || camPointers.size > 0 ? 0 : Math.max(0, camRecenter - dt);
+      const k = opts.reducedMotion ? 1 : 1 - Math.exp(-dt * 9);
+      camYawSmooth = angleLerp(camYawSmooth, walkHeading, k);
+      inputYawRef = camYawSmooth;
+      camPitchOffset += (0 - camPitchOffset) * k;
+      followSustain = 0;
+    }
     // Pitch: a gentle smoothing of the player's own drag input
     // (pitch never feeds movement, so it cannot loop).
     if (opts.reducedMotion) {
@@ -6706,14 +6742,14 @@ export function createTownScene(
       const moved = Math.hypot(walkPos.x - camPrevX, walkPos.z - camPrevZ);
       camPrevX = walkPos.x;
       camPrevZ = walkPos.z;
-      if (walkDrag || camPointers.size > 0) lastDragT = t;
+      if (walkDrag || camPointers.size > 0 || padOrbitLive) lastDragT = t;
       const gate: FollowCamGate = {
         underway:
           boatState === null &&
           !seatPlayer &&
           dt > 0 &&
           moved / dt >= FOLLOW_CAM.minWalkSpeed,
-        dragging: walkDrag !== null || camPointers.size > 0,
+        dragging: walkDrag !== null || camPointers.size > 0 || padOrbitLive,
         sinceDragEndSec: t - lastDragT,
         hold: camHold,
         reducedMotion: opts.reducedMotion,
@@ -6740,7 +6776,7 @@ export function createTownScene(
     // recenters once he walks again); a drag, a pinch or reduced
     // motion leaves the camera alone. Staging, spacing and gates are
     // untouched.
-    const camFree = !opts.reducedMotion && walkDrag === null && camPointers.size === 0;
+    const camFree = !opts.reducedMotion && walkDrag === null && camPointers.size === 0 && !padOrbitLive;
     const pairCam = pairState && !pairState.glide ? PAIR_CAM[pairState.kind] : null;
     if (pairCam && pairState && camFree) {
       camYawSmooth = angleLerp(camYawSmooth, walkHeading + pairCam.yaw, 1 - Math.exp(-dt * 1.6));
@@ -12225,6 +12261,9 @@ export function createTownScene(
       camPitchSmooth = 0;
       camDistSmooth = walkRestDist();
       walkDrag = null;
+      padOrbitX = 0;
+      padOrbitY = 0;
+      camRecenter = 0;
       savedCamPos = camera.position.clone();
       savedCamTarget = controls.target.clone();
       flight = null;
@@ -12507,6 +12546,17 @@ export function createTownScene(
     setWalkMove: (x: number, y: number) => {
       padX = THREE.MathUtils.clamp(x, -1, 1);
       padY = THREE.MathUtils.clamp(y, -1, 1);
+    },
+    orbitCamera: (x: number, y: number) => {
+      padOrbitX = THREE.MathUtils.clamp(x, -1, 1);
+      padOrbitY = THREE.MathUtils.clamp(y, -1, 1);
+    },
+    recenterCamera: () => {
+      if (!walking) return;
+      padOrbitX = 0;
+      padOrbitY = 0;
+      camRecenter = 0.8;
+      userZoom = 1;
     },
     setPad2Move: (x: number, y: number, source) => {
       // A fresh human input outranks a director's channel while it lasts.

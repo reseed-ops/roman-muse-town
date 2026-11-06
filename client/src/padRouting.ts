@@ -60,6 +60,26 @@ export function pressedShoulders(prev: readonly boolean[], now: readonly boolean
   return out;
 }
 
+/** The stick presses, standard mapping: L3 is button 10, R3 is 11. */
+export const PAD_STICK_PRESS = { L3: 10, R3: 11 } as const;
+export type PadStickPress = keyof typeof PAD_STICK_PRESS;
+
+/** The stick presses that are down now and were not a frame ago. */
+export function pressedSticks(prev: readonly boolean[], now: readonly boolean[]): PadStickPress[] {
+  const out: PadStickPress[] = [];
+  for (const name of Object.keys(PAD_STICK_PRESS) as PadStickPress[]) {
+    const i = PAD_STICK_PRESS[name];
+    if (now[i] && !prev[i]) out.push(name);
+  }
+  return out;
+}
+
+/** The right stick (standard mapping axes 2 and 3) as the town's pad
+ *  vector, up forward, the same dead zone as the left. */
+export function rightStickVector(axes: readonly number[]): { x: number; y: number } {
+  return stickVector(axes[2] ?? 0, axes[3] ?? 0);
+}
+
 /** The face buttons that are down now and were not a frame ago. */
 export function pressedButtons(prev: readonly boolean[], now: readonly boolean[]): PadButton[] {
   const out: PadButton[] = [];

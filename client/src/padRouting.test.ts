@@ -12,6 +12,8 @@ import {
   routePads,
   stickVector,
   pressedShoulders,
+  pressedSticks,
+  rightStickVector,
 } from "./padRouting";
 
 // Player 2 routing (Task 3): which pad maps to whom, how a stick and
@@ -95,6 +97,27 @@ test("the menu line names who drives her, then the second pad's connection", () 
   expect(pad2StatusLine({ ...base, driver: "harness", harness: "beside" })).toContain("beside Gaius");
   expect(pad2StatusLine({ ...base, driver: "self" })).toStartWith("Aelia: walking with you on her own.");
   expect(pad2StatusLine({ ...base, driver: "self", following: false })).toStartWith("Aelia: keeping her own routine.");
+});
+
+describe("pressedSticks and the right stick", () => {
+  test("reports L3 (10) and R3 (11) on their press frame only", () => {
+    const up = new Array(12).fill(false);
+    const r3 = up.slice(); r3[11] = true;
+    const l3 = up.slice(); l3[10] = true;
+    expect(pressedSticks(up, r3)).toEqual(["R3"]);
+    expect(pressedSticks(up, l3)).toEqual(["L3"]);
+    expect(pressedSticks(r3, r3)).toEqual([]);
+    // A shoulder press is not a stick press.
+    const rb = up.slice(); rb[5] = true;
+    expect(pressedSticks(up, rb)).toEqual([]);
+  });
+  test("the right stick reads axes 2 and 3, up forward, with the dead zone", () => {
+    expect(rightStickVector([0.9, 0.9, 0, 0])).toEqual({ x: 0, y: 0 });
+    expect(rightStickVector([0, 0, 0, -1])).toEqual({ x: 0, y: 1 });
+    expect(rightStickVector([0, 0, 1, 0]).x).toBeCloseTo(1);
+    expect(rightStickVector([0, 0, 0.1, 0.05])).toEqual({ x: 0, y: 0 });
+    expect(rightStickVector([])).toEqual({ x: 0, y: 0 });
+  });
 });
 
 describe("pressedShoulders", () => {

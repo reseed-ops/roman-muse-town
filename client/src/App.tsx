@@ -183,6 +183,8 @@ import {
   pad2StatusLine,
   pressedButtons,
   pressedShoulders,
+  pressedSticks,
+  rightStickVector,
   routePads,
   stickVector,
   type PadSeats,
@@ -4974,6 +4976,7 @@ export function App() {
     const prevButtons = new Map<number, boolean[]>();
     const keys = new Set<string>();
     let p1Live = false;
+    let p1OrbitLive = false;
     let p2Live = false;
     let kbLive = false;
     let lastStatus = "";
@@ -5032,6 +5035,14 @@ export function App() {
         // The shoulders (standard mapping: LB 4, RB 5) take the same
         // route as the on-screen LB and RB.
         for (const side of pressedShoulders(was, now)) shoulderPressRef.current(side);
+        // The right stick orbits the follow camera and R3 recenters it
+        // (owner's ask, Nov 6, 2026); the stick writes while live or on
+        // the frame it centres, like the left one.
+        const orbit = rightStickVector(g1.axes);
+        const orbitLive = orbit.x !== 0 || orbit.y !== 0;
+        if ((orbitLive || p1OrbitLive) && walkingRef.current) scene.orbitCamera(orbit.x, orbit.y);
+        p1OrbitLive = orbitLive;
+        if (walkingRef.current && pressedSticks(was, now).includes("R3")) scene.recenterCamera();
         prevButtons.set(g1.index, now);
       }
       const g2 = padFor(seats.p2);
@@ -6426,7 +6437,7 @@ export function App() {
             </div>
             <div className="rounded-2xl bg-white/10 px-2 py-2">
               <dt className="text-[11px] font-bold tracking-wide text-white/60 uppercase">Controls</dt>
-              <dd className="mt-0.5 text-[13px] font-bold">Xbox joystick + ABXY + LB/RB · WASD · Arrows</dd>
+              <dd className="mt-0.5 text-[13px] font-bold">Xbox sticks (right orbits, press to recenter) + ABXY + LB/RB · WASD · Arrows</dd>
             </div>
           </dl>
           <p className="mt-2.5 text-[13px] leading-relaxed text-white/70">
