@@ -883,9 +883,9 @@ Notes for the port and the owner:
   carried them a constant 0.33 m behind the root, into the backrest). The kicking was the
   seated takes swapping (a bench take every 12 to 18 s, a seated-talk take every few
   seconds) with no leg blend; every seated take now carries the sit clip's own legs.
-  Deploy: see the landing note.
+  Deployed Nov 6, build 005ed766d1c8.
 
-- Visitor key copyable (owner's ask in chat, Claude, Nov 6, 2026): the game surface turns text selection off, so the key under Muse Visits could not be copied. It now sits in a read-only field that selects itself on tap, with a Copy button (clipboard, then a selection fallback with a "press and hold" line). Local build bb501a64097c; deploy pending the owner's word.
+- Visitor key copyable (owner's ask in chat, Claude, Nov 6, 2026): the game surface turns text selection off, so the key under Muse Visits could not be copied. It now sits in a read-only field that selects itself on tap, with a Copy button (clipboard, then a selection fallback with a "press and hold" line). Local build bb501a64097c; deployed Nov 6, 2026, on the owner's "run", first upload attempt; Railway build 005ed766d1c8, bundle main-sadnwyag.js, served on muse-town-production.up.railway.app and town.reseed.net, /healthz {"ok":true} on both (one build with Tasks 18 and 20).
 - Task 19 prepared (Claude, Nov 6, 2026, morning): `bridge/Dockerfile` (builds bridge/
   with shared/ beside it), a `bridge/pack.md` for the hosted template's Aelia (rank 0,
   never in git), an upload directory and a one-shot script for the owner that creates
@@ -900,7 +900,7 @@ Notes for the port and the owner:
   16's way home began the instant the state ended, so the camera left the three-quarter
   exactly while the held peak was on screen (the hug's long static clip hid it). The
   framing now holds one second past the state's end, then comes home; the console says
-  when the pose has released. Task 17's pointer work stays. Deploy: see the landing note.
+  when the pose has released. Task 17's pointer work stays. Deployed Nov 6, build 005ed766d1c8.
 
 ## Task 9 (READY, added Nov 5, 2026): hosted web town fixes: Aelia's missing textures, the conversation panel rectangle, and the unreachable hug and flirt pairs
 
@@ -2166,7 +2166,7 @@ standing uplink rule, and the landing note records the build.
 
 **Suites.** SQLite 376 pass / 19 skip / 0 fail (seven new in `pairCam.test.ts`); Postgres 20 pass / 0 fail; `tsc` at the 295-error baseline, nothing new; `bun run web/build.ts` exit 0 (local build `4ec578add593`).
 
-**Deploy.** pending the owner's word (one build with Task 20).
+**Deploy.** deployed Nov 6, 2026, on the owner's "run", first upload attempt; Railway build 005ed766d1c8, bundle main-sadnwyag.js, served on muse-town-production.up.railway.app and town.reseed.net, /healthz {"ok":true} on both (one build with Task 20 and the copyable visitor key).
 
 ### Landing note, Task 20 (Claude, Nov 6, 2026, morning)
 
@@ -2198,7 +2198,7 @@ is not free is held off with no yaw and no boom.
 
 **Suites.** SQLite 376 pass / 19 skip / 0 fail (seven new in `pairCam.test.ts`); Postgres 20 pass / 0 fail; `tsc` at the 295-error baseline, nothing new; `bun run web/build.ts` exit 0 (local build `4ec578add593`).
 
-**Deploy.** pending the owner's word (one build with Task 18).
+**Deploy.** deployed Nov 6, 2026, on the owner's "run", first upload attempt; Railway build 005ed766d1c8, bundle main-sadnwyag.js, served on muse-town-production.up.railway.app and town.reseed.net, /healthz {"ok":true} on both (one build with Task 18 and the copyable visitor key).
 
 **What the owner re-verifies.** Through the preview route, flirt first: F in the plaza and
 on the avenue, the three-quarter engaged and held through the hands meeting and for a
