@@ -719,7 +719,8 @@ Notes for the port and the owner:
   through the Gamepad API (left stick, ABXY, LB/RB, standard mapping; the first
   pad takes Gaius, a second takes Aelia). Later the same night, on the owner's ask, LB
   moved to the left side above the stick and RB stays above the cluster, as on the pad
-  (deployed the same night on the owner's word, build 1db5765066ba, bundle main-59m0crpv.js).
+  (deployed the same night on the owner's word, build 1db5765066ba, bundle main-59m0crpv.js;
+  LB levelled with RB and deployed again, build d100afe858cd, bundle main-fwgwwx19.js).
 
 - Task 12 landed (Claude, Nov 5, 2026, evening): her flirt hand does rise, at clip
   level and after the bake (arm directions within 5° of the take on both bodies);
