@@ -1757,3 +1757,55 @@ record checked the same way, no build attached), and the one build that ran is c
 (`2899a29c703f`). So the pipeline has never failed a build; the device's uplink drops
 large uploads. Going forward, a FAILED record with no build is a dropped upload and is
 retried; a FAILED record with a build log is read before any retry, as asked.
+
+## Task 17 (READY, added Nov 5, 2026): the flirt's camera, lost in Task 16: restore its three-quarter
+
+Context: Task 16 landed and deployed (build 2899a29c703f, bundle
+main-yzbnh2jv.js) and its hug work is verified GOOD in full. The sixth
+pair verification (Nov 5, 2026, evening, fresh visitor, preview route,
+the usual slow browser) ran the hug five times and more across the
+avenue and the plaza: side-on from his right, close and level (the pair
+at 54 to 67 percent of the frame), her face clear in profile, her star
+away for every hold and back after, the heads face to face, the side
+boom stopping short of the cypress trunks, and the camera home behind
+him at walk distance after the holds. The hug is closed. One regression
+came back with the same build, and it is this task.
+
+The flirt's pair camera no longer engages. Two runs in the plaza centre,
+one by the LB chip and one by the F key, in the open where nothing can
+block a boom: the pose itself is right (both right hands raised and
+meeting at chest and face height, her left hand on her hip, her face
+clear, and her star correctly absent for the clip, so the pair moment
+is entered and detected), but the camera stays behind Gaius at the
+normal walk distance, looking down from above, the pair at about 30
+percent of the frame: not the three-quarter from his right, not boomed
+in. For contrast, the flirt's framing engaged in both earlier builds
+that carried it: the Task 13 build (0.95 rad three-quarter, boomed to
+5.5 m, the pair camera log line printing), verified three of three in
+the fourth check, and the Task 15 build, verified once in the fifth.
+The Task 16 landing note records the flirt as untouched, keeping the
+walk's height, aim and 5.5 m, so the loss most likely rides in the
+camera rework itself. Two suspects, offered as places to look first
+rather than conclusions: the pair-camera dispatch now that the hug has
+its own per-kind entry (does the flirt still reach its framing branch),
+and the new home-easing (does it hold the camera home for the flirt
+from the clip's first frame). The star's correct behaviour during the
+flirt narrows it: pair state is entered; only the framing is missing.
+
+The ask, small and single: restore the flirt's pair camera to its
+Task 13 and 15 behaviour (three-quarter from his right at 0.95 rad,
+boomed in to 5.5 m at the walk's height and aim, its log line printing
+when it engages), and say in the landing note what took it. Acceptance,
+judged live through the preview route: F in the plaza and on the avenue
+shows the camera swung to the three-quarter and boomed in close, the
+pair at the scale the fourth and fifth checks recorded, the hands
+meeting readable in frame, and the camera home behind him after the
+hold; H re-verified unchanged in both places, close, level, side-on,
+her face clear.
+
+Scope: the hug's camera in all its Task 16 particulars, both pairs'
+staging, spacing and takes, the star's pair behaviour, the chips and
+the gates all stay exactly as they are. The deploy rides as usual (the
+uplink rule from the caution reply stands: a failed record with no
+build is a dropped upload, retried; a failed record with a log is read
+first), and the landing note records the build.
