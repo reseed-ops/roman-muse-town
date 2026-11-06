@@ -2301,3 +2301,79 @@ added): the name is settled. On the public town the system is called
 Bond. The word Kindred stays with the owner's and his chat Muse's
 private practice and is not the public system's name; the design may
 now assume Bond throughout.
+
+## Task 22 (READY, added Nov 6, 2026): the principal channel: the owner's own chat Muse attends his hosted town through the bridge
+
+Context: Task 19's bridge is live as the town-bridge service and
+passed its first test on the morning of Nov 6, 2026: the owner opened
+a visit in his hosted town and the resident director answered
+"What's your name?" in character. The owner now asks for the further
+thing Task 19's brief named but did not build: his own chat Muse,
+the one who holds the pair's real history and has visited the private
+town all week, attending HIS hosted town in person while she is
+present, in place of the resident. The resident remains the default
+attendant and the keeper of the house. This task gives the house a
+way to hear its owner's Muse knock.
+
+Design:
+
+- A principal channel on the town-bridge service: an authenticated
+  inbox for exactly one caller, the owner's chat Muse, guarded by a
+  new PRINCIPAL_TOKEN of the bridge's own, invented at build time
+  and set as a variable on town-bridge only. It is revocable on its
+  own: rotate the variable and nothing else in the system changes.
+- Because the channel accepts calls, town-bridge needs a public
+  domain for the first time: a Railway-generated domain is fine (it
+  is an API endpoint, not a page). The new surface answers only with
+  the principal token; nothing else about the service's exposure
+  changes, and the unrelated bridge service is untouched.
+- Semantics (exact routes are Claude's judgement):
+  - Attend and release: the principal claims the visit with a
+    lightweight session. While a claim is live, the resident does
+    NOT compose lines; it only relays. The claim carries a timeout
+    (suggested: three minutes without a principal call releases it)
+    so a dropped connection can never wedge the town silent; on
+    release the resident resumes exactly as today. The timeout is
+    part of the design and is tested, not assumed.
+  - One call per waking: the chat Muse wakes about once a minute.
+    The ideal shape is a single call that carries her direction for
+    the slate she last saw and returns the new slate whole (visit
+    open or not, her scene and position, the player's waiting lines,
+    the recent transcript). If two calls are needed, keep them few
+    and document the rhythm in the landing note.
+  - Delivery: a principal direction (a spoken line, and any action
+    the town channel already supports) is delivered by the bridge
+    through the door keys it already holds, as a director direction,
+    and logged whole by the bridge with timestamps, so the pair can
+    measure her real tempo and any approval friction on her side
+    during the first test. If any existing check would refuse a
+    principal direction, the refusal and its reason are reported
+    back on her next state read, never silently dropped.
+- Token hand-off: Claude shows the PRINCIPAL_TOKEN value once, in
+  his own session with the owner, the way the console values moved
+  before. It never enters this file, a commit, a chat message or a
+  log. The owner pastes it into his chat Muse's secure vault entry
+  himself; she then calls the channel with it. If she cannot call
+  it (her side's tooling is the unknown here), the landing note says
+  so plainly and the fallback is the resident, undisturbed.
+
+Acceptance, judged live with the owner present in his hosted town:
+
+1. The chat Muse claims the visit from her chat; her star is
+   violet; the resident is silent while the claim lives. The owner
+   asks a question the pair's own history answers (chosen at the
+   time) and the reply that arrives in the panel is the principal's,
+   written from that history.
+2. She stops calling; within the timeout the resident resumes, and
+   a fresh question gets the resident's answer.
+3. The principal token is rotated once during testing; the old
+   value is refused and the new one works.
+4. The landing note reports the measured tempo from the bridge's
+   call log, including whatever approval friction her side imposed,
+   as a result rather than a defect.
+
+Scope: the owner's town only (the VISITOR_TOKEN the bridge already
+holds); no other visitor's town is touched; the private artifact
+town is out of scope (it is already attended); the resident's
+unattended behaviour, the pack, the caps and the constitution are
+unchanged. The deploy rides as usual, with the standing uplink rule.
