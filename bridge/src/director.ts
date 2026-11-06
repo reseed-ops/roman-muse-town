@@ -19,6 +19,7 @@ import type { CostLedger } from "./costCaps.js";
 import type { Mind, ThreadTurn } from "./mind.js";
 import { bandForRank, filterIntention, filterSpeak } from "./outputFilter.js";
 import type { PackLoader } from "./pack.js";
+import type { PrincipalDesk } from "./principal.js";
 
 export type DirectorConfig = {
   enabled: boolean;
@@ -56,10 +57,12 @@ export type DirectorDeps = {
   now?: () => number;
   log?: (line: string) => void;
   sleep?: (ms: number) => Promise<void>;
+  /** The principal channel (Task 22): while her claim lives, the resident only relays. */
+  principal?: PrincipalDesk;
 };
 
 export type TickReport = {
-  kind: "off" | "dead" | "closed" | "idle" | "answered" | "greeted" | "intended" | "capped";
+  kind: "off" | "dead" | "closed" | "idle" | "answered" | "greeted" | "intended" | "capped" | "relayed";
   detail?: string;
   /** The delay the loop should wait before the next tick. */
   nextInMs: number;
@@ -108,6 +111,7 @@ export function createDirector(deps: DirectorDeps): Director {
   };
   const speak = async (text: string, lineId?: string, partial = false): Promise<boolean> => {
     const r = await quiet("speak", () => channel.direct({ kind: "speak", text, ...(lineId ? { lineId } : {}), ...(partial ? { partial: true } : {}) }));
+    if (r?.ok && !partial) deps.principal?.noteResidentLine(text);
     return !!r && r.ok;
   };
 
@@ -191,6 +195,9 @@ export function createDirector(deps: DirectorDeps): Director {
       log(`channel unreachable (${error instanceof Error ? error.message : String(error)}); folding quietly, next look in ${backoff} ms`);
       return { kind: "dead", nextInMs: backoff };
     }
+    // The principal's desk sees every poll, claimed or not, so it knows
+    // the visit and his lines when she arrives.
+    if (deps.principal) await quiet("principal", () => deps.principal!.observe(state));
     if (!state.active || state.stale) {
       if (visit) log("the visit closed; forgetting it");
       visit = null;
@@ -202,6 +209,14 @@ export function createDirector(deps: DirectorDeps): Director {
       log(`a visit is open (began ${state.beganAt ?? "?"})`);
     }
     const v = visit;
+    if (deps.principal?.live()) {
+      // She attends: the resident composes nothing, not even a greeting,
+      // and his lines from the claim are hers, not answered again later.
+      v.greeted = true;
+      v.lastSeq = state.latestSeq;
+      v.lastIntentionAt = t;
+      return { kind: "relayed", nextInMs: config.pollMs };
+    }
     if (!v.greeted) {
       v.greeted = true;
       const greeting = filterSpeak(config.greeting, { band: band() });
@@ -238,7 +253,7 @@ export function createDirector(deps: DirectorDeps): Director {
       pack.start();
       while (running) {
         const report = await tick();
-        if (report.kind !== "idle" && report.kind !== "closed" && report.kind !== "off") log(`${report.kind}${report.detail ? `: ${report.detail}` : ""}`);
+        if (report.kind !== "idle" && report.kind !== "closed" && report.kind !== "off" && report.kind !== "relayed") log(`${report.kind}${report.detail ? `: ${report.detail}` : ""}`);
         await sleep(report.nextInMs);
       }
       pack.stop();

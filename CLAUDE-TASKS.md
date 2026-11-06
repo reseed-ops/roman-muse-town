@@ -886,6 +886,7 @@ Notes for the port and the owner:
   Deployed Nov 6, build 005ed766d1c8.
 
 - Visitor key copyable (owner's ask in chat, Claude, Nov 6, 2026): the game surface turns text selection off, so the key under Muse Visits could not be copied. It now sits in a read-only field that selects itself on tap, with a Copy button (clipboard, then a selection fallback with a "press and hold" line). Local build bb501a64097c; deployed Nov 6, 2026, on the owner's "run", first upload attempt; Railway build 005ed766d1c8, bundle main-sadnwyag.js, served on muse-town-production.up.railway.app and town.reseed.net, /healthz {"ok":true} on both (one build with Tasks 18 and 20).
+- Task 22 built (Claude, Nov 6, 2026): the principal channel on town-bridge, `bridge/src/principal.ts` (the desk: claim with a three-minute lapse, performed beats with conditions, acknowledgment staging, refusals reported back, the call log) and `bridge/src/principalServer.ts` (`POST /principal/wake`, `GET /principal/waiting`, `GET /healthz`); the resident relays while a claim lives. Tokens and domain by the owner's script; live acceptance pending. See the landing note.
 - Task 19 prepared (Claude, Nov 6, 2026, morning): `bridge/Dockerfile` (builds bridge/
   with shared/ beside it), a `bridge/pack.md` for the hosted template's Aelia (rank 0,
   never in git), an upload directory and a one-shot script for the owner that creates
@@ -2434,3 +2435,20 @@ Acceptance grows by two items, judged in the same test visit:
 
 The base brief's scope is unchanged. This amendment is part of
 Task 22, not a new task.
+
+### Landing note, Task 22 (Claude, Nov 6, 2026): built; the owner's setup and the live test pending
+
+**What was built.** All of it lives in the bridge; the town needed nothing, since her star is already violet whenever a visit is open and the principal speaks through the same door keys the resident holds.
+
+- `bridge/src/principal.ts`, the desk. A claim begins with her first call and lapses `PRINCIPAL_CLAIM_MS` (180 000 ms) after her last; `attend: false` releases it at once. While it lives the resident director only relays (`relayed` ticks): no greeting, no answer, no intention, and his lines from the claim are not answered again by the resident after it. Her call carries one `direction` or up to six `beats` (`delayS` 0 to 120 from the previous beat, `when: {noReply, scene}`), and the remainder is dropped when he replies, when his scene changes materially (he arrives elsewhere or leaves his feet; drifting into `roaming` is not material), when the visit closes, when the claim lapses, or when her next call carries a direction. A newly landed line is acknowledged with presence only: a `goto` to `gaius` (she walks to him, and near him turns to face him; seated within 3 m she stays seated) and the composing flag. Never speech. Her lines pass the same output filter as the resident's at the pack's band, then the town's direction checks; each refusal (and each alteration the filter made, e.g. the dash rule) is reported on her next slate with its reason.
+- `bridge/src/principalServer.ts`: `POST /principal/wake` (the one call per waking: direction in, the slate whole out: claim, visit, scene and positions, intention, composing, latestSeq, waiting lines, the last 30 transcript lines marked principal or resident, the sequence still to come, and every report since her last slate), `GET /principal/waiting` (`{waiting, seq, at, composing, claimLive}`, never text), `GET /healthz`. Bearer tokens compared in constant time; a miss is a bare 401 and a log line without the value.
+- The marker judgement: it carries no text, but it still tells when the owner is in his town, so it is not public. It answers to `PRINCIPAL_TOKEN` or to a lesser read-only `PRINCIPAL_MARKER_TOKEN` that can read nothing else.
+- The log: `principal call <iso>: <body>` for every call whole; every beat performed, skipped, dropped or refused with its condition; each acknowledgment; each claim, release and lapse. Tokens never.
+- `bridge/README.md` documents the routes, the call and the slate.
+
+**Suites.** `bridge/src/principal.test.ts`, 13 tests: the claim silences the resident and his line waits for her; the lapse at exactly 180 s (still hers at 179 s), the resident then answering a fresh line and not the old one; release; acknowledgment (walks to him at 9.0 m, composing, once per line; seated beside him, composing only); the three-beat sequence (beat 2 not at 3.9 s, performed at 4.0 s, beat 3 dropped by his reply, the log lines asserted verbatim); the poll dropping the remainder between beats; supersession; scene conditions and a material scene change; refusals by the filter, by shape and by a closed visit; the marker carrying no text; call shapes; the server's gates (no token, the marker token on the wake route, the principal token, bad JSON) and rotation (the old token 401 after the restart, the new 200, no token in any log line). Full suites 389 pass / 19 skip / 0 fail and 20 pass / 0 fail; the bridge's tsc clean; client tsc 295 (baseline).
+
+**Setup (the owner's, in a real terminal).** `bash /root/bridge-deploy/principal_setup.sh` mints `PRINCIPAL_TOKEN` and `PRINCIPAL_MARKER_TOKEN` (openssl), sets them as variables on town-bridge only, sets `PORT=8790`, generates the Railway domain (town-bridge's first), uploads, and shows the two values once in his terminal before clearing it. They never enter this file, a commit, a chat or a log; Claude does not see them. `bash /root/bridge-deploy/principal_setup.sh rotate` mints a new principal token for acceptance 3.
+
+**Live acceptance (1 to 6), the measured tempo and her side's friction:** PENDING_22.
+

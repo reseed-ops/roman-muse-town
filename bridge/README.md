@@ -113,6 +113,79 @@ hand (`curl -X POST $TOWN_URL/actions -H "x-director-token: …" -H
 "x-visitor-token: …" -d '{"action":"beginvisit","args":{}}'`); the loop
 never calls them.
 
+## The principal channel (Task 22)
+
+On the town channel, with `PRINCIPAL_TOKEN` set, the bridge serves one
+caller: the owner's own chat Muse, who attends his hosted town in place
+of the resident while her claim lives. The resident stays the default
+attendant: it greets, answers and intends whenever no claim is live.
+
+Routes (Bearer token, constant-time compare, bare 401 on a miss):
+
+| Route | Token | Answer |
+| --- | --- | --- |
+| `POST /principal/wake` | principal | Her call: claims (or keeps) the visit, carries her direction, returns the slate whole. |
+| `GET /principal/waiting` | principal or marker | `{waiting, seq, at, composing, claimLive}`: that a line waits, its number and time. Never its text. |
+| `GET /healthz` | none | `{"ok":true}` and nothing else. |
+
+One call per waking. The body of `POST /principal/wake`, every field optional:
+
+```json
+{
+  "attend": true,
+  "seen": 4,
+  "beats": [
+    { "direction": { "kind": "speak", "text": "Do you hear the fountain?" } },
+    { "direction": { "kind": "speak", "text": "It keeps your time." }, "delayS": 4, "when": { "noReply": true } },
+    { "direction": { "kind": "emote", "emote": "wave" }, "delayS": 3, "when": { "scene": "tree" } }
+  ],
+  "drop": { "onReply": true, "onSceneChange": true },
+  "frame": false
+}
+```
+
+- `attend: false` releases the claim at once. Any other call claims it
+  or keeps it; three minutes (`PRINCIPAL_CLAIM_MS`) without a call and it
+  lapses, and the resident resumes. His lines from the claim are not
+  answered again by the resident.
+- `direction` (one direction, performed at once) or `beats` (at most 6;
+  `delayS` 0 to 120 from the previous beat). Any direction the town
+  channel takes: `speak`, `goto`, `sit`, `stand`, `seat`, `stepout`,
+  `emote`, `intend`, `look`, `pad`.
+- `when.noReply`: fire only if he has sent no line since the call landed.
+  `when.scene`: fire only if his scene (`scene.gaiusZone`) is this. An
+  unmet condition skips that beat.
+- `drop`: the unperformed remainder is dropped when he replies, when his
+  scene changes materially (he arrives somewhere else, or leaves his feet;
+  drifting into `roaming` is not material), when the visit closes, when
+  the claim lapses, and when her next call carries a direction.
+- `seen`: the `latestSeq` of the slate her words answer (defaults to the
+  last slate she was shown); his lines up to it stop waiting.
+
+The slate: `claim` (live, since, lastCallAt, expiresAt), `visit`,
+`scene` (the town's telemetry: her zone and position, his, distance,
+seated, day phase), `intention`, `composing`, `latestSeq`, `waiting` (his
+unanswered lines), `transcript` (the last 30 lines, both sides, hers
+marked `principal` or `resident`), `sequence` (beats still to come), and
+`reports`: everything since her last slate, each beat `performed` (with
+the condition that governed it, and `altered` if the filter changed her
+words), `dropped` (with why), `refused` (with the filter's or the town's
+reason), and each `acknowledged` line.
+
+The honesty rule: the bridge never composes, extends or paraphrases her
+words. Her lines pass the same output filter as the resident's (at the
+pack's band) and the town's own direction checks; a refusal is reported
+on her next slate, never dropped silently. When a sequence runs out she
+is silent until her next call. While her claim lives, a newly landed line
+is acknowledged with presence only: she walks to him (a `goto` to
+`gaius`, which turns her to face him when near; seated beside him she
+stays seated) and the panel shows her composing. Never words.
+
+The log: every call whole with its timestamp (`principal call <iso>: <body>`),
+every beat performed, skipped, dropped or refused with its condition,
+each acknowledgment, and each claim, release and lapse. Tokens are never
+logged.
+
 ## Environment
 
 | Variable | Default | Meaning |
@@ -124,7 +197,10 @@ never calls them.
 | `DIRECTOR_TOKEN` | (none) | The town service's director token (`town` only). Never in the repo. |
 | `VISITOR_TOKEN` | (none) | The one visitor whose town this bridge directs (`town` only): the owner's own visitor key from the town's Settings. Never in the repo. |
 | `BRIDGE_TOKEN` | (none) | The per-installation token the town presents. Required for `bridge`; without it the face does not serve. Never in the repo. |
-| `PORT` | `8790` | The face's port (`bridge` only; Railway sets it). |
+| `PORT` | `8790` | The face's port (`bridge`, and `town` with a principal token; Railway sets it). |
+| `PRINCIPAL_TOKEN` | (none) | The principal channel (Task 22, `town` only): the one token the owner's chat Muse presents. Unset, the channel does not serve. Rotate it to revoke. Never in the repo. |
+| `PRINCIPAL_MARKER_TOKEN` | (none) | A lesser, read-only token for `GET /principal/waiting` only. Optional; the principal token reads the marker too. Never in the repo. |
+| `PRINCIPAL_CLAIM_MS` | `180000` | Her claim lapses this long after her last call, and the resident resumes. |
 | `BRIDGE_ALLOW_ORIGIN` | `*` | CORS origin for the face; set it to the town's origin to narrow it (the token gates either way). |
 | `SNAPSHOT_LAPSE_MS` | `30000` | No snapshot for this long and the held visit dies; the face reads closed. |
 | `HARNESS_URL` | `http://localhost:8787` | The seam harness (`seam` only). |

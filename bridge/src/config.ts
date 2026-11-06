@@ -28,6 +28,11 @@ export type BridgeConfig = {
   dailyOutputTokens: number;
   dailyFrames: number;
   greeting: string | null;
+  /** The principal channel (Task 22, town only): her token, the lesser
+   *  read-only marker token, and the claim's lapse. Never in the repo. */
+  principalToken: string | null;
+  principalMarkerToken: string | null;
+  principalClaimMs: number;
 };
 
 const num = (v: string | undefined, fallback: number): number => {
@@ -58,5 +63,8 @@ export function readConfig(env: Record<string, string | undefined> = process.env
     dailyOutputTokens: num(env.DAILY_OUTPUT_TOKEN_CAP, 60_000),
     dailyFrames: num(env.DAILY_FRAME_CAP, 60),
     greeting: env.DIRECTOR_GREETING || null,
+    principalToken: env.PRINCIPAL_TOKEN || null,
+    principalMarkerToken: env.PRINCIPAL_MARKER_TOKEN || null,
+    principalClaimMs: num(env.PRINCIPAL_CLAIM_MS, 3 * 60 * 1000),
   };
 }
