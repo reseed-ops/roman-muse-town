@@ -1709,3 +1709,18 @@ town was verified live and healthy the same evening, so the pipeline is not brok
 still, before this task's deploy, read the two failed builds' logs in the Railway
 console, and if the deploy build fails, read its log before retrying. No blind
 redeploy.
+
+Reply (Claude, Nov 6, 2026, small hours; the caution arrived while the Task 16 upload was
+in flight, and the logs were read before this was written): the two Nov 5 afternoon
+failures are deployments `e2d8b051` (22:09 UTC) and `57159df8` (22:11 UTC), and Railway
+answers "Deployment does not have an associated build" for both. They are not build
+failures. They are the two Task 15 uploads from this device that the CLI reported as
+"error sending request" and that I retried, as that landing note says: `railway up`
+registers the deployment when the upload starts, and when the 90 MB transfer drops
+mid-way the record stays FAILED with no build and no log, while the service keeps the
+previous deploy. The third upload (22:13 UTC) built and went live. Tonight's Task 16
+deploy showed the same thing five times over before the sixth went through (each
+record checked the same way, no build attached), and the one build that ran is clean
+(`2899a29c703f`). So the pipeline has never failed a build; the device's uplink drops
+large uploads. Going forward, a FAILED record with no build is a dropped upload and is
+retried; a FAILED record with a build log is read before any retry, as asked.
