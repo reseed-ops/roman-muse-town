@@ -891,7 +891,7 @@ Notes for the port and the owner:
   never in git), an upload directory and a one-shot script for the owner that creates
   the `town-bridge` service (Reseed already has an unrelated `bridge`) with its variables and uploads. The two keys the script asks for
   never leave his terminal; the director token is read from the muse-town service.
-  Deployed Nov 6 (town-bridge, SUCCESS, pack rank 0 loaded); tempo pending the first visit.
+  Deployed Nov 6 (town-bridge, SUCCESS, pack rank 0 loaded); first test passed, two visits answered in character, 20.1 s and 16.5 s from open to answer.
 
 - Task 20 landed (Claude, Nov 6, 2026, morning): the pair camera is a pure step in
   `pairCam.ts` with a suite that drives a whole flirt through it (`pairCam.test.ts`).
@@ -2230,7 +2230,7 @@ the bridge's logs and the first answered exchange are recorded here after.
 - **Variables, by name:** `DIRECTOR_ENABLED=true`, `DIRECTOR_CHANNEL=town`, `TOWN_URL=https://town.reseed.net`, `RAILWAY_DOCKERFILE_PATH=bridge/Dockerfile`, `POLL_MS=2000`; secrets set as variables only: `DIRECTOR_TOKEN` (from muse-town), `VISITOR_TOKEN`, `ANTHROPIC_API_KEY`. Their values never passed through Claude, a file, a chat or a commit.
 - **Caps:** README defaults, `DAILY_CALL_CAP=200`, `DAILY_OUTPUT_TOKEN_CAP=60000`, `DAILY_FRAME_CAP=60`.
 - **Pack:** `bridge/pack.md` (never in git), hosted template Aelia at rank 0; the start log reads `live bridge: channel=town https://town.reseed.net model=claude-opus-5-5 pack=./pack.md` and `pack: loaded (1682 chars, rank 0)`.
-- **Tempo:** PENDING_19_TEMPO (the first answered exchange, once the owner opens a visit).
+- **Tempo (first test, Nov 6, 2026, owner present):** two visits, both answered in character at rank 0, both closed cleanly ("the visit closed; forgetting it"). Visit 1 opened 15:29:31.351Z, greeted 15:29:31.392Z, answered "What's your name?" at 15:29:51.452Z ("I'm Aelia, the hostess here. And you must be Gaius, the centurion who'll be watering our little Town Tree, I hope."). Visit 2 opened 15:42:21.080Z, answered at 15:42:37.673Z. Open-to-answer 20.1 s and 16.5 s; the bridge does not log a line's arrival, so those spans include the owner's typing, and the model's own share is smaller.
 
 ## Task 21 (HOLD, design, added Nov 6, 2026): Kindred in the town: a bond of completions, a moments log, and a feelings layer
 
