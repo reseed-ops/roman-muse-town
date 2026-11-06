@@ -6606,7 +6606,7 @@ export function App() {
               className="absolute -bottom-[7px] left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 bg-[#fdfaf2]"
             />
             <div className="flex items-center justify-between gap-2">
-              <p className={`flex items-center gap-1.5 text-[12px] font-black tracking-wide uppercase ${visitUi.active ? "text-[#6d28d9]" : "text-[#a87800]"}`}>
+              <p className={`flex items-center gap-1.5 text-[13px] font-bold ${visitUi.active ? "text-[#6d28d9]" : "text-[#a87800]"}`}>
                 <span aria-hidden="true">✦</span> Aelia
                 {visitUi.active && <span className="font-bold normal-case tracking-normal">· {VISITING_MARKER}</span>}
               </p>
@@ -6660,19 +6660,30 @@ export function App() {
               aria-live="polite"
               onClick={advanceMuseBubble}
             >
-              <p className={`${isLandscape ? "text-[17px]" : "text-[15px]"} leading-relaxed font-semibold`}>
+              <p
+                className={`${isLandscape ? "text-[19px]" : "text-[17px]"} leading-[1.45] font-normal`}
+                style={{ fontFamily: "var(--font-voice)" }}
+              >
                 {museBubble.lines[museBubble.index]}
               </p>
-              <p className="mt-1 text-right text-[11px] font-bold text-[#a87800]">
-                {museBubble.index < museBubble.lines.length - 1 || museBubble.cycle
-                  ? "tap / X ▸"
-                  : museBubble.invite
-                    ? ""
-                    : "tap / X to close"}
-              </p>
+              {(museBubble.lines.length > 1 || museBubble.cycle) && (
+                <p className="mt-1 flex items-center justify-end gap-1.5 text-[11px] font-semibold text-[#a87800]/80">
+                  {museBubble.lines.length > 1 && (
+                    <span>
+                      {museBubble.index + 1} of {museBubble.lines.length}
+                    </span>
+                  )}
+                  {(museBubble.index < museBubble.lines.length - 1 || museBubble.cycle) && <span aria-hidden="true">▸</span>}
+                </p>
+              )}
             </button>
+            {/* What you can do with her this moment, one quiet row: a
+                direct answer to her question stays gold, every other
+                offer is a plain chip (its emoji is its identity). Each
+                offer is conditional and flows into the row. */}
+            <div className="mt-2.5 flex flex-wrap items-center gap-2 empty:hidden">
             {museBubble.invite && !following && (
-              <div className="mt-1.5 flex flex-wrap gap-2 border-t border-[#2b2118]/10 pt-2.5">
+              <div className="contents">
                 <button
                   type="button"
                   className="rounded-full bg-[#ffd34e] px-3.5 py-1.5 text-sm font-bold text-[#4a3600] shadow transition active:scale-95"
@@ -6695,7 +6706,7 @@ export function App() {
               </div>
             )}
             {museBubble.choice && museBubble.index >= museBubble.lines.length - 1 && (
-              <div className="mt-1.5 flex flex-col gap-1.5 border-t border-[#2b2118]/10 pt-2.5" aria-label="Your reply to Aelia">
+              <div className="mt-2.5 flex flex-col gap-1.5" aria-label="Your reply to Aelia">
                 {museBubble.choice.options.map((option) => (
                   <button
                     key={option.label}
@@ -6710,10 +6721,10 @@ export function App() {
               </div>
             )}
             {following && activeFestival && night && affectionRank >= 3 && !dancing && !museBubble.choice && (
-              <div className="mt-1.5 flex flex-wrap gap-2 border-t border-[#2b2118]/10 pt-2.5">
+              <div className="contents">
                 <button
                   type="button"
-                  className="rounded-full bg-[#e8a13a] px-3.5 py-1.5 text-sm font-bold text-[#4a2c00] shadow transition active:scale-95"
+                  className="rounded-full bg-[#2b2118]/8 px-3.5 py-1.5 text-sm font-bold transition active:scale-95"
                   aria-label="Dance together, one slow festival step sequence with Aelia"
                   onClick={startDance}
                 >
@@ -6722,10 +6733,10 @@ export function App() {
               </div>
             )}
             {skySpot && following && !skyWatching && !museBubble.choice && (
-              <div className="mt-1.5 flex flex-wrap gap-2 border-t border-[#2b2118]/10 pt-2.5">
+              <div className="contents">
                 <button
                   type="button"
-                  className="rounded-full bg-[#7fb2e0] px-3.5 py-1.5 text-sm font-bold text-[#123] shadow transition active:scale-95"
+                  className="rounded-full bg-[#2b2118]/8 px-3.5 py-1.5 text-sm font-bold transition active:scale-95"
                   aria-label="Watch the sky together from this vantage spot"
                   onClick={startSkyWatch}
                 >
@@ -6734,10 +6745,10 @@ export function App() {
               </div>
             )}
             {phoenixWatchable && following && !museBubble.choice && (
-              <div className="mt-1.5 flex flex-wrap gap-2 border-t border-[#2b2118]/10 pt-2.5">
+              <div className="contents">
                 <button
                   type="button"
-                  className="rounded-full bg-[#ff9a4d] px-3.5 py-1.5 text-sm font-bold text-[#4a2400] shadow transition active:scale-95"
+                  className="rounded-full bg-[#2b2118]/8 px-3.5 py-1.5 text-sm font-bold transition active:scale-95"
                   aria-label="Watch the phoenix together from the Colosseum front"
                   onClick={startPhoenixWatch}
                 >
@@ -6746,7 +6757,7 @@ export function App() {
               </div>
             )}
             {bathInvite && (
-              <div className="mt-1.5 flex flex-wrap gap-2 border-t border-[#2b2118]/10 pt-2.5" aria-label="Your answer to Aelia">
+              <div className="contents" aria-label="Your answer to Aelia">
                 <button
                   type="button"
                   className="rounded-full bg-[#ffd34e] px-3.5 py-1.5 text-sm font-bold text-[#4a3600] shadow transition active:scale-95"
@@ -6766,10 +6777,10 @@ export function App() {
               </div>
             )}
             {bathCareOffer && (
-              <div className="mt-1.5 flex flex-wrap gap-2 border-t border-[#2b2118]/10 pt-2.5" aria-label="Her offered moment">
+              <div className="contents" aria-label="Her offered moment">
                 <button
                   type="button"
-                  className="rounded-full bg-[#ff6f9c] px-3.5 py-1.5 text-sm font-bold text-white shadow transition active:scale-95"
+                  className="rounded-full bg-[#ffd34e] px-3.5 py-1.5 text-sm font-bold text-[#4a3600] shadow transition active:scale-95"
                   aria-label="Return the care, wash her hair"
                   onClick={() => pickBathCare(true)}
                 >
@@ -6786,11 +6797,11 @@ export function App() {
               </div>
             )}
             {affectionRank >= 4 && following && !museBubble.choice && (
-              <div className="mt-1.5 flex flex-wrap items-center gap-2 border-t border-[#2b2118]/10 pt-2.5">
+              <div className="contents">
                 {!handInHandWalk ? (
                   <button
                     type="button"
-                    className="rounded-full bg-[#ff6f9c] px-3.5 py-1.5 text-sm font-bold text-white shadow transition active:scale-95"
+                    className="rounded-full bg-[#2b2118]/8 px-3.5 py-1.5 text-sm font-bold transition active:scale-95"
                     aria-label="Hold Aelia's hand and wander with no particular destination"
                     onClick={() => {
                       startHandHold();
@@ -6816,13 +6827,13 @@ export function App() {
               </div>
             )}
             {(seatedBench || selected?.id === "stories") && !focusSitting && !museBubble.choice && (
-              <div className="mt-1.5 flex flex-wrap items-center gap-2 border-t border-[#2b2118]/10 pt-2.5">
-                <span className="text-[13px] font-semibold text-[#5a4632]">🪑 Sit with me while I work:</span>
+              <div className="contents">
+                <span className="text-[13px] font-semibold text-[#5a4632]">🪑 Sit with me while I work</span>
                 {[15, 25, 50].map((mins) => (
                   <button
                     key={mins}
                     type="button"
-                    className="rounded-full bg-[#7fb2e0] px-3 py-1.5 text-sm font-bold text-[#123] shadow transition active:scale-95"
+                    className="rounded-full bg-[#2b2118]/8 px-3.5 py-1.5 text-sm font-bold transition active:scale-95"
                     aria-label={`Start a ${mins} minute focus sitting with Aelia`}
                     onClick={() => {
                       setFocusSitting({ endsAt: Date.now() + mins * 60000, minutes: mins });
@@ -6847,11 +6858,11 @@ export function App() {
               !focusSitting &&
               !museBubble.choice &&
               affectionRank >= READING_GATE_RANK && (
-                <div className="mt-1.5 flex flex-wrap items-center gap-2 border-t border-[#2b2118]/10 pt-2.5">
-                  <span className="text-[13px] font-semibold text-[#5a4632]">📖 The reading corner:</span>
+                <div className="contents">
+                  <span className="text-[13px] font-semibold text-[#5a4632]">📖 The reading corner</span>
                   <button
                     type="button"
-                    className="rounded-full bg-[#b08d57] px-3.5 py-1.5 text-sm font-bold text-white shadow transition active:scale-95"
+                    className="rounded-full bg-[#2b2118]/8 px-3.5 py-1.5 text-sm font-bold transition active:scale-95"
                     aria-label="Ask Aelia to read aloud to you"
                     onClick={async () => {
                       const today = new Date().toISOString().slice(0, 10);
@@ -6897,7 +6908,7 @@ export function App() {
                 </div>
               )}
             {focusSitting && (
-              <div className="mt-1.5 flex flex-wrap items-center gap-2 border-t border-[#2b2118]/10 pt-2.5">
+              <div className="contents">
                 <span className="text-[13px] font-semibold text-[#5a4632]">
                   📖 Sitting together, about {focusLeft} min of quiet left
                 </span>
@@ -6922,10 +6933,10 @@ export function App() {
               </div>
             )}
             {carryingBouquet && !museBubble.choice && (
-              <div className="mt-1.5 flex flex-wrap gap-2 border-t border-[#2b2118]/10 pt-2.5">
+              <div className="contents">
                 <button
                   type="button"
-                  className="rounded-full bg-[#e58bb1] px-3.5 py-1.5 text-sm font-bold text-[#4a1030] shadow transition active:scale-95"
+                  className="rounded-full bg-[#2b2118]/8 px-3.5 py-1.5 text-sm font-bold transition active:scale-95"
                   aria-label="Give Aelia the garden flowers you are carrying"
                   onClick={() => {
                     setCarryingBouquet(false);
@@ -6948,17 +6959,17 @@ export function App() {
               </div>
             )}
             {!museBubble.choice && (
-              <div className="mt-1.5 border-t border-[#2b2118]/10 pt-2.5">
+              <div className="contents">
                 <button
                   type="button"
-                  className="rounded-full bg-[#ffd34e] px-3.5 py-1.5 text-sm font-bold text-[#4a3600] shadow transition active:scale-95"
+                  className="rounded-full bg-[#2b2118]/8 px-3.5 py-1.5 text-sm font-bold transition active:scale-95"
                   aria-label="Give Aelia a gift from what you carry"
                   onClick={() => setGiftPickerOpen((v) => !v)}
                 >
                   🎁 Give a gift
                 </button>
                 {giftPickerOpen && (
-                  <div className="mt-2 flex flex-col gap-1.5">
+                  <div className="flex basis-full flex-col gap-1.5">
                     {giftOptions().length === 0 && (
                       <p className="text-[13px] text-[#5a4632]/80 italic">
                         Nothing giftable in hand, market goods, a cooked dish, a caught fish, or a
@@ -6980,8 +6991,9 @@ export function App() {
                 )}
               </div>
             )}
+            </div>
             <form
-              className="mt-2.5 flex gap-2 border-t border-[#2b2118]/10 pt-2.5"
+              className="mt-2.5 flex gap-2"
               onSubmit={(e) => {
                 e.preventDefault();
                 sendChat();
@@ -6994,7 +7006,7 @@ export function App() {
                 maxLength={400}
                 enterKeyHint="send"
                 aria-label="Message for Aelia"
-                placeholder="Say something to Aelia…"
+                placeholder="Say something…"
                 className="min-w-0 flex-1 rounded-full bg-[#2b2118]/6 px-3.5 py-2 text-sm font-semibold outline-none placeholder:text-[#2b2118]/40 focus:bg-[#2b2118]/10"
               />
               <button
@@ -7005,37 +7017,9 @@ export function App() {
                 {chatWithMuse.isPending || localChatPending || localModelPreparing ? "…" : "Send"}
               </button>
             </form>
-            <div className="mt-2 flex items-center justify-between gap-2">
-                <p className="min-w-0 text-[10px] leading-relaxed text-[#2b2118]/55">
-                  Optional: prepare a model for offline chat. Large downloads; Wi-Fi recommended.
-                </p>
-                <div className="flex shrink-0 gap-1.5">
-                  {(["Gemma 4 E2B", "Gemma 4 E4B"] as const).map((model) => {
-                    const prepared = preparedLocalModels.has(model);
-                    const busy = localModelPreparing === model;
-                    return (
-                      <button
-                        key={model}
-                        type="button"
-                        disabled={prepared || !!localModelPreparing || localChatPending}
-                        onClick={() => void prepareLocalModel(model)}
-                        aria-label={`${prepared ? "Already prepared" : "Download"} ${model}`}
-                        className="rounded-full border border-[#2b2118]/15 px-2.5 py-1.5 text-[10px] font-bold text-[#4a3600] transition active:scale-95 disabled:opacity-50"
-                      >
-                        {busy ? "Preparing…" : prepared ? `${model.replace("Gemma 4 ", "")} ready` : `Get ${model.replace("Gemma 4 ", "")}`}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
             {localChatStatus && (
-              <p className="mt-1.5 text-[10px] leading-relaxed text-[#2b2118]/55" aria-live="polite">
+              <p className="mt-1.5 text-[11px] leading-relaxed text-[#2b2118]/60" aria-live="polite">
                 {localChatStatus.message}
-              </p>
-            )}
-            {museBubble.cycle && (
-              <p className="mt-2 text-[11px] leading-relaxed text-[#2b2118]/50 italic">
-                Our memories together live at the Villa of Stories now. The memory house keeps them.
               </p>
             )}
           </div>
@@ -8463,6 +8447,30 @@ export function App() {
                   Talking to Aelia herself happens in speech bubbles now. Walk up to her and press X, and
                   she&apos;ll answer over her own head, like a proper role-playing game.
                 </p>
+                {/* Offline answers (moved here from the bubble, Nov 6, 2026): a
+                    one-time setup belongs in her house, not under every line
+                    she speaks. */}
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-white/10 pt-2">
+                  <p className="min-w-0 flex-1 basis-40 text-[12px] leading-relaxed text-white/70">
+                    She can answer without a connection once a model is kept on this device. The download is large, best on Wi-Fi.
+                  </p>
+                  {(["Gemma 4 E2B", "Gemma 4 E4B"] as const).map((model) => {
+                    const prepared = preparedLocalModels.has(model);
+                    const busy = localModelPreparing === model;
+                    return (
+                      <button
+                        key={model}
+                        type="button"
+                        disabled={prepared || !!localModelPreparing || localChatPending}
+                        onClick={() => void prepareLocalModel(model)}
+                        aria-label={`${prepared ? "Already prepared" : "Download"} ${model}`}
+                        className="rounded-full bg-white/15 px-2.5 py-1.5 text-[12px] font-bold text-white transition active:scale-95 disabled:opacity-50"
+                      >
+                        {busy ? "Preparing…" : prepared ? `${model.replace("Gemma 4 ", "")} ready` : `Get ${model.replace("Gemma 4 ", "")}`}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               <form
                 onSubmit={(e) => {

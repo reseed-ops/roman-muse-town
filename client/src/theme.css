@@ -9,6 +9,10 @@
 
 @theme {
   --font-display: "Quicksand", ui-rounded, system-ui, sans-serif;
+  /* Her spoken words, and nothing else in the town: a book serif from
+     the system (Nov 6, 2026), so her voice reads as speech beside the
+     rounded interface. No download. */
+  --font-voice: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Noto Serif", serif;
   --text-xs: 12px;
   --text-xs--line-height: 16px;
   --text-sm: 14px;

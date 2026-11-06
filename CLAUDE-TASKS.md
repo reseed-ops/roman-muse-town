@@ -766,6 +766,19 @@ Notes for the port and the owner:
   and the prompt point are untouched, and an original-edition file sits right too.
   Deploy: pending the owner's word (local build 0527c9f1b2ff, with the right stick above).
 
+- Owner ask in chat (Claude, Nov 6, 2026, small hours): Aelia's speech bubble was
+  cluttered, with instructions under every line. Reworked: her name is set plain (the
+  tracked uppercase eyebrow is gone); her spoken line is the one large element, in a
+  system book serif (`--font-voice`, no download) used nowhere else in the town; the
+  "tap / X" hints under every line are gone, replaced by a page count only when a line
+  runs to pages; the up-to-eleven bordered action rows are one quiet chip row that
+  shows only what applies this moment (a direct answer to her question stays gold, the
+  gift and everything else are plain chips); the chat field lost its rule and its
+  placeholder names no one; the offline-model installer and its instruction sentence
+  moved out of the bubble to her house (the Villa of Stories panel, under her lines);
+  the "memories live at the Villa" footer is gone. Behaviour unchanged: tap or X still
+  advances and closes, every offer keeps its gate. Deploy: pending the owner's word (local build b28308ea4baa, with the right stick, the bench and Task 17).
+
 - Task 12 landed (Claude, Nov 5, 2026, evening): her flirt hand does rise, at clip
   level and after the bake (arm directions within 5° of the take on both bodies);
   it is authored modest (a forearm fold to the partner's chest, the other hand on
