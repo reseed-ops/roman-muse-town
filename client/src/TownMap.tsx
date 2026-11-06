@@ -49,7 +49,7 @@ export function TownMap({ you, her }: { you: { x: number; z: number } | null; he
       {spots.map(([pos, label]) => (
         <g key={label}>
           <circle cx={pos[0]} cy={pos[1]} r="0.8" fill="#fff8e6" stroke={ink} strokeWidth="0.3" />
-          <text x={pos[0] + 1.4} y={pos[1] + 0.8} fontSize="2.2" fill={ink} textAnchor="start">{label}</text>
+          <text x={pos[0] + (label === "quests" ? -1.4 : 1.4)} y={pos[1] + 0.8} fontSize="2.2" fill={ink} textAnchor={label === "quests" ? "end" : "start"}>{label}</text>
         </g>
       ))}
       {her && <text x={her.x} y={her.z + 1.1} fontSize="3.6" fill="#a87800" textAnchor="middle" aria-label="Aelia">✦</text>}

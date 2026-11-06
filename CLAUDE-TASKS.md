@@ -814,7 +814,7 @@ Notes for the port and the owner:
   it, the secret terrace and the forest's discoveries deliberately absent) opens from
   the menu's "Map" row. Not applied, by design: the Embassy (who lives there is Muse's
   content decision), a second shadow cascade (an upgrade to consider, not a defect),
-  and the phoenix's texture. Deploy: pending the owner's word (local build 4a6b5148cec7, with everything above since Task 17).
+  and the phoenix's texture. Deploy: pending the owner's word (local build cfb3b201081d, with everything above since Task 17).
 
 - Task 12 landed (Claude, Nov 5, 2026, evening): her flirt hand does rise, at clip
   level and after the bake (arm directions within 5° of the take on both bodies);
