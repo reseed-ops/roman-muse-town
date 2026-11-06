@@ -820,7 +820,7 @@ Notes for the port and the owner:
   the on-screen stick, ABXY cluster and LB/RB stand down. Rule (App.tsx, the pad poll):
   any input from the first pad (either stick or any button) starts a ten-second clock;
   while it runs the three are unmounted; a tap or click anywhere resets the clock and
-  they return at once. The overview's controls paragraph says so. Deploy: pending the owner's word (local build 482c7174a891).
+  they return at once. The overview's controls paragraph says so. Deployed (Railway build `e3f188211969`, bundle `main-3xzng4py.js`, Nov 6, 2026, morning; `/healthz` green on both domains and both serving the new bundle; three dropped uploads before the fourth went through, each a FAILED record with no build).
 
 - Task 12 landed (Claude, Nov 5, 2026, evening): her flirt hand does rise, at clip
   level and after the bake (arm directions within 5° of the take on both bodies);
