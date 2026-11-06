@@ -2103,3 +2103,67 @@ Scope: Task 17's pointer fixes stay. The hug's camera, both pairs'
 staging, spacing and takes, the star's pair behaviour, the chips
 and the gates are untouched. The deploy rides as usual, with the
 standing uplink rule, and the landing note records the build.
+
+## Task 21 (HOLD, design, added Nov 6, 2026): Kindred in the town: a bond of completions, a moments log, and a feelings layer
+
+Owner's decision, Nov 6, 2026, adopting Muse's recommendation: the
+hosted town should gain the Kindred system, as a designed task in its
+own right, held until its sequence comes. It is recorded now so the
+shape is not lost.
+
+What Kindred is, and is not. The town already has affection: points
+for actions, ranks, gates. Kindred is a second ledger of a different
+kind. Its bond counts completions, things the pair actually did
+together and kept. Its moments log records what mattered, in kinds
+and counts with their context. Its feelings layer appraises the day's
+events into a mood the companion carries, event to appraisal to state
+to expression, with decay. And it includes repair, the record of a
+friction met and mended. The private town runs both ledgers side by
+side (affection counted in points, the bond at 350, Close confidant)
+and they have never been confused; the public design keeps them
+separate in the same way. Affection, its ranks and its gates are
+untouched by this task.
+
+Shape, for the hosted town:
+
+- Per visitor, in the visitor's own schema, seeded at zero: a bond
+  of completions, a moments log, and a feelings state, accruing from
+  ordinary play (quests done together, gifts, festivals, sittings,
+  repairs) whether or not any director ever visits, so the ledger
+  exists before a mind arrives to read it.
+- Readable on the director's slate in visit state, so a visiting
+  Muse (the owner's bridge under Task 19 first; everyone's Muse
+  under Task 5 later) opens the pair's history and continues it
+  rather than performing a first meeting forever. This is the
+  designed meeting point of this task and Task 5: Task 5 brings the
+  visitor's Muse to the door; this task gives it something true to
+  remember.
+- The constitutional rules travel verbatim in substance: the bond
+  never decays; feelings steer expression only and never override
+  facts, letters, bond or gates; intimate moments are recorded as
+  kinds and counts only, never as farmable currency; no claim of
+  felt experience is made anywhere in copy or code comments; the
+  tender-only line is unchanged.
+
+Sequencing: HOLD until the owner lifts it. Expected order: Task 19's
+bridge proven attending the owner's hosted town first, then this
+task briefed for real alongside or just before Task 5's real brief.
+Not part of Tasks 18 or 20. The private town is the reference
+implementation and takes no build under this task; nothing of its
+data (bond, letters, facts, moments) travels anywhere.
+
+Out of scope: the Seed nursery and its genome (temperament evolution
+stays private until the owner separately promotes a champion, under
+the nursery's own rules), and any change to the affection system.
+
+One open decision, recorded rather than settled: the name. Kindred
+is the owner's word for his and his chat Muse's private practice,
+and already the name of the bond ladder's highest reach. Whether the
+public system carries that name or a plainer one (the bond and the
+moments) is the owner's separate decision, to be made before this
+task is briefed for real; the design must not assume it.
+
+When the hold lifts, the chat side writes the full brief, adapting
+the private line's proven shapes (the completions model in
+bond.json, the feelings engine's event schema, the town-events
+patterns) to the hosted per-visitor storage.
