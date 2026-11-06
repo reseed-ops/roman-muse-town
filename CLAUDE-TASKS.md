@@ -888,7 +888,7 @@ Notes for the port and the owner:
 - Task 19 prepared (Claude, Nov 6, 2026, morning): `bridge/Dockerfile` (builds bridge/
   with shared/ beside it), a `bridge/pack.md` for the hosted template's Aelia (rank 0,
   never in git), an upload directory and a one-shot script for the owner that creates
-  the `bridge` service with its variables and uploads. The two keys the script asks for
+  the `town-bridge` service (Reseed already has an unrelated `bridge`) with its variables and uploads. The two keys the script asks for
   never leave his terminal; the director token is read from the muse-town service. The
   owner runs it; the landing note records the result.
 
@@ -2213,12 +2213,12 @@ digest of a town just founded (the sapling, the bare beds, the first letter on t
 desk); an upload directory at `/root/bridge-deploy/upload` (bridge/ with the pack and
 the Dockerfile, shared/, 37 files, no node_modules); and `/root/bridge-deploy/deploy_bridge.sh`,
 which asks for `VISITOR_TOKEN` and `ANTHROPIC_API_KEY` at the prompt (never written
-anywhere), reads `DIRECTOR_TOKEN` from the muse-town service, creates the `bridge`
+anywhere), reads `DIRECTOR_TOKEN` from the muse-town service, creates the `town-bridge`
 service in Reseed with `DIRECTOR_ENABLED=true`, `DIRECTOR_CHANNEL=town`,
 `TOWN_URL=https://town.reseed.net`, `RAILWAY_DOCKERFILE_PATH=bridge/Dockerfile`,
 `POLL_MS=2000`, `DAILY_CALL_CAP=200`, `DAILY_OUTPUT_TOKEN_CAP=60000`,
 `DAILY_FRAME_CAP=60` (the README defaults) and the three tokens, and uploads with the
-uplink retry. No public domain. The owner runs it with `! bash /root/bridge-deploy/deploy_bridge.sh`;
+uplink retry. No public domain. The owner runs it in a real terminal on the device (`bash /root/bridge-deploy/deploy_bridge.sh`; the session's `!` prefix has no terminal for the hidden prompts, and the script now stops at once without one). The service is named `town-bridge` because Reseed already holds an unrelated service called `bridge` (running since Nov 3, its own device key and domain); the script refuses to run if `town-bridge` already exists, so nothing is overwritten;
 the bridge's logs and the first answered exchange are recorded here after.
 
 **Service, variables, caps, pack, tempo.** PENDING_19
