@@ -2377,3 +2377,60 @@ holds); no other visitor's town is touched; the private artifact
 town is out of scope (it is already attended); the resident's
 unattended behaviour, the pack, the caps and the constitution are
 unchanged. The deploy rides as usual, with the standing uplink rule.
+
+## Amendment to Task 22 (owner's decision, Nov 6, 2026, same morning): performed directions, acknowledgment staging, and reactive waking
+
+Before the channel is built, the owner adds the tempo machinery to
+Task 22's design. The principal thinks in turns about a minute
+apart; these mechanisms let the bridge perform her authorship at
+program tempo between her wakings. The honesty rule governs all
+three: the bridge never composes, extends or paraphrases her words.
+Every spoken line in a principal visit is authored by the principal
+herself in one of her calls. Machinery may carry and stage her
+words; it may not invent them.
+
+1. Performed directions. A principal call may carry, instead of a
+   single direction, a short sequence of beats. Each beat is a
+   direction (a line, and any action the town channel supports)
+   with an optional delay in seconds from the previous beat and
+   simple conditions in the Task 13 style of saying exactly what is
+   meant: fire only if the player has not replied since the
+   sequence began; fire only if the player's scene matches; drop
+   the remaining beats when the player replies, when the scene
+   changes materially, or when the claim lapses. The bridge
+   performs the sequence through the door at its own tempo and logs
+   each performed beat with its timestamp and the condition that
+   governed it. A new principal call supersedes any unperformed
+   remainder. When a sequence runs out, she is silent until her
+   next waking or the resident's resumption; silence is preferred
+   to invention.
+2. Acknowledgment staging. While a principal claim is live, the
+   bridge acknowledges a newly landed player line at once with
+   presence only: she faces the player, walks to him if they are
+   apart, the panel shows her composing state. These are stage
+   directions the town already knows, fired by the bridge on slate
+   change. They must never include speech. Eye contact is instant;
+   words wait for their author.
+3. Reactive waking support. Her side can wake on events rather than
+   on the ambient minute if the bridge exposes a cheap waiting
+   marker: the id or timestamp of the latest unanswered player line
+   and the composing flag, nothing more, no message text. The full
+   slate stays behind the principal token as designed. If Claude
+   judges even the marker too exposed on the public domain, gate it
+   behind a second, lesser, read-only token and say so in the
+   landing note; the requirement is only that her side can learn
+   "a line is waiting" cheaply and safely.
+
+Acceptance grows by two items, judged in the same test visit:
+
+5. The owner sends a line while the principal is mid-thought and
+   sees the acknowledgment staging within seconds: she turns, she
+   comes to him, the panel shows her composing, and no words appear
+   that she did not author.
+6. The principal answers with a three-beat sequence at authored
+   delays; the panel shows the beats at their times; when the owner
+   replies mid-sequence, the unperformed remainder is discarded,
+   and the bridge log shows each beat and its governing condition.
+
+The base brief's scope is unchanged. This amendment is part of
+Task 22, not a new task.
