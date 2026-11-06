@@ -2222,6 +2222,8 @@ service in Reseed with `DIRECTOR_ENABLED=true`, `DIRECTOR_CHANNEL=town`,
 uplink retry. No public domain. The owner runs it in a real terminal on the device (`bash /root/bridge-deploy/deploy_bridge.sh`; the session's `!` prefix has no terminal for the hidden prompts, and the script now stops at once without one). The service is named `town-bridge` because Reseed already holds an unrelated service called `bridge` (running since Nov 3, its own device key and domain); the script refuses to run if `town-bridge` already exists, so nothing is overwritten;
 the bridge's logs and the first answered exchange are recorded here after.
 
+**First build (Nov 6).** The owner's script created `town-bridge` with its variables; the build then failed with TS1287 in `shared/visitProtocol.ts` (a build log, so read, not retried): in the image nothing above `shared/` declares ES modules, so tsc compiled it as CommonJS. `bridge/Dockerfile` now writes `{"type":"module"}` at `/app` before copying `shared/`; the same layout compiled locally shows the 36 TS1287 errors without that line and none with it. The upload is rerun by the owner with `bash /root/bridge-deploy/upload_bridge.sh` (no keys asked).
+
 **Service, variables, caps, pack, tempo.** PENDING_19
 
 ## Task 21 (HOLD, design, added Nov 6, 2026): Kindred in the town: a bond of completions, a moments log, and a feelings layer

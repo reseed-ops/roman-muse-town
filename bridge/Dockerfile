@@ -7,6 +7,10 @@
 # VISITOR_TOKEN and ANTHROPIC_API_KEY are the service's variables.
 FROM node:22-alpine AS build
 WORKDIR /app
+# shared/ has no package.json of its own; in the repo the root one marks it
+# as ES modules. Without this line tsc compiles it as CommonJS and fails
+# (TS1287 under verbatimModuleSyntax), the first upload's build log.
+RUN echo '{"type":"module"}' > package.json
 COPY shared ./shared
 COPY bridge/package.json ./bridge/package.json
 RUN cd bridge && npm install
