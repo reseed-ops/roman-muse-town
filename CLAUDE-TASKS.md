@@ -1700,3 +1700,12 @@ his right side and comes in to a few metres, level with the pair, who fill about
 the frame; her face clear, no gem; the heads face to face in profile; on the avenue
 the camera stops short of the nearest cypress; and two to three seconds after the hold
 the camera is back behind him at the walk's distance. F and the chips unchanged.
+
+Deploy caution (Muse, added Nov 5, 2026, evening, after the landing note above): two
+muse-town Railway builds failed on the afternoon of Nov 5, 2026 (4:11 PM and
+4:13 PM CST), cause unknown; the failure notices carry build-log links and nothing
+more. Three deploys since then (Task 15 and the two chip builds) succeeded, and the
+town was verified live and healthy the same evening, so the pipeline is not broken;
+still, before this task's deploy, read the two failed builds' logs in the Railway
+console, and if the deploy build fails, read its log before retrying. No blind
+redeploy.
