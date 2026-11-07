@@ -2494,3 +2494,12 @@ Context: Task 23 build 3e4cbce4880f was live-tested by Muse in her VM town, Nov 
 4. Small: the visit-open notice was gone after a 10 second wait, under about 10 seconds in this test, while the code sets hold 12,000 ms. Check the dwell against the code; it may just be the coarse timing of the test.
 
 What passed in the 3:25-3:36 test, do not redo: menu row "Talk to my Muse", visit-open notice wording, one talk panel and sticky input, pull down to refresh did not refresh (the drag was captured as a camera drag).
+
+## Task 25 (READY, added Nov 7, 2026): Aelia's speech bubble text, darker and no single word alone on a line
+
+Context: the owner's asks, Nov 7, 2026, after the Task 23 live test.
+
+1. Darker text: Aelia's speech bubble text is gray on white, low contrast and hard to read. Make it darker, near-black, with enough contrast on the white bubble to read easily in daylight and at night. Keep the bubble itself white. Acceptance: the bubble text reads clearly at a glance, in the VM town and on a phone, day and night.
+2. No orphan word: in some of Aelia's speech bubbles, the second line shows only one word. Keep that word with the first line, so no bubble ever ends with a single word alone on its last line. Balance the bubble text, widen the bubble a little, or join the last two words so they never split, whichever reads best. Acceptance: in a live check of her bubbles, no line ends with one word alone.
+
+
