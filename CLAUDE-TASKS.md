@@ -2457,3 +2457,22 @@ Task 22, not a new task.
 
 **Live acceptance (1 to 6), the measured tempo and her side's friction:** PENDING_22.
 
+## Task 23 (READY, added Nov 7, 2026): follow-up from the live test of the deployed build e4250886d0c1, plus pull to refresh and the PWA
+
+Context: build e4250886d0c1 (commit 5668c33, bundle main-yn354fbs.js) was deployed Nov 7, 2026 and tested live by Muse in her own VM town, 2:23-2:34 PM CST, no visitor key or token used. The visit was left open at 2:34 PM, violet chip still showing.
+
+What passed in that test, do not redo:
+- Idle status: "Connected to the town's own director door (town.reseed.net). No director has checked in since the visit opened." No frozen "last 15 seconds", same line at 2:26, 2:29 and 2:33.
+- Folds survive reload: "Behind the scenes" still expanded after two reloads, visit stayed open both times.
+- Menu talk keeps walk mode: tapping the Aelia row in the menu while walking kept the camera behind Gaius on foot, Aelia beside him, no fly to her home spot, no "Back to Gaius" button.
+- No pale blue rectangle in the night landscape from the dock over about 9 minutes, weather cycling Clear, Rain and Sparkle shower.
+- Reload notice shown, exact text: "Visit picked up again after the reload. Muse can carry on." Duration was not measurable in that test: visible right after reload, gone by the next view a minute later. The 20 second hold, starting only once the tab is in view, is still to be confirmed by timing, not by re-reading the code.
+
+Work, in order:
+
+1. The pale blue rectangle is still there, tied to Aelia's conversation panel, not the lake. A large pale blue empty rectangle, about 550x230 px, appears below her white conversation panel whenever it is open, overlapping Gaius's legs. It vanishes the moment the panel closes and returns immediately on reopen, in the same screen spot regardless of camera angle. Fix the panel so no empty rectangle shows. The lake itself never came into view in that run, Aelia stopped Gaius at the forest edge, so the moon streak on the lake still needs a check from the lake shore, not from the dock.
+2. Make the two ways of opening her panel agree. Opening via the menu Aelia row the panel said "1 of 3" with no input box. Opening via the "Talk to Aelia" prompt it said "1 of 4" with a "Say something..." box and Send. Same panel, same count, same input, both ways.
+3. Disable pull down to refresh at the source. A published Muse space, "Road To Ur", does not refresh on a pull down, tested in Muse's browser Nov 7: two pull drags, no spinner, no reload, no page movement. Its structure is a fixed header plus an iframe filling the viewport, with a fixed full-height layout and no scrollable outer document to overscroll. For the town, add the standard fix alongside the sessionStorage resume already built: overscroll-behavior: none on html and body, a fixed full-height layout with no outer scroll, and touch-action set so a downward swipe does not reach the browser. Stop the refresh at the source instead of only recovering from it.
+4. PWA, the owner's chosen route for everyone (owner, Nov 7, 2026): the hosted web town as an installable PWA, not a native Android app. Task 8 already decided PWA, manifest and service worker, installable and full screen, no offline play promised. Verify and fix, in order: (a) PWA install on Android Chrome, install prompt appears, manifest and icons correct, full screen, service worker caches the heavy first load, action calls stay network-first. (b) A visit survives in the installed PWA: no tab refresh reset, background does not time out in 15 to 20 minutes, closing time and reason still show. (c) Make the talking flow obvious: a "Talk to my Muse" entry that opens a visit, shows the violet chip and the connected status, and tells the user plainly what to do next. (d) Label the standalone APK clearly in Releases as offline only, no Muse, so no user installs it expecting to talk. Only later, if a native app is still wanted: a thin Android wrapper around the hosted town, same web code, not a separate town. Out of scope here: the Muse side, a built-in Town Bridge connector and a background watcher in the Muse runtime. That is Meta's work.
+
+Acceptance: a live VM test with the panel open and closed, a lake-shore view at dusk/night, a reload after a pull-down attempt on a phone, and an installed PWA visit that survives 20 minutes in the background.
