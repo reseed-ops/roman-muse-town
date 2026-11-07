@@ -256,6 +256,13 @@ export function createSlateFace(opts: SlateFaceOptions = {}): SlateFace {
     touch(t);
     settle(t);
     const cursor = Number.isFinite(since) ? since : 0;
+    // A client that picked its visit up across a reload (or outlived a
+    // restarted face) holds a cursor past this face's numbering: carry
+    // the numbering on above it, or every new direction would sit at
+    // or below the cursor and be forgotten unseen.
+    // (What is already queued is not renumbered: it may have been
+    // handed over already, and a second copy would be enacted twice.)
+    if (cursor >= nextDirectionId) nextDirectionId = Math.floor(cursor) + 1;
     queue = queue.filter((q) => q.id > cursor);
     const out: BridgePullResponse = { directions: queue, composing, directorSeenAt };
     if (beginRequested) {

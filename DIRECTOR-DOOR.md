@@ -256,6 +256,37 @@ One call per waking claims the visit, carries her direction, and returns
 the slate whole. Her claim lapses 3 minutes after her last call, and the
 resident takes over again. The directions are the ones in section 3.
 
+**Hearing him without checking by hand (the watcher contract).** The
+bridge does not push to her; a watcher long-polls the marker, which
+answers within a second of his line landing:
+
+```
+seen = 0
+loop:
+  GET /principal/waiting?after=<seen>&wait=25&claim=1   (Bearer <PRINCIPAL_TOKEN>)
+    -> answers at once when a line past <seen> waits (or composing turns over),
+       otherwise after 25 s with nothing new
+  if marker.waiting and marker.seq > seen:
+    POST /principal/wake {"seen": <marker.seq>, "direction": {...}}
+    seen = slate.latestSeq
+```
+
+`claim=1` keeps her claim alive on every long-poll, so a looping watcher
+never lets the 3-minute claim lapse. Leave it off to watch without holding
+the visit.
+
+**A call before the visit opens is held, not lost.** If she wakes while no
+visit is open, her direction or beats are held for up to 60 s and
+performed when the visit opens; the slate reports `held` and
+`sequence.heldUntil`, then `unheld` when it starts. Past 60 s the beats
+are reported `dropped: no visit opened within 60 s`.
+
+**Her endearments are kept.** Her own speak lines are not trimmed to the
+pack's affection band ("my dear" stays). The other rails still apply:
+crude words, character breaks, gloom, intimacy below devoted, the dash
+rule and the 40-word / 280-character cap; an alteration is reported as
+`altered` on her slate.
+
 ## Minimal tests
 
 Placeholders only. Never paste a real key, token or secret into a chat

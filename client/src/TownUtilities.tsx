@@ -204,16 +204,19 @@ export function TownUtilities({ open, onClose, scene, state, ready, holdArrival,
         <section>
           <h3>Muse Visits</h3>
           <p>{hosted
-            ? "While a visit is open, the town reports to its own director door, where Muse may direct it; a Live Bridge entered here takes that place instead. The address and token stay on this device."
-            : "While a visit is open, the town calls out to your Live Bridge and nowhere else; with no address, a visit runs undirected and the town makes no call. The address and token stay on this device."}</p>
+            ? "Most towns leave both bridge fields empty. With them empty, an open visit reports to this town's own director door, and Muse directs it from there (through town-bridge). That is the usual setup."
+            : "While a visit is open, the town calls out to your Live Bridge and nowhere else; with no address, a visit runs undirected and the town makes no call."}</p>
+          <p>{hosted
+            ? "Fill them in only to send visits to a separate Live Bridge of your own instead. Its address looks like https://your-bridge.up.railway.app, and the token is that bridge's BRIDGE_TOKEN. Once an address is entered, the town's own door and town-bridge stop seeing your visits. Both values stay on this device."
+            : "The address looks like https://your-bridge.up.railway.app; the token is that bridge's BRIDGE_TOKEN. Both values stay on this device."}</p>
           <label className="town-field">Bridge address
-            <input type="url" inputMode="url" autoComplete="off" spellCheck={false} placeholder="https://your-bridge.up.railway.app" value={bridgeDraft.url}
+            <input type="url" inputMode="url" autoComplete="off" spellCheck={false} placeholder={hosted ? "empty: use the town's own door" : "https://your-bridge.up.railway.app"} value={bridgeDraft.url}
               onChange={(event) => setBridgeDraft((d) => ({ ...d, url: event.target.value }))} onBlur={commitBridge}
               onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); commitBridge(); } }} />
           </label>
           {hosted && <VisitorKey />}
           <label className="town-field">Bridge token
-            <input type="password" autoComplete="off" placeholder="the token set in the bridge's service" value={bridgeDraft.token}
+            <input type="password" autoComplete="off" placeholder={hosted ? "empty: use the town's own door" : "that bridge's BRIDGE_TOKEN"} value={bridgeDraft.token}
               onChange={(event) => setBridgeDraft((d) => ({ ...d, token: event.target.value }))} onBlur={commitBridge}
               onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); commitBridge(); } }} />
           </label>

@@ -199,6 +199,7 @@ import {
   captureMail,
   emptySlate,
   endVisit,
+  heartbeat,
   markFramesSent,
   nextDirection,
   recordEvent,
@@ -217,7 +218,9 @@ import {
 import { frameDue, validateFrameDataUrl } from "./visitFrames";
 import { HARNESS_STORAGE_KEY, IDLE_GLANCE_MS, resolveHarnessUrl, syncWithHarness } from "./visitHarnessClient";
 import { bridgeClose, bridgeConfigured, bridgeGlance, bridgeLeg, emptyBridgeCursor, hostedBridgeSettings, readBridgeSettings, resolveBridge, storeBridgeSettings, type BridgeCursor, type BridgeSettings } from "./visitBridgeClient";
-import { BRIDGE_BEAT_MS, FRAME_JPEG_QUALITY, FRAME_MAX_EDGE, SIGHT_LINE, VISITING_MARKER, VISIT_POLL_MS, type QueuedDirection } from "../../shared/visitProtocol";
+import { BRIDGE_BEAT_MS, FRAME_JPEG_QUALITY, FRAME_MAX_EDGE, SIGHT_LINE, VISITING_MARKER, VISIT_LAPSE_MS, VISIT_POLL_MS, type QueuedDirection } from "../../shared/visitProtocol";
+import { clearVisitResume, loadVisitResume, saveVisitResume, sessionStore } from "./visitResume";
+import { LAPSE_WARN_MS, UNREACHABLE_AFTER_FAILS, composingVisible, hostOf, visitChipLine, visitClosedLine, visitStatusLine, type VisitCloseReason, type VisitDirectorState, type VisitRoute } from "./visitStatus";
 import {
 playChime,
 playJar,
@@ -455,8 +458,25 @@ export function App() {
     intention: string | null;
     composing: boolean;
     thread: VisitThreadEntry[];
-    director: "none" | "live" | "unreachable" | "refused";
-  }>({ active: false, intention: null, composing: false, thread: [], director: "none" });
+    director: VisitDirectorState;
+    /** When an idle visit will lapse, once that is inside the warning
+     *  stretch; null otherwise (fix list, Nov 7, 2026). */
+    lapseAt: number | null;
+  }>({ active: false, intention: null, composing: false, thread: [], director: "none", lapseAt: null });
+  // The visit's one-line notices: opened, picked up after a reload,
+  // closed and why (fix list, Nov 7, 2026). Shown a few seconds.
+  const [visitNotice, setVisitNotice] = useState<{ text: string; at: number } | null>(null);
+  useEffect(() => {
+    if (!visitNotice) return;
+    const timer = window.setTimeout(() => setVisitNotice(null), 6500);
+    return () => window.clearTimeout(timer);
+  }, [visitNotice]);
+  // Bridge beats that failed in a row: "unreachable" only after a few.
+  const bridgeFailsRef = useRef(0);
+  // The writing line's clock: when "composing" came on, and when her
+  // last final line landed (so a stale flag cannot hold it up).
+  const composingSinceRef = useRef<number | null>(null);
+  const finalLineAtRef = useRef<number | null>(null);
   // The director seam's harness: ?harness= or localStorage
   // "muse-town-visit-harness" names it; without either the town never
   // calls anywhere, and a visit opened from the menu runs undirected.
@@ -491,6 +511,14 @@ export function App() {
   const activeBridge = resolveBridge(bridgeSettings, hostedBridge);
   const bridgeRef = useRef(activeBridge);
   bridgeRef.current = activeBridge;
+  // Where an open visit reports, named in the status lines.
+  const visitRoute: VisitRoute = bridgeConfigured(bridgeSettings)
+    ? { kind: "bridge", host: hostOf(bridgeSettings.url) }
+    : hostedBridge
+      ? { kind: "door", host: hostOf(hostedBridge.url) }
+      : harnessRef.current?.configured
+        ? { kind: "harness", host: hostOf(harnessRef.current.url) }
+        : { kind: "none" };
   const bridgeCursorRef = useRef<BridgeCursor>(emptyBridgeCursor());
   /** A prompt bridge beat (new mail, a fresh frame); a no-op unless the leg is on. */
   const bridgeNudgeRef = useRef<() => void>(() => {});
@@ -3791,6 +3819,7 @@ export function App() {
       const captured = captureMail(visitRef.current, msg, Date.now());
       visitRef.current = captured.slate;
       visitThreadRef.current = [...visitThreadRef.current, { who: "him", text: msg, seq: captured.mail.seq }];
+      saveVisitResume(sessionStore(), visitRef.current, visitThreadRef.current, bridgeCursorRef.current, Date.now());
       setVisitUi((ui) => ({ ...ui, thread: visitThreadRef.current }));
       bridgeNudgeRef.current();
       return;
@@ -5164,38 +5193,54 @@ export function App() {
   };
 
   // --- Muse Visits (Task 4): lifecycle, the beat, and enactment ------
-  const publishVisit = useCallback((director?: "none" | "live" | "unreachable" | "refused") => {
+  const publishVisit = useCallback((director?: VisitDirectorState) => {
     const s = visitRef.current;
+    const now = Date.now();
+    if (!s.composing) composingSinceRef.current = null;
+    else if (composingSinceRef.current === null) composingSinceRef.current = now;
+    const composing = s.active && composingVisible(s.composing, composingSinceRef.current, finalLineAtRef.current, now);
+    const lapseDue = s.active && s.heartbeatAt !== null ? s.heartbeatAt + VISIT_LAPSE_MS : null;
+    const lapseAt = lapseDue !== null && lapseDue - now < LAPSE_WARN_MS ? lapseDue : null;
+    // The open visit rides this tab's session across a reload.
+    saveVisitResume(sessionStore(), s, visitThreadRef.current, bridgeCursorRef.current, now);
     setVisitUi((ui) => {
       const next = {
         active: s.active,
         intention: s.intention,
-        composing: s.composing,
+        composing,
         thread: visitThreadRef.current,
         director: director ?? (s.active ? ui.director : "none"),
+        lapseAt,
       };
       // A quiet beat changes nothing: no re-render of the shell.
-      return next.active === ui.active && next.intention === ui.intention && next.composing === ui.composing && next.thread === ui.thread && next.director === ui.director ? ui : next;
+      return next.active === ui.active && next.intention === ui.intention && next.composing === ui.composing && next.thread === ui.thread && next.director === ui.director && next.lapseAt === ui.lapseAt ? ui : next;
     });
   }, []);
-  const beginVisitNow = useCallback(() => {
+  const beginVisitNow = useCallback((by: "you" | "director" = "you") => {
     if (visitRef.current.active) return;
     visitRef.current = beginVisit(visitRef.current, Date.now());
     visitThreadRef.current = [];
     visitLastFrameAtRef.current = null;
     bridgeCursorRef.current = emptyBridgeCursor();
+    bridgeFailsRef.current = 0;
+    composingSinceRef.current = null;
+    finalLineAtRef.current = null;
     sceneRef.current?.setVisitActive(true);
     publishVisit("none");
+    setVisitNotice({ text: by === "director" ? "Muse opened a visit. She can direct Aelia now." : "Visit open. Muse can direct Aelia now.", at: Date.now() });
   }, [publishVisit]);
-  const endVisitNow = useCallback(() => {
+  const endVisitNow = useCallback((reason: VisitCloseReason = "you") => {
     if (!visitRef.current.active) return;
     // The slate dies whole: inbox, frames, intention, queue, events.
     visitRef.current = endVisit(visitRef.current);
     visitThreadRef.current = [];
     visitLastFrameAtRef.current = null;
     bridgeCursorRef.current = emptyBridgeCursor();
+    bridgeFailsRef.current = 0;
     sceneRef.current?.setVisitActive(false);
     publishVisit("none");
+    clearVisitResume(sessionStore());
+    setVisitNotice({ text: visitClosedLine(reason, VISIT_LAPSE_MS), at: Date.now() });
     // The bridge hears the visit closed now rather than at its lapse.
     void bridgeClose(bridgeRef.current);
   }, [publishVisit]);
@@ -5213,7 +5258,10 @@ export function App() {
         if (partial) scene?.showBubbleGrowing(d.text);
         else scene?.showBubble("muse", d.text);
         visitThreadRef.current = threadWithSpeak(visitThreadRef.current, d.text, d.lineId, partial);
-        return s;
+        if (partial) return s;
+        // Her line has landed: the writing line goes with it.
+        finalLineAtRef.current = Date.now();
+        return setComposing(s, false);
       }
       case "intend":
         return setIntention(s, d.text);
@@ -5241,8 +5289,11 @@ export function App() {
     const harness = harnessRef.current;
     const now = Date.now();
     let s = visitRef.current;
-    if (s.active && visitLapsed(s, now)) {
-      visitRefs.current.endVisitNow();
+    // A hidden tab never lapses its visit: a phone that parks the tab
+    // is not a director going quiet. The lapse is judged on return.
+    const shown = typeof document === "undefined" || document.visibilityState === "visible";
+    if (s.active && shown && visitLapsed(s, now)) {
+      visitRefs.current.endVisitNow("lapse");
       return;
     }
     if (s.active && scene) {
@@ -5264,7 +5315,9 @@ export function App() {
       if (frameLanded) bridgeNudgeRef.current();
     }
     if (!harness?.configured) {
-      publishVisit(s.active ? "none" : undefined);
+      // No seam: the bridge leg (if any) owns the director state; this
+      // beat only refreshes the panel, and never overwrites "live".
+      publishVisit();
       return;
     }
     const newFrames = unsentFrames(s);
@@ -5276,14 +5329,16 @@ export function App() {
     }
     const director = res.directorSeenAt !== null && now - res.directorSeenAt < 15_000 ? "live" : "none";
     if (!s.active) {
-      if (res.begin) visitRefs.current.beginVisitNow();
+      if (res.begin) visitRefs.current.beginVisitNow("director");
       return;
     }
+    // The seam answered: the visit is alive while the tab is.
+    s = heartbeat(s, now);
     s = markFramesSent(s, newFrames.map((f) => f.id));
     s = setComposing(s, res.composing);
     if (res.end) {
       visitRef.current = s;
-      visitRefs.current.endVisitNow();
+      visitRefs.current.endVisitNow("director");
       return;
     }
     s = absorbDirections(s, res.directions, now);
@@ -5320,17 +5375,25 @@ export function App() {
     if (!result || !result.slate.active) return;
     bridgeCursorRef.current = result.cursor;
     if (result.outcome !== "ok") {
-      publishVisit(result.outcome);
+      // One slow beat is not an outage: "unreachable" only after a few
+      // in a row; a refused token says so at once.
+      bridgeFailsRef.current += 1;
+      if (result.outcome === "refused" || bridgeFailsRef.current >= UNREACHABLE_AFTER_FAILS) publishVisit(result.outcome);
+      else publishVisit();
       return;
     }
+    bridgeFailsRef.current = 0;
     if (result.ended) {
       // The director ended it through the hosted door: the town folds
       // the visit itself, exactly as it folds a harness end.
       visitRef.current = result.slate;
-      visitRefs.current.endVisitNow();
+      visitRefs.current.endVisitNow("director");
       return;
     }
-    visitRef.current = drainVisitQueue(result.slate);
+    // The bridge answered: the visit is alive as long as the tab is
+    // open and reaching it (fix list, Nov 7, 2026); it lapses only
+    // after VISIT_LAPSE_MS with no contact at all.
+    visitRef.current = drainVisitQueue(heartbeat(result.slate, Date.now()));
     publishVisit(result.directorSeenAt !== null && Date.now() - result.directorSeenAt < 15_000 ? "live" : "none");
   };
   const bridgeBeatRef = useRef(bridgeBeat);
@@ -5373,7 +5436,7 @@ export function App() {
       if (busy) return;
       busy = true;
       void bridgeGlance(hostedBridge).then((heard) => {
-        if (heard?.begin) visitRefs.current.beginVisitNow();
+        if (heard?.begin) visitRefs.current.beginVisitNow("director");
       }).finally(() => {
         busy = false;
       });
@@ -5382,6 +5445,36 @@ export function App() {
     const timer = window.setInterval(tick, IDLE_GLANCE_MS);
     return () => window.clearInterval(timer);
   }, [glanceOn, hostedBridge]);
+
+  // A visit picked up after a reload (fix list, Nov 7, 2026): the
+  // tab's session holds the open visit, its counters, the bridge
+  // cursor and the transcript, so the director sees it carry on.
+  const visitResumedRef = useRef(false);
+  useEffect(() => {
+    if (!sceneReady || visitResumedRef.current) return;
+    visitResumedRef.current = true;
+    const resumed = loadVisitResume(sessionStore(), Date.now());
+    if (!resumed || visitRef.current.active) return;
+    visitRef.current = resumed.slate;
+    visitThreadRef.current = resumed.thread;
+    bridgeCursorRef.current = resumed.cursor;
+    visitLastFrameAtRef.current = null;
+    sceneRef.current?.setVisitActive(true);
+    publishVisit("none");
+    setVisitNotice({ text: "Visit picked up again after the reload. Muse can carry on.", at: Date.now() });
+  }, [sceneReady, publishVisit]);
+  // Coming back to the tab counts as the tab being open: the heartbeat
+  // is refreshed and the bridge is asked at once, not on the next tick.
+  useEffect(() => {
+    const onShow = () => {
+      if (document.visibilityState !== "visible" || !visitRef.current.active) return;
+      visitRef.current = heartbeat(visitRef.current, Date.now());
+      publishVisit();
+      bridgeNudgeRef.current();
+    };
+    document.addEventListener("visibilitychange", onShow);
+    return () => document.removeEventListener("visibilitychange", onShow);
+  }, [publishVisit]);
 
   const selectPlace = (place: Place) => {
     exitWalkMode();
@@ -5861,10 +5954,28 @@ export function App() {
               Muse Town
             </span>
           )}
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex min-w-0 shrink items-center gap-2">
+            {/* The visit indicator (fix list, Nov 7, 2026): a visit is
+                visible in the town itself, apart from the letters dot.
+                Tapping it opens the menu at the visit's row. */}
+            {visitUi.active && (
+              <button
+                type="button"
+                className="pointer-events-auto flex h-11 min-w-0 max-w-[46vw] items-center gap-1.5 rounded-2xl bg-[#5b21b6]/90 px-3 text-sm font-bold text-white shadow-md transition active:scale-95"
+                onClick={() => {
+                  if (dreamingRef.current) return;
+                  releaseHandHoldRef.current();
+                  setMenuOpen(true);
+                }}
+                aria-label={`Muse's visit is open. ${visitStatusLine(visitUi.director, visitRoute)} Open the menu to end it.`}
+              >
+                <span aria-hidden="true" className={visitUi.director === "live" ? "text-[#ddd6fe]" : "text-[#c4b5fd]/70"}>✦</span>
+                <span className="truncate">{visitUi.composing ? "Muse is writing…" : visitChipLine(visitUi.director)}</span>
+              </button>
+            )}
             <button
               type="button"
-              className="pointer-events-auto relative flex h-11 w-11 items-center justify-center rounded-2xl bg-[#22332b]/85 text-lg shadow-md backdrop-blur transition active:scale-95"
+              className="pointer-events-auto relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#22332b]/85 text-lg shadow-md backdrop-blur transition active:scale-95"
               style={menuOpen ? { outline: "2px solid #ffd34e", outlineOffset: "1px" } : undefined}
               onClick={() => {
                 // Dreams have no panels: the menu stays shut in
@@ -5902,6 +6013,14 @@ export function App() {
         </div>
       </div>
 
+      {visitNotice && (
+        <div className="pointer-events-none absolute inset-x-0 top-[64px] z-40 flex justify-center px-4 pt-safe">
+          <p role="status" className="pointer-events-auto max-w-[min(420px,92vw)] rounded-2xl bg-[#5b21b6]/95 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-xl" onClick={() => setVisitNotice(null)}>
+            ✦ {visitNotice.text}
+          </p>
+        </div>
+      )}
+
       {/* Keep routine actions visible and occasional controls in expandable groups. */}
       {menuOpen && <TownMenu
         onClose={() => setMenuOpen(false)}
@@ -5909,7 +6028,7 @@ export function App() {
         festival={activeFestival}
         footerNote={motionStatus ?? undefined}
         perfNote={perfLine ?? undefined}
-        className={`mt-scrollable absolute right-3 z-30 w-[min(320px,86vw)] overflow-y-auto rounded-3xl bg-[#22332b]/97 p-2 shadow-2xl backdrop-blur ${forcedLandscape ? "top-[60px] max-h-[calc(100%-118px)]" : isLandscape ? "top-[60px] max-h-[calc(100dvh-130px)]" : "top-[76px] max-h-[62vh] sm:right-4"}`}
+        className={`mt-scrollable absolute right-3 z-30 w-[min(320px,86vw)] overflow-y-auto rounded-3xl bg-[#22332b] p-2 shadow-2xl ${forcedLandscape ? "top-[60px] max-h-[calc(100%-118px)]" : isLandscape ? "top-[60px] max-h-[calc(100dvh-130px)]" : "top-[76px] max-h-[62vh] sm:right-4"}`}
         backstage={[{
             // Player 2 (Task 3): the second channel's status, and
             // the natural-motion driver's follow harness, a test
@@ -5921,26 +6040,6 @@ export function App() {
             active: driverFollow !== "off",
             action: cycleDriverFollow,
             aria: "Second controller status. Press to cycle the follow driver: off, beside Gaius, behind Gaius",
-          }, {
-            // Muse Visits (Task 4): open or end a visit. While one is
-            // open her star is violet, her quick voice is hushed for
-            // panel chat, and a director (through the seam) may move
-            // her and borrow her bubble.
-            key: "visit",
-            icon: "✦",
-            label: visitUi.active ? "End Muse's visit" : "Open a visit for Muse",
-            detail: visitUi.active
-              ? `${VISITING_MARKER}. ${visitUi.director === "live" ? "A director is reading the slate." : visitUi.director === "unreachable" ? "The director is unreachable; nobody is directing." : visitUi.director === "refused" ? "The bridge refused the token; check Settings." : "Nobody is directing yet."} Her quick voice is hushed for panel chat.`
-              : bridgeConfigured(bridgeSettings)
-                ? `Live Bridge at ${bridgeSettings.url}${bridgeSettings.token ? "" : " (no token entered)"}.${harnessRef.current?.configured ? ` Director seam at ${harnessRef.current.url}.` : ""}`
-                : hostedBridge
-                  ? "This town's own director door is the bridge; Muse may direct a visit through it."
-                  : harnessRef.current?.configured
-                  ? `Director seam at ${harnessRef.current.url}.`
-                  : "No director named (a Live Bridge in Settings, or ?harness=); a visit would run undirected.",
-            active: visitUi.active,
-            action: () => (visitUi.active ? endVisitNow() : beginVisitNow()),
-            aria: visitUi.active ? "End Muse's visit; Aelia returns to her own voice" : "Open a visit for Muse; a director may then move Aelia and speak through her",
           }]}
         groups={[{
           heading: "Aelia", hideHeading: true, items: [{
@@ -5975,6 +6074,28 @@ export function App() {
             aria: following
               ? "Ask Aelia to stay here. She stays a while, then gets on with her day around town"
               : "Walk with Aelia. She falls in beside you as you walk",
+          }]
+        },
+        {
+          // Muse Visits (Task 4): open or end a visit. Its own group
+          // near the top since the fix list (Nov 7, 2026), so the
+          // button and its status read without scrolling. While one is
+          // open her star is violet, her quick voice is hushed for
+          // panel chat, and a director may move her and borrow her
+          // bubble.
+          heading: "Muse's visit", items: [{
+            key: "visit",
+            icon: "✦",
+            tint: "#a78bfa",
+            label: visitUi.active ? "End Muse's visit" : "Open a visit for Muse",
+            detail: visitUi.active
+              ? `${visitStatusLine(visitUi.director, visitRoute)}${visitUi.lapseAt !== null ? ` With no contact, it closes at ${new Date(visitUi.lapseAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.` : ""}`
+              : visitRoute.kind === "none"
+                ? "No director is named (a Live Bridge in Settings, or ?harness=); a visit would run undirected."
+                : `Muse directs through ${visitRoute.kind === "door" ? "this town's own director door" : visitRoute.kind === "bridge" ? `the Live Bridge at ${visitRoute.host}${bridgeSettings.token ? "" : " (no token entered)"}` : `the director seam at ${visitRoute.host}`}.`,
+            active: visitUi.active,
+            action: () => (visitUi.active ? endVisitNow() : beginVisitNow()),
+            aria: visitUi.active ? "End Muse's visit; Aelia returns to her own voice" : "Open a visit for Muse; a director may then move Aelia and speak through her",
           }]
         },
         {
@@ -6725,12 +6846,13 @@ export function App() {
               <div className="mt-1.5 rounded-2xl bg-[#8b5cf6]/10 px-3 py-2 text-[12px] leading-relaxed" aria-live="polite">
                 {visitUi.intention && <p className="font-semibold text-[#6d28d9]">{visitUi.intention}</p>}
                 <p className="text-[#2b2118]/60">{SIGHT_LINE}</p>
+                <p className="text-[#2b2118]/60">Lines marked Muse are hers; the line below this box is Aelia's own town voice.</p>
                 {visitUi.composing && <p className="text-[#6d28d9]/80 italic">Muse is writing…</p>}
                 {visitUi.thread.length > 0 && (
                   <ul className="mt-1.5 flex flex-col gap-1">
                     {visitUi.thread.slice(-8).map((entry, i) => (
                       <li key={`${entry.who}:${entry.seq ?? entry.lineId ?? i}`} className={entry.who === "him" ? "text-[#6d28d9]" : "text-[#2b2118]"}>
-                        <span className="font-bold">{entry.who === "him" ? "You" : "Aelia"}: </span>
+                        <span className="font-bold">{entry.who === "him" ? "You" : "Muse, as Aelia"}: </span>
                         {entry.text}
                         {entry.who === "him" && <span className="text-[#6d28d9]/70"> · carried to Muse</span>}
                         {entry.partial && <span className="text-[#6d28d9]/70">…</span>}
@@ -6747,6 +6869,7 @@ export function App() {
               aria-live="polite"
               onClick={advanceMuseBubble}
             >
+              {visitUi.active && <p className="text-[11px] font-semibold text-[#a87800]/80">Aelia's own voice, not from Muse</p>}
               <p
                 className={`${isLandscape ? "text-[19px]" : "text-[17px]"} leading-[1.45] font-normal`}
                 style={{ fontFamily: "var(--font-voice)" }}

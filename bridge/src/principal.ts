@@ -37,6 +37,8 @@ export const PRINCIPAL_MAX_DELAY_S = 120;
 export const TRANSCRIPT_KEEP = 30;
 /** She is "apart" from him beyond this; seated and nearer, she stays seated. */
 export const ACK_APART_M = 3;
+/** A call that lands before the visit opens is held this long, then dropped. */
+export const PRINCIPAL_HOLD_MS = 60_000;
 
 export type BeatCondition = {
   /** Fire only if he has not sent a line since the sequence began. */
@@ -66,7 +68,9 @@ export type DeskReport =
   | { kind: "dropped"; at: number; beat: number; of: number; reason: string }
   | { kind: "refused"; at: number; beat: number; of: number; direction: unknown; reason: string }
   | { kind: "acknowledged"; at: number; seq: number; staging: string }
-  | { kind: "claim"; at: number; event: "claimed" | "released" | "lapsed" };
+  | { kind: "claim"; at: number; event: "claimed" | "released" | "lapsed" }
+  | { kind: "held"; at: number; of: number; until: number; reason: string }
+  | { kind: "unheld"; at: number; of: number; reason: string };
 
 export type PrincipalSlate = {
   now: number;
@@ -82,7 +86,7 @@ export type PrincipalSlate = {
   /** The recent exchange, both sides, oldest first. */
   transcript: TranscriptLine[];
   /** Her sequence still to come. */
-  sequence: { remaining: number; nextAt: number | null } | null;
+  sequence: { remaining: number; nextAt: number | null; heldUntil: number | null } | null;
   /** What happened since the last slate she saw: beats, drops, refusals, acknowledgments. */
   reports: DeskReport[];
   frame?: VisitFrame | null;
@@ -92,7 +96,7 @@ export type WaitingMarker = { waiting: boolean; seq: number | null; at: number |
 export type WakeResult = { ok: true; slate: PrincipalSlate } | { ok: false; error: string };
 
 type Pending = { beat: number; dueAt: number; direction: VisitDirection | null; raw: unknown; invalid: string | null; when: BeatCondition };
-type Sequence = { startedAt: number; startSeq: number; startZone: string | null; beganAt: number | null; of: number; beats: Pending[]; dropOnReply: boolean; dropOnScene: boolean };
+type Sequence = { heldUntil: number | null; startedAt: number; startSeq: number; startZone: string | null; beganAt: number | null; of: number; beats: Pending[]; dropOnReply: boolean; dropOnScene: boolean };
 
 export type PrincipalDeskOptions = {
   channel: DirectorChannel;
@@ -114,6 +118,8 @@ export type PrincipalDesk = {
   pump(): Promise<void>;
   /** The resident's own spoken lines, for the transcript she reads. */
   noteResidentLine(text: string): void;
+  /** A watcher's long-poll keeps (or takes) the claim without a wake. */
+  keepClaim(): void;
 };
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -216,6 +222,7 @@ export function createPrincipalDesk(opts: PrincipalDeskOptions): PrincipalDesk {
   let lastState: ChannelState | null = null;
   let lineCounter = 0;
   let pumping = false;
+  let heldLookAt = 0;
 
   const report = (r: DeskReport) => {
     reports.push(r);
@@ -248,7 +255,7 @@ export function createPrincipalDesk(opts: PrincipalDeskOptions): PrincipalDesk {
       transcript = [];
       transcriptSeq = answeredSeq = ackedSeq = shownSeq = 0;
       latestAt = null;
-      if (sequence) dropSequence(state.active ? "a new visit began" : "the visit closed");
+      if (sequence && sequence.heldUntil === null) dropSequence(state.active ? "a new visit began" : "the visit closed");
     }
     latestSeq = state.active ? state.latestSeq : 0;
     // Unclaimed, his lines are the resident's to answer: none of them is
@@ -310,7 +317,8 @@ export function createPrincipalDesk(opts: PrincipalDeskOptions): PrincipalDesk {
     let direction: VisitDirection = p.direction;
     let altered: string[] | undefined;
     if (direction.kind === "speak") {
-      const filtered = filterSpeak(direction.text, { band: bandForRank(opts.rank()) });
+      // Her own words keep their endearments; every other rail holds.
+      const filtered = filterSpeak(direction.text, { band: bandForRank(opts.rank()), endearments: "allow" });
       if (!filtered.ok) {
         report({ kind: "refused", at: t, beat: p.beat, of, direction: p.raw, reason: `the constitution's filter: ${filtered.reason}` });
         log(`principal beat ${p.beat}/${of} refused by the filter (${filtered.reason}): ${JSON.stringify(p.raw)}`);
@@ -346,6 +354,20 @@ export function createPrincipalDesk(opts: PrincipalDeskOptions): PrincipalDesk {
     }
   };
 
+  /** The visit opened under a held sequence: its clock starts now. */
+  const unhold = (seq: Sequence, state: ChannelState, reason: string) => {
+    const t = now();
+    const shift = t - seq.startedAt;
+    for (const b of seq.beats) b.dueAt += shift;
+    seq.heldUntil = null;
+    seq.startedAt = t;
+    seq.startSeq = state.latestSeq;
+    seq.startZone = state.telemetry?.gaiusZone ?? null;
+    seq.beganAt = beganAt;
+    report({ kind: "unheld", at: t, of: seq.of, reason });
+    log(`principal sequence (${seq.of} beat${seq.of === 1 ? "" : "s"}) released from hold: ${reason}`);
+  };
+
   const pump = async (): Promise<void> => {
     if (pumping) return;
     pumping = true;
@@ -353,6 +375,21 @@ export function createPrincipalDesk(opts: PrincipalDeskOptions): PrincipalDesk {
       while (sequence) {
         if (!liveNow()) return;
         const seq = sequence;
+        if (seq.heldUntil !== null) {
+          // Held for a visit that has not opened yet: a look a second at most.
+          const t0 = now();
+          if (t0 < heldLookAt + 1000) return;
+          heldLookAt = t0;
+          const held = await quiet("readState", () => channel.readState());
+          if (sequence !== seq) continue;
+          if (held?.active) {
+            followVisit(held);
+            unhold(seq, held, "the visit opened");
+            continue;
+          }
+          if (t0 >= seq.heldUntil) dropSequence(`no visit opened within ${Math.round(PRINCIPAL_HOLD_MS / 1000)} s`);
+          return;
+        }
         const next = seq.beats[0];
         if (!next || now() < next.dueAt) return;
         // A fresh look at the slate before each beat: has he replied, has he moved on?
@@ -407,7 +444,7 @@ export function createPrincipalDesk(opts: PrincipalDeskOptions): PrincipalDesk {
       latestSeq,
       waiting: transcript.filter((l) => l.who === "him" && (l.seq ?? 0) > answeredSeq),
       transcript: [...transcript],
-      sequence: sequence ? { remaining: sequence.beats.length, nextAt: sequence.beats[0]?.dueAt ?? null } : null,
+      sequence: sequence ? { remaining: sequence.beats.length, nextAt: sequence.heldUntil === null ? (sequence.beats[0]?.dueAt ?? null) : null, heldUntil: sequence.heldUntil } : null,
       reports,
     };
     reports = [];
@@ -451,7 +488,9 @@ export function createPrincipalDesk(opts: PrincipalDeskOptions): PrincipalDesk {
           const direction = v.ok && v.direction.kind === "speak" ? { kind: "speak" as const, text: v.direction.text } : v.ok ? v.direction : null;
           return { beat: i + 1, dueAt: due, direction, raw: b.direction, invalid: v.ok ? null : v.error, when: b.when ?? {} };
         });
+        const open = !!state?.active;
         sequence = {
+          heldUntil: open ? null : t + PRINCIPAL_HOLD_MS,
           startedAt: t,
           startSeq: latestSeq,
           startZone: state?.telemetry?.gaiusZone ?? null,
@@ -462,6 +501,11 @@ export function createPrincipalDesk(opts: PrincipalDeskOptions): PrincipalDesk {
           dropOnScene: call.drop?.onSceneChange ?? true,
         };
         if (beats.some((b) => b.direction?.kind === "speak")) answeredSeq = Math.max(answeredSeq, Math.min(call.seen ?? shownSeq, latestSeq));
+        if (!open) {
+          report({ kind: "held", at: t, of: beats.length, until: t + PRINCIPAL_HOLD_MS, reason: "held until the visit opens" });
+          log(`principal sequence (${beats.length} beat${beats.length === 1 ? "" : "s"}) held: no visit is open; held up to ${Math.round(PRINCIPAL_HOLD_MS / 1000)} s`);
+          heldLookAt = t;
+        }
         await pump();
       }
       return { ok: true, slate: await slate(!!call.frame) };
@@ -475,6 +519,7 @@ export function createPrincipalDesk(opts: PrincipalDeskOptions): PrincipalDesk {
     async observe(state) {
       followVisit(state);
       if (!liveNow()) return;
+      if (sequence && sequence.heldUntil !== null && state.active) unhold(sequence, state, "the visit opened");
       await readMail();
       if (state.active && state.latestSeq > ackedSeq) {
         ackedSeq = state.latestSeq;
@@ -501,6 +546,15 @@ export function createPrincipalDesk(opts: PrincipalDeskOptions): PrincipalDesk {
       if (sequence) await pump();
     },
     pump,
+    keepClaim() {
+      const t = now();
+      if (!liveNow()) {
+        claimSince = t;
+        report({ kind: "claim", at: t, event: "claimed" });
+        log("principal claims the visit (watcher); the resident only relays");
+      }
+      lastCallAt = t;
+    },
     noteResidentLine(text) {
       keep({ who: "her", by: "resident", text, at: now() });
     },

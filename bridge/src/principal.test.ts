@@ -5,7 +5,8 @@ import { createDirector } from "./director.js";
 import { createFakeChannel } from "./fakeChannel.js";
 import type { Mind } from "./mind.js";
 import { createPackLoader } from "./pack.js";
-import { createPrincipalDesk, parsePrincipalCall, sceneChangedMaterially, PRINCIPAL_CLAIM_MS, type PrincipalSlate } from "./principal.js";
+import { filterSpeak } from "./outputFilter.js";
+import { createPrincipalDesk, parsePrincipalCall, sceneChangedMaterially, PRINCIPAL_CLAIM_MS, PRINCIPAL_HOLD_MS, type PrincipalSlate } from "./principal.js";
 import { startPrincipalServer } from "./principalServer.js";
 
 // Task 22: the principal channel. Her claim silences the resident, which
@@ -259,7 +260,7 @@ test("refusals come back on her next slate with their reasons: the filter, the t
   clock.t += 1000;
   slate = await wake({ direction: { kind: "emote", emote: "wave" } });
   expect(slate.visit.active).toBe(false);
-  expect(slate.reports.some((r) => r.kind === "dropped" || r.kind === "refused")).toBe(true);
+  expect(slate.reports.some((r) => r.kind === "held")).toBe(true);
 });
 
 test("the waiting marker says only that a line waits, its number and time, and the composing flag", async () => {
@@ -306,4 +307,71 @@ test("the server answers only to her token; the marker token reads the marker an
   await second.close();
   expect(lines.join("\n")).not.toContain("principal-token");
   expect(lines.join("\n")).not.toContain("marker-token");
+});
+
+test("a wake seconds before the visit opens is held, then performed when it opens; past the hold it is dropped and said so", async () => {
+  const { clock, channel, pack, desk, director, speaks, wake } = setup();
+  await pack.check();
+  let slate = await wake({ direction: { kind: "speak", text: "There you are, Gaius." } });
+  expect(slate.visit.active).toBe(false);
+  expect(slate.reports.find((r) => r.kind === "held")).toMatchObject({ of: 1, until: clock.t + PRINCIPAL_HOLD_MS, reason: "held until the visit opens" });
+  expect(slate.sequence?.heldUntil).toBe(clock.t + PRINCIPAL_HOLD_MS);
+  expect(speaks()).toEqual([]);
+  clock.t += 5000;
+  channel.open(clock.t, tel());
+  await director.tick();
+  await desk.pump();
+  expect(speaks()).toEqual(["There you are, Gaius."]);
+  slate = await wake({});
+  expect(slate.reports.map((r) => r.kind)).toEqual(["unheld", "performed"]);
+  // Past the hold: dropped, reported on the next slate.
+  channel.close();
+  await director.tick();
+  await wake({ beats: [{ direction: { kind: "emote", emote: "wave" } }] });
+  clock.t += PRINCIPAL_HOLD_MS + 1000;
+  await desk.pump();
+  slate = await wake({});
+  expect(slate.reports.find((r) => r.kind === "dropped")).toMatchObject({ reason: "no visit opened within 60 s" });
+  expect(slate.sequence).toBeNull();
+});
+
+test("her endearments are kept whatever the band; the resident's band still trims, and the other rails hold for her", async () => {
+  const { clock, channel, pack, speaks, wake } = setup();
+  await pack.check(); // rank 0: reserved
+  channel.open(clock.t, tel());
+  const slate = await wake({ direction: { kind: "speak", text: "I am here, my dear, and I am not going anywhere." } });
+  expect(speaks()).toEqual(["I am here, my dear, and I am not going anywhere."]);
+  expect(slate.reports.find((r) => r.kind === "performed")).not.toHaveProperty("altered");
+  const resident = filterSpeak("I am here, my dear, and I am not going anywhere.", { band: "reserved" });
+  expect(resident.ok && resident.text).toBe("I am here, and I am not going anywhere.");
+  const crude = filterSpeak("Oh shit, my dear.", { band: "reserved", endearments: "allow" });
+  expect(crude.ok).toBe(false);
+});
+
+test("the marker long-polls: it answers as soon as a line past `after` lands, and claim=1 keeps the claim alive", async () => {
+  const { channel, pack, desk, director } = setup();
+  await pack.check();
+  // The server's long-poll uses the wall clock; this desk's own clock is fixed, so the claim math is the desk's.
+  channel.open(1_000_000, tel());
+  const server = await startPrincipalServer({ desk, token: "watch-principal-token", markerToken: "watch-marker-token", port: 0, host: "127.0.0.1", log: () => {} });
+  const at = (path: string) => `http://127.0.0.1:${server.port}${path}`;
+  const bearer = (t: string) => ({ authorization: `Bearer ${t}` });
+  // The marker token cannot claim.
+  await fetch(at("/principal/waiting?claim=1"), { headers: bearer("watch-marker-token") });
+  expect(desk.live()).toBe(false);
+  const started = Date.now();
+  const pending = fetch(at("/principal/waiting?after=0&wait=5&claim=1"), { headers: bearer("watch-principal-token") });
+  await new Promise((r) => setTimeout(r, 400));
+  expect(desk.live()).toBe(true); // claimed at the start of the poll
+  channel.mail("Are you there?", 1_000_500);
+  await director.tick();
+  const marker = await (await pending).json();
+  expect(Date.now() - started).toBeLessThan(3000);
+  expect(marker).toMatchObject({ waiting: true, seq: 1, claimLive: true });
+  // Nothing new past seq 1: the poll runs its time out and answers the same marker.
+  const t0 = Date.now();
+  const quiet = await (await fetch(at("/principal/waiting?after=1&wait=1"), { headers: bearer("watch-principal-token") })).json();
+  expect(Date.now() - t0).toBeGreaterThanOrEqual(900);
+  expect(quiet.seq).toBe(1);
+  await server.close();
 });

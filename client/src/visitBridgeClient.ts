@@ -91,9 +91,18 @@ export type BridgeLegResult = {
 
 type Call = { status: number; json: unknown } | null;
 
-async function call(url: string, token: string, init: RequestInit, fetchImpl: typeof fetch): Promise<Call> {
+/** How long one call may take before it counts as unreachable (fix
+ *  list, Nov 7, 2026). The old cap was the beat itself (1.7 s), which a
+ *  phone network misses whenever a 30-second view frame (up to 400 KB)
+ *  rides the snapshot: every frame beat then read as "unreachable".
+ *  The beat cannot pile up behind a slow call (the caller runs one at
+ *  a time), so a generous cap only delays the next beat. */
+export const BRIDGE_CALL_TIMEOUT_MS = Math.max(8_000, BRIDGE_BEAT_MS * 4);
+export const BRIDGE_FRAME_CALL_TIMEOUT_MS = 20_000;
+
+async function call(url: string, token: string, init: RequestInit, fetchImpl: typeof fetch, timeoutMs = BRIDGE_CALL_TIMEOUT_MS): Promise<Call> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), BRIDGE_BEAT_MS - 300);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetchImpl(url, { ...init, headers: { ...(init.headers as Record<string, string> | undefined), authorization: `Bearer ${token}` }, signal: controller.signal });
     const text = await res.text();
@@ -139,7 +148,7 @@ export async function bridgeLeg(input: {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(snapshot),
-  }, fetchImpl);
+  }, fetchImpl, snapshot.frame ? BRIDGE_FRAME_CALL_TIMEOUT_MS : BRIDGE_CALL_TIMEOUT_MS);
   const fail = (outcome: BridgeLegOutcome): BridgeLegResult => ({ slate: read(), cursor: input.cursor, outcome, directorSeenAt: null, queued: 0, refused: 0, ended: false });
   if (!posted) return fail("unreachable");
   if (posted.status === 401) return fail("refused");

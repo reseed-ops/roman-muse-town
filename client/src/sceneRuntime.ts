@@ -73,7 +73,11 @@ export class SceneRuntime {
     const label = !this.automatic || this.light || this.software || this.adaptive.tier < 2
       ? ["light", "balanced", "full"][this.adaptive.tier] ?? "full"
       : this.tuner.tierLabel;
-    return formatPerfLine(snap, label);
+    // Frames slower than a second are not counted, so a stalled town
+    // reads "measuring", never a misleading 0 fps (fix list, Nov 7).
+    const line = snap.fps > 0 ? formatPerfLine(snap, label) : `Perf: measuring · quality ${label}`;
+    // No GPU (a VM, a software renderer): say so, or 1 fps reads as a bug.
+    return this.software ? `${line} · software rendering, no GPU` : line;
   }
   dispose(): void { this.streaming.dispose(); }
 }

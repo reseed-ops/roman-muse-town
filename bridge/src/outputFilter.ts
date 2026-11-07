@@ -104,7 +104,14 @@ function stripVocatives(text: string, band: AffectionBand): { text: string; stri
   return { text: t, stripped };
 }
 
-export function filterSpeak(raw: string, opts: { band: AffectionBand; maxWords?: number; maxChars?: number }): FilterResult {
+/**
+ * `endearments: "allow"` keeps vocative endearments whatever the band:
+ * the principal's own lines (Task 22 fixes, Nov 7) are her words and are
+ * carried, not trimmed to the resident's band. Every other rail (crude,
+ * character break, gloom, intimacy below devoted, dashes, the caps)
+ * holds for her exactly as for the resident.
+ */
+export function filterSpeak(raw: string, opts: { band: AffectionBand; maxWords?: number; maxChars?: number; endearments?: "band" | "allow" }): FilterResult {
   const notes: string[] = [];
   let text = stripNarration(raw);
   if (!text) return { ok: false, reason: "nothing spoken" };
@@ -115,7 +122,7 @@ export function filterSpeak(raw: string, opts: { band: AffectionBand; maxWords?:
   const dashed = applyDashRule(text);
   if (dashed !== text) notes.push("dash rule");
   text = dashed;
-  const voc = stripVocatives(text, opts.band);
+  const voc = opts.endearments === "allow" ? { text, stripped: [] as string[] } : stripVocatives(text, opts.band);
   if (voc.stripped.length) notes.push(`stripped: ${voc.stripped.join(", ")}`);
   text = voc.text;
   const capped = capLength(text, opts.maxWords, opts.maxChars);

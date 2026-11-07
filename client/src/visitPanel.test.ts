@@ -34,7 +34,8 @@ test("a visit send is captured as mail and returns before any reply, local chat,
   }
   // Outside a visit the path is unchanged: the hush is the only visit
   // check in the send, and it is a plain early return.
-  expect(sendChat.split("visitRef.current").length - 1).toBe(3);
+  // (The fourth mention is the reload record, saved inside the hush.)
+  expect(sendChat.split("visitRef.current").length - 1).toBe(4);
 });
 
 test("the presence signs: the violet star, the visiting marker, the intention line, and the exact sight line", () => {

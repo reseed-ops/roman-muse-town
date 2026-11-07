@@ -8,6 +8,14 @@
  *                                                               read-only PRINCIPAL_MARKER_TOKEN)
  *   GET  /healthz                          -> {"ok":true}      (no token; says nothing else)
  *
+ * The waiting marker also long-polls (the watcher contract, Nov 7):
+ * `GET /principal/waiting?after=<seq>&wait=<s>` holds the answer until a
+ * line past `after` waits, the composing flag turns over, or `wait`
+ * seconds pass (capped at WAIT_MAX_S), then answers the marker as ever.
+ * With the principal token, `claim=1` also keeps (or takes) her claim at
+ * the start and at the answer, so a watcher looping on it holds the
+ * visit without a wake; the marker token can never claim.
+ *
  * The token rides as `Authorization: Bearer <token>`, compared in
  * constant time over digests (bridgeServer.ts). A refused call gets a
  * bare 401 and one log line that never carries the value. Rotating the
@@ -24,6 +32,8 @@ import { bearerToken, tokenMatches } from "./bridgeServer.js";
 import type { PrincipalDesk } from "./principal.js";
 
 const MAX_BODY_BYTES = 64_000;
+export const WAIT_MAX_S = 25;
+const WAIT_LOOK_MS = 250;
 
 export type PrincipalServerOptions = {
   desk: PrincipalDesk;
@@ -86,6 +96,26 @@ export function startPrincipalServer(opts: PrincipalServerOptions): Promise<Prin
       }
       if (path === "/principal/waiting") {
         if (method !== "GET") return send(res, 405, { error: "method not allowed" });
+        const claim = principal && url.searchParams.get("claim") === "1";
+        const waitS = Math.min(WAIT_MAX_S, Math.max(0, Number(url.searchParams.get("wait") ?? 0) || 0));
+        const afterRaw = url.searchParams.get("after");
+        const after = afterRaw !== null && Number.isFinite(Number(afterRaw)) ? Number(afterRaw) : null;
+        if (claim) desk.keepClaim();
+        if (waitS > 0) {
+          const first = desk.marker();
+          const deadline = Date.now() + waitS * 1000;
+          let gone = false;
+          res.on("close", () => {
+            gone = true;
+          });
+          const changed = () => {
+            const m = desk.marker();
+            return (m.waiting && m.seq !== null && (after === null || m.seq > after)) || m.composing !== first.composing;
+          };
+          while (!gone && Date.now() < deadline && !changed()) await new Promise((r) => setTimeout(r, WAIT_LOOK_MS));
+          if (gone) return;
+          if (claim) desk.keepClaim();
+        }
         return send(res, 200, desk.marker());
       }
       if (method !== "POST") return send(res, 405, { error: "method not allowed" });

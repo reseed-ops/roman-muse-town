@@ -22,6 +22,11 @@ interface MenuGroup {
   items: TownMenuItem[];
 }
 
+/** The folds left open, remembered while the page lives (fix list,
+ *  Nov 7, 2026): reopening the menu finds "Behind the scenes" as it
+ *  was left. Never stored. */
+const openFolds = new Set<string>();
+
 // One row style for every line of the menu, the folds and Settings
 // included (Nov 6, 2026 review): the eye reads one list.
 const rowClass =
@@ -65,7 +70,8 @@ export function TownMenu({ groups, backstage, className, festival, footerNote, p
     </button>
   ));
   const fold = (heading: string, children: ReactNode) => (
-    <details key={heading} className="group">
+    <details key={heading} className="group" open={openFolds.has(heading)}
+      onToggle={(event) => { if (event.currentTarget.open) openFolds.add(heading); else openFolds.delete(heading); }}>
       <summary className={`${rowClass} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
         <span aria-hidden="true" className="w-6 shrink-0 text-center text-lg leading-none text-white/50 transition-transform group-open:rotate-90">›</span>
         <span className="min-w-0 flex-1">{heading}</span>

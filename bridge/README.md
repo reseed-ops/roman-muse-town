@@ -125,7 +125,7 @@ Routes (Bearer token, constant-time compare, bare 401 on a miss):
 | Route | Token | Answer |
 | --- | --- | --- |
 | `POST /principal/wake` | principal | Her call: claims (or keeps) the visit, carries her direction, returns the slate whole. |
-| `GET /principal/waiting` | principal or marker | `{waiting, seq, at, composing, claimLive}`: that a line waits, its number and time. Never its text. |
+| `GET /principal/waiting` | principal or marker | `{waiting, seq, at, composing, claimLive}`: that a line waits, its number and time. Never its text. Long-polls with `?after=<seq>&wait=<s>`; `claim=1` (principal token only) keeps the claim. |
 | `GET /healthz` | none | `{"ok":true}` and nothing else. |
 
 One call per waking. The body of `POST /principal/wake`, every field optional:
@@ -162,6 +162,35 @@ One call per waking. The body of `POST /principal/wake`, every field optional:
 - `seen`: the `latestSeq` of the slate her words answer (defaults to the
   last slate she was shown); his lines up to it stop waiting.
 
+- A call that lands while no visit is open is **held**, not dropped: the
+  slate reports `held` ("held until the visit opens") and
+  `sequence.heldUntil`; when the visit opens within 60 s
+  (`PRINCIPAL_HOLD_MS`) the beats start then, at their authored delays,
+  and an `unheld` report says so. Past 60 s the beats are reported
+  `dropped` ("no visit opened within 60 s") on her next slate.
+
+### The watcher contract (no push needed)
+
+There is no push to her; a watcher long-polls the marker instead, so a
+line reaches her within a second of landing:
+
+```
+seen = 0
+loop:
+  GET /principal/waiting?after=<seen>&wait=25&claim=1     (Bearer <PRINCIPAL_TOKEN>)
+    -> answers at once when a line past <seen> waits or composing turns over,
+       else after 25 s with the marker unchanged
+  if marker.waiting and marker.seq > seen:
+    POST /principal/wake {"seen": <marker.seq>, ...her words...}   -> the slate
+    seen = slate.latestSeq
+```
+
+`wait` is capped at 25 s (under Railway's idle timeout). With `claim=1`
+each long-poll keeps her claim alive at its start and at its answer, so a
+looping watcher never lets the 180 s claim lapse; drop `claim=1` (or use
+the marker token, which can never claim) to watch without holding the
+visit. `after` defaults to "any waiting line".
+
 The slate: `claim` (live, since, lastCallAt, expiresAt), `visit`,
 `scene` (the town's telemetry: her zone and position, his, distance,
 seated, day phase), `intention`, `composing`, `latestSeq`, `waiting` (his
@@ -173,8 +202,13 @@ words), `dropped` (with why), `refused` (with the filter's or the town's
 reason), and each `acknowledged` line.
 
 The honesty rule: the bridge never composes, extends or paraphrases her
-words. Her lines pass the same output filter as the resident's (at the
-pack's band) and the town's own direction checks; a refusal is reported
+words. Her lines pass the same output filter as the resident's and the
+town's own direction checks, with one difference: her endearments ("my
+dear", "love", "darling", ...) are kept whatever the pack's band, since
+they are her words, not the resident's reach; the band trims only the
+resident's lines. Every other rail holds for her too (crude words,
+character breaks, gloom, intimacy below devoted, the dash rule, the
+40-word and 280-character caps); a refusal is reported
 on her next slate, never dropped silently. When a sequence runs out she
 is silent until her next call. While her claim lives, a newly landed line
 is acknowledged with presence only: she walks to him (a `goto` to
