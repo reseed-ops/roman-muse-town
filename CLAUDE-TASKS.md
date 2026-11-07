@@ -2502,4 +2502,8 @@ Context: the owner's asks, Nov 7, 2026, after the Task 23 live test.
 1. Darker text: Aelia's speech bubble text is gray on white, low contrast and hard to read. Make it darker, near-black, with enough contrast on the white bubble to read easily in daylight and at night. Keep the bubble itself white. Acceptance: the bubble text reads clearly at a glance, in the VM town and on a phone, day and night.
 2. No orphan word: in some of Aelia's speech bubbles, the second line shows only one word. Keep that word with the first line, so no bubble ever ends with a single word alone on its last line. Balance the bubble text, widen the bubble a little, or join the last two words so they never split, whichever reads best. Acceptance: in a live check of her bubbles, no line ends with one word alone.
 
+## Task 26 (READY, added Nov 7, 2026): Aelia's speech bubble must never fill the screen
 
+Context: the owner's ask, Nov 7, 2026. Sometimes Aelia's speech bubble fills the screen, hiding the town and her.
+
+Give the bubble a max size that does not fill the screen: a max width and a max height that always leave the scene visible around it, on a phone and on a desktop, in portrait and landscape. If a line ever runs longer than that, the text scrolls inside the bubble instead of the bubble growing. Acceptance: in a live check, with her longest lines, the bubble never covers the whole screen, and Aelia and the town stay visible around it.
