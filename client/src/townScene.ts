@@ -3497,8 +3497,29 @@ export function createTownScene(
   }
   // The moonlight path: a soft additive streak across the water,
   // invisible by day, that shimmers once nightMix rises.
+  // Its map fades to nothing at every edge (follow-up, Nov 7, 2026):
+  // untextured, the plane read as a hard pale-blue rectangle on the
+  // lake through dusk and night.
+  const glitterMap = (() => {
+    const c = document.createElement("canvas");
+    c.width = 64;
+    c.height = 256;
+    const g = c.getContext("2d");
+    if (g) {
+      g.translate(32, 128);
+      g.scale(1, 4);
+      const grad = g.createRadialGradient(0, 0, 0, 0, 0, 32);
+      grad.addColorStop(0, "rgba(255,255,255,1)");
+      grad.addColorStop(0.55, "rgba(255,255,255,0.45)");
+      grad.addColorStop(1, "rgba(255,255,255,0)");
+      g.fillStyle = grad;
+      g.fillRect(-32, -32, 64, 64);
+    }
+    return new THREE.CanvasTexture(c);
+  })();
   const moonGlitterMat = new THREE.MeshBasicMaterial({
     color: 0xdceaff,
+    map: glitterMap,
     transparent: true,
     opacity: 0,
     blending: THREE.AdditiveBlending,
@@ -4877,7 +4898,8 @@ export function createTownScene(
     const ctx = canvas.getContext("2d")!;
     const tex = new THREE.CanvasTexture(canvas);
     const sprite = new THREE.Sprite(
-      new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false, opacity: 0 }),
+      // fog off: in mist or rain the plate must not wash to the sky's pale colour.
+      new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false, opacity: 0, fog: false }),
     );
     sprite.scale.set(2.4, 1.2, 1);
     sprite.position.set(0, y, 0);

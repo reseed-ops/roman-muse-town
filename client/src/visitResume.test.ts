@@ -68,3 +68,11 @@ test("a face carries its numbering above a resumed client's cursor", async () =>
   expect(await face.channel.direct({ kind: "stand" })).toEqual({ ok: true, id: 10 });
   expect(face.pull(9).directions.map((q) => q.id)).toEqual([10]);
 });
+
+test("the idle status says when a director last checked in, not a fixed 15 seconds", () => {
+  const door = { kind: "door", host: "town.reseed.net" } as const;
+  expect(visitStatusLine("none", door)).toContain("No director has checked in since the visit opened");
+  const line = visitStatusLine("none", door, Date.UTC(2026, 10, 7, 15, 24));
+  expect(line).toContain("last checked in at");
+  expect(line).not.toContain("15 seconds");
+});

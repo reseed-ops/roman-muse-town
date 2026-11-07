@@ -41,7 +41,13 @@ export function routeName(route: VisitRoute): string {
   }
 }
 
-export function visitStatusLine(director: VisitDirectorState, route: VisitRoute): string {
+/** A clock time for a status line ("3:24 PM"). */
+export const clockTime = (at: number): string => new Date(at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+
+/** `seenAt` is when a director last read the visit, if ever: the line
+ *  states that moment rather than a fixed "15 seconds" (follow-up,
+ *  Nov 7, 2026: the old wording read as a counter that never moved). */
+export function visitStatusLine(director: VisitDirectorState, route: VisitRoute, seenAt: number | null = null): string {
   if (route.kind === "none") return "No director is named, so nobody can direct this visit.";
   switch (director) {
     case "live":
@@ -51,7 +57,9 @@ export function visitStatusLine(director: VisitDirectorState, route: VisitRoute)
     case "refused":
       return `${routeName(route).replace(/^t/, "T")} refused this town's token; check Settings, Muse Visits.`;
     default:
-      return `Connected to ${routeName(route)}. Nobody has read the visit in the last 15 seconds.`;
+      return seenAt === null
+        ? `Connected to ${routeName(route)}. No director has checked in since the visit opened.`
+        : `Connected to ${routeName(route)}. A director last checked in at ${clockTime(seenAt)}, and is not reading it now.`;
   }
 }
 

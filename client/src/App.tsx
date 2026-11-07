@@ -462,15 +462,31 @@ export function App() {
     /** When an idle visit will lapse, once that is inside the warning
      *  stretch; null otherwise (fix list, Nov 7, 2026). */
     lapseAt: number | null;
-  }>({ active: false, intention: null, composing: false, thread: [], director: "none", lapseAt: null });
+    /** When a director last read the visit, held while none is
+     *  reading now (so the line can say when, not "15 seconds"). */
+    seenAt: number | null;
+  }>({ active: false, intention: null, composing: false, thread: [], director: "none", lapseAt: null, seenAt: null });
   // The visit's one-line notices: opened, picked up after a reload,
   // closed and why (fix list, Nov 7, 2026). Shown a few seconds.
-  const [visitNotice, setVisitNotice] = useState<{ text: string; at: number } | null>(null);
+  const [visitNotice, setVisitNotice] = useState<{ text: string; at: number; holdMs?: number } | null>(null);
   useEffect(() => {
     if (!visitNotice) return;
-    const timer = window.setTimeout(() => setVisitNotice(null), 6500);
-    return () => window.clearTimeout(timer);
+    // The clock starts only once the tab is in view; a long notice
+    // (the reload pickup, read while a slow town is still settling)
+    // stays up longer, and any notice goes on a tap.
+    let timer = 0;
+    const arm = () => {
+      if (timer || document.visibilityState !== "visible") return;
+      timer = window.setTimeout(() => setVisitNotice(null), visitNotice.holdMs ?? 6500);
+    };
+    arm();
+    document.addEventListener("visibilitychange", arm);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", arm);
+    };
   }, [visitNotice]);
+  const directorSeenAtRef = useRef<number | null>(null);
   // Bridge beats that failed in a row: "unreachable" only after a few.
   const bridgeFailsRef = useRef(0);
   // The writing line's clock: when "composing" came on, and when her
@@ -5211,9 +5227,13 @@ export function App() {
         thread: visitThreadRef.current,
         director: director ?? (s.active ? ui.director : "none"),
         lapseAt,
+        seenAt: s.active ? directorSeenAtRef.current : null,
       };
+      // While a director is reading, the stamp moves every beat; the
+      // line does not show it then, so it must not re-render the shell.
+      if (next.director === "live") next.seenAt = ui.seenAt;
       // A quiet beat changes nothing: no re-render of the shell.
-      return next.active === ui.active && next.intention === ui.intention && next.composing === ui.composing && next.thread === ui.thread && next.director === ui.director && next.lapseAt === ui.lapseAt ? ui : next;
+      return next.active === ui.active && next.intention === ui.intention && next.composing === ui.composing && next.thread === ui.thread && next.director === ui.director && next.lapseAt === ui.lapseAt && next.seenAt === ui.seenAt ? ui : next;
     });
   }, []);
   const beginVisitNow = useCallback((by: "you" | "director" = "you") => {
@@ -5223,6 +5243,7 @@ export function App() {
     visitLastFrameAtRef.current = null;
     bridgeCursorRef.current = emptyBridgeCursor();
     bridgeFailsRef.current = 0;
+    directorSeenAtRef.current = null;
     composingSinceRef.current = null;
     finalLineAtRef.current = null;
     sceneRef.current?.setVisitActive(true);
@@ -5393,6 +5414,7 @@ export function App() {
     // The bridge answered: the visit is alive as long as the tab is
     // open and reaching it (fix list, Nov 7, 2026); it lapses only
     // after VISIT_LAPSE_MS with no contact at all.
+    if (result.directorSeenAt !== null) directorSeenAtRef.current = result.directorSeenAt;
     visitRef.current = drainVisitQueue(heartbeat(result.slate, Date.now()));
     publishVisit(result.directorSeenAt !== null && Date.now() - result.directorSeenAt < 15_000 ? "live" : "none");
   };
@@ -5461,7 +5483,7 @@ export function App() {
     visitLastFrameAtRef.current = null;
     sceneRef.current?.setVisitActive(true);
     publishVisit("none");
-    setVisitNotice({ text: "Visit picked up again after the reload. Muse can carry on.", at: Date.now() });
+    setVisitNotice({ text: "Visit picked up again after the reload. Muse can carry on.", at: Date.now(), holdMs: 20_000 });
   }, [sceneReady, publishVisit]);
   // Coming back to the tab counts as the tab being open: the heartbeat
   // is refreshed and the bridge is asked at once, not on the next tick.
@@ -5517,18 +5539,24 @@ export function App() {
   };
 
   const selectMuse = () => {
-    exitWalkMode();
+    // Walking, a talk keeps him on his feet and the camera behind him
+    // (follow-up, Nov 7, 2026), as the A-prompt talk always has. It
+    // used to leave walk mode and fly to her fixed home spot, which,
+    // with her elsewhere (a visit moves her), framed an empty avenue
+    // at head height and showed Back to Gaius.
+    const onFoot = walkingRef.current;
+    if (!onFoot) exitWalkMode();
     stopTour();
     setSelected(null);
     setTreeOpen(false);
     setYouOpen(false);
     setWeatherOpen(false);
-    // Meeting Muse from the menu is a talk: her speech bubble, and
-    // the camera strolls over, no panel.
+    // Meeting Muse from the menu is a talk: her speech bubble, and,
+    // from the overview, the camera strolls over; no panel.
     openTalkBubble();
     window.setTimeout(() => {
       sceneRef.current?.greetMuse();
-      sceneRef.current?.flyTo(MUSE.cameraPos, MUSE.cameraTarget, 1200);
+      if (!onFoot) sceneRef.current?.flyTo(MUSE.cameraPos, MUSE.cameraTarget, 1200);
     }, 60);
   };
 
@@ -5967,7 +5995,7 @@ export function App() {
                   releaseHandHoldRef.current();
                   setMenuOpen(true);
                 }}
-                aria-label={`Muse's visit is open. ${visitStatusLine(visitUi.director, visitRoute)} Open the menu to end it.`}
+                aria-label={`Muse's visit is open. ${visitStatusLine(visitUi.director, visitRoute, visitUi.seenAt)} Open the menu to end it.`}
               >
                 <span aria-hidden="true" className={visitUi.director === "live" ? "text-[#ddd6fe]" : "text-[#c4b5fd]/70"}>✦</span>
                 <span className="truncate">{visitUi.composing ? "Muse is writing…" : visitChipLine(visitUi.director)}</span>
@@ -6089,7 +6117,7 @@ export function App() {
             tint: "#a78bfa",
             label: visitUi.active ? "End Muse's visit" : "Open a visit for Muse",
             detail: visitUi.active
-              ? `${visitStatusLine(visitUi.director, visitRoute)}${visitUi.lapseAt !== null ? ` With no contact, it closes at ${new Date(visitUi.lapseAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.` : ""}`
+              ? `${visitStatusLine(visitUi.director, visitRoute, visitUi.seenAt)}${visitUi.lapseAt !== null ? ` With no contact, it closes at ${new Date(visitUi.lapseAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.` : ""}`
               : visitRoute.kind === "none"
                 ? "No director is named (a Live Bridge in Settings, or ?harness=); a visit would run undirected."
                 : `Muse directs through ${visitRoute.kind === "door" ? "this town's own director door" : visitRoute.kind === "bridge" ? `the Live Bridge at ${visitRoute.host}${bridgeSettings.token ? "" : " (no token entered)"}` : `the director seam at ${visitRoute.host}`}.`,

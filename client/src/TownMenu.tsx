@@ -22,10 +22,14 @@ interface MenuGroup {
   items: TownMenuItem[];
 }
 
-/** The folds left open, remembered while the page lives (fix list,
- *  Nov 7, 2026): reopening the menu finds "Behind the scenes" as it
- *  was left. Never stored. */
-const openFolds = new Set<string>();
+/** The folds left open (fix list, Nov 7, 2026): reopening the menu,
+ *  or reloading the tab (follow-up, Nov 7), finds "Behind the scenes"
+ *  as it was left. Held in this tab's sessionStorage only. */
+const FOLDS_KEY = "muse-town-menu-folds";
+const openFolds = new Set<string>((() => {
+  try { return JSON.parse(sessionStorage.getItem(FOLDS_KEY) ?? "[]") as string[]; } catch { return []; }
+})());
+const keepFolds = () => { try { sessionStorage.setItem(FOLDS_KEY, JSON.stringify([...openFolds])); } catch { /* optional */ } };
 
 // One row style for every line of the menu, the folds and Settings
 // included (Nov 6, 2026 review): the eye reads one list.
@@ -71,7 +75,7 @@ export function TownMenu({ groups, backstage, className, festival, footerNote, p
   ));
   const fold = (heading: string, children: ReactNode) => (
     <details key={heading} className="group" open={openFolds.has(heading)}
-      onToggle={(event) => { if (event.currentTarget.open) openFolds.add(heading); else openFolds.delete(heading); }}>
+      onToggle={(event) => { if (event.currentTarget.open) openFolds.add(heading); else openFolds.delete(heading); keepFolds(); }}>
       <summary className={`${rowClass} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
         <span aria-hidden="true" className="w-6 shrink-0 text-center text-lg leading-none text-white/50 transition-transform group-open:rotate-90">›</span>
         <span className="min-w-0 flex-1">{heading}</span>
