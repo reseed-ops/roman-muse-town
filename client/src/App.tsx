@@ -263,6 +263,9 @@ function rememberInvite(change: (memory: InviteMemory) => InviteMemory) {
   try { localStorage.setItem(INVITE_MEMORY_KEY, JSON.stringify(change(readInviteMemory()))); } catch { /* optional */ }
 }
 
+/** How long a reopened talk shows the same opener (Task 24). */
+const OPENER_REUSE_MS = 3 * 60 * 1000;
+
 export function App() {
   const rootRef = useRef<HTMLDivElement>(null);
   const guideEndRef = useRef<(arrived: boolean) => void>(() => {});
@@ -3024,7 +3027,18 @@ export function App() {
   const restInTownRef = useRef(restInTown);
   restInTownRef.current = restInTown;
 
+  // The opener she composed last (Task 24): reopening the talk
+  // within a few minutes, by any way in, shows the same lines and
+  // the same pages instead of composing a fresh greeting, so the
+  // menu row, a click on her and the scene prompt open one panel.
+  // An answered choice clears it; her next talk is then new.
+  const lastOpenerRef = useRef<{ bubble: NonNullable<typeof museBubble>; at: number } | null>(null);
   const openTalkBubble = useCallback(() => {
+    const last = lastOpenerRef.current;
+    if (last && Date.now() - last.at < OPENER_REUSE_MS) {
+      setMuseBubble({ ...last.bubble, index: 0 });
+      return;
+    }
     // The day's first real conversation counts toward her heart (the
     // server caps it silently; later talks the same day are just talk).
     talkedTodayRef.current = true;
@@ -3442,19 +3456,22 @@ export function App() {
       );
     }
     if (choice && choice.line) lines.push(choice.line);
-    setMuseBubble({
+    const opener = {
       lines: paginateLines(lines),
       index: 0,
       cycle: true,
       invite: !followingRef.current && !atSecretRef.current,
       choice,
-    });
+    };
+    lastOpenerRef.current = { bubble: opener, at: Date.now() };
+    setMuseBubble(opener);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pickChoiceSet, talkPool]);
 
   /** He taps one of her dialogue choices: attentive replies earn her
    *  heart and a warmer follow-up; glib ones earn her wit, and only that. */
   const pickChoice = useCallback((option: DialogueChoiceOption) => {
+    lastOpenerRef.current = null;
     // A Star Book answer: helping starts the chapter's small task.
     const pc = pendingChapterRef.current;
     if (pc) {
@@ -6836,12 +6853,18 @@ export function App() {
           className={`pointer-events-none absolute inset-x-0 z-30 flex justify-center px-4 ${isLandscape ? "top-[62px]" : "top-[96px]"}`}
         >
           <div
-            className={`pointer-events-auto relative ${isLandscape ? (forcedLandscape ? "w-[min(560px,94%)]" : "w-[min(560px,94vw)]") : forcedLandscape ? "w-[min(400px,94%)]" : "w-[min(400px,94vw)]"} rounded-3xl bg-[#fdfaf2] px-4 pt-3 pb-3 text-[#2b2118] shadow-2xl ${isLandscape ? `mt-scrollable overflow-y-auto ${forcedLandscape ? "max-h-[calc(100dvw-124px)]" : "max-h-[calc(100dvh-124px)]"}` : ""}`}
+            className={`pointer-events-auto relative ${isLandscape ? (forcedLandscape ? "w-[min(560px,94%)]" : "w-[min(560px,94vw)]") : forcedLandscape ? "w-[min(400px,94%)]" : "w-[min(400px,94vw)]"} flex flex-col rounded-3xl bg-[#fdfaf2] px-4 pt-3 pb-3 text-[#2b2118] shadow-2xl ${isLandscape ? (forcedLandscape ? "max-h-[calc(100dvw-124px)]" : "max-h-[calc(100dvh-124px)]") : ""}`}
           >
             <span
               aria-hidden="true"
               className="absolute -bottom-[7px] left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 bg-[#fdfaf2]"
             />
+            {/* Task 24: the panel box itself never scrolls; this inner
+                area does, and the input sits below it, always in view.
+                (The panel used to be its own scroller up to its full
+                max height, the likeliest source of the pale rectangle
+                that spanned from its foot down to that max.) */}
+            <div className={isLandscape ? "mt-scrollable -mx-4 min-h-0 flex-1 overflow-y-auto px-4" : ""}>
             <div className="flex items-center justify-between gap-2">
               <p className={`flex items-center gap-1.5 text-[13px] font-bold ${visitUi.active ? "text-[#6d28d9]" : "text-[#a87800]"}`}>
                 <span aria-hidden="true">✦</span> Aelia
@@ -7197,7 +7220,9 @@ export function App() {
                 </button>
               </div>
             )}
-            {!museBubble.choice && (
+            {/* The gift is always offered (Task 24), a question of hers
+                included, so the panel is the same however it opened. */}
+            {(
               <div className="contents">
                 <button
                   type="button"
@@ -7231,11 +7256,11 @@ export function App() {
               </div>
             )}
             </div>
-            {/* The input rides the panel's foot (Task 23): in a short
-                landscape window the panel scrolls, and the box must
-                never scroll out of sight. */}
+            </div>
+            {/* The input rides the panel's foot (Task 23), outside the
+                scrolling area (Task 24), so it never scrolls out of sight. */}
             <form
-              className="sticky -bottom-3 -mx-4 mt-2.5 flex gap-2 bg-[#fdfaf2] px-4 pt-1 pb-1"
+              className="mt-2.5 flex shrink-0 gap-2 pt-1"
               onSubmit={(e) => {
                 e.preventDefault();
                 sendChat();

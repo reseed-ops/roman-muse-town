@@ -1411,6 +1411,20 @@ export function createTownScene(
   const plazaGlow = new THREE.PointLight(0xffc873, 0, 26, 1.6);
   plazaGlow.position.set(0, 3.4, 0);
   scene.add(plazaGlow);
+  // Night faces (Task 24): the moon as a real light, soft and cool,
+  // high in the north-west where her disc hangs, so heads and
+  // shoulders take a gentle rim of it; and one warm lamp-coloured
+  // fill that keeps to the pair, set between them and the camera,
+  // short-ranged, so Aelia's and Gaius's faces stay warm and
+  // readable while the town around them keeps its night. Neither
+  // casts shadows: no harsh edges on a face, and no extra shadow pass.
+  const moonLight = new THREE.DirectionalLight(0xb8ccff, 0);
+  moonLight.position.set(-52, 60, -72);
+  scene.add(moonLight);
+  const faceFill = new THREE.PointLight(0xffc796, 0, 6.5, 2);
+  scene.add(faceFill);
+  const faceFillAim = new THREE.Vector3();
+  const faceFillCam = new THREE.Vector3();
 
   const world = new THREE.Group();
   scene.add(world);
@@ -4839,6 +4853,8 @@ export function createTownScene(
     anchorY: number;
   }
   const BUBBLE_LINES_PER_PAGE = 3;
+  /** The widest a text line may run inside the 920 px box. */
+  const BUBBLE_TEXT_MAX_W = 880;
   function bubblePageDuration(page: string): number {
     return THREE.MathUtils.clamp(3 + page.length * 0.05, 3.4, 8.5);
   }
@@ -4857,7 +4873,22 @@ export function createTownScene(
       }
     }
     if (line) lines.push(line);
-    return lines.length > 0 ? lines : [""];
+    return lines.length > 0 ? fixBubbleOrphan(ctx, lines) : [""];
+  }
+  /** No bubble ends on one word alone (Task 25): a short last word
+   *  rejoins the line above when it still fits inside the box, else
+   *  the line above lends it its own last word. */
+  function fixBubbleOrphan(ctx: CanvasRenderingContext2D, lines: string[]): string[] {
+    const n = lines.length;
+    if (n < 2) return lines;
+    const last = lines[n - 1]!;
+    if (/\s/.test(last)) return lines;
+    const prev = lines[n - 2]!;
+    const joined = `${prev} ${last}`;
+    if (ctx.measureText(joined).width <= BUBBLE_TEXT_MAX_W) return [...lines.slice(0, n - 2), joined];
+    const cut = prev.lastIndexOf(" ");
+    if (cut <= 0) return lines;
+    return [...lines.slice(0, n - 2), prev.slice(0, cut), `${prev.slice(cut + 1)} ${last}`];
   }
   /** Split a line into bubble pages: whole sentences are packed into
    *  pages of at most BUBBLE_LINES_PER_PAGE wrapped lines; a sentence
@@ -4881,10 +4912,16 @@ export function createTownScene(
         cur = s;
         continue;
       }
-      // One sentence longer than a page: carry it over wrapped pages.
+      // One sentence longer than a page: carry it over wrapped pages,
+      // never leaving one lone line for the last page (two and two).
       const lines = wrapBubbleLines(ctx, s);
-      for (let i = 0; i < lines.length; i += BUBBLE_LINES_PER_PAGE) {
-        pages.push(lines.slice(i, i + BUBBLE_LINES_PER_PAGE).join(" "));
+      const tailSplit = lines.length > BUBBLE_LINES_PER_PAGE && lines.length % BUBBLE_LINES_PER_PAGE === 1 ? lines.length - 4 : lines.length;
+      for (let i = 0; i < tailSplit; i += BUBBLE_LINES_PER_PAGE) {
+        pages.push(lines.slice(i, Math.min(tailSplit, i + BUBBLE_LINES_PER_PAGE)).join(" "));
+      }
+      if (tailSplit < lines.length) {
+        pages.push(lines.slice(tailSplit, tailSplit + 2).join(" "));
+        pages.push(lines.slice(tailSplit + 2).join(" "));
       }
       cur = "";
     }
@@ -4897,9 +4934,14 @@ export function createTownScene(
     canvas.height = 512;
     const ctx = canvas.getContext("2d")!;
     const tex = new THREE.CanvasTexture(canvas);
+    // The canvas is painted in sRGB: read as linear, its near-black
+    // ink was lifted to mid-grey on screen (Task 25).
+    tex.colorSpace = THREE.SRGBColorSpace;
     const sprite = new THREE.Sprite(
-      // fog off: in mist or rain the plate must not wash to the sky's pale colour.
-      new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false, opacity: 0, fog: false }),
+      // fog off: in mist or rain the plate must not wash to the sky's
+      // pale colour; tone mapping off: the white stays white and the
+      // ink stays ink, by day and by night.
+      new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false, opacity: 0, fog: false, toneMapped: false }),
     );
     sprite.scale.set(2.4, 1.2, 1);
     sprite.position.set(0, y, 0);
@@ -4934,7 +4976,7 @@ export function createTownScene(
     ctx.lineTo(tailX, boxY + boxH + 60);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = "#26221f";
+    ctx.fillStyle = "#15110e";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     lines.forEach((l, i) => ctx.fillText(l, 512, boxY + 80 + i * 92));
@@ -4985,15 +5027,19 @@ export function createTownScene(
     // phone, then convert that pixel height back into a world size
     // at the camera's actual distance, so zooming or pulling the
     // camera back can no longer shrink her words away.
-    const targetPxH = isLandscapeView
-      ? THREE.MathUtils.clamp(ch * 0.34, 132, 200)
-      : THREE.MathUtils.clamp(ch * 0.155, 104, 168);
-    const distToCam = Math.max(0.5, camera.position.distanceTo(bubbleTmpV));
-    const worldH = THREE.MathUtils.clamp(
-      2 * distToCam * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * (targetPxH / ch),
-      1.2,
-      6.5,
+    // Never the whole screen (Task 26): the size is set in screen
+    // pixels and capped to a share of the stage, at most 36% of its
+    // height and a bubble no wider than 90% of it, whatever the
+    // camera's distance. (A world-size floor used to win here when
+    // the camera sat close to her, and the bubble filled the view.)
+    // Longer lines page on inside the bubble, never grow it.
+    const targetPxH = Math.min(
+      isLandscapeView ? THREE.MathUtils.clamp(ch * 0.34, 132, 200) : THREE.MathUtils.clamp(ch * 0.155, 104, 168),
+      ch * 0.36,
+      cw * 0.45,
     );
+    const distToCam = Math.max(0.05, camera.position.distanceTo(bubbleTmpV));
+    const worldH = 2 * distToCam * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * (targetPxH / ch);
     b.sprite.scale.set(worldH * 2, worldH, 1);
     // The bubble's half-extents in NDC, from its (possibly resized)
     // real world size.
@@ -10839,6 +10885,26 @@ export function createTownScene(
     // warm window against the grey does most of the cosy work.
     const lampLevel = Math.min(1, nightMix + (weatherId === "fog" ? 0.45 : 0) + wCur.rain * FEEL.rainLampGlow);
     plazaGlow.intensity = lampLevel * 60;
+    // Night faces: the soft moon and the warm fill on the pair.
+    moonLight.intensity = nightMix * 0.35 * (1 - Math.min(1, wCur.rain + wCur.snow) * 0.6) * (weatherId === "fog" ? 0.5 : 1);
+    faceFill.intensity = nightMix * 2.6;
+    if (nightMix > 0.01) {
+      // Aim at her head, or at the pair's midpoint when he walks
+      // beside her; the fill sits 1.6 m from that point toward the
+      // camera and a little above, a lamp held at face height.
+      faceFillAim.set(museGroup.position.x, museGroup.position.y + 1.55, museGroup.position.z);
+      if (walking && avatar.position.distanceTo(museGroup.position) < 5) {
+        faceFillAim.x = (faceFillAim.x + avatar.position.x) / 2;
+        faceFillAim.z = (faceFillAim.z + avatar.position.z) / 2;
+        faceFillAim.y = (faceFillAim.y + avatar.position.y + 1.6) / 2;
+      }
+      faceFillCam.copy(camera.position).sub(faceFillAim);
+      faceFillCam.y = 0;
+      if (faceFillCam.lengthSq() < 1e-4) faceFillCam.set(0, 0, 1);
+      faceFillCam.normalize();
+      faceFill.position.copy(faceFillAim).addScaledVector(faceFillCam, 1.6);
+      faceFill.position.y += 0.45;
+    }
     starMat.opacity = nightMix * 0.95 * (1 - Math.min(1, wCur.rain + wCur.snow)) * (weatherId === "fog" ? 0.25 : 1);
     // Fireflies belong to warm-season nights, and they keep to the
     // lake and its willows.
