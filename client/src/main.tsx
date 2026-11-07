@@ -4,6 +4,7 @@ import { Component, StrictMode, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import "./theme.css";
+import { isHostedTown } from "./hosted";
 
 const rootEl = document.querySelector<HTMLElement>("[data-generated-space-root]");
 if (!rootEl) {
@@ -15,12 +16,22 @@ if (!rootEl) {
 // being at the very top. Sitting one pixel down keeps that answer "no".
 // theme.css makes the document that one pixel taller; nothing else moves,
 // because everything on screen is position: fixed.
+//
+// Not on the hosted web (Task 23, Nov 7, 2026): there no host app
+// watches from outside, and that one pixel was the only outer scroll a
+// browser's own pull-to-refresh could grab. The hosted town is a fixed,
+// full-height page with nothing to scroll at all (theme.css,
+// html.mt-hosted), the layout that never refreshes on a pull.
+const hostedWeb = isHostedTown();
+if (hostedWeb) document.documentElement.classList.add("mt-hosted");
 const holdOffPageTop = () => {
   if (window.scrollY <= 0) window.scrollTo(0, 1);
 };
-holdOffPageTop();
-window.addEventListener("scroll", holdOffPageTop, { passive: true });
-window.addEventListener("resize", holdOffPageTop);
+if (!hostedWeb) {
+  holdOffPageTop();
+  window.addEventListener("scroll", holdOffPageTop, { passive: true });
+  window.addEventListener("resize", holdOffPageTop);
+}
 
 // --- Out-of-band safety net ------------------------------------------------
 // The town's one unforgivable failure is a bare sky-blue screen with

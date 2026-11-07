@@ -95,6 +95,19 @@ html {
   height: calc(100% + 1px);
 }
 
+/* The hosted web (Task 23): no host app, so no one-pixel hold; the
+   document is exactly the viewport, scrolls nowhere, and a downward
+   swipe on it is never the browser's to take. Panels that scroll
+   still do (.mt-scrollable is their own scroll container). */
+html.mt-hosted {
+  height: 100%;
+  overflow: hidden;
+  touch-action: none;
+}
+html.mt-hosted body {
+  touch-action: none;
+}
+
 body {
   position: fixed;
   inset: 0;

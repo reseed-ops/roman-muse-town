@@ -90,8 +90,15 @@ export function clearVisitResume(store: Store | null): void {
   }
 }
 
+/** This tab's session, or, in the installed app (Task 23), local
+ *  storage: Android may end an installed PWA's process in the
+ *  background, and its relaunch is a new session, so the session
+ *  store would come back empty. An installed app has one window, so
+ *  there is no second tab to pick the same visit up twice. */
 export function sessionStore(): Store | null {
   try {
+    const installed = typeof matchMedia !== "undefined" && matchMedia("(display-mode: fullscreen), (display-mode: standalone)").matches;
+    if (installed && typeof localStorage !== "undefined") return localStorage;
     return typeof sessionStorage === "undefined" ? null : sessionStorage;
   } catch {
     return null;

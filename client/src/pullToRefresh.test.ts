@@ -90,3 +90,18 @@ test("the page holds itself one pixel below the top", () => {
   expect(main).toContain("if (window.scrollY <= 0) window.scrollTo(0, 1);");
   expect(css).toContain("height: calc(100% + 1px);");
 });
+
+test("the hosted web has no outer scroll at all: no one-pixel hold, a fixed full-height page", () => {
+  expect(main).toContain('if (hostedWeb) document.documentElement.classList.add("mt-hosted");');
+  expect(main).toContain("if (!hostedWeb) {");
+  const hosted = css.slice(css.indexOf("html.mt-hosted {"), css.indexOf("}", css.indexOf("html.mt-hosted {")));
+  expect(hosted).toContain("height: 100%;");
+  expect(hosted).toContain("overflow: hidden;");
+  expect(hosted).toContain("touch-action: none;");
+});
+
+test("one talk with Aelia: the prompt and the menu row open it the same way", () => {
+  expect(app).toContain("talkToAeliaRef.current();");
+  expect(app).toContain("const selectMuse = () => talkToAelia();");
+  expect(app.split("openTalkBubble();").length - 1).toBe(1);
+});

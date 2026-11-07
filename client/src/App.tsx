@@ -2397,20 +2397,9 @@ export function App() {
           });
         }
       } else if (kind === "muse") {
-        setSelected(null);
-        setTreeOpen(false);
-        setYouOpen(false);
-        setBoardOpen(false);
-        setQuestOpen(false);
-        setSecretOpen(false);
-        setLettersOpen(false);
-        // Talking to Muse opens her speech bubble, never a panel.
-        openTalkBubbleRef.current();
-        if (nightRef.current) completeQuestRef.current("greet-at-night");
-        sceneRef.current?.greetMuse();
-        if (!walkingRef.current) {
-          sceneRef.current?.flyTo(MUSE.cameraPos, MUSE.cameraTarget, 1200);
-        }
+        // Talking to Muse opens her speech bubble, never a panel: the
+        // one talk, the same from the prompt and the menu (Task 23).
+        talkToAeliaRef.current();
       } else if (kind === "place") {
         const place = PLACES.find((p) => p.id === (id as PlaceId));
         if (place) {
@@ -5248,7 +5237,13 @@ export function App() {
     finalLineAtRef.current = null;
     sceneRef.current?.setVisitActive(true);
     publishVisit("none");
-    setVisitNotice({ text: by === "director" ? "Muse opened a visit. She can direct Aelia now." : "Visit open. Muse can direct Aelia now.", at: Date.now() });
+    setVisitNotice({
+      text: by === "director"
+        ? "Muse opened a visit. Talk to Aelia and type to her; Muse answers through her."
+        : "Visit open. Now talk to Aelia and type to her; Muse answers through her. The violet chip shows whether she is connected.",
+      at: Date.now(),
+      holdMs: 12_000,
+    });
   }, [publishVisit]);
   const endVisitNow = useCallback((reason: VisitCloseReason = "you") => {
     if (!visitRef.current.active) return;
@@ -5538,27 +5533,33 @@ export function App() {
     }, 60);
   };
 
-  const selectMuse = () => {
-    // Walking, a talk keeps him on his feet and the camera behind him
-    // (follow-up, Nov 7, 2026), as the A-prompt talk always has. It
-    // used to leave walk mode and fly to her fixed home spot, which,
-    // with her elsewhere (a visit moves her), framed an empty avenue
-    // at head height and showed Back to Gaius.
+  /** The one talk with her (Task 23): the A prompt, the menu's Aelia
+   *  row and the You panel's chip all land here, so the panel opens
+   *  the same way every time, with the same lines and the same input.
+   *  Walking, a talk keeps him on his feet and the camera behind him;
+   *  from the overview, the camera strolls over to her spot. (A first
+   *  talk of the day carries the day's extra lines, letters, notes,
+   *  so the page count can differ between one talk and the next, but
+   *  never between the two ways in.) */
+  const talkToAelia = () => {
     const onFoot = walkingRef.current;
-    if (!onFoot) exitWalkMode();
     stopTour();
     setSelected(null);
     setTreeOpen(false);
     setYouOpen(false);
     setWeatherOpen(false);
-    // Meeting Muse from the menu is a talk: her speech bubble, and,
-    // from the overview, the camera strolls over; no panel.
+    setBoardOpen(false);
+    setQuestOpen(false);
+    setSecretOpen(false);
+    setLettersOpen(false);
     openTalkBubble();
-    window.setTimeout(() => {
-      sceneRef.current?.greetMuse();
-      if (!onFoot) sceneRef.current?.flyTo(MUSE.cameraPos, MUSE.cameraTarget, 1200);
-    }, 60);
+    if (nightRef.current) completeQuestRef.current("greet-at-night");
+    sceneRef.current?.greetMuse();
+    if (!onFoot) sceneRef.current?.flyTo(MUSE.cameraPos, MUSE.cameraTarget, 1200);
   };
+  const talkToAeliaRef = useRef(talkToAelia);
+  talkToAeliaRef.current = talkToAelia;
+  const selectMuse = () => talkToAelia();
 
   const selectYou = () => {
     stopTour();
@@ -6115,7 +6116,7 @@ export function App() {
             key: "visit",
             icon: "✦",
             tint: "#a78bfa",
-            label: visitUi.active ? "End Muse's visit" : "Open a visit for Muse",
+            label: visitUi.active ? "End Muse's visit" : "Talk to my Muse",
             detail: visitUi.active
               ? `${visitStatusLine(visitUi.director, visitRoute, visitUi.seenAt)}${visitUi.lapseAt !== null ? ` With no contact, it closes at ${new Date(visitUi.lapseAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.` : ""}`
               : visitRoute.kind === "none"
@@ -6123,7 +6124,7 @@ export function App() {
                 : `Muse directs through ${visitRoute.kind === "door" ? "this town's own director door" : visitRoute.kind === "bridge" ? `the Live Bridge at ${visitRoute.host}${bridgeSettings.token ? "" : " (no token entered)"}` : `the director seam at ${visitRoute.host}`}.`,
             active: visitUi.active,
             action: () => (visitUi.active ? endVisitNow() : beginVisitNow()),
-            aria: visitUi.active ? "End Muse's visit; Aelia returns to her own voice" : "Open a visit for Muse; a director may then move Aelia and speak through her",
+            aria: visitUi.active ? "End Muse's visit; Aelia returns to her own voice" : "Talk to my Muse: open a visit, so Muse can move Aelia and speak through her",
           }]
         },
         {
@@ -7230,8 +7231,11 @@ export function App() {
               </div>
             )}
             </div>
+            {/* The input rides the panel's foot (Task 23): in a short
+                landscape window the panel scrolls, and the box must
+                never scroll out of sight. */}
             <form
-              className="mt-2.5 flex gap-2"
+              className="sticky -bottom-3 -mx-4 mt-2.5 flex gap-2 bg-[#fdfaf2] px-4 pt-1 pb-1"
               onSubmit={(e) => {
                 e.preventDefault();
                 sendChat();
