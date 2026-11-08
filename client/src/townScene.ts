@@ -1,4 +1,5 @@
 import { createPlaceFootprints } from "./buildingFootprints";
+import { aimSeaPath, buildSeaCliff, CLIFF, clampToWorld, walkable as onCliffPath } from "./seaCliff";
 import { createTrueSky, skyDirection, SKY_REFRESH_S } from "./trueSky";
 import { armsVisibility, createGaiusArms } from "./gaiusArms";
 import { createNightLights } from "./nightLights";
@@ -53,7 +54,7 @@ import {
   type VisitTelemetry,
 } from "../../shared/visitProtocol";
 import { frameDimensions } from "./visitFrames";
-import { setRainLevel, setRainShelter } from "./audio";
+import { setRainLevel, setRainShelter, setSurfLevel } from "./audio";
 import { FEEL } from "./feel";
 import { buildMetaSudans, META_SUDANS_LINES } from "./metaSudans";
 import { rainIntensity, rainSwell, SHELTER_HINT_LINE, SHELTERED_LINES, shelterAmount, wrapAround, type Shelter } from "./rainMood";
@@ -1337,7 +1338,12 @@ export function createTownScene(
         gl_FragColor = vec4(mix(horizonColor, topColor, k), 1.0); }`,
     }),
   );
-  scene.add(skyDome);
+  // The sky's own anchor (Task 34): the dome, the sun, the moon and the
+  // stars ride with the camera, so from the headland, far south of the
+  // town's centre, they still sit at their true bearings on the horizon.
+  const skyAnchor = new THREE.Group();
+  scene.add(skyAnchor);
+  skyAnchor.add(skyDome);
 
   const camera = new THREE.PerspectiveCamera(46, 1, 0.1, 500);
   camera.position.set(0, 34, 60);
@@ -3548,6 +3554,46 @@ export function createTownScene(
   moonGlitter.rotation.x = -Math.PI / 2;
   moonGlitter.position.set(LAKE_CX, LAKE_Y + 0.015, LAKE_CZ);
   world.add(moonGlitter);
+
+  // The sea cliff (Task 34): the coast, the peninsula path to the
+  // headland, the sea below and its surf (seaCliff.ts).
+  const foamTexture = (() => {
+    const c = document.createElement("canvas");
+    c.width = 128;
+    c.height = 64;
+    const g = c.getContext("2d");
+    if (g) {
+      for (let i = 0; i < 420; i++) {
+        const x = (i * 97.13) % 128;
+        const y = (i * 41.7 + (i % 7) * 9) % 64;
+        const r = 1.2 + ((i * 13) % 5);
+        g.fillStyle = `rgba(255,255,255,${0.15 + ((i * 7) % 10) / 20})`;
+        g.beginPath();
+        g.ellipse(x, y, r * 1.8, r * 0.7, 0, 0, Math.PI * 2);
+        g.fill();
+      }
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    return tex;
+  })();
+  const seaCliff = buildSeaCliff({ terrainHeight, waterNormal: waterTex, foamTexture, pathTexture: glitterMap });
+  scene.add(seaCliff.group);
+  void placeWorld(benchStoneUrl, { x: CLIFF.bench.x, z: CLIFF.bench.z, rotY: CLIFF.bench.rotY, width: 1.9 }).then((g) => {
+    if (disposed) return null;
+    if (g) {
+      faceBackrestPlusZ(g);
+      benchGroups.set(CLIFF.bench.id, g);
+    }
+  });
+  // A few wind-bent shrubs and rocks along the trail, so it reads as a walk.
+  for (const [px, pz, kind, rot] of [
+    [-6.6, 66, 0, 0.4], [7.1, 74, 1, 1.9], [-7.4, 85, 1, 2.6], [6.8, 93, 0, 0.9], [-6.2, 101, 0, 2.2], [7.6, 108, 1, 0.3],
+  ] as [number, number, number, number][]) {
+    if (kind === 0) void placeWorld(bushCUrl, { x: px, z: pz, rotY: rot, width: 1.6 });
+    else void placeWorld(rockPackUrl, { x: px, z: pz, rotY: rot, width: 1.1 });
+  }
   /** Moon up (0..1) and its light share (phase), refreshed with the sky. */
   let moonUp = 0;
   let moonShare = 0;
@@ -4656,6 +4702,8 @@ export function createTownScene(
       baseZ: PISCINA.position[1],
       standBehind: true,
     },
+    // The sea cliff's bench (Task 34), at the headland's edge, facing the sea.
+    { id: CLIFF.bench.id, x: CLIFF.bench.x, z: CLIFF.bench.z, rotY: CLIFF.bench.rotY, seatTop: 0.47, baseX: CLIFF.bench.x, baseZ: CLIFF.bench.z },
   ];
   /** Each bench's seat surface in WORLD Y, measured from the placed
    *  model's own transform (bounding-box base + the GLB-measured
@@ -6527,20 +6575,12 @@ export function createTownScene(
       // Town boundary: the town disc, union the forest lobe west.
       // Beyond both, the world (or the thicket) simply ends, he
       // is eased back to whichever rim he crossed.
-      const rad = Math.hypot(newX, newZ);
+      // (Task 34: and the sea cliff's peninsula, south of the gate.)
       const fn = forestNorm(newX, newZ);
-      if (rad > 52 && fn > 0.985) {
-        const dx = (newX / rad) * 52;
-        const dz = (newZ / rad) * 52;
-        const lx = FOREST.cx + ((newX - FOREST.cx) / fn) * 0.985;
-        const lz = FOREST.cz + ((newZ - FOREST.cz) / fn) * 0.985;
-        if (Math.hypot(newX - dx, newZ - dz) <= Math.hypot(newX - lx, newZ - lz)) {
-          newX = dx;
-          newZ = dz;
-        } else {
-          newX = lx;
-          newZ = lz;
-        }
+      const bounded = clampToWorld(newX, newZ, { norm: forestNorm, cx: FOREST.cx, cz: FOREST.cz });
+      if (bounded.x !== newX || bounded.z !== newZ) {
+        newX = bounded.x;
+        newZ = bounded.z;
         // Pushing at the wood's true edge with Aelia beside him:
         // she names it, softly, and not often.
         if (fn > 0.9 && followMode && t - lastForestEdgeAt > 120) {
@@ -6920,7 +6960,7 @@ export function createTownScene(
     let camZ = camFollowZ - fz * camDistSmooth;
     // Keep the camera inside the town's sensible range and off the ground.
     const camRad = Math.hypot(camX, camZ);
-    if (camRad > 62) {
+    if (camRad > 62 && !onCliffPath(walkPos.x, walkPos.z)) {
       camX = (camX / camRad) * 62;
       camZ = (camZ / camRad) * 62;
     }
@@ -7654,20 +7694,10 @@ export function createTownScene(
           newX = r.x;
           newZ = r.z;
         }
-        const rad = Math.hypot(newX, newZ);
-        const fn = forestNorm(newX, newZ);
-        if (rad > 52 && fn > 0.985) {
-          const dx = (newX / rad) * 52;
-          const dz = (newZ / rad) * 52;
-          const lx = FOREST.cx + ((newX - FOREST.cx) / fn) * 0.985;
-          const lz = FOREST.cz + ((newZ - FOREST.cz) / fn) * 0.985;
-          if (Math.hypot(newX - dx, newZ - dz) <= Math.hypot(newX - lx, newZ - lz)) {
-            newX = dx;
-            newZ = dz;
-          } else {
-            newX = lx;
-            newZ = lz;
-          }
+        {
+          const bounded = clampToWorld(newX, newZ, { norm: forestNorm, cx: FOREST.cx, cz: FOREST.cz });
+          newX = bounded.x;
+          newZ = bounded.z;
         }
         // A slide into a wall ends there.
         if (sliding(pad2Run) && Math.hypot(newX - cur.x, newZ - cur.z) < stepLen * 0.3) endSlide(pad2Run, t);
@@ -8114,20 +8144,10 @@ export function createTownScene(
     }
     // Her boundary is his: the town disc, union the forest lobe,
     // she follows him into the wood and no further than he can go.
-    const rad = Math.hypot(newX, newZ);
-    const mfn = forestNorm(newX, newZ);
-    if (rad > 52 && mfn > 0.985) {
-      const dx = (newX / rad) * 52;
-      const dz = (newZ / rad) * 52;
-      const lx = FOREST.cx + ((newX - FOREST.cx) / mfn) * 0.985;
-      const lz = FOREST.cz + ((newZ - FOREST.cz) / mfn) * 0.985;
-      if (Math.hypot(newX - dx, newZ - dz) <= Math.hypot(newX - lx, newZ - lz)) {
-        newX = dx;
-        newZ = dz;
-      } else {
-        newX = lx;
-        newZ = lz;
-      }
+    {
+      const bounded = clampToWorld(newX, newZ, { norm: forestNorm, cx: FOREST.cx, cz: FOREST.cz });
+      newX = bounded.x;
+      newZ = bounded.z;
     }
     const prevMX = cur.x;
     const prevMZ = cur.z;
@@ -8369,9 +8389,16 @@ export function createTownScene(
   // Stars (night only): Rome's true sky (Task 37), the naked-eye stars
   // of the Yale Bright Star Catalogue, the planets and the moon, each
   // where it really is over Rome now (trueSky.ts, romanSky.ts).
-  const trueSky = createTrueSky(scene, new THREE.CanvasTexture(spriteCanvas));
+  const trueSky = createTrueSky(skyAnchor, new THREE.CanvasTexture(spriteCanvas));
   trueSky.update(new Date());
   let skyRefreshAt = 0;
+  let surfLevelSent = 0;
+  let cliffGreeted = false;
+  const CLIFF_LINES = [
+    "There. All of it, and you beside me to see it. I'd have walked a long way for this.",
+    "Sit with me a while. The sea doesn't need us to say anything.",
+    "I'm glad you didn't come here alone, centurion.",
+  ];
 
   // The shared constellation, The Two Lanterns: two small lantern
   // figures of stars, side by side in the sky over the lake, joined
@@ -8453,6 +8480,11 @@ export function createTownScene(
     [-6, 33, -70, 1.6],
     [48, 30, 29, 1.15],
     [-61, 35, 32, 1.3],
+    // Over the sea (Task 34), where the low sun catches them at dawn and dusk.
+    [-70, 31, 165, 2.2],
+    [25, 36, 205, 2.6],
+    [95, 33, 150, 2.0],
+    [-140, 38, 230, 2.8],
   ] as [number, number, number, number][]) {
     const cloud = new THREE.Group();
     for (const [ox, oy, oz, r] of [
@@ -10667,7 +10699,7 @@ export function createTownScene(
   });
   const sunDisc = new THREE.Sprite(sunDiscMat);
   sunDisc.scale.setScalar(11);
-  scene.add(sunDisc);
+  skyAnchor.add(sunDisc);
   const sunGlowMat = new THREE.SpriteMaterial({
     map: new THREE.CanvasTexture(spriteCanvas),
     color: 0xffc98a,
@@ -10678,7 +10710,7 @@ export function createTownScene(
   });
   const sunGlow = new THREE.Sprite(sunGlowMat);
   sunGlow.scale.setScalar(30);
-  scene.add(sunGlow);
+  skyAnchor.add(sunGlow);
 
   // Day/night blending, now a living sky. The darkness (nightMix)
   // is DERIVED from the sun's elevation each frame, so every system
@@ -10759,6 +10791,7 @@ export function createTownScene(
     sunWarm.setHex(0xfff2d8);
     if (skyElevDeg < 16) sunWarm.lerp(tmpColorB.setHex(0xffc98a), Math.min(1, Math.max(0, (16 - skyElevDeg) / 13)));
     if (skyElevDeg < 4) sunWarm.lerp(tmpColorB.setHex(0xff9a4d), Math.min(1, Math.max(0, (4 - skyElevDeg) / 6)));
+    skyAnchor.position.set(camera.position.x, 0, camera.position.z);
     sunDisc.position.copy(sunDirCur).multiplyScalar(118);
     sunGlow.position.copy(sunDirCur).multiplyScalar(116);
     const discVis = THREE.MathUtils.clamp((skyElevDeg + 1.5) / 2.5, 0, 1) * (1 - Math.min(1, wCur.rain + wCur.snow)) * (weatherId === "fog" ? 0.3 : 1);
@@ -12125,6 +12158,39 @@ export function createTownScene(
           aimMoonPath(moonGlitter, moon.elev, moon.azim);
         }
         moonGlitterMat.opacity = nightMix * moonUp * moonShare * (0.5 + 0.1 * Math.sin(t * 2.3) + 0.06 * Math.sin(t * 5.1));
+        // The sea (Task 34): moving water, surf that swells at the cliff's
+        // foot, the moon's silver path and the low sun's gold laid toward
+        // their true bearings from wherever he stands.
+        {
+          const sea = seaCliff.oceanMat.normalMap;
+          if (sea) {
+            sea.offset.x = t * 0.0021;
+            sea.offset.y = t * 0.0013;
+          }
+          seaCliff.oceanMat.color.setHex(0x1f5674).lerp(tmpColorB.setHex(0x0a1a2a), nightMix * 0.8);
+          seaCliff.foamMat.opacity = 0.32 + 0.22 * Math.sin(t * 0.7) + 0.1 * Math.sin(t * 1.9 + 1.3);
+          if (seaCliff.foamMat.map) seaCliff.foamMat.map.offset.x = t * 0.02;
+          const vx = camera.position.x;
+          const vz = camera.position.z;
+          const moon = trueSky.moon();
+          aimSeaPath(seaCliff.moonPath, vx, vz, moon.azim);
+          (seaCliff.moonPath.material as THREE.MeshBasicMaterial).opacity =
+            nightMix * moonUp * moonShare * (0.42 + 0.08 * Math.sin(t * 2.1));
+          aimSeaPath(seaCliff.sunPath, vx, vz, skyAzimDeg);
+          const lowSun = Math.max(0, 1 - Math.abs(skyElevDeg - 4) / 10);
+          (seaCliff.sunPath.material as THREE.MeshBasicMaterial).opacity = lowSun * 0.55 * (1 - Math.min(1, wCur.rain + wCur.snow));
+          // At the headland together for the first time this visit, she says one quiet thing.
+          if (!cliffGreeted && walking && followMode && Math.hypot(walkPos.x - CLIFF.head.x, walkPos.z - CLIFF.head.z) < 6) {
+            cliffGreeted = true;
+            showMuseBubbleInternal(CLIFF_LINES[Math.floor(Math.random() * CLIFF_LINES.length)]!, t);
+          }
+          // The surf's sound, by how near the coast he walks.
+          const surf = walking ? THREE.MathUtils.smoothstep(walkPos.z, 50, 96) : 0;
+          if (Math.abs(surf - surfLevelSent) > 0.03) {
+            surfLevelSent = surf;
+            setSurfLevel(surf);
+          }
+        }
         // The moon shows by night, faintly by day when it is up (as it does).
         trueSky.moonMaterial.opacity = moonUp * (nightMix * 0.95 + (1 - nightMix) * 0.22);
         waterMat.emissive.setHex(0x0a2e4a);

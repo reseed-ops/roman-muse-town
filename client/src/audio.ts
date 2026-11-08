@@ -481,3 +481,55 @@ export function playJar(jar: SoundJar) {
     }, 4000);
   }
 }
+
+// The sea below the cliff (Task 34): soft surf, a slow swell and fall,
+// louder the nearer he walks to the coast. Level 0 fades it out and
+// stops it; nothing plays until the context has been opened by a tap.
+let surf: { src: AudioBufferSourceNode; lfo: OscillatorNode; master: GainNode } | null = null;
+const SURF_VOLUME = 0.2;
+
+export function setSurfLevel(level: number) {
+  const ac = actx;
+  if (!ac || ac.state !== "running") return;
+  const v = Math.max(0, Math.min(1, level));
+  const now = ac.currentTime;
+  if (v <= 0.001) {
+    if (!surf) return;
+    const going = surf;
+    surf = null;
+    going.master.gain.setTargetAtTime(0.0001, now, 0.6);
+    window.setTimeout(() => {
+      try {
+        going.src.stop();
+        going.lfo.stop();
+      } catch {
+        /* already stopped */
+      }
+    }, 3000);
+    return;
+  }
+  if (!surf) {
+    const src = ac.createBufferSource();
+    src.buffer = noiseBuffer(ac);
+    src.loop = true;
+    const low = ac.createBiquadFilter();
+    low.type = "lowpass";
+    low.frequency.value = 480;
+    low.Q.value = 0.6;
+    // The swell: a gain that a slow oscillator lifts and lets fall.
+    const swell = ac.createGain();
+    swell.gain.value = 0.55;
+    const lfo = ac.createOscillator();
+    lfo.frequency.value = 0.12;
+    const lfoDepth = ac.createGain();
+    lfoDepth.gain.value = 0.42;
+    lfo.connect(lfoDepth).connect(swell.gain);
+    const master = ac.createGain();
+    master.gain.value = 0.0001;
+    src.connect(low).connect(swell).connect(master).connect(ac.destination);
+    src.start();
+    lfo.start();
+    surf = { src, lfo, master };
+  }
+  surf.master.gain.setTargetAtTime(v * SURF_VOLUME * FEEL.stepVolume, now, 0.8);
+}
