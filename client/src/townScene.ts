@@ -1,4 +1,6 @@
 import { createPlaceFootprints } from "./buildingFootprints";
+import { armsVisibility, createGaiusArms } from "./gaiusArms";
+import { createNightLights } from "./nightLights";
 import { BUBBLE_SPEAKERS, bubblePageDuration, drawBubblePlate, paginateBubbleText, type BubbleSpeaker } from "./bubblePlate";
 import { samplePath } from "./pathGeometry";
 import { streetWidth } from "./town";
@@ -1417,44 +1419,10 @@ export function createTownScene(
   const plazaGlow = new THREE.PointLight(0xffc873, 0, 26, 1.6);
   plazaGlow.position.set(0, 3.4, 0);
   scene.add(plazaGlow);
-  // Night faces (Task 24): the moon as a real light, soft and cool,
-  // high in the north-west where her disc hangs, so heads and
-  // shoulders take a gentle rim of it; and one warm lamp-coloured
-  // fill that keeps to the pair, set between them and the camera,
-  // short-ranged, so Aelia's and Gaius's faces stay warm and
-  // readable while the town around them keeps its night. Neither
-  // casts shadows: no harsh edges on a face, and no extra shadow pass.
-  const moonLight = new THREE.DirectionalLight(0xb8ccff, 0);
-  // From the moon's own bearing (MOON_POS below, beyond the lake),
-  // raised to about 30 degrees so it reaches into the trees and
-  // across the ground rather than only grazing walls.
-  moonLight.position.set(-50, 62, -97);
-  scene.add(moonLight);
-  const faceFill = new THREE.PointLight(0xffc796, 0, 6.5, 2);
-  scene.add(faceFill);
-  const faceFillAim = new THREE.Vector3();
-  // Aelia's skin at night (Task 27): her pale VRM skin under the warm
-  // fill washed flat white-grey (toon shading has no soft falloff to
-  // model a face with). After dark her skin and face materials take a
-  // warm tan multiply, and that also brings back the contrast of the
-  // eyes and mouth painted on her face texture. Day is untouched.
-  const nightSkin: { mat: THREE.MeshToonMaterial; base: THREE.Color }[] = [];
-  const NIGHT_SKIN_WARM = new THREE.Color(0xe8b48c);
-  const nightSkinTmp = new THREE.Color();
-  let nightSkinApplied = -1;
-  function collectNightSkin(root: THREE.Object3D) {
-    const seen = new Set<THREE.Material>();
-    root.traverse((o) => {
-      if (!(o instanceof THREE.Mesh)) return;
-      for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
-        if (!(m instanceof THREE.MeshToonMaterial) || seen.has(m) || !/_(SKIN|FACE)(?![A-Za-z])/.test(m.name)) continue;
-        seen.add(m);
-        nightSkin.push({ mat: m, base: m.color.clone() });
-      }
-    });
-    nightSkinApplied = -1;
-  }
-  const faceFillCam = new THREE.Vector3();
+  // Night faces (Tasks 24 and 27): the soft moon, the warm fill on the
+  // pair, and Aelia's warm night skin (nightLights.ts).
+  const nightLights = createNightLights(scene);
+  const collectNightSkin = (root: THREE.Object3D) => nightLights.collectNightSkin(root);
 
   const world = new THREE.Group();
   scene.add(world);
@@ -5432,78 +5400,9 @@ export function createTownScene(
   // VRM's own leg and arm bones. He keeps his spawn on the peristyle,
   // and his greeting salute when he reaches Muse.
   let playerRig: VrmRig | null = null;
-  // Gaius's arms (the owner, Nov 8, 2026): the Roman pack's gladius,
-  // sheathed at his right hip as a legionary wore it, and the
-  // legionary's scutum slung across his back, face out. Both ride his
-  // bones (the gladius the hips, the shield the upper chest), so they
-  // move with every clip; neither is held, which would fight the walk
-  // and talk clips. The pack has no scabbard, so a plain leather one
-  // with brass bands is built here and only the hilt shows. They step
-  // aside where they would pass through someone: both in the bath and
-  // in the embrace, the shield also while he sits against a bench.
-  const gaiusSword = new THREE.Group();
-  const gaiusShield = new THREE.Group();
-  function attachGaiusArms(model: THREE.Object3D) {
-    const hips = model.getObjectByName("J_Bip_C_Hips");
-    const back =
-      model.getObjectByName("J_Bip_C_UpperChest") ?? model.getObjectByName("J_Bip_C_Chest") ?? model.getObjectByName("J_Bip_C_Spine");
-    if (!hips || !back) return;
-    // Offsets are set in his facing frame (the avatar group: forward
-    // +Z, up +Y, his right -X), at bind pose, then handed to the bone
-    // with attach(), which keeps the world placement.
-    const mount = (holder: THREE.Object3D, bone: THREE.Object3D, offset: THREE.Vector3, rot: THREE.Quaternion) => {
-      avatar.updateWorldMatrix(true, true);
-      const at = avatar.worldToLocal(bone.getWorldPosition(new THREE.Vector3()));
-      holder.position.copy(at).add(offset);
-      holder.quaternion.copy(rot);
-      avatar.add(holder);
-      holder.updateMatrixWorld(true);
-      bone.attach(holder);
-    };
-    // The gladius, built blade up from the pommel at y 0, then turned
-    // blade down so it hangs from the hilt.
-    const SWORD_LEN = 0.74;
-    const HILT = 0.19;
-    const blade = new THREE.Group();
-    const leather = mat(0x4a2f1c, { rough: 0.85 });
-    const brass = mat(0xc9a24a, { rough: 0.4, metal: 0.6 });
-    const sheath = new THREE.Mesh(new THREE.BoxGeometry(0.075, SWORD_LEN - HILT + 0.02, 0.032), leather);
-    sheath.position.y = (HILT + SWORD_LEN + 0.02) / 2;
-    const locket = new THREE.Mesh(new THREE.BoxGeometry(0.084, 0.035, 0.038), brass);
-    locket.position.y = HILT + 0.03;
-    const band = new THREE.Mesh(new THREE.BoxGeometry(0.082, 0.025, 0.037), brass);
-    band.position.y = HILT + 0.24;
-    const chape = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.045, 0.038), brass);
-    chape.position.y = SWORD_LEN;
-    for (const m of [sheath, locket, band, chape]) {
-      m.castShadow = true;
-      blade.add(m);
-    }
-    void placeModel(gladiusUrl, blade, { x: 0, z: 0, height: SWORD_LEN });
-    blade.rotation.z = Math.PI;
-    gaiusSword.clear();
-    gaiusSword.add(blade);
-    mount(
-      gaiusSword,
-      hips,
-      new THREE.Vector3(-0.21, 0.17, 0.08),
-      new THREE.Quaternion().setFromEuler(new THREE.Euler(0.35, 0, -0.12, "XYZ")),
-    );
-    // The scutum: centred on the holder, face (boss) turned backward,
-    // its curve hugging his back, hung a touch askew like a sling.
-    const SHIELD_H = 1.0;
-    const shieldInner = new THREE.Group();
-    shieldInner.position.y = -SHIELD_H / 2;
-    void placeModel(shieldLegionaireUrl, shieldInner, { x: 0, z: 0, height: SHIELD_H });
-    gaiusShield.clear();
-    gaiusShield.add(shieldInner);
-    mount(
-      gaiusShield,
-      back,
-      new THREE.Vector3(0, -0.22, -0.22),
-      new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), 0.1)),
-    );
-  }
+  // Gaius's arms: the gladius at his right hip, the scutum on his back (gaiusArms.ts).
+  const gaiusArms = createGaiusArms({ frame: avatar, place: placeModel, gladiusUrl, shieldUrl: shieldLegionaireUrl });
+  const attachGaiusArms = (model: THREE.Object3D) => gaiusArms.attach(model);
   let playerAnim: CharAnimator | null = null;
   let playerBlink: { mesh: THREE.Mesh; index: number }[] = [];
   // Reveal gate (same shape as Muse's): his body stays hidden until
@@ -10910,30 +10809,16 @@ export function createTownScene(
     const lampLevel = Math.min(1, nightMix + (weatherId === "fog" ? 0.45 : 0) + wCur.rain * FEEL.rainLampGlow);
     plazaGlow.intensity = lampLevel * 60;
     // Night faces: the soft moon and the warm fill on the pair.
-    moonLight.intensity = nightMix * 0.5 * (1 - Math.min(1, wCur.rain + wCur.snow) * 0.6) * (weatherId === "fog" ? 0.5 : 1);
-    faceFill.intensity = nightMix * 2.6;
-    if (nightSkin.length > 0 && Math.abs(nightMix - nightSkinApplied) > 0.01) {
-      nightSkinApplied = nightMix;
-      nightSkinTmp.setRGB(1, 1, 1).lerp(NIGHT_SKIN_WARM, nightMix);
-      for (const n of nightSkin) n.mat.color.copy(n.base).multiply(nightSkinTmp);
-    }
-    if (nightMix > 0.01) {
-      // Aim at her head, or at the pair's midpoint when he walks
-      // beside her; the fill sits 1.6 m from that point toward the
-      // camera and a little above, a lamp held at face height.
-      faceFillAim.set(museGroup.position.x, museGroup.position.y + 1.55, museGroup.position.z);
-      if (walking && avatar.position.distanceTo(museGroup.position) < 5) {
-        faceFillAim.x = (faceFillAim.x + avatar.position.x) / 2;
-        faceFillAim.z = (faceFillAim.z + avatar.position.z) / 2;
-        faceFillAim.y = (faceFillAim.y + avatar.position.y + 1.6) / 2;
-      }
-      faceFillCam.copy(camera.position).sub(faceFillAim);
-      faceFillCam.y = 0;
-      if (faceFillCam.lengthSq() < 1e-4) faceFillCam.set(0, 0, 1);
-      faceFillCam.normalize();
-      faceFill.position.copy(faceFillAim).addScaledVector(faceFillCam, 1.6);
-      faceFill.position.y += 0.45;
-    }
+    nightLights.update({
+      nightMix,
+      rain: wCur.rain,
+      snow: wCur.snow,
+      fog: weatherId === "fog",
+      muse: museGroup.position,
+      player: avatar.position,
+      walking,
+      camera: camera.position,
+    });
     starMat.opacity = nightMix * 0.95 * (1 - Math.min(1, wCur.rain + wCur.snow)) * (weatherId === "fog" ? 0.25 : 1);
     // Fireflies belong to warm-season nights, and they keep to the
     // lake and its willows.
@@ -11411,8 +11296,7 @@ export function createTownScene(
       const hopMode = sliding(run) ? "slide" : airborne(hop) ? (hop.vy > 0 ? "jumpUp" : "jumpFall") : t - hopLandedAt < 0.2 && playerSpeedSm < 1 ? "jumpLand" : null;
       {
         const embracing = !!pairState && pairState.kind === "hug";
-        gaiusSword.visible = !bathState && !embracing;
-        gaiusShield.visible = !bathState && !embracing && !seatPlayer;
+        gaiusArms.setVisible(armsVisibility({ bathing: !!bathState, embracing, seated: !!seatPlayer }));
       }
       playerAnim.update(dt, walking ? playerSpeedSm : 0, playerAnim.hasWave && playerSpeedSm < 0.4 && playerWaveAge >= 0 && playerWaveAge < WAVE_LEN, !!seatPlayer || !!boatState || !!bathState, hopMode ?? (pairState && !pairState.glide ? pairState.kind : danceState ? "dance" : talkAnimOpen ? "talk" : null), !!seatPlayer);
       playerInner.position.y = 0;

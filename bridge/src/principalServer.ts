@@ -42,13 +42,14 @@ const MAX_BODY_BYTES = 64_000;
 export const PAIR_MISSES_PER_SOURCE = 8;
 export const PAIR_MISS_WINDOW_MS = 10 * 60 * 1000;
 
-/** The caller's address: the rightmost X-Forwarded-For entry is the one
- *  the platform's proxy added (earlier ones are the caller's to forge). */
+/** The caller's address: Railway's edge sets X-Real-IP to the client's
+ *  address (its documented header); X-Forwarded-For is never read,
+ *  since a caller can write anything there. Off Railway (tests, a local
+ *  run) the socket's own address is used. */
 export function callerAddress(req: IncomingMessage): string {
-  const fwd = req.headers["x-forwarded-for"];
-  const raw = Array.isArray(fwd) ? fwd[fwd.length - 1] : fwd;
-  const last = raw?.split(",").map((part) => part.trim()).filter(Boolean).pop();
-  return last || req.socket.remoteAddress || "unknown";
+  const real = req.headers["x-real-ip"];
+  const value = (Array.isArray(real) ? real[real.length - 1] : real)?.trim();
+  return value || req.socket.remoteAddress || "unknown";
 }
 export const WAIT_MAX_S = 25;
 const WAIT_LOOK_MS = 250;
@@ -121,6 +122,9 @@ export function startPrincipalServer(opts: PrincipalServerOptions): Promise<Prin
       if (method === "OPTIONS") return send(res, 204, {});
       if (path === "/healthz" && method === "GET") return send(res, 200, { ok: true });
       if (path === "/pair" && opts.pair) {
+        // The town asks this before it offers Connect my Muse, so a town
+        // never shows a pairing step this bridge cannot complete.
+        if (method === "GET") return send(res, 200, { pairing: true });
         if (method !== "POST") return send(res, 405, { error: "method not allowed" });
         let raw: unknown = null;
         try {

@@ -40,3 +40,17 @@ export function museConnectMessage(code: string): string {
     `3. Tell me when you are watching. I will talk to you in the town, not here.`,
   ].join("\n");
 }
+
+/** Does the hosted bridge pair towns yet? The town offers Connect my
+ *  Muse only on a yes, so it never shows a step that cannot complete
+ *  (an older bridge answers 404 here). Any failure reads as no. */
+export async function pairingAvailable(fetchImpl: typeof fetch = fetch, timeoutMs = 6000): Promise<boolean> {
+  try {
+    const res = await fetchImpl(`${HOSTED_BRIDGE_URL}/pair`, { method: "GET", signal: AbortSignal.timeout(timeoutMs) });
+    if (res.status !== 200) return false;
+    const body = (await res.json()) as { pairing?: unknown };
+    return body.pairing === true;
+  } catch {
+    return false;
+  }
+}

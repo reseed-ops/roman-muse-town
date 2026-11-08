@@ -1,9 +1,37 @@
 // Connect my Muse (Task 29), the panel: the one-time pairing code and
 // the message the visitor pastes to their Muse, with a copy button.
 // Moved out of App.tsx, which keeps the state and the code request.
-import { museConnectMessage, type PairCode } from "./connectMuse";
+import { useCallback, useEffect, useState } from "react";
+import { museConnectMessage, pairingAvailable, requestPairCode, type PairCode } from "./connectMuse";
+import { isHostedTown } from "./hosted";
 
 export type ConnectMuseState = { state: "loading" } | { state: "ready"; pair: PairCode; copied: boolean } | { state: "error"; text: string };
+
+/** The panel's state, whether the hosted bridge pairs (asked once per
+ *  load, on the hosted web only), and the opener the menu row calls. */
+export function useConnectMuse(closeMenu: () => void) {
+  const [connectMuse, setConnectMuse] = useState<ConnectMuseState | null>(null);
+  const [pairingLive, setPairingLive] = useState(false);
+  useEffect(() => {
+    if (!isHostedTown()) return;
+    let live = true;
+    void pairingAvailable().then((ok) => {
+      if (live) setPairingLive(ok);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  const openConnectMuse = useCallback(() => {
+    closeMenu();
+    setConnectMuse({ state: "loading" });
+    requestPairCode().then(
+      (pair) => setConnectMuse({ state: "ready", pair, copied: false }),
+      (error: unknown) => setConnectMuse({ state: "error", text: error instanceof Error ? error.message : String(error) }),
+    );
+  }, [closeMenu]);
+  return { connectMuse, setConnectMuse, pairingLive, openConnectMuse };
+}
 
 export function ConnectMusePanel({ state, onClose, onCopied }: { state: ConnectMuseState; onClose: () => void; onCopied: (copied: boolean) => void }) {
   return (

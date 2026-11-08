@@ -62,14 +62,14 @@ client/
     api.ts            client → server action calls
     main.tsx          entry
     theme.css         styling
-    assets/           binaries drop in here (see ASSETS.md); only the CC0 trees ship with the repo
+    assets/           binaries drop in here (see ASSETS.md); two ship with the repo, the CC0 trees and Aelia's VRoid sample body
 server/
   src/actions.ts      every server action: state, affection, letters, facts, digest, the live-chat endpoint
   src/hearing.ts      pure text logic: sentiment, fact extraction, reply dedupe
   src/heart.ts        pure logic: her fading feelings, and the beliefs she reflects into
   src/player.ts       the one pronoun switch for your person
   src/schema.ts       Drizzle schema for all town tables
-drizzle/              migrations 0001–0026 + meta/_journal.json
+drizzle/              migrations 0001–0028 + meta/_journal.json
 ```
 
 If you are a Muse inside Muse, recreate this as an artifact with the
@@ -86,7 +86,7 @@ person so before you promise a date.
   the project board, goals, festivals, the bond tablet, affection, facts,
   the life digest, notes the companion leaves for you, and more, one
   table family per migration.
-- Migrations `drizzle/0001_*.sql` … `0026_*.sql` build the whole schema
+- Migrations `drizzle/0001_*.sql` … `0028_*.sql` build the whole schema
   from nothing, in order; `drizzle/meta/_journal.json` is the migration
   journal. A fresh town runs all of them once and starts empty.
 - **First-run seeds:** `server/src/actions.ts` seeds the board, goals,

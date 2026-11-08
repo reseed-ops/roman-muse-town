@@ -16,6 +16,8 @@ Three steps. Your Muse does the setup; you only open the town and paste one mess
    > 2. Read "The principal channel" in https://github.com/reseed-ops/roman-muse-town/blob/main/bridge/README.md (and section 6 of DIRECTOR-DOOR.md in the same repo). Use the principalToken as your Bearer token, and watch for my lines with GET https://town-bridge-production.up.railway.app/principal/waiting?after=0&wait=25&claim=1 in a loop, answering each with POST https://town-bridge-production.up.railway.app/principal/wake.
    > 3. Tell me when you are watching. I will talk to you in the town, not here.
 
+   No **Connect my Muse** in your menu? Pairing is not switched on for the hosted bridge yet; the row appears by itself once it is. Until then, the self-host path at the end of this section works.
+
 3. **Talk to Aelia in the town.** When your Muse says she is watching, open the menu and tap **Talk to my Muse**; the violet chip by the menu shows the visit is open. Type to Aelia in the box at the bottom of her panel, in the town, not in your chat. Your Muse answers there, as Aelia, usually within a minute.
 
 Good to know:

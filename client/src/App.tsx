@@ -220,9 +220,8 @@ import { HARNESS_STORAGE_KEY, IDLE_GLANCE_MS, resolveHarnessUrl, syncWithHarness
 import { bridgeClose, bridgeConfigured, bridgeGlance, bridgeLeg, emptyBridgeCursor, hostedBridgeSettings, readBridgeSettings, resolveBridge, storeBridgeSettings, type BridgeCursor, type BridgeSettings } from "./visitBridgeClient";
 import { BRIDGE_BEAT_MS, FRAME_JPEG_QUALITY, FRAME_MAX_EDGE, VISIT_LAPSE_MS, VISIT_POLL_MS, type QueuedDirection } from "../../shared/visitProtocol";
 import { clearVisitResume, loadVisitResume, saveVisitResume, sessionStore } from "./visitResume";
-import { requestPairCode } from "./connectMuse";
-import { ConnectMusePanel, type ConnectMuseState } from "./ConnectMusePanel";
-import { isHostedTown } from "./hosted";
+import { ConnectMusePanel, useConnectMuse } from "./ConnectMusePanel";
+import { useVisitNotice } from "./useVisitNotice";
 import { LAPSE_WARN_MS, UNREACHABLE_AFTER_FAILS, composingVisible, hostOf, visitChipLine, visitClosedLine, visitStatusLine, type VisitCloseReason, type VisitDirectorState, type VisitRoute } from "./visitStatus";
 import {
 playChime,
@@ -490,34 +489,9 @@ export function App() {
   }>({ active: false, intention: null, composing: false, thread: [], director: "none", lapseAt: null, seenAt: null });
   // The visit's one-line notices: opened, picked up after a reload,
   // closed and why (fix list, Nov 7, 2026). Shown a few seconds.
-  const [visitNotice, setVisitNotice] = useState<{ text: string; at: number; holdMs?: number } | null>(null);
-  // Connect my Muse (Task 29): the pairing code and the message for her.
-  const [connectMuse, setConnectMuse] = useState<ConnectMuseState | null>(null);
-  const openConnectMuse = useCallback(() => {
-    setMenuOpen(false);
-    setConnectMuse({ state: "loading" });
-    requestPairCode().then(
-      (pair) => setConnectMuse({ state: "ready", pair, copied: false }),
-      (error: unknown) => setConnectMuse({ state: "error", text: error instanceof Error ? error.message : String(error) }),
-    );
-  }, []);
-  useEffect(() => {
-    if (!visitNotice) return;
-    // The clock starts only once the tab is in view; a long notice
-    // (the reload pickup, read while a slow town is still settling)
-    // stays up longer, and any notice goes on a tap.
-    let timer = 0;
-    const arm = () => {
-      if (timer || document.visibilityState !== "visible") return;
-      timer = window.setTimeout(() => setVisitNotice(null), visitNotice.holdMs ?? 6500);
-    };
-    arm();
-    document.addEventListener("visibilitychange", arm);
-    return () => {
-      window.clearTimeout(timer);
-      document.removeEventListener("visibilitychange", arm);
-    };
-  }, [visitNotice]);
+  const [visitNotice, setVisitNotice] = useVisitNotice();
+  // Connect my Muse (Task 29): offered only once the hosted bridge pairs.
+  const { connectMuse, setConnectMuse, pairingLive, openConnectMuse } = useConnectMuse(() => setMenuOpen(false));
   const directorSeenAtRef = useRef<number | null>(null);
   // Bridge beats that failed in a row: "unreachable" only after a few.
   const bridgeFailsRef = useRef(0);
@@ -6179,7 +6153,7 @@ export function App() {
             active: visitUi.active,
             action: () => (visitUi.active ? endVisitNow() : beginVisitNow()),
             aria: visitUi.active ? "End Muse's visit; Aelia returns to her own voice" : "Talk to my Muse: open a visit, so Muse can move Aelia and speak through her",
-          }, ...(isHostedTown() ? [{
+          }, ...(pairingLive ? [{
             key: "connect-muse",
             icon: "🔗",
             label: "Connect my Muse",

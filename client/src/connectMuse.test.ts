@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { HOSTED_BRIDGE_URL, museConnectMessage, requestPairCode } from "./connectMuse";
+import { HOSTED_BRIDGE_URL, museConnectMessage, pairingAvailable, requestPairCode } from "./connectMuse";
 
 // Task 29: the town side of Connect my Muse.
 
@@ -23,4 +23,12 @@ test("the code is asked of the town's own origin with the visitor key as the bea
   expect(seen).toEqual([{ url: "https://town.test/bridge/pair", auth: "Bearer visitor-key-0000000000001" }]);
   const refused = (async () => new Response("{}", { status: 401 })) as unknown as typeof fetch;
   await expect(requestPairCode("https://town.test", () => "k", refused)).rejects.toThrow("HTTP 401");
+});
+
+test("Connect my Muse is offered only when the bridge says it pairs", async () => {
+  const answer = (status: number, body: unknown) => (async () => new Response(JSON.stringify(body), { status })) as unknown as typeof fetch;
+  expect(await pairingAvailable(answer(200, { pairing: true }))).toBe(true);
+  expect(await pairingAvailable(answer(404, { error: "no such route" }))).toBe(false);
+  expect(await pairingAvailable(answer(200, { ok: true }))).toBe(false);
+  expect(await pairingAvailable((async () => { throw new Error("offline"); }) as unknown as typeof fetch)).toBe(false);
 });

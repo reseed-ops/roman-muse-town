@@ -1,7 +1,8 @@
 # ASSETS.md: the binary manifest
 
-This repository is **code and text only**. Every binary asset the town
-needs was excluded from the copy (123 files), because nearly all of them
+This repository is **code and text, plus two freely redistributable
+binaries** (below). Every other binary asset the town needs is excluded
+(121 files), because nearly all of them
 are commercial assets whose licences allow them to be *embedded in a
 shipped product* but **never redistributed as files**. This manifest lists
 everything excluded, grouped by source pack, with the exact folder path
@@ -12,12 +13,15 @@ each file belongs at, so that:
   download, or supply, and what the town looks like without each piece
   (see "Graceful degradation" in `INSTALL-FOR-MUSE.md`).
 
-**The one binary that IS in this repo:** `client/src/assets/trees_pack.glb`,
+**The two binaries that ARE in this repo:** `client/src/assets/trees_pack.glb`,
 positively identified as *Low Poly Trees* from itch.io, released **CC0**,
-so it may ride in a public repo. Everything below is purchase/download/
-supply required; nothing below may be committed to a public repository.
+so it may ride in a public repo; and `client/src/assets/muse-avatar.vrm`,
+Aelia's body, pixiv's VRoid sample model, whose terms allow it in a free
+public repo (see its row below). Everything else is purchase/download/
+supply required, and may never be committed to a public repository.
 
-Counts: 120 files excluded from `client/src/assets/`, plus the app icon
+Counts: 121 files excluded from `client/src/assets/` (123 in the folder,
+less the two above), plus the app icon
 `icon.webp` at the space root. (Compiled copies of these assets also exist
 in the original's `client/dist/` build output, 222 binary files, which
 is build output, not source, and is not itemised here.)

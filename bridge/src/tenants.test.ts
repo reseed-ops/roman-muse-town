@@ -114,7 +114,8 @@ test("the server: the owner's token reaches the owner's desk, a paired token its
   });
   const at = (path: string) => `http://127.0.0.1:${server.port}${path}`;
   const bearer = (t: string) => ({ authorization: `Bearer ${t}`, "content-type": "application/json" });
-  // Pairing.
+  // Pairing: the capability answer the town asks for, then a code.
+  expect(await (await fetch(at("/pair"))).json()).toEqual({ pairing: true });
   expect((await fetch(at("/pair"), { method: "POST", body: JSON.stringify({ code: "WRONG-CODE0" }) })).status).toBe(404);
   const paired = await fetch(at("/pair"), { method: "POST", body: JSON.stringify({ code: "GOODC-ODE22" }) });
   expect(paired.status).toBe(200);
@@ -152,15 +153,18 @@ test("/pair limits wrong codes per caller: a guesser is refused, another caller 
     host: "127.0.0.1",
     log: (l) => lines.push(l),
   });
-  const pair = (code: string, from: string) =>
-    fetch(`http://127.0.0.1:${server.port}/pair`, { method: "POST", headers: { "x-forwarded-for": from }, body: JSON.stringify({ code }) });
-  for (let i = 0; i < PAIR_MISSES_PER_SOURCE; i++) expect((await pair("WRONG-CODE0", "9.9.9.9, 203.0.113.7")).status).toBe(404);
+  const pair = (code: string, realIp: string, forwarded = "1.2.3.4") =>
+    fetch(`http://127.0.0.1:${server.port}/pair`, { method: "POST", headers: { "x-real-ip": realIp, "x-forwarded-for": forwarded }, body: JSON.stringify({ code }) });
+  for (let i = 0; i < PAIR_MISSES_PER_SOURCE; i++) expect((await pair("WRONG-CODE0", "203.0.113.7", `10.0.0.${i}`)).status).toBe(404);
   // The guesser is now refused, even with the right code...
-  expect((await pair("GOODC-ODE22", "9.9.9.9, 203.0.113.7")).status).toBe(429);
-  // ...and forging an earlier X-Forwarded-For entry does not escape it (the proxy's own, rightmost, counts).
-  expect((await pair("WRONG-CODE0", "1.2.3.4, 203.0.113.7")).status).toBe(429);
-  // Someone else pairs as normal.
-  expect((await pair("GOODC-ODE22", "198.51.100.20")).status).toBe(200);
+  expect((await pair("GOODC-ODE22", "203.0.113.7")).status).toBe(429);
+  // ...and no X-Forwarded-For value, however varied, escapes it: only X-Real-IP counts.
+  expect((await pair("WRONG-CODE0", "203.0.113.7", "198.51.100.99, 198.51.100.20")).status).toBe(429);
+  // Someone else pairs as normal, even while forging the guesser's X-Forwarded-For.
+  expect((await pair("GOODC-ODE22", "198.51.100.20", "203.0.113.7")).status).toBe(200);
+  // Without X-Real-IP (off Railway) the socket address is the caller.
+  const bare = await fetch(`http://127.0.0.1:${server.port}/pair`, { method: "POST", headers: { "x-forwarded-for": "203.0.113.7" }, body: JSON.stringify({ code: "GOODC-ODE22" }) });
+  expect(bare.status).toBe(200);
   await server.close();
   expect(lines.join("\n")).not.toContain("203.0.113.7");
 });
