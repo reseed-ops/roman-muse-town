@@ -38,13 +38,20 @@ test("a visit send is captured as mail and returns before any reply, local chat,
   expect(sendChat.split("visitRef.current").length - 1).toBe(4);
 });
 
-test("the presence signs: the violet star, the visiting marker, the intention line, and the exact sight line", () => {
+test("the presence signs: the violet star stays; the talk panel during a visit is just Aelia and you (Task 28)", () => {
   expect(scene).toContain("mat.color.setHex(on ? VISIT_STAR_COLOR : 0xffd34e)");
-  expect(app).toContain("{visitUi.active && <span className=\"font-bold normal-case tracking-normal\">· {VISITING_MARKER}</span>}");
-  expect(app).toContain("{visitUi.intention && <p className=\"font-semibold text-[#6d28d9]\">{visitUi.intention}</p>}");
-  expect(app).toContain("<p className=\"text-[#2b2118]/60\">{SIGHT_LINE}</p>");
+  // The constants stay in the protocol; the panel no longer shows them.
   expect(SIGHT_LINE).toBe("Muse can see your view while visiting.");
   expect(VISITING_MARKER).toBe("Muse is visiting");
+  expect(app).not.toContain("{VISITING_MARKER}");
+  expect(app).not.toContain("{SIGHT_LINE}");
+  for (const gone of ["carried to Muse", "Muse, as Aelia", "Lines marked Muse are hers", "Aelia's own voice, not from Muse"]) {
+    expect(app).not.toContain(gone);
+  }
+  expect(app).toContain('{entry.who === "him" ? "You" : "Aelia"}: ');
+  // Her own town voice line is not shown while a visit is open.
+  const own = app.indexOf('onClick={advanceMuseBubble}');
+  expect(app.lastIndexOf("{!visitUi.active && (", own)).toBeGreaterThan(own - 400);
 });
 
 test("the scene resolves every named anchor, and the local Gemma chat is not wired as a director", () => {

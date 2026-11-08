@@ -218,7 +218,7 @@ import {
 import { frameDue, validateFrameDataUrl } from "./visitFrames";
 import { HARNESS_STORAGE_KEY, IDLE_GLANCE_MS, resolveHarnessUrl, syncWithHarness } from "./visitHarnessClient";
 import { bridgeClose, bridgeConfigured, bridgeGlance, bridgeLeg, emptyBridgeCursor, hostedBridgeSettings, readBridgeSettings, resolveBridge, storeBridgeSettings, type BridgeCursor, type BridgeSettings } from "./visitBridgeClient";
-import { BRIDGE_BEAT_MS, FRAME_JPEG_QUALITY, FRAME_MAX_EDGE, SIGHT_LINE, VISITING_MARKER, VISIT_LAPSE_MS, VISIT_POLL_MS, type QueuedDirection } from "../../shared/visitProtocol";
+import { BRIDGE_BEAT_MS, FRAME_JPEG_QUALITY, FRAME_MAX_EDGE, VISIT_LAPSE_MS, VISIT_POLL_MS, type QueuedDirection } from "../../shared/visitProtocol";
 import { clearVisitResume, loadVisitResume, saveVisitResume, sessionStore } from "./visitResume";
 import { LAPSE_WARN_MS, UNREACHABLE_AFTER_FAILS, composingVisible, hostOf, visitChipLine, visitClosedLine, visitStatusLine, type VisitCloseReason, type VisitDirectorState, type VisitRoute } from "./visitStatus";
 import {
@@ -6866,9 +6866,8 @@ export function App() {
                 that spanned from its foot down to that max.) */}
             <div className={isLandscape ? "mt-scrollable -mx-4 min-h-0 flex-1 overflow-y-auto px-4" : ""}>
             <div className="flex items-center justify-between gap-2">
-              <p className={`flex items-center gap-1.5 text-[13px] font-bold ${visitUi.active ? "text-[#6d28d9]" : "text-[#a87800]"}`}>
+              <p className="flex items-center gap-1.5 text-[13px] font-bold text-[#a87800]">
                 <span aria-hidden="true">✦</span> Aelia
-                {visitUi.active && <span className="font-bold normal-case tracking-normal">· {VISITING_MARKER}</span>}
               </p>
               <span className="flex items-center gap-1.5">
                 {voiceOk && (
@@ -6894,26 +6893,27 @@ export function App() {
                 </button>
               </span>
             </div>
+            {/* During a visit the panel is just a conversation (Task 28):
+                his lines and Aelia's, no labels about who carries them,
+                no info box, no town-voice line beneath. The violet chip
+                by the menu and her violet star still show the visit. */}
             {visitUi.active && (
-              <div className="mt-1.5 rounded-2xl bg-[#8b5cf6]/10 px-3 py-2 text-[12px] leading-relaxed" aria-live="polite">
-                {visitUi.intention && <p className="font-semibold text-[#6d28d9]">{visitUi.intention}</p>}
-                <p className="text-[#2b2118]/60">{SIGHT_LINE}</p>
-                <p className="text-[#2b2118]/60">Lines marked Muse are hers; the line below this box is Aelia's own town voice.</p>
-                {visitUi.composing && <p className="text-[#6d28d9]/80 italic">Muse is writing…</p>}
+              <div className="mt-1.5 text-[15px] leading-relaxed" aria-live="polite">
                 {visitUi.thread.length > 0 && (
-                  <ul className="mt-1.5 flex flex-col gap-1">
+                  <ul className="flex flex-col gap-1.5">
                     {visitUi.thread.slice(-8).map((entry, i) => (
-                      <li key={`${entry.who}:${entry.seq ?? entry.lineId ?? i}`} className={entry.who === "him" ? "text-[#6d28d9]" : "text-[#2b2118]"}>
-                        <span className="font-bold">{entry.who === "him" ? "You" : "Muse, as Aelia"}: </span>
+                      <li key={`${entry.who}:${entry.seq ?? entry.lineId ?? i}`} className={entry.who === "him" ? "text-[#5a4632]" : "text-[#2b2118]"}>
+                        <span className="font-bold">{entry.who === "him" ? "You" : "Aelia"}: </span>
                         {entry.text}
-                        {entry.who === "him" && <span className="text-[#6d28d9]/70"> · carried to Muse</span>}
-                        {entry.partial && <span className="text-[#6d28d9]/70">…</span>}
+                        {entry.partial && <span className="text-[#2b2118]/50">…</span>}
                       </li>
                     ))}
                   </ul>
                 )}
+                {visitUi.composing && <p className="mt-1 text-[13px] text-[#2b2118]/55 italic">Aelia is writing…</p>}
               </div>
             )}
+            {!visitUi.active && (
             <button
               type="button"
               className="mt-1 block w-full text-left"
@@ -6921,7 +6921,6 @@ export function App() {
               aria-live="polite"
               onClick={advanceMuseBubble}
             >
-              {visitUi.active && <p className="text-[11px] font-semibold text-[#a87800]/80">Aelia's own voice, not from Muse</p>}
               <p
                 className={`${isLandscape ? "text-[19px]" : "text-[17px]"} leading-[1.45] font-normal`}
                 style={{ fontFamily: "var(--font-voice)" }}
@@ -6939,6 +6938,7 @@ export function App() {
                 </p>
               )}
             </button>
+            )}
             {/* What you can do with her this moment, one quiet row: a
                 direct answer to her question stays gold, every other
                 offer is a plain chip (its emoji is its identity). Each

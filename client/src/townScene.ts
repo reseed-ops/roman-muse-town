@@ -1419,11 +1419,35 @@ export function createTownScene(
   // readable while the town around them keeps its night. Neither
   // casts shadows: no harsh edges on a face, and no extra shadow pass.
   const moonLight = new THREE.DirectionalLight(0xb8ccff, 0);
-  moonLight.position.set(-52, 60, -72);
+  // From the moon's own bearing (MOON_POS below, beyond the lake),
+  // raised to about 30 degrees so it reaches into the trees and
+  // across the ground rather than only grazing walls.
+  moonLight.position.set(-50, 62, -97);
   scene.add(moonLight);
   const faceFill = new THREE.PointLight(0xffc796, 0, 6.5, 2);
   scene.add(faceFill);
   const faceFillAim = new THREE.Vector3();
+  // Aelia's skin at night (Task 27): her pale VRM skin under the warm
+  // fill washed flat white-grey (toon shading has no soft falloff to
+  // model a face with). After dark her skin and face materials take a
+  // warm tan multiply, and that also brings back the contrast of the
+  // eyes and mouth painted on her face texture. Day is untouched.
+  const nightSkin: { mat: THREE.MeshToonMaterial; base: THREE.Color }[] = [];
+  const NIGHT_SKIN_WARM = new THREE.Color(0xe8b48c);
+  const nightSkinTmp = new THREE.Color();
+  let nightSkinApplied = -1;
+  function collectNightSkin(root: THREE.Object3D) {
+    const seen = new Set<THREE.Material>();
+    root.traverse((o) => {
+      if (!(o instanceof THREE.Mesh)) return;
+      for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+        if (!(m instanceof THREE.MeshToonMaterial) || seen.has(m) || !/_(SKIN|FACE)(?![A-Za-z])/.test(m.name)) continue;
+        seen.add(m);
+        nightSkin.push({ mat: m, base: m.color.clone() });
+      }
+    });
+    nightSkinApplied = -1;
+  }
   const faceFillCam = new THREE.Vector3();
 
   const world = new THREE.Group();
@@ -3531,6 +3555,13 @@ export function createTownScene(
     }
     return new THREE.CanvasTexture(c);
   })();
+  // The moon hangs low beyond the lake (Task 27): at its old place,
+  // 21-32 degrees up in the north-west, it sat above the top of the
+  // frame in every level view of the lake (the camera sees 23 degrees
+  // above centre). Now about 11 degrees over the far shore, on the
+  // line from the town through the lake, so the dock and the arch
+  // views both have it in the sky above the water.
+  const MOON_POS = new THREE.Vector3(LAKE_CX - 40, 19, LAKE_CZ - 86);
   const moonGlitterMat = new THREE.MeshBasicMaterial({
     color: 0xdceaff,
     map: glitterMap,
@@ -3543,8 +3574,13 @@ export function createTownScene(
   {
     const glitter = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 8.6), moonGlitterMat);
     glitter.rotation.x = -Math.PI / 2;
-    glitter.rotation.z = 0.5;
-    glitter.position.set(LAKE_CX + 0.7, LAKE_Y + 0.015, LAKE_CZ + 0.4);
+    // The path runs across the water toward the moon (Task 27).
+    {
+      const dx = MOON_POS.x - LAKE_CX;
+      const dz = MOON_POS.z - LAKE_CZ;
+      glitter.rotation.z = Math.atan2(-dx, -dz);
+    }
+    glitter.position.set(LAKE_CX, LAKE_Y + 0.015, LAKE_CZ);
     world.add(glitter);
     // The moon itself: a pale disc hung in the north-west sky, over
     // the aqueduct, fading in with the night like the stars do.
@@ -3566,10 +3602,12 @@ export function createTownScene(
       transparent: true,
       opacity: 0,
       depthWrite: false,
+      // Never fogged into the night sky's colour (Task 27).
+      fog: false,
     });
     const moon = new THREE.Sprite(moonMat);
-    moon.scale.set(11, 11, 1);
-    moon.position.set(-52, 34, -72);
+    moon.scale.set(12, 12, 1);
+    moon.position.copy(MOON_POS);
     world.add(moon);
     moonSpriteMat = moonMat;
   }
@@ -5123,6 +5161,7 @@ export function createTownScene(
       resources.adopt(model);
       downscaleModelTextures(model);
       litVrmMaterials(model, MUSE_TINTS);
+      collectNightSkin(model);
       prepareVrm(model);
       const body = groundModel(model, { height: 1.8 });
       // Hidden on arrival: a fresh VRM stands in its bind pose (arms
@@ -10886,8 +10925,13 @@ export function createTownScene(
     const lampLevel = Math.min(1, nightMix + (weatherId === "fog" ? 0.45 : 0) + wCur.rain * FEEL.rainLampGlow);
     plazaGlow.intensity = lampLevel * 60;
     // Night faces: the soft moon and the warm fill on the pair.
-    moonLight.intensity = nightMix * 0.35 * (1 - Math.min(1, wCur.rain + wCur.snow) * 0.6) * (weatherId === "fog" ? 0.5 : 1);
+    moonLight.intensity = nightMix * 0.5 * (1 - Math.min(1, wCur.rain + wCur.snow) * 0.6) * (weatherId === "fog" ? 0.5 : 1);
     faceFill.intensity = nightMix * 2.6;
+    if (nightSkin.length > 0 && Math.abs(nightMix - nightSkinApplied) > 0.01) {
+      nightSkinApplied = nightMix;
+      nightSkinTmp.setRGB(1, 1, 1).lerp(NIGHT_SKIN_WARM, nightMix);
+      for (const n of nightSkin) n.mat.color.copy(n.base).multiply(nightSkinTmp);
+    }
     if (nightMix > 0.01) {
       // Aim at her head, or at the pair's midpoint when he walks
       // beside her; the fill sits 1.6 m from that point toward the
@@ -12180,7 +12224,7 @@ export function createTownScene(
           (fountainWater.material as THREE.MeshStandardMaterial).opacity = 0.78 + Math.sin(t * 1.7) * 0.08;
           if (metaSweat) (metaSweat.material as THREE.MeshStandardMaterial).opacity = 0.3 + Math.sin(t * 0.9) * 0.08;
         }
-        moonGlitterMat.opacity = nightMix * (0.34 + 0.09 * Math.sin(t * 2.3) + 0.05 * Math.sin(t * 5.1));
+        moonGlitterMat.opacity = nightMix * (0.5 + 0.1 * Math.sin(t * 2.3) + 0.06 * Math.sin(t * 5.1));
         if (moonSpriteMat) moonSpriteMat.opacity = nightMix * 0.95;
         waterMat.emissive.setHex(0x0a2e4a);
         waterMat.emissiveIntensity = nightMix * 0.55;
