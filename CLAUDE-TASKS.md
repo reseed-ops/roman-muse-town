@@ -157,6 +157,19 @@ Context: the owner asked Nov 8, 2026, in a voice call, after finding the town ha
 
 Acceptance: in a live check on the owner's Android Chrome phone, after the next town deploy, the Basilica panel and the house panel show Roman names only, the town plan, prompts, letters and project board show no "Main Chat" or "Side Chat" anywhere, and both buildings are still there and still open.
 
+## Task 43 (READY, added Nov 8, 2026): a night together, implied and never shown
+
+Context: the owner's decision, Nov 8, 2026. The Nov 1 tender-only rule stands: nothing explicit is ever shown, described or said, at any rank. Within it, Gaius and Aelia can spend a night together in their house as a fade to black: the door closes, the lamp dims, the screen goes dark, and morning comes. The house, the bed, the lamp lit when someone is home and "rest together till morning" (Task 40) already exist. This builds on them and does not need the lying animation Task 35 is still waiting for, because nothing is shown in the room.
+
+1. When it's offered: only at night, only inside the house (HOME), and only at a bond of rank 7 or above, the terrace kiss's rank. Never during a visit's opening minutes, never right after a quarrel or a sad moment, and at most once a night.
+2. Her choice as much as his. Either one can ask: he through a prompt by the bed ("Stay together tonight"), she by inviting him in her own words when her mood and the day allow it. She can say a gentle no ("Not tonight, just hold me") and mean it, and that ends as an ordinary rest till morning with no penalty. He can decline her invitation the same way, and her mood stays kind.
+3. The scene: they go in, the door closes behind them, the lamp dims over a few seconds, and the screen fades to black for a short beat with the night's sounds (crickets, the far sea), with no text over the black. The town then moves to morning: light through the window, the two of them waking together, one soft line from her, and a warm mood that carries into the day. Skippable, and gentle with reduced motion.
+4. Words: her lines suggest closeness but never describe anything ("stay with me tonight", "I'm glad you're here"). The output filter (bridge/src/outputFilter.ts, `principalRank`) keeps refusing explicit words at every rank, unchanged; add tests proving that the invitation lines pass at rank 7 and above, and that explicit lines are still refused at every rank. The town never names what happened afterwards; the fade says it.
+5. Keepsake: the first such night earns one keepsake for the house (for example, the lamp they kept lit), placed like the other ten.
+6. Paired towns and visits: this works the same in a paired town, where her lines pass the strictest band. If a director is present, the director's view goes dark with the screen, and no view frame is taken during the fade.
+
+Acceptance: in a live check, at rank 7 or above at night in the house, he can ask and she can invite. She sometimes declines kindly. The fade shows nothing, the morning arrives with both of them waking together, below rank 7 the option doesn't exist, and no explicit line gets through the filter at any rank.
+
 ## Landing notes (since the history was archived)
 
 ### Tasks 29, 30: landing note (Claude, Nov 8, 2026), built, not yet deployed (needs both the town and town-bridge)
