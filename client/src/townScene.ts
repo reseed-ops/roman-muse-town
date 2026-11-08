@@ -60,6 +60,7 @@ import { frameDimensions } from "./visitFrames";
 import { playLampIgnite, setBeeHumLevel, setCricketLevel, setLampCrackleLevel, setRainLevel, setRainShelter, setSurfLevel } from "./audio";
 import { HOME } from "./town";
 import { createCritters, type XZ } from "./townCritters";
+import { FIREFLY_PLACES_MAX, fireflyPlaceAt, fireflyPlacesBudget } from "./fireflyPlaces";
 import { FEEL } from "./feel";
 import { buildMetaSudans, META_SUDANS_LINES } from "./metaSudans";
 import { rainIntensity, rainSwell, SHELTER_HINT_LINE, SHELTERED_LINES, shelterAmount, wrapAround, type Shelter } from "./rainMood";
@@ -8572,6 +8573,18 @@ export function createTownScene(
   });
   const fireflies = new THREE.Points(fireflyGeo, fireflyMat);
   world.add(fireflies);
+  // Task 49: more of the same warm points by their front door and over
+  // the sea cliff, sharing the lake swarm's material (so its opacity:
+  // after dark, spring and summer, out of the rain), counted by tier.
+  const placeFlyPos = new Float32Array(FIREFLY_PLACES_MAX * 3);
+  const placeFlySeed: number[] = [];
+  for (let i = 0; i < FIREFLY_PLACES_MAX; i++) placeFlySeed.push(Math.random());
+  const placeFlyGeo = new THREE.BufferGeometry();
+  placeFlyGeo.setAttribute("position", new THREE.BufferAttribute(placeFlyPos, 3));
+  placeFlyGeo.setDrawRange(0, 0);
+  const placeFlies = new THREE.Points(placeFlyGeo, fireflyMat);
+  placeFlies.frustumCulled = false;
+  world.add(placeFlies);
 
   // =====================================================================
   // Asset integration + new systems (dance, animals, pack trees,
@@ -12270,6 +12283,17 @@ export function createTownScene(
           }
           const attr = fireflyGeo.attributes.position;
           if (attr) attr.needsUpdate = true;
+        }
+        // By the house and the cliff (Task 49): only while they can be seen.
+        if (nightMix > 0.05 && fireflyMat.opacity > 0.01) {
+          const b = fireflyPlacesBudget(runtime.tier);
+          for (let i = 0; i < b.house; i++) fireflyPlaceAt("house", placeFlySeed[i] ?? 0, t, groundHeightAt, placeFlyPos, i);
+          for (let j = 0; j < b.cliff; j++) fireflyPlaceAt("cliff", placeFlySeed[b.house + j] ?? 0, t, groundHeightAt, placeFlyPos, b.house + j);
+          placeFlyGeo.setDrawRange(0, b.house + b.cliff);
+          const attr = placeFlyGeo.attributes.position;
+          if (attr) attr.needsUpdate = true;
+        } else {
+          placeFlyGeo.setDrawRange(0, 0);
         }
       }
       // The lake's own life: the water's normal map drifts, the
