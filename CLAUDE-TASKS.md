@@ -84,6 +84,16 @@ Context: the owner's decision, Nov 7, 2026. Task 5, a director for everyone, the
 
 Acceptance: Task 5 is rewritten in this file to the hosted bridge plus voice plus self-host resident shape above, Task 5 stays HOLD until Tasks 29 and 30 are deployed and tested live, and voice in town is the next piece built after that, not the old resident director alone.
 
+## Task 37 (READY, added Nov 7, 2026): a true Roman sky, and accurate Roman history to teach
+
+Context: the owner's ask, Nov 7, 2026. He wants the stars above the town to appear as they would for that time period and location, and he wants an educational aspect to this town, to teach accurate Roman history. The town is a Roman town, so its sky is Rome's sky, and its history is Rome's history, true, not made up.
+
+1. A true sky for Rome. The night sky above the town is computed from real astronomy, for Rome, latitude about 41.9 north, longitude about 12.5 east, at the town's time: the stars in their true places, with their true brightness, from a real star catalogue, the sun and the moon in their true positions, and the planets where they truly are. Use a real astronomy library or engine, Stellarium's web engine or Astronomy Engine or equivalent, and render it in Three.js as points of light on the sky dome, with the town's own fictional constellation, the Two Lanterns, kept as a story laid over the true sky, clearly marked as the town's own. The moon's light on the lake and on the ocean follows the true moon, and the sunrise and sunset at the cliff follow the true sun for Rome at that date.
+2. Accurate Roman history to teach. The town teaches accurate Roman history, checked against sources, not invented. Every place, person, story and lesson in town carries its source, and where the town invents for the story, it says so plainly, so a player never mistakes invention for history. Start with the places already in town, the forum, the temple, the baths, the market, the Colosseum, the villa, and the people who lived in them, and add short in-town lessons, Aelia's letters, Nova's star log, and the town's own history book, that a player can read while they walk, in plain language, true to what historians know, with the date and the source named.
+3. Keep the town's own story and true history apart, and both visible. Aelia's book, the Two Lanterns, the letters from the other me, are the town's story. The history lessons are Rome's history. A player can tell which is which, at a glance, in the panel and in the book.
+
+Acceptance: in a live check at night, the stars above the pavilion and the cliff match the true sky over Rome for that date and time, checked against a real star chart, the moon is where the true moon is, and a player walking the town can read a short lesson at the forum and at the temple that is accurate, sourced, and says plainly where the town's own story begins.
+
 ## Landing notes (since the history was archived)
 
 ### Tasks 29, 30: landing note (Claude, Nov 8, 2026), built, not yet deployed (needs both the town and town-bridge)
