@@ -218,6 +218,16 @@ Context: the owner asked Nov 8, 2026, in a voice call, for fireflies floating ar
 
 Acceptance: in a live check on the owner's town at night in spring or summer, fireflies drift by the house door and by the sea cliff as well as by the lake, all the same warm glow, and the phone stays smooth.
 
+## Task 50 (READY, added Nov 8, 2026): Roman ships on the sea, sailing boat most days, trireme rarely
+
+Context: the owner bought both ships Nov 8, 2026 (Order #1376026162327): Low-poly Greek Trireme by Alin Loghin ($20, 191.5 MB) and Ancient trade ship by Alin Loghin ($18, 23.5 MB), both owned in My Assets on the Unity account Tuan Hoang / admin@reseed.net. The town has no sea vessel yet, only the small lake rowboat (boat_small.glb). The sea is the Task 34 cliff's ocean, south of town, with true sunrise/sunset bearings and the moon's silver path on the water. The owner asked for both ships, randomized, warships less: about 3 in 4 a small sailing or fishing boat, about 1 in 4 a trireme, farther out and slower.
+
+1. Bring both models in from the purchased packs (FBX, converted to GLB in Blender, in the low poly Roman style of the town), with their sails and textures, listed in ASSETS.md, never committed to the repo. Keep them light for phones, following the Task 41 phone tier: few ships, no shadows on them, quiet when far away.
+2. Sail them past the sea cliff, on the water below the headland, slow and far out, on a slow drift that turns with the day. Choose by chance each time one appears: about 3 in 4 the Ancient trade ship, close enough to see its sail, about 1 in 4 the trireme, farther out and slower, so a warship feels rare.
+3. Keep it a quiet sight, not a game: no boarding, no battle, no prompt to chase them, just ships passing while he stands on the cliff with Aelia.
+
+   Acceptance: in a live check on the owner's Android Chrome phone, stand on the sea cliff and watch the sea: over several minutes a sailing ship drifts past, and on a longer watch a trireme passes farther out and slower, both reading as Roman ships in the town's style, and the phone stays smooth.
+
 ## Landing notes (since the history was archived)
 
 ### Tasks 29, 30: landing note (Claude, Nov 8, 2026), built, not yet deployed (needs both the town and town-bridge)
