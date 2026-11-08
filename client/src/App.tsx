@@ -777,6 +777,23 @@ export function App() {
   // the B button.
   const [seatedBench, setSeatedBench] = useState<string | null>(null);
   const seatedBenchRef = useRef<string | null>(null);
+  // Task 47: Gaius's shield, stowed on every load; one press brings it
+  // out onto his back, the next stows it (the pad's shield button, or G).
+  const [shieldOut, setShieldOut] = useState(false);
+  const shieldOutRef = useRef(false);
+  const toggleShield = useCallback(() => {
+    const next = !shieldOutRef.current;
+    shieldOutRef.current = next;
+    setShieldOut(next);
+    sceneRef.current?.setShieldOut(next);
+    // Sitting, it waits to be slung until he stands (it would pass through the seat's back).
+    if (next && seatedBenchRef.current) {
+      setHintText("Shield out. It goes on your back when you stand.");
+      window.setTimeout(() => setHintText(null), 2600);
+    }
+  }, []);
+  const toggleShieldRef = useRef(toggleShield);
+  toggleShieldRef.current = toggleShield;
   seatedBenchRef.current = seatedBench;
   // Rowing: the pair are out in the lake rowboat. The scene owns the
   // state; this mirror drives the prompt label, the B button, and
@@ -5436,6 +5453,10 @@ export function App() {
         xboxStoneRef.current();
         return;
       }
+      if (key === "g" && !e.repeat && walkingRef.current) {
+        toggleShieldRef.current();
+        return;
+      }
       if ((key === "h" || key === "f") && !e.repeat && walkingRef.current) {
         shoulderPressRef.current(key === "f" ? "LB" : "RB");
         return;
@@ -7166,7 +7187,7 @@ export function App() {
                 ? "You're in landscape. The town is framed wide, panels dock to the side, and the walk camera pulls back a little so you and Aelia both stay in view."
                 : "Tip: this app's window doesn't turn when you rotate your phone, use Landscape in the ☰ menu and the town turns itself sideways instead. Panels dock to the side, and walking feels more cinematic."}{" "}
             Walk up to Aelia by the town tree and you&apos;ll both wave; walk up to a house or the tree and press X when the prompt appears to interact, the garden key you simply walk over.
-            In walk mode the virtual Xbox controller appears: left joystick to walk, A or the space bar to jump, B or C to slide while moving (B goes back when you're still), X to talk and interact, Y for stones and hints, LB to flirt and RB to hug (when she is ready for it), dragging anywhere on the open view swings the camera around you (drag up far enough to look straight up at the sky), and a double tap on the open view brings it home behind you. While a physical controller is driving, the on-screen controls hide; tap the screen to bring them back.
+            In walk mode the virtual Xbox controller appears: left joystick to walk, A or the space bar to jump, B or C to slide while moving (B goes back when you're still), X to talk and interact, Y for stones and hints, LB to flirt and RB to hug (when she is ready for it), the shield button beside RB (or G) to bring out his shield or stow it, dragging anywhere on the open view swings the camera around you (drag up far enough to look straight up at the sky), and a double tap on the open view brings it home behind you. While a physical controller is driving, the on-screen controls hide; tap the screen to bring them back.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {walking && (
@@ -9717,6 +9738,30 @@ export function App() {
                 </button>
               </div>
             ))}
+          {/* The shield (Task 47): beside RB, the same shoulder shape,
+              an icon only; it shows the shield out or stowed. */}
+          {walking && (
+            <div
+              className={isLandscape ? "absolute right-[84px] bottom-[168px] z-20" : "absolute right-[84px] bottom-[200px] z-20 sm:right-[88px]"}
+              data-mt-shield="1"
+            >
+              <button
+                type="button"
+                aria-label={shieldOut ? "Stow the shield (also G on the keyboard)" : "Bring out the shield (also G on the keyboard)"}
+                aria-pressed={shieldOut}
+                className={`pointer-events-auto flex h-9 w-[46px] items-center justify-center rounded-t-2xl rounded-b-lg border-2 ${shieldOut ? "border-[#ffd34e]/80 bg-[#3a2f12]/70" : "border-white/45 bg-[#1b1b1b]/55"} text-[17px] leading-none shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur transition active:scale-90 active:bg-white/80`}
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  toggleShield();
+                }}
+                onClick={(e) => {
+                  if (e.detail === 0) toggleShield();
+                }}
+              >
+                <span aria-hidden="true" className={shieldOut ? "" : "opacity-60"}>🛡️</span>
+              </button>
+            </div>
+          )}
           {/* The way back from the overview: one small tappable
               chip under the cluster, in the same quiet pill style
               as the other button hints. It used to be a caption

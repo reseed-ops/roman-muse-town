@@ -9,16 +9,26 @@
 // with brass bands is built here and only the hilt shows. They step
 // aside where they would pass through someone: both in the bath and
 // in the embrace, the shield also while he sits against a bench.
+// Task 47 (Nov 8, 2026): the shield is stowed by default, on every load,
+// and comes out on his back at a press (the pad's shield button, or G).
 import * as THREE from "three";
 
 export type ArmsVisibility = { sword: boolean; shield: boolean };
 
 /** Where each piece would pass through someone, it steps aside. */
-export function armsVisibility(state: { bathing: boolean; embracing: boolean; seated: boolean }): ArmsVisibility {
+export function armsVisibility(state: { bathing: boolean; embracing: boolean; seated: boolean; shieldOut?: boolean }): ArmsVisibility {
   return {
     sword: !state.bathing && !state.embracing,
-    shield: !state.bathing && !state.embracing && !state.seated,
+    shield: !!state.shieldOut && !state.bathing && !state.embracing && !state.seated,
   };
+}
+
+/** The shield's raise as it comes out: from a hand's width low into its
+ *  place on his back, over about a quarter second (0 stowed, 1 in place). */
+export const SHIELD_RAISE_S = 0.25;
+export function shieldRaiseStep(raise: number, shown: boolean, dt: number): number {
+  if (!shown) return 0;
+  return Math.min(1, raise + dt / SHIELD_RAISE_S);
 }
 
 export type GaiusArms = {
@@ -26,7 +36,8 @@ export type GaiusArms = {
   shield: THREE.Group;
   /** Hang both on his loaded body (bind pose); a no-op without the bones. */
   attach(model: THREE.Object3D): void;
-  setVisible(v: ArmsVisibility): void;
+  /** Show or hide each piece; `dt` (s) eases the shield's raise. */
+  setVisible(v: ArmsVisibility, dt?: number): void;
 };
 
 export function createGaiusArms(opts: {
@@ -40,6 +51,9 @@ export function createGaiusArms(opts: {
   const { frame } = opts;
   const sword = new THREE.Group();
   const shield = new THREE.Group();
+  shield.visible = false;
+  let shieldInner: THREE.Group | null = null;
+  let raise = 0;
   return {
     sword,
     shield,
@@ -92,7 +106,7 @@ export function createGaiusArms(opts: {
       // The scutum: centred on the holder, face (boss) turned backward,
       // its curve hugging his back, hung a touch askew like a sling.
       const SHIELD_H = 1.0;
-      const shieldInner = new THREE.Group();
+      shieldInner = new THREE.Group();
       shieldInner.position.y = -SHIELD_H / 2;
       void opts.place(opts.shieldUrl, shieldInner, { x: 0, z: 0, height: SHIELD_H });
       shield.clear();
@@ -104,9 +118,14 @@ export function createGaiusArms(opts: {
         new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), 0.1)),
       );
     },
-    setVisible(v) {
+    setVisible(v, dt = 1) {
       sword.visible = v.sword;
       shield.visible = v.shield;
+      raise = shieldRaiseStep(raise, v.shield, dt);
+      if (shieldInner) {
+        const e = raise * raise * (3 - 2 * raise);
+        shieldInner.position.y = -0.5 - 0.12 * (1 - e);
+      }
     },
   };
 }
