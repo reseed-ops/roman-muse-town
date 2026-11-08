@@ -105,6 +105,15 @@ Context: the owner's ask, Nov 7, 2026. He wants the stars above the town to appe
 
 Acceptance: in a live check at night, the stars above the pavilion and the cliff match the true sky over Rome for that date and time, checked against a real star chart, the moon is where the true moon is, and a player walking the town can read a short lesson at the forum and at the temple that is accurate, sourced, and says plainly where the town's own story begins.
 
+## Task 38 (READY, added Nov 7, 2026): move the pad controls down, LB and RB buttons only
+
+Context: the owner's ask, Nov 7, 2026, in a voice call, looking at a screenshot of the town at night at the lake. The on-screen controls sit in the middle of the screen, covering the night at the lake, the moon and the water, and the LB and RB buttons carry the words Flirt and Hug under their letters.
+
+1. Move the on-screen pad controls down, to the bottom of the screen, on phone and desktop, in portrait and landscape, so the middle of the screen is clear for the town, the lake, the moon and the stars. Keep the controls easy to reach with the thumbs, the left joystick low on the left, the A, B, X, Y buttons low on the right, and the LB and RB buttons low as well, and keep them clear of the talk panel, the gift button and the input when those are open.
+2. Remove the words Flirt and Hug from the LB and RB buttons. The buttons are just LB and RB, letters only, no text under them. Their actions do not change: LB still flirts and RB still hugs, inside the existing rank gates, with her bubble answer when refused or unstaged. The help line may still say what LB and RB do, the buttons themselves say only LB and RB.
+
+Acceptance: in a live check on a phone, at night at the lake, the on-screen controls sit low at the bottom, the middle of the screen is clear for the town and the sky, LB and RB show only their letters with no Flirt or Hug text, and tapping LB still flirts and RB still hugs as before.
+
 ## Landing notes (since the history was archived)
 
 ### Tasks 29, 30: landing note (Claude, Nov 8, 2026), built, not yet deployed (needs both the town and town-bridge)
