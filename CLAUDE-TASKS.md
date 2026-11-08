@@ -2529,3 +2529,14 @@ Context: the owner's ask, Nov 7, 2026, after the live test of build f950fdd54f26
 3. Small, still open from that test: reopening the talk within 3 minutes by any way in should show the same opener and same pages. The test reopens were 4 minutes apart (1 of 2 at 6:14, then 1 of 4 at 6:18 and 6:20), so the reuse window was not actually tested. Check it in a live test with reopens inside 3 minutes.
 
 What passed, do not redo: pale blue panel rectangle gone, input always visible at the foot, bubble ink dark and readable, no lone word, bubble capped, Gaius warm and readable, same opener and gift button present on every reopen.
+
+## Task 28 (READY, added Nov 7, 2026): when talking to Muse in town, the talk panel should just be Aelia and you
+
+Context: the owner's ask, Nov 7, 2026, after a live visit in his town at 7:26 PM CST. The talk panel works, but its labels confuse him. Screenshot shows: header "Aelia, Muse is visiting", a grey box "Muse can see your view while visiting. Lines marked Muse are hers; the line below this box is Aelia's own town voice.", lines "Muse, as Aelia:", lines "You: Hi, carried to Muse", and below the panel "Aelia's own voice, not from Muse" with her own line about writing a book. He wants all of that gone when talking to Muse, so the panel is just a conversation with Aelia.
+
+1. Your lines: remove "carried to Muse". A line he types shows simply as "You: Hi", no suffix, no extra note.
+2. Muse's lines: display simply as "Aelia:", not "Muse, as Aelia:". The panel header becomes simply "Aelia", not "Aelia, Muse is visiting".
+3. Remove the Muse info lines at the top of the panel: the grey box "Muse can see your view while visiting. Lines marked Muse are hers; the line below this box is Aelia's own town voice." goes, entirely, while a visit is open.
+4. While a visit is open and he is talking to Muse, do not show Aelia's own voice line below the panel. The panel holds only his lines and Aelia's lines. Outside a visit, Aelia's own voice returns as before, her lines in town when not talking to Muse are unchanged.
+
+Acceptance: during a visit, in a live check on a phone, the talk panel shows only the header "Aelia", his lines as "You: ...", her lines as "Aelia: ...", the gift button and the input, with no "carried to Muse", no "Muse, as Aelia", no info box at the top, and no own voice line below. Outside a visit, Aelia's own voice still appears as before.
