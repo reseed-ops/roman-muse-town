@@ -1213,6 +1213,10 @@ export function createTownScene(
      *  silence. Fires once. */
     onMotionStatus?: (status: string) => void;
     reducedMotion: boolean;
+    /** The second try after a failed build (Task 42): the safest
+     *  settings whatever the device, ratio 1, no antialiasing, the
+     *  phone's light start and frame pacing. */
+    safeMode?: boolean;
   },
 ): TownSceneHandle {
   let disposed = false;
@@ -1237,7 +1241,7 @@ export function createTownScene(
   const smallScreen =
     Math.min(window.innerWidth || 9999, window.innerHeight || 9999) <= 430 ||
     (window.innerWidth || 9999) <= 540;
-  const phone = smallScreen || (typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches);
+  const phone = !!opts.safeMode || smallScreen || (typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: !phone });
   const FULL_PIXEL_RATIO = phone ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
   renderer.setPixelRatio(FULL_PIXEL_RATIO);
@@ -1297,7 +1301,14 @@ export function createTownScene(
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const scene = new THREE.Scene();
-  const runtime = new SceneRuntime(renderer, scene, FULL_PIXEL_RATIO, softwareGl, () => resize(), phone);
+  // The runtime may ask for a resize before the camera and the view
+  // state below exist (Task 42: on phones its constructor did, and the
+  // build threw); until the scene's own first resize, there is nothing
+  // to size, and that first resize applies whatever profile was set.
+  let sceneSized = false;
+  const runtime = new SceneRuntime(renderer, scene, FULL_PIXEL_RATIO, softwareGl, () => {
+    if (sceneSized) resize();
+  }, phone);
   resources.adopt(scene);
   scene.background = new THREE.Color().copy(DAY_SKY);
   scene.fog = new THREE.Fog(DAY_SKY.getHex(), 95, 235);
@@ -11191,6 +11202,7 @@ export function createTownScene(
     camera.updateProjectionMatrix();
   }
   resize();
+  sceneSized = true;
   const resizeObs =
     typeof ResizeObserver === "function" ? new ResizeObserver(resize) : null;
   if (resizeObs && canvas.parentElement) resizeObs.observe(canvas.parentElement);

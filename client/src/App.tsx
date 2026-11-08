@@ -225,6 +225,7 @@ import { HistoryBook, lessonForPlace, TownStoryTag } from "./HistoryBook";
 import { HomePanel } from "./HomePanel";
 import { earnedKeepsakes } from "./homeKeepsakes";
 import { readArrangement } from "../../shared/homeDecor";
+import { SceneBuildError, describeSceneError } from "./sceneBuildError";
 import { useVisitNotice } from "./useVisitNotice";
 import { LAPSE_WARN_MS, UNREACHABLE_AFTER_FAILS, composingVisible, hostOf, visitChipLine, visitClosedLine, visitStatusLine, type VisitCloseReason, type VisitDirectorState, type VisitRoute } from "./visitStatus";
 import {
@@ -353,6 +354,7 @@ export function App() {
   const [tourStep, setTourStep] = useState<number | null>(null);
   const [journalDraft, setJournalDraft] = useState("");
   const [webglError, setWebglError] = useState<string | null>(null);
+  const [errorCopied, setErrorCopied] = useState(false);
   // First-load stability: the loading screen stays up until the scene
   // renders its first frame (never a bare black screen), model loads
   // report progress, a lost WebGL context gets a friendly retry, and
@@ -4363,7 +4365,7 @@ export function App() {
     if (!canvas) return;
     let handle: TownSceneHandle | null = null;
     try {
-      handle = createTownScene(canvas, {
+      const sceneOpts: Parameters<typeof createTownScene>[1] = {
         onPick: handlePick,
         onNearbyChange: handleNearbyChange,
         onGuideEnd: (arrived) => guideEndRef.current(arrived),
@@ -4475,7 +4477,23 @@ export function App() {
           typeof window.matchMedia === "function"
             ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
             : false,
-      });
+      };
+      try {
+        handle = createTownScene(canvas, sceneOpts);
+      } catch (first) {
+        // Recovery before giving up (Task 42): one more try at the
+        // safest settings (ratio 1, no antialiasing, low graphics). A
+        // second failure falls through to the overlay below, which
+        // names both causes.
+        console.error("[muse-town] scene build failed, retrying at the safest settings:", first);
+        lowGfxRef.current = true;
+        setLowGfx(true);
+        try {
+          handle = createTownScene(canvas, { ...sceneOpts, safeMode: true });
+        } catch (second) {
+          throw new SceneBuildError(first, second);
+        }
+      }
       sceneRef.current = handle;
       // Walk-together from frame one (see the following state): she
       // starts as his companion, so no greeting wave fires on load
@@ -4494,12 +4512,13 @@ export function App() {
       // shell build). Name the cause in the overlay, and record it
       // on the window flags so the out-of-band watchdog in main.tsx
       // tells the same story if this tree ever fails to paint it.
-      const detail = err instanceof Error && err.message ? ` (${err.message})` : "";
+      // Task 42: the overlay shows the real error, not only a guess,
+      // so a screenshot is enough to diagnose the next failure.
+      const detail = describeSceneError(err);
+      console.error("[muse-town] the 3D town could not start:", err);
       (window as unknown as { __mtSceneError?: string }).__mtSceneError =
-        `The 3D town could not start on this device${detail}.`;
-      setWebglError(
-        "The 3D town could not start on this device. WebGL seems unavailable. The town guide below still works.",
-      );
+        `The 3D town could not start on this device (${detail}).`;
+      setWebglError(detail);
     }
     // First-frame watchdog: the scene exists but no frame has
     // rendered within 20 seconds, on a phone that is a dead scene,
@@ -6006,15 +6025,34 @@ export function App() {
       {webglError && (
         <div className="absolute inset-x-4 top-20 z-40 rounded-2xl bg-[#22332b]/95 p-4 text-sm shadow-lg" role="alert" data-mt-overlay="1">
           <p className="font-bold">The town couldn&apos;t load, tap to retry.</p>
-          <p className="mt-1">{webglError}</p>
-          <button
-            type="button"
-            className="mt-3 rounded-full bg-[#ffd34e] px-4 py-2 text-sm font-bold text-[#4a3600] shadow-md transition active:scale-95"
-            onClick={() => window.location.reload()}
-            aria-label="Retry loading Muse Town"
-          >
-            ↻ Retry
-          </button>
+          <p className="mt-1">The 3D town could not start on this device. The town guide below still works.</p>
+          <p className="mt-2 break-words rounded-lg bg-black/30 p-2 font-mono text-xs" data-mt-scene-error="1">
+            {webglError}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="rounded-full bg-[#ffd34e] px-4 py-2 text-sm font-bold text-[#4a3600] shadow-md transition active:scale-95"
+              onClick={() => window.location.reload()}
+              aria-label="Retry loading Muse Town"
+            >
+              ↻ Retry
+            </button>
+            <button
+              type="button"
+              className="rounded-full bg-white/15 px-4 py-2 text-sm font-bold text-white shadow-md transition active:scale-95"
+              onClick={() => {
+                const text = `Muse Town could not start: ${webglError}\n${navigator.userAgent}`;
+                void navigator.clipboard?.writeText(text).then(
+                  () => setErrorCopied(true),
+                  () => setErrorCopied(false),
+                );
+              }}
+              aria-label="Copy the error"
+            >
+              {errorCopied ? "Copied" : "Copy the error"}
+            </button>
+          </div>
         </div>
       )}
 

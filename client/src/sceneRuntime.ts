@@ -23,19 +23,23 @@ export class SceneRuntime {
     this.light = software;
     try { this.automatic = localStorage.getItem("muse-town-auto-graphics") !== "0"; } catch { /* defaults */ }
     this.updateMode(performance.now());
-    // A phone starts light at once (ratio 1, no shadows): nothing to recompile yet.
-    if (phone) this.applyQuality(false);
+    // A phone starts light at once (ratio 1, no shadows): nothing to
+    // recompile yet, and no resize either. This runs while the scene is
+    // still being built (no camera yet), so calling back into it here
+    // threw on every phone (Task 42); the scene sizes itself once its
+    // camera exists, at the profile set here.
+    if (phone) this.applyQuality(false, false);
   }
   private updateMode(now: number) {
     this.adaptive.setMode(this.light || this.software ? "light" : this.automatic ? "auto" : "full", now);
   }
-  private applyQuality(recompile: boolean) {
+  private applyQuality(recompile: boolean, resize = true) {
     const tier = this.adaptive.tier;
     // At full tier the swing tuner owns the exact ratio (its ladder
     // tops out at the same cap, so a fresh town renders identically);
     // the coarse tiers below keep their long-standing ratios.
     const ratio = tier === 2 ? (this.automatic && !this.light ? this.tuner.ratio : this.fullRatio) : tier === 1 ? Math.min(1, this.fullRatio) : Math.min(0.75, this.fullRatio);
-    if (this.graphics.setProfile(ratio, tier === 2 && !this.software, recompile)) this.resize();
+    if (this.graphics.setProfile(ratio, tier === 2 && !this.software, recompile) && resize) this.resize();
   }
   setLightGraphics(on: boolean): void {
     this.light = on;
