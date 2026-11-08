@@ -135,6 +135,17 @@ Context: the live phone check Task 41 was waiting on failed at the first step. T
 
 Acceptance: in a live check on the owner's Android Chrome phone, town.reseed.net loads to the full 3D scene and he can walk, on the fixed build. Then the Task 41 phone check can run: first paint, time to interactive, smoothness walking and in a visit, and the tier the phone settles on from the menu perf line. 
 
+## Task 43 (READY, added Nov 8, 2026): a public library in the town, by the forum
+
+Context: the owner asked Nov 8, 2026, in a voice call, after asking if Rome had libraries back then. Yes: Asinius Pollio opened the first public library in Rome about 39 BC near the Forum, and Augustus added more, and the baths had library rooms. The town has no library building or place yet. The only library material in the town is the Task 37 history lesson "villa-library" in client/src/romanHistory.ts, about the Villa of the Papyri at Herculaneum, over a thousand scrolls, many by the philosopher Philodemus, plus scroll quests and a Scrollkeeper badge. Build this after the Task 42 phone fix is deployed and tested live, so the owner can walk in on his phone. Task 42 was built, not deployed, at the time this task was written (commit ecfde88).
+
+1. Build a public library by the forum, in the low poly Roman style, with a door, reading tables and lamp light, and shelves of scrolls. Two wings, Greek and Latin, clearly marked, like a Roman library.
+2. Scrolls you can open and read: short sourced Roman history pieces, reusing the Task 37 lessons with their sources, Aelia's letters, and Nova's star log when it exists, plus the town's own stories. Reading is quiet, with no grinding and no currency.
+3. A quiet reading moment: sit together and Aelia reads aloud, inside the existing affection gates, tender only, like the reading aloud moments already in the town.
+4. Keep it accurate, per Task 37: every history piece carries its source, with its date named, and invention is plainly marked as invention. Keep the town's own story apart and visible, with the violet "The town's own story" tag where it departs from history.
+
+Acceptance: in a live check on the owner's Android Chrome phone, walk to the library by the forum, go in, open a Greek scroll and a Latin scroll and read them, sit and hear Aelia read aloud, and the history pieces show their sources.
+
 ## Landing notes (since the history was archived)
 
 ### Tasks 29, 30: landing note (Claude, Nov 8, 2026), built, not yet deployed (needs both the town and town-bridge)
