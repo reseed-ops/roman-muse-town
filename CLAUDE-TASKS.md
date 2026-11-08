@@ -181,6 +181,18 @@ Context: the owner asked Nov 8, 2026, in a voice call, after asking if Rome had 
 
 Acceptance: in a live check on the owner's Android Chrome phone, after the next town deploy, bees are flying in the garden, butterflies are drifting over the forum and the fields, crickets are visible in the grass at dusk with their sound, and walking stays smooth on the phone.
 
+## Task 47 (READY, added Nov 8, 2026): hide Gaius's shield by default, bring it out with a button
+
+Context: the owner asked Nov 8, 2026, in a voice call, whether the shield should be hidden by default and brought out with a button press, and said yes. Today Gaius always carries the legionary shield on his back (commit 190e120, "Gaius carries the gladius at his hip and the legionary shield on his back"), a large rectangular scutum, blue-grey face with a red band, a round silver boss and blue bands, confirmed live on the owner's town. In tender scenes, on the cliff, in the boat, at home and on the terrace, it reads like he is still on duty. The gladius at his hip is small and stays as it is; this task is the shield only.
+
+1. Hide the shield by default: on every load and every new visit, Gaius has no shield on his back. The gladius stays at his hip.
+2. Add one shield toggle button in the pad controls at the screen foot, beside LB and RB, icon or letters only, no long label, so it is one tap in play and not buried in a menu. On desktop give it a keyboard key as well.
+3. Pressing it brings the shield out onto his back, with a small raise animation if one fits; pressing it again stows it away. The toggle works while walking, standing, sitting on a bench or the bed edge, and in a visit, and it never opens a panel or a prompt.
+4. The button must not clash with LB flirt or RB hug, must not cover her speech bubble or the walk controls, and must stay clear on a phone in portrait and landscape. Keep it light, like the other controls, so the phone stays happy.
+5. Add tests proving the default is hidden on load and that the toggle shows and hides the shield again.
+
+Acceptance: in a live check on the owner's town, Gaius loads with no shield on his back and the gladius still at his hip; one press brings the shield out, a second press hides it again, on phone touch and on desktop, while walking and while sitting, with no panel opened and no clash with LB, RB or her bubble.
+
 ## Landing notes (since the history was archived)
 
 ### Tasks 29, 30: landing note (Claude, Nov 8, 2026), built, not yet deployed (needs both the town and town-bridge)
