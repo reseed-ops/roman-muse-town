@@ -56,7 +56,9 @@ import {
   type VisitTelemetry,
 } from "../../shared/visitProtocol";
 import { frameDimensions } from "./visitFrames";
-import { playLampIgnite, setRainLevel, setRainShelter, setSurfLevel } from "./audio";
+import { playLampIgnite, setBeeHumLevel, setCricketLevel, setRainLevel, setRainShelter, setSurfLevel } from "./audio";
+import { HOME } from "./town";
+import { createCritters, type XZ } from "./townCritters";
 import { FEEL } from "./feel";
 import { buildMetaSudans, META_SUDANS_LINES } from "./metaSudans";
 import { rainIntensity, rainSwell, SHELTER_HINT_LINE, SHELTERED_LINES, shelterAmount, wrapAround, type Shelter } from "./rainMood";
@@ -5248,7 +5250,9 @@ export function createTownScene(
     PLANT_CLEARANCE.every(([cx, cz, r]) => Math.hypot(x - cx, z - cz) > r);
   // The peristyle's four garden quarters, in pack flowers and grass
   // patches, mirrored across both axes; a spot is planted only when it
-  // clears every path and every building.
+  // clears every path and every building. The planted spots are kept
+  // for the bees and butterflies (Task 46).
+  const peristyleFlowers: [number, number][] = [];
   for (let i = 0; i < 24; i++) {
     const row = Math.floor(i / 4);
     const fx = (i % 2 ? 1 : -1) * (4.4 + (row % 3) * 2.8);
@@ -5256,6 +5260,7 @@ export function createTownScene(
     const angle = i * 0.9;
     if (pathDistance(fx, fz) < 1.8 || !plantClear(fx, fz)) continue;
     const flowerUrl = PACK_FLOWERS[i % PACK_FLOWERS.length]!;
+    peristyleFlowers.push([fx, fz]);
     void placeWorld(flowerUrl, {
       x: fx,
       z: fz,
@@ -5391,6 +5396,48 @@ export function createTownScene(
       butterflies.push({ group: bg, wingL: pivotL, wingR: pivotR, phase: def.phase, cx: def.cx, cz: def.cz, rx: def.rx, rz: def.rz, y0: def.y0 });
     }
   }
+
+  // The town's small life (Task 46): bees working the Hortus beds and
+  // the peristyle's flowers, butterflies over the forum and the open
+  // lawns, crickets in the grass by the Atrium of Sounds (the jar's
+  // evening crickets, out of the jar), by the stone bench and by their
+  // own front door. Light shapes in a few instanced meshes; how many
+  // show follows the quality tier.
+  const critters = (() => {
+    const nearestGrass = (cx: number, cz: number, n: number): XZ[] =>
+      [...tuftData]
+        .sort((a, b) => Math.hypot(a.x - cx, a.z - cz) - Math.hypot(b.x - cx, b.z - cz))
+        .slice(0, n)
+        .map((g) => [g.x, g.z] as const);
+    const hortus: XZ[] = [
+      ...GARDEN_BEDS.flatMap(([x, z]) => [[x - 0.45, z] as const, [x + 0.45, z] as const]),
+      [9.8, 25.2],
+      [13.4, 25.2],
+    ];
+    const westFlowers = peristyleFlowers.filter(([x]) => x < 0);
+    const eastFlowers = peristyleFlowers.filter(([x]) => x >= 0);
+    const lawns = ([[-27, -9], [27, 11], [-9, 31], [29, -11], [-30, 6]] as const)
+      .filter(([x, z]) => pathDistance(x, z) > 2.6 && plantClear(x, z))
+      .slice(0, 2);
+    return createCritters(
+      world,
+      {
+        beePatches: [hortus, westFlowers, eastFlowers].filter((p) => p.length > 1),
+        butterflyPatches: [
+          { centre: [0, 0], radius: 7.5, flowers: peristyleFlowers },
+          ...lawns.map(([x, z]) => ({ centre: [x, z] as XZ, radius: 4.5, flowers: nearestGrass(x, z, 4) })),
+        ],
+        cricketGrass: [
+          ...nearestGrass(-14, 0, 5),
+          ...nearestGrass(8.8, 4.6, 3),
+          ...nearestGrass(HOME.position[0] + HOME.halfW + 2, HOME.position[1], 4),
+        ],
+      },
+      terrainHeight,
+    );
+  })();
+  let critterHumSent = 0;
+  let critterChirpSent = 0;
 
   // The kitchen garden, east of the forecourt, mirroring the piscina
   // across the axis; what grows in its beds is pack flowers, not cones.
@@ -12180,6 +12227,29 @@ export function createTownScene(
           bf.group.visible =
             nightMix < 0.5 && wCur.rain < 0.25 && wCur.snow < 0.25 && weatherId !== "fog";
         }
+        // Bees, butterflies and crickets (Task 46), and their sounds.
+        {
+          const sound = critters.update({
+            t,
+            dt,
+            tier: runtime.tier,
+            nightMix,
+            rain: wCur.rain,
+            snow: wCur.snow,
+            fog: weatherId === "fog",
+            season: currentTreeSeason,
+            player: walking ? [walkPos.x, walkPos.z] : null,
+            view: [camera.position.x, camera.position.z],
+          });
+          if (Math.abs(sound.hum - critterHumSent) > 0.04 || (sound.hum === 0 && critterHumSent !== 0)) {
+            critterHumSent = sound.hum;
+            setBeeHumLevel(sound.hum);
+          }
+          if (Math.abs(sound.chirp - critterChirpSent) > 0.04 || (sound.chirp === 0 && critterChirpSent !== 0)) {
+            critterChirpSent = sound.chirp;
+            setCricketLevel(sound.chirp);
+          }
+        }
         // Forest birds by day: the flock circles its clearing,
         // flushes to another when he comes close, and settles again.
         {
@@ -13154,6 +13224,9 @@ export function createTownScene(
       canvas.removeEventListener("touchmove", blockTouchGesture);
       canvas.removeEventListener("contextmenu", blockContextMenu);
       controls.dispose();
+      critters.dispose();
+      setBeeHumLevel(0);
+      setCricketLevel(0);
       runtime.dispose();
       resources.dispose();
       renderer.dispose();

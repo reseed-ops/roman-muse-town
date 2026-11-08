@@ -553,3 +553,96 @@ export function playLampIgnite() {
   src.connect(band).connect(gain).connect(ac.destination);
   src.start(start, Math.random(), 0.55);
 }
+
+// Task 46: the small life's own sounds, synthesized live like the
+// Atrium's jars (no recordings). Each is a loop whose level the scene
+// sets by how near he is; level 0 fades it out and stops it.
+type Loop = { nodes: AudioScheduledSourceNode[]; master: GainNode };
+
+function setLoopLevel(
+  current: Loop | null,
+  level: number,
+  volume: number,
+  build: (ac: AudioContext, master: GainNode) => AudioScheduledSourceNode[],
+): Loop | null {
+  const ac = actx;
+  if (!ac || ac.state !== "running") return current;
+  const v = Math.max(0, Math.min(1, level));
+  const now = ac.currentTime;
+  if (v <= 0.001) {
+    if (!current) return null;
+    const going = current;
+    going.master.gain.setTargetAtTime(0.0001, now, 0.4);
+    window.setTimeout(() => {
+      for (const n of going.nodes) {
+        try {
+          n.stop();
+        } catch {
+          /* already stopped */
+        }
+      }
+    }, 2000);
+    return null;
+  }
+  let loop = current;
+  if (!loop) {
+    const master = ac.createGain();
+    master.gain.value = 0.0001;
+    master.connect(ac.destination);
+    const nodes = build(ac, master);
+    for (const n of nodes) n.start();
+    loop = { nodes, master };
+  }
+  loop.master.gain.setTargetAtTime(v * volume * FEEL.stepVolume, now, 0.35);
+  return loop;
+}
+
+let beeHum: Loop | null = null;
+/** A bee's soft hum, only when he is close to one (Task 46). */
+export function setBeeHumLevel(level: number) {
+  beeHum = setLoopLevel(beeHum, level, 0.05, (ac, master) => {
+    const osc = ac.createOscillator();
+    osc.type = "sawtooth";
+    osc.frequency.value = 228;
+    // A wavering pitch, as a bee turns about a flower.
+    const wobble = ac.createOscillator();
+    wobble.frequency.value = 5.5;
+    const wobbleDepth = ac.createGain();
+    wobbleDepth.gain.value = 9;
+    wobble.connect(wobbleDepth).connect(osc.frequency);
+    const low = ac.createBiquadFilter();
+    low.type = "lowpass";
+    low.frequency.value = 820;
+    osc.connect(low).connect(master);
+    return [osc, wobble];
+  });
+}
+
+let cricketSong: Loop | null = null;
+/** Crickets in the grass at dusk (Task 46): the jar's high chirp, pulsed
+ *  in its triplets, louder the nearer he walks to them. */
+export function setCricketLevel(level: number) {
+  cricketSong = setLoopLevel(cricketSong, level, 0.035, (ac, master) => {
+    const tone = ac.createOscillator();
+    tone.frequency.value = 4300;
+    // Fast pulses (the wing strokes), gated into chirps (the song's beat).
+    const pulse = ac.createGain();
+    pulse.gain.value = 0.5;
+    const pulseLfo = ac.createOscillator();
+    pulseLfo.type = "square";
+    pulseLfo.frequency.value = 28;
+    const pulseDepth = ac.createGain();
+    pulseDepth.gain.value = 0.5;
+    pulseLfo.connect(pulseDepth).connect(pulse.gain);
+    const chirp = ac.createGain();
+    chirp.gain.value = 0.5;
+    const chirpLfo = ac.createOscillator();
+    chirpLfo.type = "square";
+    chirpLfo.frequency.value = 2.1;
+    const chirpDepth = ac.createGain();
+    chirpDepth.gain.value = 0.5;
+    chirpLfo.connect(chirpDepth).connect(chirp.gain);
+    tone.connect(pulse).connect(chirp).connect(master);
+    return [tone, pulseLfo, chirpLfo];
+  });
+}
