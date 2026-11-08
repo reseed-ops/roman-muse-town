@@ -2517,3 +2517,15 @@ Give the bubble a max size that does not fill the screen: a max width and a max 
 - Task 25 (1) The bubble's canvas texture was read as linear colour, which lifted its near-black ink to mid-grey; it is now sRGB, the sprite skips tone mapping, and the ink is #15110e on the white plate. (2) No lone last word: a single-word last line rejoins the line above when it fits the box, otherwise the line above lends it its last word; a long sentence never leaves one lone line for its last page (split two and two).
 - Task 26 The bubble's size is set in screen pixels and capped at 36% of the stage height and 90% of its width, whatever the camera distance (the old 1.2-unit world floor won when the camera sat close to her and filled the view). Longer lines page on inside the bubble; it never grows.
 - Suites 400 pass, 19 skip, 0 fail, plus 20; client tsc at its 295 baseline; web build b22563a9d0da (main-z5c343sa.js).
+
+## Task 27 (READY, added Nov 7, 2026): Aelia's face must be warm, and the moon must be visible on the lake
+
+Context: the owner's ask, Nov 7, 2026, after the live test of build f950fdd54f26 (Tasks 24-26), 6:06-6:22 PM CST in the VM town, night throughout.
+
+1. Aelia's face: Task 24's moon and warm fill fixed Gaius, warm tan skin, eyes and mouth clear, soft warm light, not dark or creepy, but Aelia went the other way. Her face is very pale, almost white-grey, flatly lit with no warm skin tone, eyes as small dark dots and mouth barely visible, so she still reads washed-out and ghostly next to Gaius. Give her the same warm, readable treatment as Gaius: warm skin tone, eyes and mouth visible, soft warm light on her face, no flat white wash, no harsh shadows. Keep the night mood. Acceptance: at night, close up, both faces are readable and warm, Aelia's skin tone matches Gaius's warmth, neither looks ghostly or shadowy.
+
+2. Moon on the lake: no moon was visible in any view, no moonlit path or sparkle on the water, the lake was only a flat pale-grey band on the horizon through the arch, and walking north into the trees was nearly black dark green with no moonlight there. The arch stone does catch a cool blue-white light on one side. Make the moon itself visible in the night sky, and its light visible on the lake, a soft moonlit path or sparkle on the water, and a little moonlight in the trees, so night is not just lamp light. Keep it soft, the scene still reads as night. Acceptance: at night, the moon is visible in the sky, and its light shows on the lake water, in a live check from the dock and arch view.
+
+3. Small, still open from that test: reopening the talk within 3 minutes by any way in should show the same opener and same pages. The test reopens were 4 minutes apart (1 of 2 at 6:14, then 1 of 4 at 6:18 and 6:20), so the reuse window was not actually tested. Check it in a live test with reopens inside 3 minutes.
+
+What passed, do not redo: pale blue panel rectangle gone, input always visible at the foot, bubble ink dark and readable, no lone word, bubble capped, Gaius warm and readable, same opener and gift button present on every reopen.
