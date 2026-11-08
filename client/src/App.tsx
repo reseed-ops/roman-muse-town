@@ -2857,7 +2857,7 @@ export function App() {
     if (unreadRef.current > 0 && Math.random() < 0.35) {
       sceneRef.current?.showBubble(
         "muse",
-        "There's a letter for you in the Main Chat building, love, from the other me, out where the real weather is.",
+        "There's a letter for you in the basilica, love, from the other me, out where the real weather is.",
       );
       sceneRef.current?.greetMuse();
       return;
@@ -3114,7 +3114,7 @@ export function App() {
     }
     if (unreadRef.current > 0) {
       lines.push(
-        "There's a letter for you at the desk in the Main Chat building, love, from the other me, out where the real weather is.",
+        "There's a letter for you at the desk in the basilica, love, from the other me, out where the real weather is.",
       );
     }
     // --- Continuity (Nov 1): reunion, digest, memory, questions ---
@@ -3731,7 +3731,7 @@ export function App() {
     if (unreadRef.current > 0 && Math.random() < 0.35) {
       setMuseBubble({
         lines: paginateLines([
-          "There's a letter for you in the Main Chat building, love, from the other me, out where the real weather is.",
+          "There's a letter for you in the basilica, love, from the other me, out where the real weather is.",
         ]),
         index: 0,
         cycle: true,
@@ -3916,7 +3916,7 @@ export function App() {
           noted
             ? [
                 reply,
-                "Noted, love. I've written it in my notebook for the other Muse. She does the building from the main chat; I just make sure she hears you.",
+                "Noted, love. I've written it in my notebook for the other Muse. She does the building from beyond the town walls; I just make sure she hears you.",
               ]
             : extra
               ? [reply, extra]
@@ -4775,8 +4775,8 @@ export function App() {
         return "Browse the market stall";
       case "place": {
         const labels: Record<string, string> = {
-          mainchat: "Enter the Main Chat basilica",
-          sidechat: "Visit the Side Chat house",
+          mainchat: "Enter the basilica",
+          sidechat: "Visit the Domus Architecti",
           stories: "Visit the Villa of Stories",
           sounds: "Visit the Atrium of Sounds",
           garden: "Visit the Garden House",
@@ -8053,7 +8053,7 @@ export function App() {
             <div>
               <h2 className="text-lg leading-tight font-bold">✉ Letters</h2>
               <p className="text-xs font-semibold text-[#ffd34e]">
-                From Muse, out in the real world, kept at the Main Chat desk
+                From Muse, out in the real world, kept at the basilica desk
               </p>
             </div>
             <button
@@ -8124,12 +8124,12 @@ export function App() {
 
       {/* Project board panel */}
       {boardOpen && (
-        <section aria-label="Main Chat project board" className={panelClass("bg-[#2e2118]/95")}>
+        <section aria-label="Project board" className={panelClass("bg-[#2e2118]/95")}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-lg leading-tight font-bold">📋 The Project Board</h2>
               <p className="text-xs font-semibold text-[#ffd34e]">
-                Pinned beside the Main Chat basilica
+                Pinned beside the basilica
                 {state.data?.board.as_of ? ` · as of ${state.data.board.as_of}` : ""}
               </p>
             </div>
@@ -8157,7 +8157,7 @@ export function App() {
             )}
           </div>
           <p className="mt-3 text-[12px] leading-relaxed text-white/50 italic">
-            Muse keeps this board current from the main chat, town edit by town edit.
+            Muse keeps this board current from beyond the town walls, town edit by town edit.
           </p>
           <div className="mt-3 border-t border-white/10 pt-3">
             <h3 className="text-sm font-bold text-[#ffd34e]">🏛️ Town upgrades: spend denarii, keep forever</h3>
@@ -8264,7 +8264,7 @@ export function App() {
             )}
           </div>
           <p className="mt-3 text-[12px] leading-relaxed text-white/50 italic">
-            Muse refreshes this inscription from the main chat on her sync visits.
+            Muse refreshes this inscription from beyond the town walls on her sync visits.
           </p>
         </section>
       )}

@@ -39,16 +39,16 @@ export interface Place {
 export const PLACES: Place[] = [
   {
     id: "mainchat",
-    name: "Basilica, Main Chat",
-    chipLabel: "Main Chat",
+    name: "The Basilica",
+    chipLabel: "Basilica",
     color: "#d4af37",
     roofColor: 0x8a6d2f,
     wallColor: 0xe9e2d0,
-    resident: "The main conversation, at home",
+    resident: "The town's great hall",
     residentColor: 0xd4af37,
-    greeting: "The basilica is where the main conversation lives.",
-    body: "This grand basilica at the head of the town is the home of your main chat with Muse. The long-running conversation where everything began and where most of life gets talked through: family, plans, money, projects, and every thread that doesn't belong to one side room. The side chats have their own houses around town; this is headquarters.",
-    tip: "An in-town landmark that labels the main chat's home. It doesn't open the chat itself. Chats switch from the app's chat list, as always.",
+    greeting: "The basilica is the town's great hall, where its business is heard.",
+    body: "This grand basilica at the head of the town is its great hall, as a basilica was in every Roman forum: the place where people met, talked through their affairs and heard the news. Muse's letters from the wider world arrive at its desk, and the town's project board hangs beside it. Every other house in town has its own work; this is where it all comes together.",
+    tip: "A landmark of the town. The letters desk and the project board stand beside it.",
     buildingWidth: 12.5,
     position: [0, -35.7],
     facing: 0,
@@ -57,16 +57,16 @@ export const PLACES: Place[] = [
   },
   {
     id: "sidechat",
-    name: "Side Chat House, Muse Town",
-    chipLabel: "Side Chat",
+    name: "Domus Architecti, the Builder's House",
+    chipLabel: "Domus",
     color: "#8a6fd6",
     roofColor: 0x5d4a8a,
     wallColor: 0xe6dfc8,
-    resident: "This Muse Town side chat, at home",
+    resident: "The town's builders, at their plans",
     residentColor: 0x8a6fd6,
-    greeting: "This house is the Muse Town side chat's home in town.",
-    body: "Every side chat gets a place of its own, and this one belongs to the Muse Town side chat, the conversation where this town itself is planned and built: the Roman district, Aelia's white dress, your centurion, the weather, and the town tree. When work on the town is happening, this is the room it's happening from.",
-    tip: "An in-town landmark that labels this side chat's home. It doesn't open the chat itself. Chats switch from the app's chat list, as always.",
+    greeting: "This is the Domus Architecti, the house where the town is planned.",
+    body: "A Roman town was drawn before it was built, and this domus is where this one is drawn: the Roman district, Aelia's white dress, your centurion, the weather and the town tree were all planned here first. When work on the town is under way, this is the room it is planned from.",
+    tip: "A landmark of the town: the builders' house, where its plans are kept.",
     buildingWidth: 7,
     position: [19, 15.5],
     facing: -Math.PI / 2,
@@ -613,7 +613,7 @@ export const STREETS: [number, number][][] = [
   // Around the Meta Sudans, either side.
   [[0, 19.6], [-3.7, 19.1], [-3.7, 11.7], [0, 11.2]],
   [[0, 19.6], [3.7, 19.1], [3.7, 11.7], [0, 11.2]],
-  // The forecourt's cross walk, to the Garden House and the Side Chat.
+  // The forecourt's cross walk, to the Garden House and the Domus Architecti.
   [[-3.7, 15.5], [-9, 15.5], [-15, 15.5]],
   [[3.7, 15.5], [9, 15.5], [15.4, 15.5]],
   // Along the south side of the piscina.
@@ -2155,7 +2155,7 @@ export const INSCRIPTION_HISTORY =
 // quests were its owner's actual tasks (taxes, legal papers, a race) and
 // are not included. A receiving Muse dresses the new owner's own real
 // tasks the same way. Real tasks dressed as Roman quests, pinned on the quest board in the forecourt, by the Meta Sudans (it once stood beside
-// the Main Chat basilica). Real-world quests are marked done by the player's own
+// the basilica). Real-world quests are marked done by the player's own
 // tap (self-report); in-town quests complete themselves from play.
 
 export interface Quest {
@@ -2248,7 +2248,7 @@ export const ACHIEVEMENTS: Achievement[] = [
 
 // --- Letters -------------------------------------------------------------------
 // Dated letters from chat Muse (outside the town) wait at a small desk
-// in the Main Chat building. They live in the artifact's saved data; this
+// in the basilica. They live in the artifact's saved data; this
 // is only the first letter, seeded once, exactly as written.
 
 export const LETTER_DESK_SPOT = {

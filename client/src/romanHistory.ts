@@ -69,7 +69,7 @@ export const HISTORY_LESSONS: HistoryLesson[] = [
       { cite: "Filippo Coarelli, Rome and Environs: An Archaeological Guide (updated ed., 2014), on the Basilica Aemilia and Basilica Julia" },
     ],
     townNote:
-      "In this town the basilica is the 'Main Chat' hall, a meeting place in the game. That use is close in spirit to a real basilica, but the building itself is invented.",
+      "In this town the basilica is the great hall where letters arrive and the project board hangs, a meeting place in the game. That use is close in spirit to a real basilica, but the building itself is invented.",
   },
   {
     id: "roman-temple",

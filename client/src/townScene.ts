@@ -720,9 +720,9 @@ let loadsSettled = 0;
 type LoadTier = 0 | 1 | 2 | 3;
 
 const LOAD_TIER_BY_URL = new Map<string, LoadTier>([
-  // Tier 0, the opening view: the basilica (Main Chat) at the head
+  // Tier 0, the opening view: the basilica at the head
   // of the peristyle, and the houses nearest the camera on the peristyle's
-  // south side (Side Chat, Garden, Stars pavilion).
+  // south side (Domus Architecti, Garden, Stars pavilion).
   [senateUrl, 0],
   [annexUrl, 0],
   [houseGardenUrl, 0],
@@ -2842,7 +2842,7 @@ export function createTownScene(
   });
 
   // A floating text sign (the same canvas-sprite trick as the character
-  // name labels), used for the Main Chat / Side Chat building signs.
+  // name labels), used for the basilica and Domus Architecti signs.
   function makeTextLabel(text: string, bg: string, fg: string): THREE.Sprite {
     const c = document.createElement("canvas");
     c.width = 512;
@@ -2855,7 +2855,13 @@ export function createTownScene(
       else g.rect(56, 14, 400, 100);
       g.fill();
       g.fillStyle = fg;
-      g.font = "700 52px sans-serif";
+      // Longer names (DOMVS ARCHITECTI) shrink to stay inside the pill.
+      let size = 52;
+      g.font = `700 ${size}px sans-serif`;
+      while (size > 26 && g.measureText(text).width > 360) {
+        size -= 2;
+        g.font = `700 ${size}px sans-serif`;
+      }
       g.textAlign = "center";
       g.textBaseline = "middle";
       g.fillText(text, 256, 66);
@@ -3005,12 +3011,12 @@ export function createTownScene(
     }
     // A low stone step up to the front door.
     house.add(box(2.2, 0.18, 0.9, 0xd8cdb2, 0, 0.42, buildingWidth * 0.52, { rough: 0.95 }));
-    // The two chat buildings carry clear signs over their roofs: the
-    // basilica is the MAIN CHAT's home, the annex by the south-east lawn
-    // is this SIDE CHAT's (Muse Town) home.
+    // The basilica and the builders' house (the annex by the south-east
+    // lawn) carry carved name signs over their roofs, in Roman capitals
+    // (Task 44: Roman names only, no chat labels).
     if (place.id === "mainchat" || place.id === "sidechat") {
       const sign = makeTextLabel(
-        place.id === "mainchat" ? "MAIN CHAT" : "SIDE CHAT",
+        place.id === "mainchat" ? "BASILICA" : "DOMVS ARCHITECTI",
         place.id === "mainchat" ? "rgba(74,58,10,0.92)" : "rgba(43,32,74,0.92)",
         "#ffd34e",
       );
@@ -4067,7 +4073,7 @@ export function createTownScene(
     pickRoots.push(gGroup);
   }
 
-  // The letters desk in the Main Chat basilica's shadow: a small table
+  // The letters desk in the basilica's shadow: a small table
   // with paper waiting on it, and a golden ✉ that glows while a letter
   // sits unread.
   const letterIndicator: { group: THREE.Group | null } = { group: null };
