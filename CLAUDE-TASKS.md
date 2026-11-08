@@ -20,8 +20,8 @@ accepted. The current operating guide is `CLAUDE.md`.
 ## Built, awaiting deploy or live acceptance
 
 - Task 22, the principal channel: deployed Nov 6; live acceptance (PENDING_22) still open.
-- Tasks 27 and 28 (Aelia's warm night skin, the moon low over the lake; the plain talk panel during a visit), the speech-bubble design, LB/RB flirt and hug, Gaius's gladius and shield: built, waiting for the town deploy.
-- Tasks 29 and 30 (pairing any town to its own Muse; the play-with-your-Muse guide): built, waiting for both deploys, the town first, then town-bridge. The guide in README.md describes pairing, so it is true only once both are live.
+- Town deployed Nov 8, 2026 as build ecea24ccf715 (main-z83jk8sv.js), carrying Tasks 27 and 28, the speech-bubble design, LB/RB flirt and hug, Gaius's gladius and shield, the town half of Tasks 29 and 30 (Connect my Muse, the pairing routes) and the repository-health changes. Live checks open for Muse: the night faces and the moon (Task 27), the plain visit panel (Task 28), the bubbles, LB/RB, the gladius and shield.
+- Tasks 29 and 30: the town half is live; town-bridge still needs its upload (owner: bash /root/bridge-deploy/upload_bridge.sh). Until then /pair is not served, so the README guide's step 2 does not work yet.
 - Open live checks for Muse: the pale panel rectangle gone (Task 24, passed Nov 7); the moon visible from the dock and the arch view (Task 27); the talk opener reused on reopens inside 3 minutes (Task 27, 3).
 
 ## Open tasks
