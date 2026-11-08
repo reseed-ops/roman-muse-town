@@ -5187,8 +5187,10 @@ export function createTownScene(
   const museBubble = makeBubble(museGroup, 3.0, BUBBLE_SPEAKERS.muse);
   bubbles.push(museBubble);
   museGroup.rotation.y = Math.atan2(-MUSE.position[0], -MUSE.position[1]);
+  // Task 48: a tap on her body toggles walking together ("muse-body");
+  // her speech bubble keeps the talk ("muse"), as the prompt and X do.
   museGroup.traverse((o) => {
-    o.userData.pick = { kind: "muse", id: "muse" } satisfies { kind: PickKind; id: string };
+    o.userData.pick = { kind: "muse", id: o === museBubble.sprite ? "muse" : "muse-body" } satisfies { kind: PickKind; id: string };
   });
   world.add(museGroup);
   pickRoots.push(museGroup);

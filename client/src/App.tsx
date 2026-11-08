@@ -480,11 +480,29 @@ export function App() {
   // remembered last state).
   const [following, setFollowing] = useState(true);
   const followingRef = useRef(true);
-  // One-time rejoin hint (UI review, Nov 1): the first time Aelia is
-  // parked via the menu's "Ask Aelia to stay here", a single small
-  // dismissible hint explains she can be rejoined from the menu
-  // ("Walk with Aelia"). Dismissal is remembered for good.
+  // One-time rejoin hint (UI review, Nov 1; Task 48): the first time
+  // Aelia is parked, a single small dismissible hint explains the way
+  // back (tap her, or Y near her). Dismissal is remembered for good.
   const [rejoinHint, setRejoinHint] = useState(false);
+  // Task 48: once, after the follow switch moved onto her, a small toast says so.
+  const FOLLOW_TOAST_KEY = "muse-town-follow-tap-toast";
+  const [followToast, setFollowToast] = useState(() => {
+    try {
+      return localStorage.getItem(FOLLOW_TOAST_KEY) !== "1";
+    } catch {
+      return false;
+    }
+  });
+  const dismissFollowToast = () => {
+    try {
+      localStorage.setItem(FOLLOW_TOAST_KEY, "1");
+    } catch {
+      /* dismissed for this visit */
+    }
+    setFollowToast(false);
+  };
+  const dismissFollowToastRef = useRef(dismissFollowToast);
+  dismissFollowToastRef.current = dismissFollowToast;
   const rejoinHintDismissedRef = useRef<boolean>(false);
   try {
     if (!rejoinHintDismissedRef.current) {
@@ -2094,6 +2112,19 @@ export function App() {
     );
   }, [releaseHandHold]);
 
+  // Task 48: one switch for walking together, from a tap on her body,
+  // Y near her, T on the keyboard, or the status chip.
+  const toggleFollow = useCallback(() => {
+    if (followingRef.current) {
+      stopFollowing();
+      // One-time hint: the first time she is parked, the way back, once.
+      if (!rejoinHintDismissedRef.current) setRejoinHint(true);
+    } else startFollowing();
+    dismissFollowToastRef.current();
+  }, [startFollowing, stopFollowing]);
+  const toggleFollowRef = useRef(toggleFollow);
+  toggleFollowRef.current = toggleFollow;
+
   /** Offer, once per occasion per session, to accompany the player. She
    *  never leads to the secret place, which she will only ever walk to
    *  or from at his invitation. */
@@ -2262,6 +2293,11 @@ export function App() {
       // Dreams offer nothing and take nothing: no prompt, tap, or
       // panel opens inside either kind of dream.
       if (dreamingRef.current) return;
+      // A tap on her body, on foot, is the follow switch (Task 48), not a talk.
+      if (kind === "muse" && id === "muse-body" && walkingRef.current) {
+        toggleFollowRef.current();
+        return;
+      }
       // Any deliberate interaction, a panel, a seat, the boat, a
       // building, parts joined hands first: wandering is for the
       // stretches between errands, and the errand gets his hands.
@@ -5412,6 +5448,11 @@ export function App() {
       scene.throwStone();
       return;
     }
+    // Near Aelia, Y is the follow switch (Task 48); away from her, stones and hints.
+    if (nearbyRef.current?.kind === "muse") {
+      toggleFollowRef.current();
+      return;
+    }
     scene.pickUpStone();
     if (!scene.hasCarriedStone()) xboxHint();
   };
@@ -5451,6 +5492,10 @@ export function App() {
       if (key === "y" && !e.repeat && walkingRef.current) {
         e.preventDefault();
         xboxStoneRef.current();
+        return;
+      }
+      if (key === "t" && !e.repeat && walkingRef.current) {
+        toggleFollowRef.current();
         return;
       }
       if (key === "g" && !e.repeat && walkingRef.current) {
@@ -6556,29 +6601,6 @@ export function App() {
             active: !!museBubble,
             action: selectMuse,
             aria: "Meet Aelia, your host in Muse Town",
-          }, {
-            // The follow control lives here (Nov 1): the
-            // floating walk-screen chip and the speech-bubble
-            // status line are gone, her bubbles carry her
-            // words, and this menu row carries the switch.
-            key: "follow",
-            icon: "🚶",
-            label: following ? "Ask Aelia to stay here" : "Walk with Aelia",
-            active: following,
-            action: () => {
-              if (following) {
-                stopFollowing();
-                // One-time hint (UI review): the first
-                // parking via this menu item explains the
-                // way back, once dismissed, never again.
-                if (!rejoinHintDismissedRef.current) setRejoinHint(true);
-              } else {
-                startFollowing();
-              }
-            },
-            aria: following
-              ? "Ask Aelia to stay here. She stays a while, then gets on with her day around town"
-              : "Walk with Aelia. She falls in beside you as you walk",
           }]
         },
         {
@@ -7187,7 +7209,7 @@ export function App() {
                 ? "You're in landscape. The town is framed wide, panels dock to the side, and the walk camera pulls back a little so you and Aelia both stay in view."
                 : "Tip: this app's window doesn't turn when you rotate your phone, use Landscape in the ☰ menu and the town turns itself sideways instead. Panels dock to the side, and walking feels more cinematic."}{" "}
             Walk up to Aelia by the town tree and you&apos;ll both wave; walk up to a house or the tree and press X when the prompt appears to interact, the garden key you simply walk over.
-            In walk mode the virtual Xbox controller appears: left joystick to walk, A or the space bar to jump, B or C to slide while moving (B goes back when you're still), X to talk and interact, Y for stones and hints, LB to flirt and RB to hug (when she is ready for it), the shield button beside RB (or G) to bring out his shield or stow it, dragging anywhere on the open view swings the camera around you (drag up far enough to look straight up at the sky), and a double tap on the open view brings it home behind you. While a physical controller is driving, the on-screen controls hide; tap the screen to bring them back.
+            In walk mode the virtual Xbox controller appears: left joystick to walk, A or the space bar to jump, B or C to slide while moving (B goes back when you're still), X to talk and interact, Y for stones and hints (near Aelia, Y or T asks her to walk with you or to stay; a tap on her does the same), LB to flirt and RB to hug (when she is ready for it), the shield button beside RB (or G) to bring out his shield or stow it, dragging anywhere on the open view swings the camera around you (drag up far enough to look straight up at the sky), and a double tap on the open view brings it home behind you. While a physical controller is driving, the on-screen controls hide; tap the screen to bring them back.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {walking && (
@@ -9640,11 +9662,22 @@ export function App() {
             <span />
             <button
               type="button"
-              aria-label="Y button: pick up a loose stone at your feet, or throw the stone you are holding; with no stone in play, ask Aelia for a hint"
-              className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#ffb900]/80 bg-[#1b1b1b]/55 text-lg font-black text-[#ffb900] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8),1px_0_0_rgba(0,0,0,0.6),-1px_0_0_rgba(0,0,0,0.6)] transition active:scale-90 active:bg-[#ffb900] active:text-black"
+              aria-label={
+                nearby?.kind === "muse"
+                  ? following
+                    ? "Y button: ask Aelia to stay here (also T on the keyboard)"
+                    : "Y button: walk together with Aelia (also T on the keyboard)"
+                  : "Y button: pick up a loose stone at your feet, or throw the stone you are holding; with no stone in play, ask Aelia for a hint"
+              }
+              className="pointer-events-auto relative flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#ffb900]/80 bg-[#1b1b1b]/55 text-lg font-black text-[#ffb900] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8),1px_0_0_rgba(0,0,0,0.6),-1px_0_0_rgba(0,0,0,0.6)] transition active:scale-90 active:bg-[#ffb900] active:text-black"
               onClick={xboxStone}
             >
               Y
+              {nearby?.kind === "muse" && (
+                <span aria-hidden="true" className="absolute -top-1 -right-1 text-[11px] leading-none" data-mt-y-follow="1">
+                  🚶
+                </span>
+              )}
             </button>
             <span />
             <button
@@ -9843,14 +9876,52 @@ export function App() {
           bottom is gameplay only, joystick, ABXY, the X prompt,
           the follow chip, plus this transient hint toast, which
           used to ride inside the old bar. */}
-      {/* One-time rejoin hint: shown only after the first menu
-          parking of Aelia, until dismissed, never again after. */}
+      {/* Task 48: her walking-together status, tappable, for when she is
+          out of sight; centred above the prompt, clear of the stick, the
+          buttons and her bubble's band. */}
+      {walking && sceneReady && !rowingBoat && !dreaming && (
+        <div
+          className={
+            isLandscape
+              ? "pointer-events-none absolute inset-x-0 bottom-[122px] z-10 flex justify-center px-4"
+              : "pointer-events-none absolute inset-x-0 bottom-[176px] z-10 flex justify-center px-4"
+          }
+          data-mt-follow-chip="1"
+        >
+          <button
+            type="button"
+            className="pointer-events-auto rounded-full bg-[#22332b]/80 px-3 py-1 text-xs font-bold text-white/90 shadow-md backdrop-blur transition active:scale-95"
+            aria-label={following ? "Walking with you. Tap to ask Aelia to stay here" : "Aelia is staying. Tap to walk together"}
+            aria-pressed={following}
+            onClick={() => toggleFollow()}
+          >
+            {following ? "🚶 Walking with you" : "✦ Aelia is staying"}
+          </button>
+        </div>
+      )}
+      {followToast && walking && sceneReady && !hintText && (
+        <div className="absolute inset-x-0 bottom-[18px] z-20 flex justify-center px-4 pb-safe" data-mt-follow-toast="1">
+          <div className="pointer-events-auto flex max-w-[92vw] items-center gap-2 rounded-2xl bg-[#22332b]/92 px-4 py-2 text-sm font-medium shadow-xl backdrop-blur">
+            <p>Tap Aelia to walk together, tap again to let her stay</p>
+            <button
+              type="button"
+              className="shrink-0 rounded-full bg-white/12 px-2 py-0.5 text-[13px] font-bold transition active:scale-95"
+              aria-label="Dismiss this hint. It will not be shown again"
+              onClick={dismissFollowToast}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+      {/* One-time rejoin hint: shown only after the first parking of
+          Aelia, until dismissed, never again after. */}
       {rejoinHint && !following && (
         <div className="absolute inset-x-0 bottom-[64px] z-20 flex justify-center px-4 pb-safe">
           <div className="pointer-events-auto flex max-w-[92vw] items-start gap-2 rounded-2xl bg-[#22332b]/92 px-4 py-2.5 text-sm font-medium shadow-xl backdrop-blur">
             <p className="leading-relaxed">
-              Aelia will keep her own day from here. To walk together again, open the ☰ menu and
-              choose <strong className="text-[#ffd34e]">“Walk with Aelia”</strong>.
+              Aelia will keep her own day from here. To walk together again,{" "}
+              <strong className="text-[#ffd34e]">tap Aelia</strong> (or press Y near her).
             </p>
             <button
               type="button"
