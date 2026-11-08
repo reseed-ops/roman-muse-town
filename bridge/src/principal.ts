@@ -29,7 +29,7 @@
  */
 import { validateDirection, type VisitDirection, type VisitFrame, type VisitTelemetry } from "../../shared/visitProtocol.js";
 import type { ChannelState, DirectorChannel } from "./channel.js";
-import { bandForRank, filterIntention, filterSpeak } from "./outputFilter.js";
+import { bandForRank, filterIntention, filterSpeak, gentleRefusal } from "./outputFilter.js";
 
 export const PRINCIPAL_CLAIM_MS = 3 * 60 * 1000;
 export const PRINCIPAL_MAX_BEATS = 6;
@@ -323,14 +323,20 @@ export function createPrincipalDesk(opts: PrincipalDeskOptions): PrincipalDesk {
     let altered: string[] | undefined;
     if (direction.kind === "speak") {
       // Her own words keep their endearments; every other rail holds.
-      const filtered = filterSpeak(direction.text, { band: bandForRank(opts.rank()), endearments: "allow" });
+      const rank = opts.rank();
+      const filtered = filterSpeak(direction.text, { band: bandForRank(rank), endearments: "allow", principalRank: rank });
       if (!filtered.ok) {
-        report({ kind: "refused", at: t, beat: p.beat, of, direction: p.raw, reason: `the constitution's filter: ${filtered.reason}` });
-        log(`principal beat ${p.beat}/${of} refused by the filter (${filtered.reason}): ${JSON.stringify(p.raw)}`);
-        return;
+        // Never silence (Task 31): her line is refused, and in its place
+        // she says a gentle refusal in town, so he knows he was heard.
+        const softened = gentleRefusal(filtered.reason);
+        report({ kind: "refused", at: t, beat: p.beat, of, direction: p.raw, reason: `the constitution's filter: ${filtered.reason}; said instead: "${softened}"` });
+        log(`principal beat ${p.beat}/${of} refused by the filter (${filtered.reason}), a gentle refusal said instead: ${JSON.stringify(p.raw)}`);
+        direction = { kind: "speak", text: softened, lineId: `P${beganAt ?? 0}-${++lineCounter}` };
+        altered = [`refused (${filtered.reason}); a gentle refusal said instead`];
+      } else {
+        if (filtered.text !== direction.text) altered = filtered.notes.length ? filtered.notes : ["the filter's text rules"];
+        direction = { kind: "speak", text: filtered.text, lineId: `P${beganAt ?? 0}-${++lineCounter}` };
       }
-      if (filtered.text !== direction.text) altered = filtered.notes.length ? filtered.notes : ["the filter's text rules"];
-      direction = { kind: "speak", text: filtered.text, lineId: `P${beganAt ?? 0}-${++lineCounter}` };
     } else if (direction.kind === "intend") {
       const filtered = filterIntention(direction.text);
       if (!filtered.ok) {

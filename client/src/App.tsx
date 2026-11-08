@@ -5829,7 +5829,7 @@ export function App() {
         onContextMenu={(e) => e.preventDefault()}
         aria-label={
           walking
-            ? "Muse Town on foot as Gaius, use the joystick, WASD, or arrow keys to stroll around, drag the view to look around, and walk up to Aelia to interact"
+            ? "Muse Town on foot as Gaius, use the joystick, WASD, or arrow keys to stroll around, drag the view to look around, double tap it to bring the camera home, and walk up to Aelia to interact"
             : "Muse Town 3D village. Drag to look around, tap a house to visit it, or use Landscape in the town menu to turn the town sideways"
         }
       />
@@ -6720,7 +6720,7 @@ export function App() {
                 ? "You're in landscape. The town is framed wide, panels dock to the side, and the walk camera pulls back a little so you and Aelia both stay in view."
                 : "Tip: this app's window doesn't turn when you rotate your phone, use Landscape in the ☰ menu and the town turns itself sideways instead. Panels dock to the side, and walking feels more cinematic."}{" "}
             Walk up to Aelia by the town tree and you&apos;ll both wave; walk up to a house or the tree and press X when the prompt appears to interact, the garden key you simply walk over.
-            In walk mode the virtual Xbox controller appears: left joystick to walk, A or the space bar to jump, B or C to slide while moving (B goes back when you're still), X to talk and interact, Y for stones and hints, and dragging anywhere on the open view swings the camera around you. While a physical controller is driving, the on-screen controls hide; tap the screen to bring them back.
+            In walk mode the virtual Xbox controller appears: left joystick to walk, A or the space bar to jump, B or C to slide while moving (B goes back when you're still), X to talk and interact, Y for stones and hints, dragging anywhere on the open view swings the camera around you (drag up far enough to look straight up at the sky), and a double tap on the open view brings it home behind you. While a physical controller is driving, the on-screen controls hide; tap the screen to bring them back.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {walking && (
@@ -9112,7 +9112,7 @@ export function App() {
             <div
               role="application"
               data-mt-stick="1"
-              aria-label="Left joystick, drag to walk; drag the open view to move the camera"
+              aria-label="Left joystick, drag to walk; drag the open view to move the camera, double tap it to bring the camera home"
               className="mt-game-surface pointer-events-auto relative h-[118px] w-[118px] touch-none rounded-full border border-white/15 bg-[#202020]/45 shadow-[inset_0_2px_10px_rgba(0,0,0,0.55),0_4px_14px_rgba(0,0,0,0.4)] backdrop-blur select-none"
               onPointerDown={(e) => {
                 e.preventDefault();

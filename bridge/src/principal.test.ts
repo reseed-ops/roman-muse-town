@@ -8,6 +8,7 @@ import { createPackLoader } from "./pack.js";
 import { filterSpeak } from "./outputFilter.js";
 import { createPrincipalDesk, parsePrincipalCall, sceneChangedMaterially, PRINCIPAL_CLAIM_MS, PRINCIPAL_HOLD_MS, type PrincipalSlate } from "./principal.js";
 import { startPrincipalServer } from "./principalServer.js";
+import { gentleRefusal } from "./outputFilter.js";
 
 // Task 22: the principal channel. Her claim silences the resident, which
 // only relays; the claim lapses after three minutes without a call and
@@ -249,13 +250,14 @@ test("refusals come back on her next slate with their reasons: the filter, the t
       { direction: { kind: "speak", text: "Well — never mind." } },
     ],
   });
-  expect(speaks()).toEqual(["Well, never mind."]);
+  // Task 31: a line the filter refuses is never silence; a gentle refusal is said in its place.
+  expect(speaks()).toEqual([gentleRefusal("beyond the band"), "Well, never mind."]);
   const refusals = slate.reports.filter((r) => r.kind === "refused");
   expect(refusals.map((r) => r.beat)).toEqual([1, 2]);
-  expect(refusals[0]!.kind === "refused" && refusals[0]!.reason.startsWith("the constitution's filter:")).toBe(true);
+  expect(refusals[0]!.kind === "refused" && refusals[0]!.reason.startsWith("the constitution's filter: beyond the band; said instead:")).toBe(true);
   expect(refusals[1]!.kind === "refused" && refusals[1]!.reason).toBe("unknown direction kind: fly");
-  const performed = slate.reports.find((r) => r.kind === "performed");
-  expect(performed && performed.kind === "performed" && performed.altered).toBeDefined();
+  const performed = slate.reports.filter((r) => r.kind === "performed");
+  expect(performed.every((r) => r.kind === "performed" && r.altered)).toBe(true);
   channel.close();
   clock.t += 1000;
   slate = await wake({ direction: { kind: "emote", emote: "wave" } });

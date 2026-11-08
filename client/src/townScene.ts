@@ -5804,6 +5804,14 @@ export function createTownScene(
   // not a control) swings the follow camera around the walker, like the
   // default view's orbit drag. The drag writes the camera yaw directly.
   let camPitchOffset = 0;
+  // Looking up (Task 31): past CAM_LOOK_UP_FROM the camera stays at its
+  // lowest and the point it looks at rises into the sky instead, so a
+  // full drag up looks nearly straight up (the pavilion's stars, the
+  // moon), and the view holds there until he drags back or recenters.
+  const CAM_PITCH_MIN = -3.0;
+  const CAM_LOOK_UP_FROM = -1.1;
+  const CAM_PITCH_MAX = 2.6;
+  const CAM_LOOK_UP_HEIGHT = 42;
   let walkDrag: { x: number; y: number } | null = null;
   // The pad's right stick (owner's ask, Nov 6, 2026): a held vector
   // that orbits the follow camera at these rates at full tilt, and R3's
@@ -6767,7 +6775,7 @@ export function createTownScene(
       camRecenter = 0;
       camYawSmooth -= padOrbitX * PAD_ORBIT_YAW_RATE * dt;
       inputYawRef = camYawSmooth;
-      camPitchOffset = THREE.MathUtils.clamp(camPitchOffset - padOrbitY * PAD_ORBIT_PITCH_RATE * dt, -1.1, 2.6);
+      camPitchOffset = THREE.MathUtils.clamp(camPitchOffset - padOrbitY * PAD_ORBIT_PITCH_RATE * dt, CAM_PITCH_MIN, CAM_PITCH_MAX);
       lastDragT = t;
     } else if (camRecenter > 0) {
       camRecenter = walkDrag || camPointers.size > 0 ? 0 : Math.max(0, camRecenter - dt);
@@ -6921,11 +6929,12 @@ export function createTownScene(
     }
     const holdKind = pairStep.framing ?? pairCamState.kind;
     const holdHeight = (holdKind ? PAIR_CAM[holdKind].height : null) ?? PAIR_CAM.hug.height ?? framing.height;
-    let camY = camGroundY + THREE.MathUtils.lerp(framing.height, holdHeight, pairCamMix) + camPitchSmooth;
+    const lookUp = THREE.MathUtils.clamp((CAM_LOOK_UP_FROM - camPitchSmooth) / (CAM_LOOK_UP_FROM - CAM_PITCH_MIN), 0, 1);
+    let camY = camGroundY + THREE.MathUtils.lerp(framing.height, holdHeight, pairCamMix) + Math.max(camPitchSmooth, CAM_LOOK_UP_FROM);
     const minCamY = terrainHeight(camX, camZ) + 0.55;
     if (camY < minCamY) camY = minCamY;
     camera.position.set(camX, camY, camZ);
-    controls.target.set(camFollowX + fx * 1.2, camGroundY + 1.15, camFollowZ + fz * 1.2);
+    controls.target.set(camFollowX + fx * 1.2, camGroundY + 1.15 + lookUp * lookUp * CAM_LOOK_UP_HEIGHT * (1 - pairCamMix), camFollowZ + fz * 1.2);
     if (pairCamMix > 0) {
       // The hold's aim: the pair's midpoint at chest height.
       const midX = (walkPos.x + museGroup.position.x) / 2;
@@ -10951,7 +10960,7 @@ export function createTownScene(
     // the player just chose (see camYawSmooth).
     camYawSmooth -= dx * 0.0052;
     inputYawRef = camYawSmooth;
-    camPitchOffset = THREE.MathUtils.clamp(camPitchOffset + dy * 0.012, -1.1, 2.6);
+    camPitchOffset = THREE.MathUtils.clamp(camPitchOffset + dy * 0.012, CAM_PITCH_MIN, CAM_PITCH_MAX);
   }
   function onPointerCancel(e: PointerEvent) {
     camPointers.delete(e.pointerId);
@@ -10962,6 +10971,20 @@ export function createTownScene(
       walkDrag = null;
       pinchSeen = false;
     }
+  }
+  // Double tap on the open scene recenters the camera (Task 32), the
+  // phone's R3: two genuine taps on nothing interactable, close in time
+  // and place. A single tap does nothing new; a tap on an interactable
+  // still opens it, and never counts toward a double.
+  let lastOpenTap: { t: number; x: number; y: number } | null = null;
+  const DOUBLE_TAP_MS = 350;
+  const DOUBLE_TAP_PX = 40;
+  function recenterWalkCamera() {
+    if (!walking) return;
+    padOrbitX = 0;
+    padOrbitY = 0;
+    camRecenter = 0.8;
+    userZoom = 1;
   }
   function onPointerUp(e: PointerEvent) {
     camPointers.delete(e.pointerId);
@@ -11004,11 +11027,22 @@ export function createTownScene(
     raycaster.setFromCamera(pointer, camera);
     const hits = raycaster.intersectObjects(pickRoots, true);
     const hit = hits[0];
-    if (!hit) return;
-    let obj: THREE.Object3D | null = hit.object;
+    let obj: THREE.Object3D | null = hit?.object ?? null;
     while (obj && !obj.userData.pick) obj = obj.parent;
     const pick = obj?.userData.pick as { kind: PickKind; id: string } | undefined;
-    if (pick) opts.onPick(pick.kind, pick.id);
+    if (pick) {
+      lastOpenTap = null;
+      opts.onPick(pick.kind, pick.id);
+      return;
+    }
+    if (!walking) return;
+    const now = performance.now();
+    if (lastOpenTap && now - lastOpenTap.t < DOUBLE_TAP_MS && Math.hypot(e.clientX - lastOpenTap.x, e.clientY - lastOpenTap.y) < DOUBLE_TAP_PX) {
+      lastOpenTap = null;
+      recenterWalkCamera();
+      return;
+    }
+    lastOpenTap = { t: now, x: e.clientX, y: e.clientY };
   }
   canvas.addEventListener("pointerdown", onPointerDown);
   canvas.addEventListener("pointermove", onPointerMove);
@@ -12686,13 +12720,7 @@ export function createTownScene(
       padOrbitX = THREE.MathUtils.clamp(x, -1, 1);
       padOrbitY = THREE.MathUtils.clamp(y, -1, 1);
     },
-    recenterCamera: () => {
-      if (!walking) return;
-      padOrbitX = 0;
-      padOrbitY = 0;
-      camRecenter = 0.8;
-      userZoom = 1;
-    },
+    recenterCamera: () => recenterWalkCamera(),
     setPad2Move: (x: number, y: number, source) => {
       // A fresh human input outranks a director's channel while it lasts.
       if (source === "director" && pad2Source !== "director" && pad2Live(pad2LastInputAt, clock.getElapsedTime())) return;

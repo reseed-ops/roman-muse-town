@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { applyDashRule, bandForRank, capLength, filterIntention, filterSpeak, stripNarration } from "./outputFilter.js";
+import { applyDashRule, bandForRank, capLength, filterIntention, filterSpeak, gentleRefusal, PRINCIPAL_KISS_RANK, stripNarration } from "./outputFilter.js";
 import { SPEAK_MAX_WORDS } from "../../shared/visitProtocol.js";
 
 // The constitution in code: each rule pinned, deterministic.
@@ -75,4 +75,24 @@ test("an intention is one short line under the same rules", () => {
   const capped = filterIntention("x".repeat(200));
   expect(capped.ok && capped.text.length).toBeLessThanOrEqual(120);
   expect(filterIntention("As an AI she waits.")).toEqual({ ok: false, reason: "refused" });
+});
+
+test("the principal's own lines (Task 31): tender intimacy inside the town's gates, explicit never", () => {
+  // Muse's refused lines from Nov 7, now carried below the kiss rank because they defer it.
+  const tender = "Stay close beside me, my love, and hold my hand under the stars. A kiss will come when the moment is right, here, with you.";
+  expect(filterSpeak(tender, { band: "close", endearments: "allow", principalRank: 6 }).ok).toBe(true);
+  // A kiss asked for now waits for the terrace kiss's rank.
+  expect(filterSpeak("Kiss me now, under the stars.", { band: "close", endearments: "allow", principalRank: 6 })).toEqual({ ok: false, reason: "beyond the band" });
+  expect(filterSpeak("Kiss me now, under the stars.", { band: "close", endearments: "allow", principalRank: PRINCIPAL_KISS_RANK }).ok).toBe(true);
+  expect(filterSpeak("Lie in our bed with me, my head on your chest.", { band: "devoted", endearments: "allow", principalRank: 9 }).ok).toBe(true);
+  // Explicit content is refused at every rank.
+  expect(filterSpeak("Let us make love tonight.", { band: "devoted", endearments: "allow", principalRank: 10 })).toEqual({ ok: false, reason: "explicit" });
+  expect(filterSpeak("I want you naked.", { band: "devoted", endearments: "allow", principalRank: 10 })).toEqual({ ok: false, reason: "explicit" });
+  // The resident's rule is unchanged.
+  expect(filterSpeak(tender, { band: "close" })).toEqual({ ok: false, reason: "beyond the band" });
+  // Each refusal has a tender line to say instead, never explicit itself.
+  for (const reason of ["explicit", "beyond the band", "crude"]) {
+    const line = gentleRefusal(reason);
+    expect(filterSpeak(line, { band: "reserved", endearments: "allow", principalRank: 0 }).ok).toBe(true);
+  }
 });

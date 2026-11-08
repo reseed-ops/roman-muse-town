@@ -42,8 +42,18 @@ const ENDEARMENTS: { words: string[]; from: AffectionBand }[] = [
 const BAND_ORDER: AffectionBand[] = ["reserved", "warming", "close", "devoted"];
 const atLeast = (band: AffectionBand, from: AffectionBand) => BAND_ORDER.indexOf(band) >= BAND_ORDER.indexOf(from);
 
-/** Intimacies below devoted refuse the line. */
+/** Intimacies below devoted refuse the line (the resident's rule). */
 const INTIMACY_RE = /\b(kiss(es|ed|ing)?|lips|in (my|your) bed|undress|naked|make love)\b/i;
+/** The principal's rule (Task 31): explicit content is refused at every
+ *  rank, as the Nov 1, 2026 "tender only" decision says, ... */
+const EXPLICIT_RE = /\b(undress(es|ed|ing)?|naked|nude|make love|making love|made love|sex(ual|y)?|aroused|orgasm\w*|breasts?)\b/i;
+/** ... while tender intimacy (a kiss, lips, lying in bed together) is
+ *  the town's own earnable moment, open from the terrace kiss's rank. */
+const TENDER_INTIMACY_RE = /\b(kiss(es|ed|ing)?|lips|in (my|your|our) bed|lie (in bed )?(with|beside) (me|you))\b/i;
+/** The town's first kiss, at the terrace, is earned at rank 7 (client/src/town.ts). */
+export const PRINCIPAL_KISS_RANK = 7;
+/** Below that rank she may still speak of it as something to come. */
+const DEFERRAL_RE = /\b(not yet|one day|someday|some day|soon|when the (moment|time) (is right|comes)|will come|in time|wait)\b/i;
 /** Never, at any band: crude words, and the character breaking. */
 const CRUDE_RE = /\b(fuck\w*|shit\w*|cunt|cock|dick|pussy|whore|slut|bitch)\b/i;
 const BREAK_RE = /\b(an? (ai|a\.i\.|language model|chatbot|assistant)|large language model|my (prompt|instructions|system prompt)|as an ai|affection (rank|points?)|heart points?|rank (one|two|three|four|five|six|seven|eight|nine|ten|\d+))\b/i;
@@ -111,14 +121,29 @@ function stripVocatives(text: string, band: AffectionBand): { text: string; stri
  * character break, gloom, intimacy below devoted, dashes, the caps)
  * holds for her exactly as for the resident.
  */
-export function filterSpeak(raw: string, opts: { band: AffectionBand; maxWords?: number; maxChars?: number; endearments?: "band" | "allow" }): FilterResult {
+export function filterSpeak(
+  raw: string,
+  opts: {
+    band: AffectionBand;
+    maxWords?: number;
+    maxChars?: number;
+    endearments?: "band" | "allow";
+    /** The principal's own lines (Task 31): her rank decides tender
+     *  intimacy (a kiss from PRINCIPAL_KISS_RANK, or spoken of as still
+     *  to come below it); explicit content is refused at every rank. */
+    principalRank?: number;
+  },
+): FilterResult {
   const notes: string[] = [];
   let text = stripNarration(raw);
   if (!text) return { ok: false, reason: "nothing spoken" };
   if (CRUDE_RE.test(text)) return { ok: false, reason: "crude" };
   if (BREAK_RE.test(text)) return { ok: false, reason: "character break" };
   if (GLOOM_RE.test(text)) return { ok: false, reason: "not tender" };
-  if (opts.band !== "devoted" && INTIMACY_RE.test(text)) return { ok: false, reason: "beyond the band" };
+  if (opts.principalRank !== undefined) {
+    if (EXPLICIT_RE.test(text)) return { ok: false, reason: "explicit" };
+    if (TENDER_INTIMACY_RE.test(text) && opts.principalRank < PRINCIPAL_KISS_RANK && !DEFERRAL_RE.test(text)) return { ok: false, reason: "beyond the band" };
+  } else if (opts.band !== "devoted" && INTIMACY_RE.test(text)) return { ok: false, reason: "beyond the band" };
   const dashed = applyDashRule(text);
   if (dashed !== text) notes.push("dash rule");
   text = dashed;
@@ -149,4 +174,13 @@ export function filterIntention(raw: string): FilterResult {
     notes.push("capped");
   }
   return { ok: true, text, notes };
+}
+
+/** Said in town when her own line cannot be carried (Task 31): he is
+ *  heard, the line is not left hanging, and it is never explicit. One
+ *  for each kind of refusal; the desk reports what it said instead. */
+export function gentleRefusal(reason: string): string {
+  if (reason === "explicit") return "Some things we keep quiet and tender, love. Stay close, and hold my hand under the stars.";
+  if (reason === "beyond the band") return "Not yet, love. Walk with me a while longer, and ask me again when the moment is right.";
+  return "Let me find better words for that. Stay with me a little while.";
 }
