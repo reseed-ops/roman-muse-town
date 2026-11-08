@@ -113,6 +113,10 @@ const WALK_NODES: Record<string, [number, number]> = {
   stairFoot: [0, -12.6],
   stairTop: [0, -25],
   storiesAlley: [-14, -6],
+  // Their house (Task 40): across the west lawn, to the door, and in.
+  lawnWest: [-18.5, 28.4],
+  homeYard: [-34.4, 26],
+  homeInside: [-37.7, 26],
 };
 
 const WALK_EDGES: [string, string][] = [
@@ -122,6 +126,7 @@ const WALK_EDGES: [string, string][] = [
   ["gardenNorthEast", "stairFootEast"], ["gardenNorthWest", "stairFootWest"], ["stairFootEast", "stairFoot"], ["stairFootWest", "stairFoot"],
   ["stairFoot", "stairTop"], ["stairFootWest", "storiesWalk"], ["storiesWalk", "lakePath"], ["lakePath", "lakeBank"],
   ["bathsRoad", "bathsGate"], ["bathsGate", "bathsInside"], ["doorWest", "storiesAlley"], ["storiesAlley", "storiesWalk"],
+  ["ponds", "lawnWest"], ["lawnWest", "homeYard"], ["homeYard", "homeInside"],
 ];
 
 export const WALK_ROUTES = { nodes: WALK_NODES, edges: WALK_EDGES };

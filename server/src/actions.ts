@@ -43,6 +43,7 @@ import { readingOutcome, SEED_LEDGER_SEED } from "./nursery";
 import { loadFishState } from "./fishState";
 import { runRetrySafe, type RequestIdentity } from "./retrySafe";
 import { saveActions } from "./saveActions";
+import { arrange, readArrangement } from "../../shared/homeDecor";
 import { oneTownAtATime, storageOf } from "./storage";
 
 /** Every town action runs one at a time per town (storage.ts). */
@@ -134,6 +135,8 @@ const stateResponse = z.object({
     ingredients: z.array(z.string()),
     dishes: z.array(z.string()),
     seeds: z.number(),
+    /** Their home's keepsakes, slot -> keepsake (Task 40; shared/homeDecor.ts). */
+    home_decor: z.record(z.string(), z.string()),
   }),
   fish: z.array(
     z.object({
@@ -820,6 +823,16 @@ async function saveTaskCompanion(ctx: Ctx, row: TaskCompanionRow): Promise<void>
     .onConflictDoUpdate({ target: schema.taskCompanion.id, set: { ...row } });
 }
 
+/** The purse's flags as they are stored, any value kept (the home's arrangement is an object). */
+function rawFlags(json: string): Record<string, unknown> {
+  try {
+    const v = JSON.parse(json) as unknown;
+    return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
+
 function parseFlags(json: string): Record<string, boolean> {
   try {
     const v = JSON.parse(json) as unknown;
@@ -974,6 +987,7 @@ async function loadEconomyState(ctx: Ctx): Promise<z.infer<typeof economyRespons
       ingredients: parseList(purse.ingredients),
       dishes: parseList(purse.dishes),
       seeds: purse.seeds,
+      home_decor: readArrangement(rawFlags(purse.flags).home) as Record<string, string>,
     },
     fish: catchRows.map((row) => ({
       fish_id: row.fishId,
@@ -3247,6 +3261,23 @@ export const Actions = {
           await savePurse(ctx, purse);
         }
       }, { requestId: args.request_id, action: "awardOnce", payload: args });
+      ctx.invalidateQueries();
+      return loadEconomyState(ctx);
+    },
+  }),
+
+  arrangeHome: defineAction({
+    description: "Place a keepsake in a spot of their house, or clear the spot (Task 40). Cosmetic only: no keepsake costs, pays or unlocks anything; a keepsake stands in one spot at a time, and ids that do not fit change nothing.",
+    request: z.object({ slot: z.string().min(1).max(40), keepsake: z.string().min(1).max(40).nullable() }).extend({ request_id: z.string().uuid().optional() }),
+    response: economyResponse,
+    async handler(ctx, args) {
+      await withEconomyTransaction(ctx, async (ctx) => {
+        const purse = await loadPurse(ctx);
+        const flags = rawFlags(purse.flags);
+        flags.home = arrange(readArrangement(flags.home), args.slot, args.keepsake);
+        purse.flags = JSON.stringify(flags);
+        await savePurse(ctx, purse);
+      }, { requestId: args.request_id, action: "arrangeHome", payload: args });
       ctx.invalidateQueries();
       return loadEconomyState(ctx);
     },

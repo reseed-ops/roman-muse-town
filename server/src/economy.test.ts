@@ -285,3 +285,24 @@ describe("from the lake and the garden to the table", () => {
     expect(state.purse.ingredients).toEqual(["garden-greens"]);
   });
 });
+
+describe("their home's keepsakes (Task 40)", () => {
+  test("a keepsake is placed, moved, cleared, and kept beside the purse's other flags; nothing is paid", async () => {
+    seedPurse(50);
+    sqlite.run(`UPDATE purse_state SET flags = '{"award:x":true}'`);
+    await call("arrangeHome", { slot: "wall-back", keepsake: "star-chart" });
+    await call("arrangeHome", { slot: "shelf-left", keepsake: "letter-bundle" });
+    // Moving the letters to the other shelf empties the first.
+    await call("arrangeHome", { slot: "shelf-right", keepsake: "letter-bundle" });
+    // A wall keepsake cannot stand on the floor; an unknown slot changes nothing.
+    await call("arrangeHome", { slot: "floor", keepsake: "star-chart" });
+    await call("arrangeHome", { slot: "attic", keepsake: "star-chart" });
+    const flags = JSON.parse(row<{ flags: string }>("SELECT flags FROM purse_state").flags) as Record<string, unknown>;
+    expect(flags["award:x"]).toBe(true);
+    expect(flags.home).toEqual({ "wall-back": "star-chart", "shelf-right": "letter-bundle" });
+    await call("arrangeHome", { slot: "wall-back", keepsake: null });
+    const after = JSON.parse(row<{ flags: string }>("SELECT flags FROM purse_state").flags) as { home: Record<string, string> };
+    expect(after.home).toEqual({ "shelf-right": "letter-bundle" });
+    expect(row<{ denarii: number }>("SELECT denarii FROM purse_state").denarii).toBe(50);
+  });
+});

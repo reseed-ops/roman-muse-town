@@ -533,3 +533,23 @@ export function setSurfLevel(level: number) {
   }
   surf.master.gain.setTargetAtTime(v * SURF_VOLUME * FEEL.stepVolume, now, 0.8);
 }
+
+/** Their lamp catching (Task 40): a soft breath of flame, small and warm. */
+export function playLampIgnite() {
+  const ac = actx;
+  if (!ac || ac.state !== "running") return;
+  const start = ac.currentTime;
+  const src = ac.createBufferSource();
+  src.buffer = noiseBuffer(ac);
+  const band = ac.createBiquadFilter();
+  band.type = "bandpass";
+  band.frequency.setValueAtTime(380, start);
+  band.frequency.exponentialRampToValueAtTime(900, start + 0.25);
+  band.Q.value = 0.8;
+  const gain = ac.createGain();
+  gain.gain.setValueAtTime(0.0001, start);
+  gain.gain.exponentialRampToValueAtTime(0.09 * FEEL.stepVolume, start + 0.06);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.5);
+  src.connect(band).connect(gain).connect(ac.destination);
+  src.start(start, Math.random(), 0.55);
+}

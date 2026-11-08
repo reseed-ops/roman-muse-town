@@ -9,13 +9,23 @@
 import * as THREE from "three";
 import { obb, type Obstacle } from "./collision";
 import { HOME, HOME_BED, HOME_FLOOR_Y, HOME_STEPS, homeToWorld } from "./town";
+import type { HomeArrangement, HomeKeepsakeId, HomeSlotId } from "../../shared/homeDecor";
 
 export type HomeHouse = {
   group: THREE.Group;
   colliders: Obstacle[];
   lamp: THREE.PointLight;
-  /** Swing the door by who is near, and set the lamp for the hour. */
-  update(dt: number, walkers: { x: number; z: number }[], nightMix: number): void;
+  /** Swing the door by who is near, and set the lamp: lit while
+   *  anyone is home, an ember when the house stands empty. Returns
+   *  true on the frame the lamp is lit (for its sound). */
+  update(dt: number, walkers: { x: number; z: number }[], nightMix: number): boolean;
+  /** Show the keepsakes where he placed them (Task 40). */
+  setDecor(arrangement: HomeArrangement): void;
+  /** Where to stand to arrange the keepsakes, and to rest together (world). */
+  arrangeSpot: { x: number; z: number };
+  restSpot: { x: number; z: number };
+  /** Inside, by the door, facing it: where she waits at night. */
+  waitSpot: { x: number; z: number; face: number };
   /** Is (x, z) inside the walls? */
   inside(x: number, z: number): boolean;
   /** The bed's edge as a seat: where, which way a sitter faces, and the seat's world height. */
@@ -139,6 +149,23 @@ export function buildHomeHouse(terrainHeight: (x: number, z: number) => number):
   const rug = box(1.9, 0.015, 1.3, m(0x6d3b2a, 1), 0.6, 0.05, 0.6);
   rug.castShadow = false;
 
+  // A shelf on the side wall, for keepsakes.
+  box(0.3, 0.05, 1.4, wood, halfW - 0.15, 1.15, -1.3);
+  for (const z of [-1.9, -0.7]) box(0.04, 0.16, 0.04, wood, halfW - 0.04, 1.06, z);
+
+  // Keepsakes (Task 40): where each spot stands, in the house's frame,
+  // and the small things themselves, built here in the town's style.
+  const SLOT_AT: Record<HomeSlotId, { x: number; y: number; z: number; ry: number }> = {
+    "wall-back": { x: bx, y: 1.78, z: -halfD + 0.03, ry: 0 },
+    "wall-side": { x: halfW - 0.03, y: 1.6, z: 0.75, ry: -Math.PI / 2 },
+    "shelf-left": { x: halfW - 0.15, y: 1.175, z: -1.75, ry: -Math.PI / 2 },
+    "shelf-right": { x: halfW - 0.15, y: 1.175, z: -0.85, ry: -Math.PI / 2 },
+    table: { x: tx - 0.14, y: 0.645, z: tz + 0.08, ry: 0 },
+    floor: { x: halfW - 0.45, y: 0.04, z: halfD - 0.55, ry: -Math.PI / 4 },
+  };
+  const decorGroup = new THREE.Group();
+  group.add(decorGroup);
+
   // Colliders, in the house's frame turned into the world's.
   const rot = HOME.facing;
   const at = (lx: number, lz: number) => homeToWorld(lx, lz);
@@ -163,21 +190,40 @@ export function buildHomeHouse(terrainHeight: (x: number, z: number) => number):
   const bedSeat = { x: seatWorld.x, z: seatWorld.z, rotY: rot - Math.PI / 2, y: HOME_FLOOR_Y + HOME_BED.top };
 
   let doorOpen = 0;
+  let lampLevel = 0;
+  let wasHome = false;
   const doorWorld = at(0, halfD + wall + 0.6);
+  const insideAt = (x: number, z: number) => {
+    const c = Math.cos(rot);
+    const s = Math.sin(rot);
+    const lx = (x - hx) * c - (z - hz) * s;
+    const lz = (x - hx) * s + (z - hz) * c;
+    return Math.abs(lx) < halfW && Math.abs(lz) < halfD;
+  };
+  const arrangeLocal = at(halfW - 0.85, -1.3);
+  const restLocal = at(bx, bz + bd / 2 + 0.45);
+  const waitLocal = at(0.35, halfD - 0.85);
   return {
     group,
     colliders,
     lamp,
     bedSeat,
-    inside(x, z) {
-      const c = Math.cos(rot);
-      const s = Math.sin(rot);
-      const dx = x - hx;
-      const dz = z - hz;
-      const lx = dx * c - dz * s;
-      const lz = dx * s + dz * c;
-      return Math.abs(lx) < halfW && Math.abs(lz) < halfD;
+    arrangeSpot: arrangeLocal,
+    restSpot: restLocal,
+    // Facing the door (local +z), as the house turns.
+    waitSpot: { x: waitLocal.x, z: waitLocal.z, face: rot },
+    setDecor(arrangement) {
+      decorGroup.clear();
+      for (const [slot, keepsake] of Object.entries(arrangement) as [HomeSlotId, HomeKeepsakeId][]) {
+        const spot = SLOT_AT[slot];
+        if (!spot || !keepsake) continue;
+        const thing = buildKeepsake(keepsake);
+        thing.position.set(spot.x, spot.y, spot.z);
+        thing.rotation.y = spot.ry;
+        decorGroup.add(thing);
+      }
     },
+    inside: insideAt,
     update(dt, walkers, nightMix) {
       // The door opens inward as anyone comes within 3 m of it, inside
       // or out, and closes again behind them.
@@ -185,10 +231,100 @@ export function buildHomeHouse(terrainHeight: (x: number, z: number) => number):
       const target = near ? 1 : 0;
       doorOpen += (target - doorOpen) * Math.min(1, dt * 3);
       hinge.rotation.y = doorOpen * 1.75;
-      // The lamp burns warm by night, softly by day; the flame flickers.
+      // The lamp: lit while anyone is home (warm by night, soft by day),
+      // an ember when the house stands empty; the flame flickers.
+      const home = walkers.some((w) => insideAt(w.x, w.z));
+      const lit = home && !wasHome;
+      wasHome = home;
+      lampLevel += ((home ? 1 : 0.08) - lampLevel) * Math.min(1, dt * (home ? 2.5 : 0.6));
       const flicker = 0.92 + 0.08 * Math.sin(performance.now() * 0.011) * Math.sin(performance.now() * 0.0037);
-      lamp.intensity = (1.2 + nightMix * 4.3) * flicker;
-      flame.scale.y = 1.6 + 0.4 * flicker;
+      lamp.intensity = (1.2 + nightMix * 4.3) * flicker * lampLevel;
+      flame.scale.setScalar(0.4 + 0.6 * lampLevel);
+      flame.scale.y = (1.6 + 0.4 * flicker) * (0.4 + 0.6 * lampLevel);
+      return lit;
     },
   };
+}
+
+/** One keepsake, small and built in the town's style; its origin sits
+ *  where it rests (a wall item's back on the wall, facing +z). */
+export function buildKeepsake(id: HomeKeepsakeId): THREE.Group {
+  const g = new THREE.Group();
+  const m = (color: number, extra: THREE.MeshStandardMaterialParameters = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.85, ...extra });
+  const add = (geo: THREE.BufferGeometry, mat: THREE.Material, x: number, y: number, z: number) => {
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    g.add(mesh);
+    return mesh;
+  };
+  const frame = (w: number, h: number, inner: number) => {
+    add(new THREE.BoxGeometry(w, h, 0.04), m(0x5a3d26), 0, 0, 0.02);
+    add(new THREE.BoxGeometry(w - 0.08, h - 0.08, 0.01), m(inner), 0, 0, 0.045);
+  };
+  switch (id) {
+    case "star-chart": {
+      frame(0.8, 0.56, 0x1d2747);
+      const star = m(0xfff3c8, { emissive: 0xfff3c8, emissiveIntensity: 0.6 });
+      for (const [x, y] of [[-0.22, 0.1], [-0.12, 0.14], [-0.05, 0.05], [0.12, 0.12], [0.2, 0.03], [0.04, -0.1], [-0.18, -0.12], [0.24, -0.15]]) {
+        add(new THREE.BoxGeometry(0.018, 0.018, 0.01), star, x!, y!, 0.052);
+      }
+      break;
+    }
+    case "inscription-rubbings": {
+      frame(0.62, 0.74, 0xe8e0cc);
+      for (let i = 0; i < 6; i++) add(new THREE.BoxGeometry(0.4 - (i % 2) * 0.1, 0.022, 0.006), m(0x6d6559), 0, 0.22 - i * 0.09, 0.052);
+      break;
+    }
+    case "fish-plaque": {
+      add(new THREE.BoxGeometry(0.66, 0.3, 0.04), m(0x6b4a2f), 0, 0, 0.02);
+      const fish = add(new THREE.SphereGeometry(0.1, 10, 8), m(0xb8c2c8, { metalness: 0.5, roughness: 0.4 }), -0.04, 0, 0.06);
+      fish.scale.set(2.2, 0.8, 0.4);
+      const tail = add(new THREE.ConeGeometry(0.07, 0.12, 4), m(0xb8c2c8, { metalness: 0.5, roughness: 0.4 }), 0.24, 0, 0.06);
+      tail.rotation.z = Math.PI / 2;
+      break;
+    }
+    case "postcard-frame": {
+      frame(0.5, 0.38, 0xe0965a);
+      add(new THREE.BoxGeometry(0.42, 0.1, 0.006), m(0x4d6b7a), 0, -0.09, 0.052);
+      add(new THREE.CircleGeometry(0.05, 12), m(0xffe0a0, { emissive: 0xffc070, emissiveIntensity: 0.4 }), 0.1, 0.05, 0.052);
+      break;
+    }
+    case "golden-carp-bowl": {
+      add(new THREE.SphereGeometry(0.14, 16, 12), new THREE.MeshStandardMaterial({ color: 0xd7ecf2, transparent: true, opacity: 0.35, roughness: 0.05 }), 0, 0.14, 0);
+      const carp = add(new THREE.SphereGeometry(0.04, 10, 8), m(0xf0a020, { emissive: 0xa05000, emissiveIntensity: 0.3 }), 0.02, 0.12, 0);
+      carp.scale.set(1.8, 0.8, 0.6);
+      break;
+    }
+    case "letter-bundle": {
+      for (let i = 0; i < 3; i++) add(new THREE.BoxGeometry(0.24, 0.025, 0.16), m(0xf1e6cc), 0, 0.0125 + i * 0.025, 0).rotation.y = i * 0.12;
+      add(new THREE.BoxGeometry(0.03, 0.09, 0.17), m(0xa3302a), 0, 0.04, 0);
+      break;
+    }
+    case "phoenix-feather": {
+      add(new THREE.CylinderGeometry(0.05, 0.07, 0.18, 10), m(0x9a5b34), 0, 0.09, 0);
+      const feather = add(new THREE.ConeGeometry(0.035, 0.38, 6), m(0xff7a2a, { emissive: 0xff5a10, emissiveIntensity: 0.6 }), 0.02, 0.36, 0);
+      feather.rotation.z = -0.15;
+      break;
+    }
+    case "terrace-lantern": {
+      add(new THREE.BoxGeometry(0.14, 0.02, 0.14), m(0x3a2a1c, { metalness: 0.4 }), 0, 0.01, 0);
+      add(new THREE.BoxGeometry(0.1, 0.16, 0.1), m(0xffd889, { emissive: 0xffb84d, emissiveIntensity: 0.9, transparent: true, opacity: 0.85 }), 0, 0.1, 0);
+      add(new THREE.ConeGeometry(0.1, 0.07, 4), m(0x3a2a1c, { metalness: 0.4 }), 0, 0.215, 0).rotation.y = Math.PI / 4;
+      break;
+    }
+    case "harvest-basket": {
+      add(new THREE.CylinderGeometry(0.22, 0.17, 0.2, 12), m(0xa07a44), 0, 0.1, 0);
+      const fruit = [0xc0392b, 0x6aa84f, 0xe0a030, 0x8e44ad];
+      fruit.forEach((c, i) => add(new THREE.SphereGeometry(0.06, 8, 6), m(c), Math.cos(i * 1.6) * 0.09, 0.22, Math.sin(i * 1.6) * 0.09));
+      break;
+    }
+    case "tree-cutting": {
+      add(new THREE.CylinderGeometry(0.16, 0.12, 0.24, 12), m(0xb5532f), 0, 0.12, 0);
+      add(new THREE.CylinderGeometry(0.02, 0.025, 0.3, 6), m(0x6b4a2f), 0, 0.38, 0);
+      add(new THREE.SphereGeometry(0.18, 10, 8), m(0x5e8c3a), 0, 0.58, 0).scale.y = 0.85;
+      break;
+    }
+  }
+  return g;
 }

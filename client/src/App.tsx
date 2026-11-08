@@ -222,6 +222,9 @@ import { BRIDGE_BEAT_MS, FRAME_JPEG_QUALITY, FRAME_MAX_EDGE, VISIT_LAPSE_MS, VIS
 import { clearVisitResume, loadVisitResume, saveVisitResume, sessionStore } from "./visitResume";
 import { ConnectMusePanel, useConnectMuse } from "./ConnectMusePanel";
 import { HistoryBook, lessonForPlace, TownStoryTag } from "./HistoryBook";
+import { HomePanel } from "./HomePanel";
+import { earnedKeepsakes } from "./homeKeepsakes";
+import { readArrangement } from "../../shared/homeDecor";
 import { useVisitNotice } from "./useVisitNotice";
 import { LAPSE_WARN_MS, UNREACHABLE_AFTER_FAILS, composingVisible, hostOf, visitChipLine, visitClosedLine, visitStatusLine, type VisitCloseReason, type VisitDirectorState, type VisitRoute } from "./visitStatus";
 import {
@@ -674,6 +677,9 @@ export function App() {
   const [inscriptionId, setInscriptionId] = useState<string | null>(null);
   // The history book (Task 37): closed (undefined), its index (null), or a lesson.
   const [historyLesson, setHistoryLesson] = useState<string | null | undefined>(undefined);
+  // Their home (Task 40): the arranging panel.
+  const [homeOpen, setHomeOpen] = useState(false);
+
   /** The real-history lesson behind a place in town, opened in the book. */
   const openHistoryFor = (placeId: string) => {
     const lesson = lessonForPlace(placeId);
@@ -1246,7 +1252,12 @@ export function App() {
   const followupShownRef = useRef(false);
   const appointmentMetRef = useRef(false);
   const affectionRank = state.data?.affection.rank ?? 0;
-  const purse = state.data?.purse ?? { denarii: 0, upgrades: [], ingredients: [], dishes: [], seeds: 0 };
+  const purse = state.data?.purse ?? { denarii: 0, upgrades: [], ingredients: [], dishes: [], seeds: 0, home_decor: {} };
+  // Their home's keepsakes, into the scene whenever the arrangement changes (Task 40).
+  const homeDecorKey = JSON.stringify(purse.home_decor);
+  useEffect(() => {
+    sceneRef.current?.setHomeDecor(JSON.parse(homeDecorKey) as Record<string, string>);
+  }, [homeDecorKey, sceneReady]);
   const gardenStage = !state.data?.garden.planted_on
     ? 0
     : state.data.garden.water_days >= 3
@@ -1480,6 +1491,10 @@ export function App() {
   const bathLinesRef = useRef({ secs: 0, idx: 0, careStage: 0 });
   const markSharedBath = useMutation({
     mutationFn: () => api.markSharedBath({}),
+    onSuccess: applyState,
+  });
+  const arrangeHome = useMutation({
+    mutationFn: (args: { slot: string; keepsake: string | null }) => api.arrangeHome(args),
     onSuccess: applyState,
   });
   const buyUpgrade = useMutation({
@@ -2300,6 +2315,8 @@ export function App() {
       } else if (kind === "inscription") {
         markInscription.mutate(id);
         setInscriptionId(id);
+      } else if (kind === "home") {
+        setHomeOpen(true);
       } else if (kind === "history") {
         // A history tablet (Task 37): the real lesson for this place.
         const lesson = lessonForPlace(id);
@@ -4697,7 +4714,9 @@ export function App() {
       case "forage":
         return FORAGE_SPOTS.find((s) => s.id === target.id)?.item === "wild-mushrooms" ? "Gather wild mushrooms" : "Gather forest herbs";
       case "rest":
-        return "Rest";
+        return target.id === "home-bed-rest" ? "Rest together till morning" : "Rest";
+      case "home":
+        return "Arrange our home";
       case "dock":
         return target.id === "boat" || rowingRef.current ? "Step ashore" : "Visit the lake dock";
       case "inscription":
@@ -6116,6 +6135,15 @@ export function App() {
         </div>
       )}
 
+      {homeOpen && state.data && (
+        <HomePanel
+          arrangement={readArrangement(state.data.purse.home_decor)}
+          earned={earnedKeepsakes(state.data)}
+          busy={arrangeHome.isPending}
+          onPlace={(slot, keepsake) => arrangeHome.mutate({ slot, keepsake })}
+          onClose={() => setHomeOpen(false)}
+        />
+      )}
       {historyLesson !== undefined && (
         <HistoryBook lessonId={historyLesson} onOpen={(id) => setHistoryLesson(id)} onClose={() => setHistoryLesson(undefined)} />
       )}

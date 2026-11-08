@@ -1,4 +1,5 @@
 import { createPlaceFootprints } from "./buildingFootprints";
+import { readArrangement } from "../../shared/homeDecor";
 import { buildHomeHouse } from "./homeHouse";
 import { aimSeaPath, buildSeaCliff, CLIFF, clampToWorld, walkable as onCliffPath } from "./seaCliff";
 import { createTrueSky, skyDirection, SKY_REFRESH_S } from "./trueSky";
@@ -55,7 +56,7 @@ import {
   type VisitTelemetry,
 } from "../../shared/visitProtocol";
 import { frameDimensions } from "./visitFrames";
-import { setRainLevel, setRainShelter, setSurfLevel } from "./audio";
+import { playLampIgnite, setRainLevel, setRainShelter, setSurfLevel } from "./audio";
 import { FEEL } from "./feel";
 import { buildMetaSudans, META_SUDANS_LINES } from "./metaSudans";
 import { rainIntensity, rainSwell, SHELTER_HINT_LINE, SHELTERED_LINES, shelterAmount, wrapAround, type Shelter } from "./rainMood";
@@ -218,7 +219,7 @@ import boatSmallUrl from "./assets/roman/boat_small.glb";
 import paddleUrl from "./assets/roman/paddle.glb";
 import waterNormalUrl from "./assets/roman/water_normal.png";
 
-export type PickKind = "place" | "collectible" | "tree" | "muse" | "board" | "secret" | "landmark" | "questboard" | "letters" | "goals" | "market" | "bench" | "dock" | "inscription" | "summit" | "piscina" | "baths" | "cat" | "phoenix" | "sky" | "stone" | "rest" | "forage" | "history";
+export type PickKind = "place" | "collectible" | "tree" | "muse" | "board" | "secret" | "landmark" | "questboard" | "letters" | "goals" | "market" | "bench" | "dock" | "inscription" | "summit" | "piscina" | "baths" | "cat" | "phoenix" | "sky" | "stone" | "rest" | "forage" | "history" | "home";
 
 /** The nearest walk-mode interactable, reported by the scene so the
  *  shell can show a small "A, …" prompt. Panels open only when the
@@ -273,6 +274,8 @@ export interface TownSceneHandle {
   /** R3: the follow camera eases back to its default view, behind him
    *  and level, at the walk's distance. */
   recenterCamera: () => void;
+  /** Their home's keepsakes, where he placed them (Task 40). */
+  setHomeDecor: (arrangement: Record<string, string>) => void;
   /** A = jump, B = slide (or stand up from a bench), X = sit on a seat
    *  within reach, stand if seated, otherwise wave. */
   pad2Press: (button: "a" | "b" | "x", source: Pad2Source) => void;
@@ -7058,6 +7061,10 @@ export function createTownScene(
       ["inscription", "temple", 22.8, -14, 3.4],
       ["inscription", "aqueduct", -29.5, -24, 3.4],
       ["inscription", "terrace-hint", -18.4, -22.9, 3.0],
+      // Their house (Task 40): arrange the keepsakes, by the shelf; rest
+      // together, at the bed's foot. (The bed's edge is a bench seat.)
+      ["home", "arrange", homeHouse.arrangeSpot.x, homeHouse.arrangeSpot.z, 1.3],
+      ["rest", "home-bed-rest", homeHouse.restSpot.x, homeHouse.restSpot.z, 1.1],
       // The forum's history tablet (Task 37), by the Town Tree.
       ["history", "forum", HISTORY_TABLET_FORUM[0], HISTORY_TABLET_FORUM[1], 2.4],
     ];
@@ -7365,10 +7372,12 @@ export function createTownScene(
     piscina: { id: "piscina", spots: [[-11.5, 25.6]], face: Math.PI },
     baths: { id: "baths", spots: [[24, 26.6]], face: Math.PI },
     terrace: { id: "terrace", spots: [[3.6, -27]], face: Math.PI / 8 },
+    // At night she goes home (Task 40): in through the door, the lamp
+    // lit, and she waits inside by the door, facing it, for him.
     night: {
       id: "night",
-      spots: [[MUSE.position[0], MUSE.position[1]]],
-      face: Math.atan2(-MUSE.position[0], -MUSE.position[1]),
+      spots: [[homeHouse.waitSpot.x, homeHouse.waitSpot.z]],
+      face: homeHouse.waitSpot.face,
     },
   };
   const ROUTINE_DAY_ORDER = ["market", "forum", "stories", "lake"];
@@ -12216,7 +12225,7 @@ export function createTownScene(
           const lowSun = Math.max(0, 1 - Math.abs(skyElevDeg - 4) / 10);
           (seaCliff.sunPath.material as THREE.MeshBasicMaterial).opacity = lowSun * 0.55 * (1 - Math.min(1, wCur.rain + wCur.snow));
           // Their house: the door swings for whoever comes near, the lamp warms at night.
-          homeHouse.update(dt, walking ? [walkPos, museGroup.position] : [museGroup.position], nightMix);
+          if (homeHouse.update(dt, walking ? [walkPos, museGroup.position] : [museGroup.position], nightMix)) playLampIgnite();
           // At the headland together for the first time this visit, she says one quiet thing.
           if (!cliffGreeted && walking && followMode && Math.hypot(walkPos.x - CLIFF.head.x, walkPos.z - CLIFF.head.z) < 6) {
             cliffGreeted = true;
@@ -12818,6 +12827,7 @@ export function createTownScene(
       padOrbitY = THREE.MathUtils.clamp(y, -1, 1);
     },
     recenterCamera: () => recenterWalkCamera(),
+    setHomeDecor: (arrangement) => homeHouse.setDecor(readArrangement(arrangement)),
     setPad2Move: (x: number, y: number, source) => {
       // A fresh human input outranks a director's channel while it lasts.
       if (source === "director" && pad2Source !== "director" && pad2Live(pad2LastInputAt, clock.getElapsedTime())) return;
