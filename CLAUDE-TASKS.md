@@ -123,6 +123,18 @@ Context: the owner's ask, Nov 7, 2026, live in his town that night. The default 
 
 Acceptance: in a live check on a phone, in portrait and landscape, opening walk mode puts the camera low and close behind Gaius at Xbox third-person height and distance, Gaius and Aelia read as people standing together rather than small figures in a wide town view, and zoom, look-up and double-tap recenter still work from the new default.
 
+## Task 42 (READY, added Nov 8, 2026): URGENT, the town will not start on the owner's phone after Task 41, WebGL unavailable 
+
+
+Context: the live phone check Task 41 was waiting on failed at the first step. The owner's Android Chrome phone worked on the build live Nov 7, 2026 evening (ecea24ccf715) and will not start the town at all on the new live build d8ca9eb1be72 (main-mb18k4dm.js), deployed Nov 8, 2026 at 01:10 CST, carrying Task 41. At 04:11 and 04:16 CST Nov 8, 2026 the phone showed, word for word: "The town couldn't load, tap to retry. The 3D town could not start on this device. WebGL seems unavailable. The town guide below still works." What was tried, all with the same error: the Retry button, closing the other tabs from 6 down to 1, and a full phone restart at about 04:30 CST. The same build loads fine in a desktop virtual browser at 04:19-04:20 CST Nov 8, daytime, the hour of the baths, Gaius and Aelia visible on the avenue, no error overlay. So this is not town-wide, it is phone-only on this build, and the Task 41 phone numbers (first paint, time to interactive, smoothness, settled tier) cannot be measured until the town starts again. The error string is in client/src/App.tsx:4501, in a catch around the scene build, which sets only the generic message above. The real error is stored on window.__mtSceneError with the error message in parentheses, but the overlay hides it. Task 41 changed phone rendering in client/src/townScene.ts from antialias true always to antialias !phone, with FULL_PIXEL_RATIO 1 on phones, plus the first-paint still, the phone quality tier, and held reads. 
+
+1. Find why the scene build throws on Android Chrome on this build, and fix it so the town starts on the phone again. Check the renderer creation, the first-paint still and its preload, the service worker precache of town-still.jpg, the phone quality tier in adaptiveQuality.ts and sceneRuntime.ts, and any assumption that fails on a small screen or a coarse pointer. Turning antialiasing off alone should make context creation easier, not harder, so look beyond that one line. 
+2. Surface the real error. The overlay must show the actual error message, or a way to copy it, not only the generic WebGL unavailable text, so a future failure can be diagnosed from a screenshot. Log it as well. 
+3. Add a recovery before giving up: if WebGL context creation fails once, retry with the safest settings (ratio 1, no antialiasing, low graphics) before showing the failure overlay, and never leave a bare sky-blue screen with nothing to tap. 
+4. Do not propose clearing site data or a private tab as the fix. That would mint a new visitor key and a fresh town, not the owner's town. 
+
+Acceptance: in a live check on the owner's Android Chrome phone, town.reseed.net loads to the full 3D scene and he can walk, on the fixed build. Then the Task 41 phone check can run: first paint, time to interactive, smoothness walking and in a visit, and the tier the phone settles on from the menu perf line. 
+
 ## Landing notes (since the history was archived)
 
 ### Tasks 29, 30: landing note (Claude, Nov 8, 2026), built, not yet deployed (needs both the town and town-bridge)
