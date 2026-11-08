@@ -144,8 +144,14 @@ reload, and install it from the browser menu. Then record the deploy in
 the build id the upload printed.
 
 An upload that fails with "error sending request" before any build
-starts was dropped: retry it. A failed build has a build log: read it
-before any retry.
+starts was dropped: retry it. So was a deployment that Railway marks
+FAILED with "Failed to create code snapshot" and no build (it shows the
+RAILPACK builder because the snapshot never reached the Dockerfile; the
+failure emails carry no detail, and `railway logs --build` answers
+"Deployment does not have an associated build"): the town is untouched,
+retry the same export. A failed build has a build log: read it before
+any retry. `railway deployment list --json` shows which kind it was
+(`meta.configErrors`).
 
 ## Deploying town-bridge
 
