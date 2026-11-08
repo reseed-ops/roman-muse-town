@@ -387,15 +387,31 @@ export function App() {
     const staged = sceneRef.current?.playPairMoment(kind) ?? false;
     console.info(`[muse-town] pair preview: ${kind} ${staged ? "staged" : "refused (stand a few steps from Aelia, in the open, both bodies ready)"}`);
   }, []);
-  // The shoulders, one route for the pad's LB/RB and the on-screen
-  // pair: under ?preview=pairs they stage the flirt (LB) and the hug
-  // (RB) for verification; otherwise they have no duty yet and fall
-  // to Aelia's hint, the way Y does with no stone in play.
+  // The shoulders, one route for the pad's LB/RB, the on-screen
+  // pair and F/H on the keyboard (owner, Nov 8, 2026): LB flirts,
+  // RB hugs, in ordinary play. Her own gates hold: the flirt from
+  // rank 3, where she stops deflecting it, the embrace from rank 4,
+  // the hand-hold rank, the same ranks her rank scenes use. Below
+  // them, or when the moment cannot be staged (too far, seated,
+  // rowing, mid-scene), she says so in a bubble, so a press is
+  // never silent. ?preview=pairs still stages both, ungated.
   const shoulderPress = useCallback(
     (side: "LB" | "RB") => {
       if (!walkingRef.current) return;
-      if (pairPreview) stagePairPreview(side === "LB" ? "flirt" : "hug");
-      else xboxHintRef.current();
+      const kind = side === "LB" ? "flirt" : "hug";
+      if (pairPreview) {
+        stagePairPreview(kind);
+        return;
+      }
+      const scene = sceneRef.current;
+      if (!scene) return;
+      if (affectionRef.current < (kind === "flirt" ? 3 : 4)) {
+        scene.showBubble("muse", kind === "flirt" ? "Careful, centurion. You haven't earned that look yet." : "Not yet, love. Walk with me a while longer.");
+        return;
+      }
+      if (!scene.playPairMoment(kind)) {
+        scene.showBubble("muse", kind === "flirt" ? "Come closer first, and somewhere we can stand." : "Come here first, somewhere open, and I'm yours.");
+      }
     },
     [pairPreview, stagePairPreview],
   );
@@ -5105,8 +5121,8 @@ export function App() {
         xboxStoneRef.current();
         return;
       }
-      if (pairPreview && (key === "h" || key === "f") && !e.repeat) {
-        stagePairPreview(key === "h" ? "hug" : "flirt");
+      if ((key === "h" || key === "f") && !e.repeat && walkingRef.current) {
+        shoulderPressRef.current(key === "f" ? "LB" : "RB");
         return;
       }
       if (!isPad2Key(key)) return;
@@ -9214,11 +9230,9 @@ export function App() {
                 <button
                   type="button"
                   aria-label={
-                    pairPreview
-                      ? `${side} button, preview the ${side === "LB" ? "flirt" : "hug"} clip (also ${side === "LB" ? "F" : "H"} on the keyboard)`
-                      : `${side} button, nothing on it yet; Aelia offers a hint`
+                    `${side} button, ${side === "LB" ? "flirt with Aelia" : "hug Aelia"} (also ${side === "LB" ? "F" : "H"} on the keyboard)`
                   }
-                  className={`pointer-events-auto flex h-9 w-[66px] flex-col items-center justify-center rounded-t-2xl rounded-b-lg border-2 border-white/45 bg-[#1b1b1b]/55 text-[13px] leading-none font-black text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8)] transition active:scale-90 active:bg-white/80 active:text-black${pairPreview ? "" : " opacity-60"}`}
+                  className={`pointer-events-auto flex h-9 w-[66px] flex-col items-center justify-center rounded-t-2xl rounded-b-lg border-2 border-white/45 bg-[#1b1b1b]/55 text-[13px] leading-none font-black text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8)] transition active:scale-90 active:bg-white/80 active:text-black`}
                   onPointerDown={(e) => {
                     e.preventDefault();
                     shoulderPress(side);
@@ -9229,7 +9243,7 @@ export function App() {
                   }}
                 >
                   {side}
-                  {pairPreview && <span className="mt-0.5 text-[9px] font-bold tracking-wide uppercase">{side === "LB" ? "Flirt" : "Hug"}</span>}
+                  <span className="mt-0.5 text-[9px] font-bold">{side === "LB" ? "Flirt" : "Hug"}</span>
                 </button>
               </div>
             ))}
