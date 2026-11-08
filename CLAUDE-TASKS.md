@@ -170,6 +170,17 @@ Context: the owner's decision, Nov 8, 2026. The Nov 1 tender-only rule stands: n
 
 Acceptance: in a live check, at rank 7 or above at night in the house, he can ask and she can invite. She sometimes declines kindly. The fade shows nothing, the morning arrives with both of them waking together, below rank 7 the option doesn't exist, and no explicit line gets through the filter at any rank.
 
+## Task 46 (READY, added Nov 8, 2026): bees and butterflies flying, crickets seen as well as heard
+
+Context: the owner asked Nov 8, 2026, in a voice call, after asking if Rome had crickets, bees and butterflies, and then asking to add them, at least the bees and butterflies flying around, to make the world feel alive. Rome did have all three, in gardens, fields and summer grass, and the poets wrote about them. Checked in the repo: no bee or butterfly assets exist yet. Crickets already exist only as sound, in the Atrium of Sounds, "evening crickets" in a jar, synthesized live, no recordings. The town already has the pattern to follow: forest birds are a loose flock of simple flapping shapes, and fireflies are 46 points at night, both light. The forest wildlife plan for deer and fox is deliberately unpopulated until rigged models are owned, with no stand-in models, ever, and that rule is not changed by this task. This was first drafted as Task 45, then renumbered to Task 46 because Task 45 was taken by the night-together task (commit 51d7fda).
+
+1. Add bees flying in the garden (Hortus) and around flowers, in small numbers, drifting from flower to flower, with a soft hum only when close, if a hum can be synthesized live like the Atrium jars, with no recordings.
+2. Add butterflies flying over the forum and the fields, in small numbers, in a few Roman colours, white, yellow and pale blue, drifting slowly, landing on flowers sometimes, never blocking a path or a panel.
+3. Add crickets seen as well as heard: small dark shapes in the grass at dusk and at night, where the evening cricket sound already lives, still and chirping, scattering a short hop if Gaius walks close, then settling again.
+4. Build them in code as simple light shapes, like the birds and fireflies, with no heavy model files and no purchase. If a bought pack is truly needed, name it first and do not buy it in this task. Keep the phone light: respect the phone quality tier from Task 41, few creatures, small, no shadows, and quiet when the player is far away or the town is idle.
+
+Acceptance: in a live check on the owner's Android Chrome phone, after the next town deploy, bees are flying in the garden, butterflies are drifting over the forum and the fields, crickets are visible in the grass at dusk with their sound, and walking stays smooth on the phone.
+
 ## Landing notes (since the history was archived)
 
 ### Tasks 29, 30: landing note (Claude, Nov 8, 2026), built, not yet deployed (needs both the town and town-bridge)
