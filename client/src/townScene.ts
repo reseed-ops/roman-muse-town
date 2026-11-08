@@ -2328,6 +2328,10 @@ export function createTownScene(
     ...MARKET_BOOTHS.map(([x, z]) => [x, z, 1.9] as Shelter),
   ];
   let lastRainLevelAt = -10;
+  /** How sheltered a spot is from the rain: the roofs above, and their
+   *  house, whose inside is fully covered (its own rectangle, not a radius). */
+  const shelterAt = (x: number, z: number): number =>
+    Math.max(shelterAmount(x, z, RAIN_SHELTERS), homeHouse.inside(x, z) ? 1 : 0);
   const rainLines = new THREE.LineSegments(rainGeo, rainMat);
   rainLines.frustumCulled = false;
   world.add(rainLines);
@@ -7305,7 +7309,7 @@ export function createTownScene(
     if (Math.hypot(mx - 12, mz - 43) < 6.5) return pickLine("companion:embassy", COMPANION_LINES.embassy!);
     if (wCur.sparkle > 0.4) return pickLine("companion:sparkles", COMPANION_LINES.sparkles!);
     if (wCur.rain > 0.45) {
-      if (shelterAmount(mx, mz, RAIN_SHELTERS) > 0.5) return pickLine("companion:sheltered", SHELTERED_LINES);
+      if (shelterAt(mx, mz) > 0.5) return pickLine("companion:sheltered", SHELTERED_LINES);
       return pickLine("companion:rain", COMPANION_LINES.rain!);
     }
     if (upgradeGroups.fountain?.visible && Math.hypot(mx - VILLA.metaSudans[0], mz - VILLA.metaSudans[1]) < 5) return pickLine("companion:meta-sudans", META_SUDANS_LINES);
@@ -11699,7 +11703,7 @@ export function createTownScene(
         if (t - lastRainLevelAt > 1) {
           lastRainLevelAt = t;
           setRainLevel(rainAmt);
-          setRainShelter(walking ? shelterAmount(walkPos.x, walkPos.z, RAIN_SHELTERS) : 0);
+          setRainShelter(walking ? shelterAt(walkPos.x, walkPos.z) : 0);
         }
         if (rainLines.visible) {
           const slant = 0.35 + wCur.wind * 1.5 + (stormy ? 1.1 : 0);

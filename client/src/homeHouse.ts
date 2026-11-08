@@ -8,7 +8,7 @@
 // the same frame, so walls and bed stop walkers where they stand.
 import * as THREE from "three";
 import { obb, type Obstacle } from "./collision";
-import { HOME, HOME_BED, HOME_FLOOR_Y, homeToWorld } from "./town";
+import { HOME, HOME_BED, HOME_FLOOR_Y, HOME_STEPS, homeToWorld } from "./town";
 
 export type HomeHouse = {
   group: THREE.Group;
@@ -55,9 +55,13 @@ export function buildHomeHouse(terrainHeight: (x: number, z: number) => number):
   box((halfW + wall) * 2 + 0.3, plinthH, (halfD + wall) * 2 + 0.3, plinth, 0, -plinthH / 2, 0);
   const floor = box(halfW * 2, 0.04, halfD * 2, m(0xb89a72, 0.85), 0, 0.02, 0);
   floor.castShadow = false;
-  // Two steps down to the lawn before the door.
-  for (const i of [1, 2]) {
-    box(1.9, 0.2, 0.64, plinth, 0, -0.1 - 0.2 * (i - 1), halfD + wall + 0.32 * (2 * i - 1));
+  // The steps down to the lawn before the door: the same tops a walker
+  // stands on (HOME_STEPS), each a block from its top down into the ground.
+  for (const step of HOME_STEPS) {
+    const p = homeToWorld(0, step.lz);
+    const bottom = Math.min(terrainHeight(p.x, p.z), step.top) - 0.15;
+    const h = step.top - bottom;
+    box(1.9, h, 0.64, plinth, 0, step.top - HOME_FLOOR_Y - h / 2, step.lz);
   }
   // Walls: back, the two sides, and the front either side of the door.
   const wy = wallHeight / 2;

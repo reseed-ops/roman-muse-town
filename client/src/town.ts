@@ -909,6 +909,20 @@ export function homeToWorld(lx: number, lz: number): { x: number; z: number } {
   return { x: HOME.position[0] + lx * c + lz * sn, z: HOME.position[1] - lx * sn + lz * c };
 }
 
+/** The steps before the door, one definition for the stone the scene
+ *  draws and the height a walker stands at: as many as the real rise
+ *  from the lawn to the floor needs (about 18 cm each), evenly spaced,
+ *  each 0.64 m deep, outward from the wall. */
+export const HOME_STEPS: { lz: number; top: number }[] = (() => {
+  const wallFace = HOME.halfD + HOME.wall;
+  const out: { lz: number; top: number }[] = [];
+  const probe = homeToWorld(0, wallFace + 1.4);
+  const rise = HOME_FLOOR_Y - terrainHeight(probe.x, probe.z);
+  const count = Math.max(0, Math.min(4, Math.round(rise / 0.18)));
+  for (let i = 1; i <= count; i++) out.push({ lz: wallFace + 0.32 * (2 * i - 1), top: HOME_FLOOR_Y - (rise * i) / (count + 1) });
+  return out;
+})();
+
 /** The bed, in the house's frame: its head against the back wall. */
 export const HOME_BED = { lx: -1.2, lz: -2.05, halfW: 0.8, halfD: 1.05, top: 0.58 } as const;
 
@@ -974,11 +988,10 @@ export const WALK_SURFACES: WalkSurface[] = (() => {
   {
     const [hx, hz] = HOME.position;
     out.push({ cx: hx, cz: hz, rotY: HOME.facing, halfW: HOME.halfW + HOME.wall, halfD: HOME.halfD + HOME.wall, top: HOME_FLOOR_Y, label: "home floor" });
-    for (const [i, drop] of [[1, 0.2], [2, 0.4]] as [number, number][]) {
-      const lz = HOME.halfD + HOME.wall + 0.32 * (2 * i - 1);
-      const p = homeToWorld(0, lz);
-      out.push({ cx: p.x, cz: p.z, rotY: HOME.facing, halfW: 0.95, halfD: 0.32, top: HOME_FLOOR_Y - drop, label: `home step ${i}` });
-    }
+    HOME_STEPS.forEach((step, i) => {
+      const p = homeToWorld(0, step.lz);
+      out.push({ cx: p.x, cz: p.z, rotY: HOME.facing, halfW: 0.95, halfD: 0.32, top: step.top, label: `home step ${i + 1}` });
+    });
   }
   // The lake dock: planks span x -13.7..-10.3 at the lake's centre z,
   // top = water level + 0.3, water = terrain at the lake centre + 0.8
