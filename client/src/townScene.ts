@@ -4989,7 +4989,8 @@ export function createTownScene(
     const hy = Math.min(0.45, Math.abs(py.y - bubbleTmpV2.y));
     const marginX = (10 / cw) * 2;
     const topPx = isLandscapeView ? 54 : 100;
-    const bottomPx = isLandscapeView ? 132 : 306;
+    // Above the walk controls, which sit at the screen's foot (Task 38).
+    const bottomPx = isLandscapeView ? 212 : 252;
     const xLo = -1 + marginX + hx;
     const xHi = 1 - marginX - hx;
     const yLo = -1 + (bottomPx / ch) * 2 + hy;
@@ -5925,16 +5926,18 @@ export function createTownScene(
   let camFollowZ = Number.NaN;
   let viewAspect = 1;
   let isLandscapeView = false;
-  // The standard walk-camera framing, used on every entry into walk
-  // mode (including the town's opening, which now starts on foot) and
-  // as the follow camera's resting distance: pulled back far enough
-  // to take in the Centurion, Muse when she's near, and the street
-  // around them, a town view, not an over-the-shoulder close-up.
-  // Landscape sits a little lower and wider; portrait rides higher
-  // to keep the same ground in frame.
+  // The standard walk-camera framing (Task 39, Nov 8, 2026): a standard
+  // third-person view, as a console game sets it, about 4 m behind
+  // Gaius at roughly eye height, so he fills the lower frame and Aelia
+  // beside him reads as a person standing with him, with the street,
+  // the lake and the sky ahead. (It was a town view, 10 to 11.5 m back
+  // and 3.6 to 4.2 m up.) Pinch and wheel zoom still pull back to a
+  // wide town view or in close; drag, look-up and double-tap recenter
+  // all work from here. Portrait rides a touch higher and further, to
+  // keep the same ground in its narrower frame.
   const walkCamFraming = () => ({
-    dist: isLandscapeView ? 11.5 : viewAspect < 0.8 ? 9.8 : 10.5,
-    height: isLandscapeView ? 3.6 : 4.2,
+    dist: isLandscapeView ? 4.0 : viewAspect < 0.8 ? 4.5 : 4.2,
+    height: isLandscapeView ? 1.85 : 2.0,
   });
   // Pinch / wheel zoom (Nov 1): the visitor's own multiplier on the
   // standard framing distance, two fingers (or the desktop wheel)
@@ -5947,7 +5950,10 @@ export function createTownScene(
   // (The overview's distance is OrbitControls' own dolly, with its
   // own 7–78 clamps, the same gesture, the same feel.)
   let userZoom = 1;
-  const walkRestDist = () => THREE.MathUtils.clamp(walkCamFraming().dist * userZoom, 3.4, 30);
+  // From close beside her (about 2.2 m) out to a wide town view (about 28 m).
+  const ZOOM_MIN = 0.55;
+  const ZOOM_MAX = 7;
+  const walkRestDist = () => THREE.MathUtils.clamp(walkCamFraming().dist * userZoom, 2.2, 30);
   const nearCollectibles = new Set<string>();
   // The last nearby prompt target reported to the shell ("kind:id", or
   // "" when none), prompts are reported on change only, never per frame.
@@ -10951,7 +10957,7 @@ export function createTownScene(
       const [pa, pb] = [...camPointers.values()];
       const spread = Math.hypot(pa!.x - pb!.x, pa!.y - pb!.y);
       if (pinchSpread > 0 && spread > 0) {
-        userZoom = THREE.MathUtils.clamp(userZoom * (pinchSpread / spread), 0.3, 3.1);
+        userZoom = THREE.MathUtils.clamp(userZoom * (pinchSpread / spread), ZOOM_MIN, ZOOM_MAX);
       }
       pinchSpread = spread;
       return;
@@ -11105,7 +11111,7 @@ export function createTownScene(
   const onWheelZoom = (e: WheelEvent) => {
     if (!walking) return;
     e.preventDefault();
-    userZoom = THREE.MathUtils.clamp(userZoom * Math.exp(e.deltaY * 0.0012), 0.3, 3.1);
+    userZoom = THREE.MathUtils.clamp(userZoom * Math.exp(e.deltaY * 0.0012), ZOOM_MIN, ZOOM_MAX);
   };
   canvas.addEventListener("wheel", onWheelZoom, { passive: false });
 
@@ -12607,7 +12613,7 @@ export function createTownScene(
       followSustain = 0;
       camPitchOffset = snap.camPitch;
       camPitchSmooth = snap.camPitch;
-      userZoom = THREE.MathUtils.clamp(snap.userZoom, 0.3, 3.1);
+      userZoom = THREE.MathUtils.clamp(snap.userZoom, ZOOM_MIN, ZOOM_MAX);
       camDistSmooth = walkRestDist();
       playerGroundSm = Number.NaN;
       museGroundSm = Number.NaN;

@@ -6774,7 +6774,7 @@ export function App() {
                 ? "You're in landscape. The town is framed wide, panels dock to the side, and the walk camera pulls back a little so you and Aelia both stay in view."
                 : "Tip: this app's window doesn't turn when you rotate your phone, use Landscape in the ☰ menu and the town turns itself sideways instead. Panels dock to the side, and walking feels more cinematic."}{" "}
             Walk up to Aelia by the town tree and you&apos;ll both wave; walk up to a house or the tree and press X when the prompt appears to interact, the garden key you simply walk over.
-            In walk mode the virtual Xbox controller appears: left joystick to walk, A or the space bar to jump, B or C to slide while moving (B goes back when you're still), X to talk and interact, Y for stones and hints, dragging anywhere on the open view swings the camera around you (drag up far enough to look straight up at the sky), and a double tap on the open view brings it home behind you. While a physical controller is driving, the on-screen controls hide; tap the screen to bring them back.
+            In walk mode the virtual Xbox controller appears: left joystick to walk, A or the space bar to jump, B or C to slide while moving (B goes back when you're still), X to talk and interact, Y for stones and hints, LB to flirt and RB to hug (when she is ready for it), dragging anywhere on the open view swings the camera around you (drag up far enough to look straight up at the sky), and a double tap on the open view brings it home behind you. While a physical controller is driving, the on-screen controls hide; tap the screen to bring them back.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {walking && (
@@ -9181,8 +9181,8 @@ export function App() {
           <div
             className={
               isLandscape
-                ? "absolute bottom-[80px] left-3 z-20 scale-90"
-                : "absolute bottom-28 left-3 z-20 sm:bottom-24 sm:left-4"
+                ? "absolute bottom-3 left-3 z-20 origin-bottom-left scale-90"
+                : "absolute bottom-5 left-3 z-20 sm:left-4"
             }
           >
             <div
@@ -9217,8 +9217,8 @@ export function App() {
           <div
             className={
               isLandscape
-                ? "absolute right-3 bottom-[80px] z-20 grid scale-90 grid-cols-3 gap-1"
-                : "absolute right-3 bottom-28 z-20 grid grid-cols-3 gap-1 sm:right-4 sm:bottom-24"
+                ? "absolute right-3 bottom-3 z-20 grid origin-bottom-right scale-90 grid-cols-3 gap-1"
+                : "absolute right-3 bottom-5 z-20 grid grid-cols-3 gap-1 sm:right-4"
             }
             role="group"
             data-mt-controls="1"
@@ -9298,11 +9298,11 @@ export function App() {
                 className={
                   side === "LB"
                     ? isLandscape
-                      ? "absolute left-3 bottom-[236px] z-20"
-                      : "absolute left-3 bottom-[292px] z-20 sm:left-4 sm:bottom-[276px]"
+                      ? "absolute left-3 bottom-[168px] z-20"
+                      : "absolute left-3 bottom-[200px] z-20 sm:left-4"
                     : isLandscape
-                      ? "absolute right-3 bottom-[236px] z-20"
-                      : "absolute right-3 bottom-[292px] z-20 sm:right-4 sm:bottom-[276px]"
+                      ? "absolute right-3 bottom-[168px] z-20"
+                      : "absolute right-3 bottom-[200px] z-20 sm:right-4"
                 }
                 data-mt-shoulders={side}
               >
@@ -9322,7 +9322,6 @@ export function App() {
                   }}
                 >
                   {side}
-                  <span className="mt-0.5 text-[9px] font-bold">{side === "LB" ? "Flirt" : "Hug"}</span>
                 </button>
               </div>
             ))}
