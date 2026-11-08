@@ -149,3 +149,73 @@ body {
   touch-action: none;
   overscroll-behavior: none;
 }
+
+/* The speaker's plate (Nov 8, 2026): every speech bubble in the town
+   is one design. The 3D bubbles over heads draw the same thing on a
+   canvas (townScene.ts, BUBBLE_* tokens). An ivory plate with a gold
+   hairline set inside its edge, the speaker's name on a coloured tab
+   across the top-left edge, a tail toward the speaker, and a small
+   bobbing chevron when there is more to read. */
+:root {
+  --bubble-plate: #fffaf2;
+  --bubble-ink: #1d1712;
+  --bubble-rim: rgba(217, 178, 74, 0.72);
+  --speaker-aelia: #b07d12;
+  --speaker-gaius: #9a3b2a;
+}
+.mt-plate {
+  position: relative;
+  background: var(--bubble-plate);
+  color: var(--bubble-ink);
+  border-radius: 22px;
+  box-shadow: 0 10px 28px rgba(43, 33, 24, 0.3), 0 2px 6px rgba(43, 33, 24, 0.18);
+}
+.mt-plate::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1.5px solid var(--bubble-rim);
+  border-radius: 17px;
+  pointer-events: none;
+}
+.mt-plate-tail {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  transform: translateX(-50%) rotate(45deg);
+  border-bottom-right-radius: 4px;
+  background: var(--bubble-plate);
+}
+.mt-nametab {
+  position: absolute;
+  top: -13px;
+  left: 18px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 12px 3px;
+  border: 2px solid var(--bubble-plate);
+  border-radius: 999px;
+  background: var(--speaker-aelia);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 18px;
+  box-shadow: 0 2px 6px rgba(43, 33, 24, 0.25);
+}
+.mt-next {
+  display: inline-block;
+  color: var(--speaker-aelia);
+  animation: mt-next-bob 1.1s ease-in-out infinite;
+}
+@keyframes mt-next-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(2px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mt-next { animation: none; }
+}

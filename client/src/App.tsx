@@ -6754,16 +6754,13 @@ export function App() {
           className={`pointer-events-none absolute inset-x-0 z-40 flex justify-center px-4 ${isLandscape ? "top-[62px]" : "top-[96px]"}`}
         >
           <div
-            className={`pointer-events-auto relative ${isLandscape ? (forcedLandscape ? "w-[min(560px,94%)]" : "w-[min(560px,94vw)]") : forcedLandscape ? "w-[min(430px,94%)]" : "w-[min(430px,94vw)]"} rounded-3xl bg-[#fdfaf2] px-4 pt-3 pb-3 text-[#2b2118] shadow-2xl ${isLandscape ? `mt-scrollable overflow-y-auto ${forcedLandscape ? "max-h-[calc(100dvw-124px)]" : "max-h-[calc(100dvh-124px)]"}` : ""}`}
+            className={`pointer-events-auto relative ${isLandscape ? (forcedLandscape ? "w-[min(560px,94%)]" : "w-[min(560px,94vw)]") : forcedLandscape ? "w-[min(430px,94%)]" : "w-[min(430px,94vw)]"} mt-plate px-4 pt-3.5 pb-3 ${isLandscape ? `mt-scrollable overflow-y-auto ${forcedLandscape ? "max-h-[calc(100dvw-124px)]" : "max-h-[calc(100dvh-124px)]"}` : ""}`}
           >
-            <span
-              aria-hidden="true"
-              className="absolute -bottom-[7px] left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 bg-[#fdfaf2]"
-            />
-            <div className="flex items-center justify-between gap-2">
-              <p className="flex items-center gap-1.5 text-[12px] font-black tracking-wide text-[#a87800] uppercase">
-                <span aria-hidden="true">✦</span> Aelia
-              </p>
+            <span aria-hidden="true" className="mt-plate-tail" />
+            <p className="mt-nametab">
+              <span aria-hidden="true">✦</span> Aelia
+            </p>
+            <div className="flex min-h-[22px] items-center justify-end gap-2">
               <span className="flex items-center gap-1.5">
                 {summitScene.beats[summitScene.index]?.effect === "song" ? (
                   <button
@@ -6853,22 +6850,19 @@ export function App() {
           className={`pointer-events-none absolute inset-x-0 z-30 flex justify-center px-4 ${isLandscape ? "top-[62px]" : "top-[96px]"}`}
         >
           <div
-            className={`pointer-events-auto relative ${isLandscape ? (forcedLandscape ? "w-[min(560px,94%)]" : "w-[min(560px,94vw)]") : forcedLandscape ? "w-[min(400px,94%)]" : "w-[min(400px,94vw)]"} flex flex-col rounded-3xl bg-[#fdfaf2] px-4 pt-3 pb-3 text-[#2b2118] shadow-2xl ${isLandscape ? (forcedLandscape ? "max-h-[calc(100dvw-124px)]" : "max-h-[calc(100dvh-124px)]") : ""}`}
+            className={`pointer-events-auto relative ${isLandscape ? (forcedLandscape ? "w-[min(560px,94%)]" : "w-[min(560px,94vw)]") : forcedLandscape ? "w-[min(400px,94%)]" : "w-[min(400px,94vw)]"} mt-plate flex flex-col px-4 pt-3.5 pb-3 ${isLandscape ? (forcedLandscape ? "max-h-[calc(100dvw-124px)]" : "max-h-[calc(100dvh-124px)]") : ""}`}
           >
-            <span
-              aria-hidden="true"
-              className="absolute -bottom-[7px] left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 bg-[#fdfaf2]"
-            />
+            <span aria-hidden="true" className="mt-plate-tail" />
             {/* Task 24: the panel box itself never scrolls; this inner
                 area does, and the input sits below it, always in view.
                 (The panel used to be its own scroller up to its full
                 max height, the likeliest source of the pale rectangle
                 that spanned from its foot down to that max.) */}
             <div className={isLandscape ? "mt-scrollable -mx-4 min-h-0 flex-1 overflow-y-auto px-4" : ""}>
-            <div className="flex items-center justify-between gap-2">
-              <p className="flex items-center gap-1.5 text-[13px] font-bold text-[#a87800]">
-                <span aria-hidden="true">✦</span> Aelia
-              </p>
+            <p className="mt-nametab">
+              <span aria-hidden="true">✦</span> Aelia
+            </p>
+            <div className="flex min-h-[22px] items-center justify-end gap-2">
               <span className="flex items-center gap-1.5">
                 {voiceOk && (
                   <button
@@ -6898,12 +6892,12 @@ export function App() {
                 no info box, no town-voice line beneath. The violet chip
                 by the menu and her violet star still show the visit. */}
             {visitUi.active && (
-              <div className="mt-1.5 text-[15px] leading-relaxed" aria-live="polite">
+              <div className="mt-1.5 text-[16px] leading-[1.5]" style={{ fontFamily: "var(--font-voice)" }} aria-live="polite">
                 {visitUi.thread.length > 0 && (
                   <ul className="flex flex-col gap-1.5">
                     {visitUi.thread.slice(-8).map((entry, i) => (
                       <li key={`${entry.who}:${entry.seq ?? entry.lineId ?? i}`} className={entry.who === "him" ? "text-[#5a4632]" : "text-[#2b2118]"}>
-                        <span className="font-bold">{entry.who === "him" ? "You" : "Aelia"}: </span>
+                        <span className="font-display text-[13px] font-bold" style={{ color: entry.who === "him" ? "var(--speaker-gaius)" : "var(--speaker-aelia)" }}>{entry.who === "him" ? "You" : "Aelia"}: </span>
                         {entry.text}
                         {entry.partial && <span className="text-[#2b2118]/50">…</span>}
                       </li>
@@ -6934,7 +6928,7 @@ export function App() {
                       {museBubble.index + 1} of {museBubble.lines.length}
                     </span>
                   )}
-                  {(museBubble.index < museBubble.lines.length - 1 || museBubble.cycle) && <span aria-hidden="true">▸</span>}
+                  {(museBubble.index < museBubble.lines.length - 1 || museBubble.cycle) && <span aria-hidden="true" className="mt-next">▾</span>}
                 </p>
               )}
             </button>

@@ -4889,21 +4889,43 @@ export function createTownScene(
     lastTailDrawAt: number;
     anchor: THREE.Object3D;
     anchorY: number;
+    speaker: BubbleSpeaker;
+    /** 0..1 pop-in scale ease, set each frame in updateBubbles. */
+    pop: number;
   }
+  // The speaker's plate (Nov 8, 2026): every speech bubble in the
+  // town, over a head here or the talk panel in the shell, is one
+  // design: an ivory plate with a gold hairline inside its edge, the
+  // spoken words in the voice serif, and the speaker's name on a
+  // coloured tab across the plate's top-left edge, Aelia's gold with
+  // her star, Gaius's crest red. Tokens mirror theme.css (--bubble-*).
+  interface BubbleSpeaker { name: string; color: string }
+  const BUBBLE_SPEAKERS = {
+    muse: { name: "✦ Aelia", color: "#b07d12" },
+    player: { name: "Gaius", color: "#9a3b2a" },
+  } satisfies Record<string, BubbleSpeaker>;
+  const BUBBLE_PLATE = "#fffaf2";
+  const BUBBLE_INK = "#1d1712";
+  const BUBBLE_RIM = "rgba(217,178,74,0.8)";
+  const BUBBLE_VOICE_FONT = '500 68px "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Noto Serif", serif';
+  const BUBBLE_TAB_FONT = "700 36px Quicksand, ui-rounded, sans-serif";
   const BUBBLE_LINES_PER_PAGE = 3;
-  /** The widest a text line may run inside the 920 px box. */
-  const BUBBLE_TEXT_MAX_W = 880;
+  /** Wrap width for a line; the orphan fix may run a little past it. */
+  const BUBBLE_WRAP_W = 800;
+  const BUBBLE_TEXT_MAX_W = 840;
+  const BUBBLE_PAD_X = 64;
+  const BUBBLE_LINE_H = 86;
   function bubblePageDuration(page: string): number {
     return THREE.MathUtils.clamp(3 + page.length * 0.05, 3.4, 8.5);
   }
   function wrapBubbleLines(ctx: CanvasRenderingContext2D, text: string): string[] {
-    ctx.font = "600 74px Quicksand, sans-serif";
+    ctx.font = BUBBLE_VOICE_FONT;
     const words = text.split(/\s+/).filter(Boolean);
     const lines: string[] = [];
     let line = "";
     for (const w of words) {
       const trial = line ? `${line} ${w}` : w;
-      if (ctx.measureText(trial).width > 840 && line) {
+      if (ctx.measureText(trial).width > BUBBLE_WRAP_W && line) {
         lines.push(line);
         line = w;
       } else {
@@ -4966,7 +4988,7 @@ export function createTownScene(
     if (cur) pages.push(cur);
     return pages.length > 0 ? pages : [clean];
   }
-  function makeBubble(parent: THREE.Object3D, y: number): BubbleState {
+  function makeBubble(parent: THREE.Object3D, y: number, speaker: BubbleSpeaker): BubbleState {
     const canvas = document.createElement("canvas");
     canvas.width = 1024;
     canvas.height = 512;
@@ -4991,6 +5013,7 @@ export function createTownScene(
       pages: [], pageIdx: 0, pageEndAt: -1,
       tailFrac: 0.5, drawnTailFrac: 0.5, lastTailDrawAt: -1,
       anchor: parent, anchorY: y,
+      speaker, pop: 1,
     };
   }
   function drawBubblePage(b: BubbleState) {
@@ -4999,25 +5022,73 @@ export function createTownScene(
     ctx.clearRect(0, 0, 1024, 512);
     const lines = wrapBubbleLines(ctx, page).slice(0, BUBBLE_LINES_PER_PAGE);
     if (lines.length === 0) lines.push("");
-    const boxH = 88 + lines.length * 92;
-    const boxY = 220 - boxH / 2;
+    ctx.font = BUBBLE_VOICE_FONT;
+    const textW = Math.max(...lines.map((l) => ctx.measureText(l).width));
+    ctx.font = BUBBLE_TAB_FONT;
+    const tabW = ctx.measureText(b.speaker.name).width + 64;
+    // The plate fits its words (a short line, a small plate), centred
+    // in the canvas; the tab and the tail ride on it.
+    const boxW = Math.min(920, Math.max(tabW + 120, textW + BUBBLE_PAD_X * 2, 360));
+    const more = b.pageIdx < b.pages.length - 1;
+    const boxH = (more ? 112 : 92) + lines.length * BUBBLE_LINE_H;
+    const boxX = 512 - boxW / 2;
+    const boxY = 240 - boxH / 2;
+    const bottom = boxY + boxH;
+    const tailX = THREE.MathUtils.clamp(boxX + b.tailFrac * boxW, boxX + 70, boxX + boxW - 70);
+    // Plate and tail as one shape, under one soft shadow.
+    ctx.save();
+    ctx.shadowColor = "rgba(43,33,24,0.34)";
+    ctx.shadowBlur = 22;
+    ctx.shadowOffsetY = 8;
     ctx.beginPath();
-    ctx.roundRect(52, boxY, 920, boxH, 52);
-    ctx.fillStyle = "rgba(255,255,255,0.96)";
-    ctx.fill();
-    // The tail: rooted at tailFrac across the box, so when the bubble
-    // is clamped away from its speaker it still points back at them.
-    const tailX = 52 + b.tailFrac * 920;
-    ctx.beginPath();
-    ctx.moveTo(tailX - 60, boxY + boxH - 4);
-    ctx.lineTo(tailX + 60, boxY + boxH - 4);
-    ctx.lineTo(tailX, boxY + boxH + 60);
+    ctx.roundRect(boxX, boxY, boxW, boxH, 44);
+    ctx.moveTo(tailX - 40, bottom - 2);
+    ctx.lineTo(tailX + 40, bottom - 2);
+    ctx.lineTo(tailX + 7, bottom + 46);
+    ctx.quadraticCurveTo(tailX, bottom + 54, tailX - 7, bottom + 46);
     ctx.closePath();
+    ctx.fillStyle = BUBBLE_PLATE;
     ctx.fill();
-    ctx.fillStyle = "#15110e";
-    ctx.textAlign = "center";
+    ctx.restore();
+    // The gold hairline, inset from the edge.
+    ctx.beginPath();
+    ctx.roundRect(boxX + 12, boxY + 12, boxW - 24, boxH - 24, 34);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = BUBBLE_RIM;
+    ctx.stroke();
+    // The speaker's tab across the top-left edge.
+    const tabX = boxX + 40;
+    const tabY = boxY - 30;
+    ctx.beginPath();
+    ctx.roundRect(tabX, tabY, tabW, 60, 30);
+    ctx.fillStyle = b.speaker.color;
+    ctx.fill();
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = BUBBLE_PLATE;
+    ctx.stroke();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = BUBBLE_TAB_FONT;
+    ctx.textAlign = "left";
     ctx.textBaseline = "middle";
-    lines.forEach((l, i) => ctx.fillText(l, 512, boxY + 80 + i * 92));
+    ctx.fillText(b.speaker.name, tabX + 32, tabY + 32);
+    // The words, left-aligned like the talk panel.
+    ctx.fillStyle = BUBBLE_INK;
+    ctx.font = BUBBLE_VOICE_FONT;
+    ctx.textBaseline = "middle";
+    const textX = boxW >= textW + BUBBLE_PAD_X * 2 ? boxX + (boxW - textW) / 2 : boxX + BUBBLE_PAD_X;
+    lines.forEach((l, i) => ctx.fillText(l, textX, boxY + 46 + BUBBLE_LINE_H / 2 + i * BUBBLE_LINE_H + 4));
+    // More to come: a small gold chevron at the plate's foot.
+    if (more) {
+      const cx = boxX + boxW - 54;
+      const cy = bottom - 32;
+      ctx.beginPath();
+      ctx.moveTo(cx - 13, cy - 9);
+      ctx.lineTo(cx + 13, cy - 9);
+      ctx.lineTo(cx, cy + 9);
+      ctx.closePath();
+      ctx.fillStyle = b.speaker.color;
+      ctx.fill();
+    }
     b.tex.needsUpdate = true;
     b.drawnTailFrac = b.tailFrac;
   }
@@ -5078,7 +5149,7 @@ export function createTownScene(
     );
     const distToCam = Math.max(0.05, camera.position.distanceTo(bubbleTmpV));
     const worldH = 2 * distToCam * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * (targetPxH / ch);
-    b.sprite.scale.set(worldH * 2, worldH, 1);
+    b.sprite.scale.set(worldH * 2 * b.pop, worldH * b.pop, 1);
     // The bubble's half-extents in NDC, from its (possibly resized)
     // real world size.
     const right = bubbleRight.setFromMatrixColumn(camera.matrixWorld, 0);
@@ -5122,6 +5193,8 @@ export function createTownScene(
         drawBubblePage(b);
       }
       const fadeIn = Math.min(1, Math.max(0, (t - b.showAt) / 0.25));
+      // A small pop as it appears (eased out), none under reduced motion.
+      b.pop = opts.reducedMotion ? 1 : 0.9 + 0.1 * (1 - Math.pow(1 - fadeIn, 3));
       const fadeOut = Math.min(1, Math.max(0, (b.hideAt - t) / 0.7));
       const o = Math.min(fadeIn, fadeOut);
       (b.sprite.material as THREE.SpriteMaterial).opacity = o;
@@ -5225,7 +5298,7 @@ export function createTownScene(
     museUmbrellaRef = museUmbrella;
   }
   museGroup.position.set(MUSE.position[0], groundHeightAt(MUSE.position[0], MUSE.position[1]), MUSE.position[1]);
-  const museBubble = makeBubble(museGroup, 3.0);
+  const museBubble = makeBubble(museGroup, 3.0, BUBBLE_SPEAKERS.muse);
   bubbles.push(museBubble);
   museGroup.rotation.y = Math.atan2(-MUSE.position[0], -MUSE.position[1]);
   museGroup.traverse((o) => {
@@ -5613,7 +5686,7 @@ export function createTownScene(
     playerUmbrellaRef = playerUmbrella;
   }
   avatar.position.set(PLAYER.spawn[0], 0, PLAYER.spawn[1]);
-  const playerBubble = makeBubble(avatar, 3.1);
+  const playerBubble = makeBubble(avatar, 3.1, BUBBLE_SPEAKERS.player);
   bubbles.push(playerBubble);
   avatar.visible = false;
   world.add(avatar);
