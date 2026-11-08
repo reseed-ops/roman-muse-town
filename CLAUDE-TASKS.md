@@ -208,6 +208,16 @@ Context: the owner asked Nov 8, 2026, in a voice call, instead of having menu it
 
 Acceptance: in a live check on the owner's town, tapping Aelia starts her walking with him and tapping her again parks her with her stay line, Y near her does the same on a physical Xbox controller, the menu has no follow row, the chip still shows her state and toggles it, and talking to her through the prompt and X still works, on phone touch and on desktop.
 
+## Task 49 (READY, added Nov 8, 2026): fireflies by our house and by the sea cliff
+
+Context: the owner asked Nov 8, 2026, in a voice call, for fireflies floating around, and chose "By our house and cliff". Fireflies already exist in the town: 46 warm points (townScene.ts, size 0.32, colour 0xffd97a), fading in after dark, keeping to the lake and its willows, drifting on sine/cosine paths about 0.5 m above the ground and water, opacity nightMix x 0.9, only in spring and summer, 0 in other seasons, except true dream mode where opacity is 0.95. There is a first-time line for them, SKY_WATCH_FIREFLY_LINE: "And now the lake answers. Look, the fireflies are taking over the lighting." The lake fireflies stay as they are; this task extends them to two more places he loves.
+
+1. Fireflies by our house: let them drift outside the front door of Gaius and Aelia's house (HOME [-40, 26], west lawn), over the lawn by the house, the same warm light as the lake ones.
+2. Fireflies by the sea cliff: let them drift over the Task 34 headland and the grass by the south gate path, and above the sea below the cliff, the same warm light.
+3. Same rules as the lake fireflies: after dark only, spring and summer only, light like the birds and the fireflies already are, so the phone stays happy. Counts follow the quality tier, as the critters do.
+
+Acceptance: in a live check on the owner's town at night in spring or summer, fireflies drift by the house door and by the sea cliff as well as by the lake, all the same warm glow, and the phone stays smooth.
+
 ## Landing notes (since the history was archived)
 
 ### Tasks 29, 30: landing note (Claude, Nov 8, 2026), built, not yet deployed (needs both the town and town-bridge)
