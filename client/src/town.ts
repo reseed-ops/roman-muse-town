@@ -868,6 +868,50 @@ export const FOREST_WILDLIFE_PLAN = {
   fox: { areas: ["trails", "den"], fleeAt: 5, note: "a trail shadow at dusk, never caught" },
 } as const;
 
+// --- Their house (Task 35) ------------------------------------------------------
+// A small Roman house of their own on the west lawn, between the
+// ballista's knoll and the town's rim: plastered walls on a travertine
+// plinth under a terracotta roof, a door that opens toward the town,
+// and inside, a lamp and a bed made for two. Local frame (the same as
+// every house: rotation `facing`, local +z is the door side): the room
+// runs x -halfW..halfW, z -halfD..halfD.
+export const HOME = {
+  position: [-40, 26] as [number, number],
+  /** The door faces east, toward the town. */
+  facing: Math.PI / 2,
+  halfW: 2.8,
+  halfD: 3.2,
+  wallHeight: 2.9,
+  wall: 0.22,
+  doorWidth: 1.3,
+} as const;
+
+/** The house floor's height: just above the highest ground under it. */
+export const HOME_FLOOR_Y: number = (() => {
+  const [cx, cz] = HOME.position;
+  const c = Math.cos(HOME.facing);
+  const sn = Math.sin(HOME.facing);
+  let top = -Infinity;
+  for (let lx = -HOME.halfW; lx <= HOME.halfW + 0.01; lx += 0.7) {
+    for (let lz = -HOME.halfD; lz <= HOME.halfD + 0.01; lz += 0.8) {
+      const x = cx + lx * c + lz * sn;
+      const z = cz - lx * sn + lz * c;
+      top = Math.max(top, terrainHeight(x, z));
+    }
+  }
+  return top + 0.2;
+})();
+
+/** A point in the house's local frame, in the world. */
+export function homeToWorld(lx: number, lz: number): { x: number; z: number } {
+  const c = Math.cos(HOME.facing);
+  const sn = Math.sin(HOME.facing);
+  return { x: HOME.position[0] + lx * c + lz * sn, z: HOME.position[1] - lx * sn + lz * c };
+}
+
+/** The bed, in the house's frame: its head against the back wall. */
+export const HOME_BED = { lx: -1.2, lz: -2.05, halfW: 0.8, halfD: 1.05, top: 0.58 } as const;
+
 // --- Walkable raised surfaces ----------------------------------------------
 // Terrain alone is NOT the ground everywhere: houses stand on two-tier
 // travertine platforms (lower step +0.14, upper slab +0.35, door step
@@ -925,6 +969,16 @@ export const WALK_SURFACES: WalkSurface[] = (() => {
       halfW: 1.1, halfD: 0.45,
       top: baseY + 0.51, label: `${place.id} door step`,
     });
+  }
+  // Their house (Task 35): the floor, and two steps up to the door.
+  {
+    const [hx, hz] = HOME.position;
+    out.push({ cx: hx, cz: hz, rotY: HOME.facing, halfW: HOME.halfW + HOME.wall, halfD: HOME.halfD + HOME.wall, top: HOME_FLOOR_Y, label: "home floor" });
+    for (const [i, drop] of [[1, 0.2], [2, 0.4]] as [number, number][]) {
+      const lz = HOME.halfD + HOME.wall + 0.32 * (2 * i - 1);
+      const p = homeToWorld(0, lz);
+      out.push({ cx: p.x, cz: p.z, rotY: HOME.facing, halfW: 0.95, halfD: 0.32, top: HOME_FLOOR_Y - drop, label: `home step ${i}` });
+    }
   }
   // The lake dock: planks span x -13.7..-10.3 at the lake's centre z,
   // top = water level + 0.3, water = terrain at the lake centre + 0.8

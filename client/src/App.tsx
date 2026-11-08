@@ -4675,6 +4675,12 @@ export function App() {
         if (target.id === "piscina-rim") {
           return seatedBenchRef.current === target.id ? "Stand up" : "Sit on the piscina rim";
         }
+        if (target.id === "home-bed") {
+          return seatedBenchRef.current === target.id ? "Stand up" : "Sit on our bed together";
+        }
+        if (target.id === "bench-cliff") {
+          return seatedBenchRef.current === target.id ? "Stand up" : "Sit together over the sea";
+        }
         return seatedBenchRef.current === target.id ? "Stand up" : "Sit on the bench";
       case "piscina":
         return target.id === "release" ? "Release a fish into the piscina" : "Scatter feed for the fish";

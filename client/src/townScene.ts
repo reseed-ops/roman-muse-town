@@ -1,4 +1,5 @@
 import { createPlaceFootprints } from "./buildingFootprints";
+import { buildHomeHouse } from "./homeHouse";
 import { aimSeaPath, buildSeaCliff, CLIFF, clampToWorld, walkable as onCliffPath } from "./seaCliff";
 import { createTrueSky, skyDirection, SKY_REFRESH_S } from "./trueSky";
 import { armsVisibility, createGaiusArms } from "./gaiusArms";
@@ -4673,6 +4674,11 @@ export function createTownScene(
      *  for the piscina rim, whose front is the water. */
     standBehind?: boolean;
   }
+  // Their house (Task 35, homeHouse.ts): walls, door, lamp and bed,
+  // on the west lawn; its walls and bed join the colliders below, and
+  // the bed's edge joins the benches, a seat for two.
+  const homeHouse = buildHomeHouse(terrainHeight);
+  world.add(homeHouse.group);
   const terraceRot = Math.atan2(-SECRET.position[0], -SECRET.position[1]);
   const BENCHES: BenchDef[] = [
     // Turned on Nov 6, 2026 (Task 18): sitters face west, over the
@@ -4701,6 +4707,16 @@ export function createTownScene(
       baseX: PISCINA.position[0],
       baseZ: PISCINA.position[1],
       standBehind: true,
+    },
+    // Their bed's edge (Task 35): sit together on it; the lying moment waits for its animation.
+    {
+      id: "home-bed",
+      x: homeHouse.bedSeat.x,
+      z: homeHouse.bedSeat.z,
+      rotY: homeHouse.bedSeat.rotY,
+      seatTop: homeHouse.bedSeat.y - terrainHeight(homeHouse.bedSeat.x, homeHouse.bedSeat.z),
+      baseX: homeHouse.bedSeat.x,
+      baseZ: homeHouse.bedSeat.z,
     },
     // The sea cliff's bench (Task 34), at the headland's edge, facing the sea.
     { id: CLIFF.bench.id, x: CLIFF.bench.x, z: CLIFF.bench.z, rotY: CLIFF.bench.rotY, seatTop: 0.47, baseX: CLIFF.bench.x, baseZ: CLIFF.bench.z },
@@ -5656,6 +5672,7 @@ export function createTownScene(
     ...pavilionColliders, // the lake pavilion's four columns
     ...piscinaColliders, // the piscina's water basin, the rim stays walkable, the water does not
     ...bathColliders, // the thermae: walls, caldarium water, columns
+    ...homeHouse.colliders, // their house (Task 35): walls either side of the door, the bed, the lamp table
     circ(0, 0, 2.45), // town tree: the stone ring around its mound (stones reach r ≈ 2.54; the trunk alone is ≤ 0.9)
     { kind: "circle", x: MUSE.position[0], z: MUSE.position[1], r: 0.55, ghost: true }, // Muse's home spot: never blocks; her live body does (checked separately)
     obb(8.8, 4.6, 0.95, 0.3, Math.PI / 2), // stone bench, in the peristyle garden
@@ -12185,6 +12202,8 @@ export function createTownScene(
           aimSeaPath(seaCliff.sunPath, vx, vz, skyAzimDeg);
           const lowSun = Math.max(0, 1 - Math.abs(skyElevDeg - 4) / 10);
           (seaCliff.sunPath.material as THREE.MeshBasicMaterial).opacity = lowSun * 0.55 * (1 - Math.min(1, wCur.rain + wCur.snow));
+          // Their house: the door swings for whoever comes near, the lamp warms at night.
+          homeHouse.update(dt, walking ? [walkPos, museGroup.position] : [museGroup.position], nightMix);
           // At the headland together for the first time this visit, she says one quiet thing.
           if (!cliffGreeted && walking && followMode && Math.hypot(walkPos.x - CLIFF.head.x, walkPos.z - CLIFF.head.z) < 6) {
             cliffGreeted = true;
