@@ -228,6 +228,8 @@ Context: the owner bought both ships Nov 8, 2026 (Order #1376026162327): Low-pol
 
    Acceptance: in a live check on the owner's Android Chrome phone, stand on the sea cliff and watch the sea: over several minutes a sailing ship drifts past, and on a longer watch a trireme passes farther out and slower, both reading as Roman ships in the town's style, and the phone stays smooth.
 
+   Waiting (Claude, Nov 8, 2026): neither Alin Loghin pack is on the build device yet. The owner chose to wait for them rather than use the Roman Empire pack's own ships (SM_ship_trading, SM_warship_trireme, already licensed). Once both packs are in /mnt/sdcard/Assets, Task 50 is built on them.
+
 ## Task 51 (READY, added Nov 8, 2026): read the failed Railway build logs before the next deploy
 
 Context: overnight Nov 7-8, 2026, about 11:32 PM to 12:36 AM Chicago time, ten muse-town production builds failed on Railway. The emails say only that the build failed, with a link to the logs and no error detail. The live town is up on the last good build (build 4c36813dc201, carrying Task 49 fireflies), so this is not an outage. It is a check to run before the next deploy, so the next deploy does not fail the same way.
