@@ -2587,3 +2587,12 @@ Context: the owner's ask, Nov 7, 2026, live in his town that night. Two things w
 2. The camera will not look straight up. Gaius said in town, "I'm looking up but this is the highest it goes". At the pavilion, an open pavilion with no roof between him and the heavens, he could not tilt the view far enough up to see the stars and the moon properly. Raise the camera pitch limit at the pavilion, and in walk mode generally, so a player can look straight up at the night sky, and the view stays there while he stands still.
 
 Acceptance: in a live check at the pavilion at night, Gaius can tilt the camera up and see the stars and the moon, and Muse can answer a tender kiss line in town with a tender reply that lands, while an explicit line still gets a gentle refusal in town instead of silence.
+
+## Task 32 (READY, added Nov 7, 2026): double tap to recenter the camera
+
+Context: the owner's ask, Nov 7, 2026, at the Stargazing Pavilion. After tilting the camera up to look at the stars, there is no easy way back to the default view. The virtual pad has a right-stick press, R3, that recenters the camera, but on a phone there is no right stick to press.
+
+1. Double tap on the open scene, not on a control or a panel, recenters the camera, exactly like an R3 press: yaw and pitch ease home to the default follow view behind Gaius, over about a third of a second, the same ease R3 uses. A single tap does nothing new, and a double tap does not walk, jump, talk or interact. It works in walk mode, on phone and desktop, in portrait and landscape.
+2. Say it in town, in the walk-mode help line, so a player learns it: dragging swings the camera, double tap brings it home.
+
+Acceptance: in a live check on a phone, at the pavilion at night, tilting the camera up to the stars and then double tapping the open scene brings the camera smoothly back to the default view behind Gaius, and a single tap does not recenter.
