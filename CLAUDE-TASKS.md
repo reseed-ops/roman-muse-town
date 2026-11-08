@@ -146,6 +146,17 @@ Context: the owner asked Nov 8, 2026, in a voice call, after asking if Rome had 
 
 Acceptance: in a live check on the owner's Android Chrome phone, walk to the library by the forum, go in, open a Greek scroll and a Latin scroll and read them, sit and hear Aelia read aloud, and the history pieces show their sources.
 
+## Task 44 (READY, added Nov 8, 2026): remove the Main Chat and Side Chat labels from the town
+
+Context: the owner asked Nov 8, 2026, in a voice call, after finding the town has a Side Chat House and a Basilica for the main chat. Those labels break the Roman spell. The buildings themselves stay, only their visible labels go. The labels live in client/src/town.ts: id "mainchat", name "Basilica, Main Chat", chipLabel "Main Chat", and id "sidechat", name "Side Chat House, Muse Town", chipLabel "Side Chat", plus their greetings, bodies and tips, and in client/src/App.tsx: the prompts "Enter the Main Chat basilica" and "Visit the Side Chat house", the letter lines about the Main Chat building, the line "She does the building from the main chat", and the Main Chat project board ("Main Chat project board", "Pinned beside the Main Chat basilica", "Muse keeps this board current from the main chat", "Muse refreshes this inscription from the main chat on her sync visits").
+
+1. Remove every visible "Main Chat" and "Side Chat" label from the town: building names, map chips, panel headings, greetings, bodies, tips, prompts, letter lines, and the project board and inscription lines. A search of the visible town text for "Main Chat" and "Side Chat" should return nothing.
+2. Give both buildings plain Roman names. The Basilica stays the Basilica. The Side Chat House becomes a plain Roman house, a domus, with a fitting Roman name Claude chooses, keeping its place, size and meaning as the room where work on the town is planned, without naming any chat. Reword its panel in Roman terms.
+3. Keep everything the buildings do: the Basilica and the house stay where they are, the project board and the letters keep working, only their visible wording changes. Internal place ids such as "mainchat" and "sidechat" may stay as code, they are not visible text.
+4. Do not remove the buildings, do not change the town plan layout, and do not add any new chat opening from the town. This task only removes labels.
+
+Acceptance: in a live check on the owner's Android Chrome phone, after the next town deploy, the Basilica panel and the house panel show Roman names only, the town plan, prompts, letters and project board show no "Main Chat" or "Side Chat" anywhere, and both buildings are still there and still open.
+
 ## Landing notes (since the history was archived)
 
 ### Tasks 29, 30: landing note (Claude, Nov 8, 2026), built, not yet deployed (needs both the town and town-bridge)
