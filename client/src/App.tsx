@@ -184,6 +184,8 @@ import {
   pad2StatusLine,
   pressedButtons,
   pressedShoulders,
+  pressedTriggers,
+  buttonsDown,
   pressedSticks,
   rightStickVector,
   routePads,
@@ -796,7 +798,8 @@ export function App() {
   const [seatedBench, setSeatedBench] = useState<string | null>(null);
   const seatedBenchRef = useRef<string | null>(null);
   // Task 47: Gaius's shield, stowed on every load; one press brings it
-  // out onto his back, the next stows it (the pad's shield button, or G).
+  // out onto his back, the next stows it (RT, or G). The gladius is worn
+  // at his hip by default; LT (or R) stows it and wears it again.
   const [shieldOut, setShieldOut] = useState(false);
   const shieldOutRef = useRef(false);
   const toggleShield = useCallback(() => {
@@ -812,6 +815,23 @@ export function App() {
   }, []);
   const toggleShieldRef = useRef(toggleShield);
   toggleShieldRef.current = toggleShield;
+  const [swordWorn, setSwordWorn] = useState(true);
+  const swordWornRef = useRef(true);
+  const toggleSword = useCallback(() => {
+    const next = !swordWornRef.current;
+    swordWornRef.current = next;
+    setSwordWorn(next);
+    sceneRef.current?.setSwordWorn(next);
+  }, []);
+  const triggerPress = useCallback(
+    (side: "LT" | "RT") => {
+      if (side === "LT") toggleSword();
+      else toggleShield();
+    },
+    [toggleSword, toggleShield],
+  );
+  const triggerPressRef = useRef(triggerPress);
+  triggerPressRef.current = triggerPress;
   seatedBenchRef.current = seatedBench;
   // Rowing: the pair are out in the lake rowboat. The scene owns the
   // state; this mirror drives the prompt label, the B button, and
@@ -5498,8 +5518,8 @@ export function App() {
         toggleFollowRef.current();
         return;
       }
-      if (key === "g" && !e.repeat && walkingRef.current) {
-        toggleShieldRef.current();
+      if ((key === "g" || key === "r") && !e.repeat && walkingRef.current) {
+        triggerPressRef.current(key === "r" ? "LT" : "RT");
         return;
       }
       if ((key === "h" || key === "f") && !e.repeat && walkingRef.current) {
@@ -5534,7 +5554,7 @@ export function App() {
         }
         if ((live || p1Live) && walkingRef.current) setPad(stick.x, stick.y);
         p1Live = live;
-        const now = g1.buttons.map((b) => b.pressed);
+        const now = buttonsDown(g1.buttons);
         const was = prevButtons.get(g1.index) ?? [];
         for (const button of pressedButtons(was, now)) {
           if (!walkingRef.current) continue;
@@ -5546,6 +5566,8 @@ export function App() {
         // The shoulders (standard mapping: LB 4, RB 5) take the same
         // route as the on-screen LB and RB.
         for (const side of pressedShoulders(was, now)) shoulderPressRef.current(side);
+        // The triggers (LT 6, RT 7): the gladius and the shield, as on screen.
+        if (walkingRef.current) for (const side of pressedTriggers(was, now)) triggerPressRef.current(side);
         // The right stick orbits the follow camera and R3 recenters it
         // (owner's ask, Nov 6, 2026); the stick writes while live or on
         // the frame it centres, like the left one.
@@ -7209,7 +7231,7 @@ export function App() {
                 ? "You're in landscape. The town is framed wide, panels dock to the side, and the walk camera pulls back a little so you and Aelia both stay in view."
                 : "Tip: this app's window doesn't turn when you rotate your phone, use Landscape in the ☰ menu and the town turns itself sideways instead. Panels dock to the side, and walking feels more cinematic."}{" "}
             Walk up to Aelia by the town tree and you&apos;ll both wave; walk up to a house or the tree and press X when the prompt appears to interact, the garden key you simply walk over.
-            In walk mode the virtual Xbox controller appears: left joystick to walk, A or the space bar to jump, B or C to slide while moving (B goes back when you're still), X to talk and interact, Y for stones and hints (near Aelia, Y or T asks her to walk with you or to stay; a tap on her does the same), LB to flirt and RB to hug (when she is ready for it), the shield button beside RB (or G) to bring out his shield or stow it, dragging anywhere on the open view swings the camera around you (drag up far enough to look straight up at the sky), and a double tap on the open view brings it home behind you. While a physical controller is driving, the on-screen controls hide; tap the screen to bring them back.
+            In walk mode the virtual Xbox controller appears: left joystick to walk, A or the space bar to jump, B or C to slide while moving (B goes back when you're still), X to talk and interact, Y for stones and hints (near Aelia, Y or T asks her to walk with you or to stay; a tap on her does the same), LB to flirt and RB to hug (when she is ready for it), LT (or R) to stow his gladius or wear it again, RT (or G) to bring out his shield or stow it, dragging anywhere on the open view swings the camera around you (drag up far enough to look straight up at the sky), and a double tap on the open view brings it home behind you. While a physical controller is driving, the on-screen controls hide; tap the screen to bring them back.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {walking && (
@@ -9771,30 +9793,51 @@ export function App() {
                 </button>
               </div>
             ))}
-          {/* The shield (Task 47): beside RB, the same shoulder shape,
-              an icon only; it shows the shield out or stowed. */}
-          {walking && (
-            <div
-              className={isLandscape ? "absolute right-[84px] bottom-[168px] z-20" : "absolute right-[84px] bottom-[200px] z-20 sm:right-[88px]"}
-              data-mt-shield="1"
-            >
-              <button
-                type="button"
-                aria-label={shieldOut ? "Stow the shield (also G on the keyboard)" : "Bring out the shield (also G on the keyboard)"}
-                aria-pressed={shieldOut}
-                className={`pointer-events-auto flex h-9 w-[46px] items-center justify-center rounded-t-2xl rounded-b-lg border-2 ${shieldOut ? "border-[#ffd34e]/80 bg-[#3a2f12]/70" : "border-white/45 bg-[#1b1b1b]/55"} text-[17px] leading-none shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur transition active:scale-90 active:bg-white/80`}
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  toggleShield();
-                }}
-                onClick={(e) => {
-                  if (e.detail === 0) toggleShield();
-                }}
-              >
-                <span aria-hidden="true" className={shieldOut ? "" : "opacity-60"}>🛡️</span>
-              </button>
-            </div>
-          )}
+          {/* The triggers (the owner, Nov 8, 2026): LT and RT just inside
+              LB and RB at the same height, clear of her bubble's band. LT
+              wears or stows the gladius, RT brings out or stows the shield;
+              gold while the piece is on him. A physical pad's LT and RT
+              press the same. */}
+          {walking &&
+            (["LT", "RT"] as const).map((side) => {
+              const on = side === "LT" ? swordWorn : shieldOut;
+              return (
+                <div
+                  key={side}
+                  className={
+                    side === "LT"
+                      ? isLandscape
+                        ? "absolute left-[84px] bottom-[168px] z-20"
+                        : "absolute left-[84px] bottom-[200px] z-20 sm:left-[88px]"
+                      : isLandscape
+                        ? "absolute right-[84px] bottom-[168px] z-20"
+                        : "absolute right-[84px] bottom-[200px] z-20 sm:right-[88px]"
+                  }
+                  data-mt-triggers={side}
+                >
+                  <button
+                    type="button"
+                    aria-label={
+                      side === "LT"
+                        ? `LT button, ${on ? "stow the gladius" : "wear the gladius"} (also R on the keyboard)`
+                        : `RT button, ${on ? "stow the shield" : "bring out the shield"} (also G on the keyboard)`
+                    }
+                    aria-pressed={on}
+                    className={`pointer-events-auto flex h-9 w-[54px] items-center justify-center gap-0.5 rounded-t-2xl rounded-b-lg border-2 ${on ? "border-[#ffd34e]/80 bg-[#3a2f12]/70" : "border-white/45 bg-[#1b1b1b]/55"} text-[13px] leading-none font-black text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8)] transition active:scale-90 active:bg-white/80 active:text-black`}
+                    onPointerDown={(e) => {
+                      e.preventDefault();
+                      triggerPress(side);
+                    }}
+                    onClick={(e) => {
+                      if (e.detail === 0) triggerPress(side);
+                    }}
+                  >
+                    {side}
+                    <span aria-hidden="true" className={`text-[11px] ${on ? "" : "opacity-50"}`}>{side === "LT" ? "🗡️" : "🛡️"}</span>
+                  </button>
+                </div>
+              );
+            })}
           {/* The way back from the overview: one small tappable
               chip under the cluster, in the same quiet pill style
               as the other button hints. It used to be a caption

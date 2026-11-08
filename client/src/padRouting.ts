@@ -60,6 +60,28 @@ export function pressedShoulders(prev: readonly boolean[], now: readonly boolean
   return out;
 }
 
+/** The triggers, standard mapping: LT is button 6, RT is 7. They are
+ *  analog, so a press is counted past half travel. LT wears or stows the
+ *  gladius, RT brings out or stows the shield (the owner, Nov 8, 2026). */
+export const PAD_TRIGGERS = { LT: 6, RT: 7 } as const;
+export type PadTrigger = keyof typeof PAD_TRIGGERS;
+export const TRIGGER_PRESS = 0.5;
+
+/** A pad's buttons as down or up, a trigger counting from half travel. */
+export function buttonsDown(buttons: readonly { pressed: boolean; value: number }[]): boolean[] {
+  return buttons.map((b) => b.pressed || b.value > TRIGGER_PRESS);
+}
+
+/** The triggers that are down now and were not a frame ago. */
+export function pressedTriggers(prev: readonly boolean[], now: readonly boolean[]): PadTrigger[] {
+  const out: PadTrigger[] = [];
+  for (const name of Object.keys(PAD_TRIGGERS) as PadTrigger[]) {
+    const i = PAD_TRIGGERS[name];
+    if (now[i] && !prev[i]) out.push(name);
+  }
+  return out;
+}
+
 /** The stick presses, standard mapping: L3 is button 10, R3 is 11. */
 export const PAD_STICK_PRESS = { L3: 10, R3: 11 } as const;
 export type PadStickPress = keyof typeof PAD_STICK_PRESS;

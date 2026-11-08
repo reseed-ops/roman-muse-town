@@ -10,15 +10,16 @@
 // aside where they would pass through someone: both in the bath and
 // in the embrace, the shield also while he sits against a bench.
 // Task 47 (Nov 8, 2026): the shield is stowed by default, on every load,
-// and comes out on his back at a press (the pad's shield button, or G).
+// and comes out on his back at a press (RT, or G). The gladius is worn
+// by default and LT (or R) stows it or wears it again (Nov 8, 2026).
 import * as THREE from "three";
 
 export type ArmsVisibility = { sword: boolean; shield: boolean };
 
 /** Where each piece would pass through someone, it steps aside. */
-export function armsVisibility(state: { bathing: boolean; embracing: boolean; seated: boolean; shieldOut?: boolean }): ArmsVisibility {
+export function armsVisibility(state: { bathing: boolean; embracing: boolean; seated: boolean; shieldOut?: boolean; swordWorn?: boolean }): ArmsVisibility {
   return {
-    sword: !state.bathing && !state.embracing,
+    sword: state.swordWorn !== false && !state.bathing && !state.embracing,
     shield: !!state.shieldOut && !state.bathing && !state.embracing && !state.seated,
   };
 }

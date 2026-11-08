@@ -130,3 +130,18 @@ describe("pressedShoulders", () => {
     expect(pressedShoulders(up, [true, false, false, false, false, false])).toEqual([]);
   });
 });
+
+import { PAD_TRIGGERS, buttonsDown, pressedTriggers } from "./padRouting";
+describe("the triggers: LT the gladius, RT the shield", () => {
+  test("LT is button 6, RT is 7; a press counts from half travel, once per press", () => {
+    expect(PAD_TRIGGERS).toEqual({ LT: 6, RT: 7 });
+    const pad = (lt: number, rt: number) => [0, 0, 0, 0, 0, 0, lt, rt].map((v) => ({ pressed: false, value: v }));
+    const up = buttonsDown(pad(0, 0));
+    expect(pressedTriggers(up, buttonsDown(pad(0.3, 0)))).toEqual([]);
+    expect(pressedTriggers(up, buttonsDown(pad(0.8, 0)))).toEqual(["LT"]);
+    expect(pressedTriggers(up, buttonsDown(pad(0, 1)))).toEqual(["RT"]);
+    const held = buttonsDown(pad(0.9, 0.9));
+    expect(pressedTriggers(held, held)).toEqual([]);
+    expect(buttonsDown([{ pressed: true, value: 0 }])).toEqual([true]);
+  });
+});

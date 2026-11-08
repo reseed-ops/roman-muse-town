@@ -379,6 +379,8 @@ export interface TownSceneHandle {
   standUp: () => void;
   /** Task 47: bring the shield out onto his back, or stow it. */
   setShieldOut: (on: boolean) => void;
+  /** Wear the gladius at his hip, or stow it. */
+  setSwordWorn: (on: boolean) => void;
   /** Both of them inside their house, he walking (Task 45). */
   homeTogether: () => boolean;
   /** A night together (Task 45), implied and never shown: "hush" holds
@@ -5557,6 +5559,8 @@ export function createTownScene(
   const attachGaiusArms = (model: THREE.Object3D) => gaiusArms.attach(model);
   /** Task 47: the shield is stowed on every load until he brings it out. */
   let shieldOut = false;
+  /** The gladius is worn at his hip until he stows it (LT). */
+  let swordWorn = true;
   let playerAnim: CharAnimator | null = null;
   let playerBlink: { mesh: THREE.Mesh; index: number }[] = [];
   // Reveal gate (same shape as Muse's): his body stays hidden until
@@ -11472,7 +11476,7 @@ export function createTownScene(
       const hopMode = sliding(run) ? "slide" : airborne(hop) ? (hop.vy > 0 ? "jumpUp" : "jumpFall") : t - hopLandedAt < 0.2 && playerSpeedSm < 1 ? "jumpLand" : null;
       {
         const embracing = !!pairState && pairState.kind === "hug";
-        gaiusArms.setVisible(armsVisibility({ bathing: !!bathState, embracing, seated: !!seatPlayer, shieldOut }), dt);
+        gaiusArms.setVisible(armsVisibility({ bathing: !!bathState, embracing, seated: !!seatPlayer, shieldOut, swordWorn }), dt);
       }
       playerAnim.update(dt, walking ? playerSpeedSm : 0, playerAnim.hasWave && playerSpeedSm < 0.4 && playerWaveAge >= 0 && playerWaveAge < WAVE_LEN, !!seatPlayer || !!boatState || !!bathState, hopMode ?? (pairState && !pairState.glide ? pairState.kind : danceState ? "dance" : talkAnimOpen ? "talk" : null), !!seatPlayer);
       playerInner.position.y = 0;
@@ -12896,6 +12900,9 @@ export function createTownScene(
     standUp: () => standUpFromBench(),
     setShieldOut: (on) => {
       shieldOut = on;
+    },
+    setSwordWorn: (on) => {
+      swordWorn = on;
     },
     homeTogether: () => walking && homeHouse.inside(walkPos.x, walkPos.z) && homeHouse.inside(museGroup.position.x, museGroup.position.z),
     nightTogether: (stage) => {

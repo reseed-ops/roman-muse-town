@@ -73,13 +73,25 @@ test("Task 47: the shield rises into place over a quarter second", () => {
   expect(SHIELD_RAISE_S).toBeLessThanOrEqual(0.3);
 });
 
-test("Task 47: the scene starts stowed, the pad has a shield button beside RB, and G toggles it", () => {
+test("Task 47: the scene starts stowed; LT and RT sit inside LB and RB; R and G on the keyboard", () => {
   const scene = readFileSync(join(import.meta.dir, "townScene.ts"), "utf8");
   const app = readFileSync(join(import.meta.dir, "App.tsx"), "utf8");
   expect(scene).toContain("let shieldOut = false;");
+  expect(scene).toContain("let swordWorn = true;");
   expect(app).toContain("useState(false);\n  const shieldOutRef = useRef(false);");
-  expect(app).toContain('data-mt-shield="1"');
-  expect(app).toMatch(/key === "g" && !e\.repeat && walkingRef\.current\) \{\n\s+toggleShieldRef\.current\(\);/);
-  // Beside RB at the same height, clear of the speech bubble's band (252 px portrait, 212 landscape).
+  expect(app).toContain('data-mt-triggers={side}');
+  expect(app).toContain('if (side === "LT") toggleSword();\n      else toggleShield();');
+  expect(app).toMatch(/\(key === "g" \|\| key === "r"\) && !e\.repeat && walkingRef\.current\) \{\n\s+triggerPressRef\.current\(key === "r" \? "LT" : "RT"\);/);
+  expect(app).toContain("for (const side of pressedTriggers(was, now)) triggerPressRef.current(side);");
+  // Inside LB and RB at the same height, clear of the speech bubble's band (252 px portrait, 212 landscape).
+  expect(app).toContain('"absolute left-[84px] bottom-[168px] z-20"');
   expect(app).toContain('"absolute right-[84px] bottom-[168px] z-20"');
+  expect(app).not.toContain('data-mt-shield="1"');
+});
+
+test("the gladius is worn by default and LT stows it, whatever else hides it", () => {
+  const still = { bathing: false, embracing: false, seated: false };
+  expect(armsVisibility(still).sword).toBe(true);
+  expect(armsVisibility({ ...still, swordWorn: false }).sword).toBe(false);
+  expect(armsVisibility({ ...still, swordWorn: true, bathing: true }).sword).toBe(false);
 });
