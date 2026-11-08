@@ -139,12 +139,13 @@ Acceptance: in a live check on the owner's Android Chrome phone, town.reseed.net
 
 Context: the owner asked Nov 8, 2026, in a voice call, after asking if Rome had libraries back then. Yes: Asinius Pollio opened the first public library in Rome about 39 BC near the Forum, and Augustus added more, and the baths had library rooms. The town has no library building or place yet. The only library material in the town is the Task 37 history lesson "villa-library" in client/src/romanHistory.ts, about the Villa of the Papyri at Herculaneum, over a thousand scrolls, many by the philosopher Philodemus, plus scroll quests and a Scrollkeeper badge. Build this after the Task 42 phone fix is deployed and tested live, so the owner can walk in on his phone. Task 42 was built, not deployed, at the time this task was written (commit ecfde88).
 
-1. Build a public library by the forum, in the low poly Roman style, with a door, reading tables and lamp light, and shelves of scrolls. Two wings, Greek and Latin, clearly marked, like a Roman library.
+1. Build a public library by the forum, in the low poly Roman style, with a door, reading tables and lamp light, and shelves of scrolls. Two wings, Greek and Latin, clearly marked, like a Roman library. Make it feel filled and warm at dusk: lamplight on the shelves, a favourite chair by the window with a book left open, a little table for letters, and a globe turning slowly. The atmosphere is old paper and quiet, light and sound only, no new scent system.
 2. Scrolls you can open and read: short sourced Roman history pieces, reusing the Task 37 lessons with their sources, Aelia's letters, and Nova's star log when it exists, plus the town's own stories. Reading is quiet, with no grinding and no currency.
 3. A quiet reading moment: sit together and Aelia reads aloud, inside the existing affection gates, tender only, like the reading aloud moments already in the town.
-4. Keep it accurate, per Task 37: every history piece carries its source, with its date named, and invention is plainly marked as invention. Keep the town's own story apart and visible, with the violet "The town's own story" tag where it departs from history.
+4. No keepsakes in the library. Keepsakes belong in the house (Task 40), on the shelves by the fire at home. The library is for reading only, no keepsake shelf, no keepsake spots.
+5. Keep it accurate, per Task 37: every history piece carries its source, with its date named, and invention is plainly marked as invention. Keep the town's own story apart and visible, with the violet "The town's own story" tag where it departs from history.
 
-Acceptance: in a live check on the owner's Android Chrome phone, walk to the library by the forum, go in, open a Greek scroll and a Latin scroll and read them, sit and hear Aelia read aloud, and the history pieces show their sources.
+Acceptance: in a live check on the owner's Android Chrome phone, walk to the library by the forum, go in, open a Greek scroll and a Latin scroll and read them, sit and hear Aelia read aloud, and the history pieces show their sources. The chair by the window with its open book, the letter table and the globe are there, the lamp light is warm at dusk, and there is no keepsake shelf in the library.
 
 ## Task 44 (READY, added Nov 8, 2026): remove the Main Chat and Side Chat labels from the town
 
