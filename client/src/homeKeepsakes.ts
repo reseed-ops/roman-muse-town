@@ -13,6 +13,8 @@ export type KeepsakeState = {
   secret: { first_kiss: string | null };
   garden: { harvests: number };
   tree: { waterings: number };
+  /** Durable firsts (Task 45: "night", their first night together). */
+  dating?: { firsts: Record<string, string> };
 };
 
 export function earnedKeepsakes(s: KeepsakeState): Set<HomeKeepsakeId> {
@@ -27,5 +29,6 @@ export function earnedKeepsakes(s: KeepsakeState): Set<HomeKeepsakeId> {
   if (s.secret.first_kiss) out.add("terrace-lantern");
   if (s.garden.harvests > 0) out.add("harvest-basket");
   if (s.tree.waterings >= 7) out.add("tree-cutting");
+  if (s.dating?.firsts.night) out.add("night-lamp");
   return out;
 }

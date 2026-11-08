@@ -377,6 +377,14 @@ export interface TownSceneHandle {
    *  is following she takes the other seat; standing frees them both. */
   toggleSit: (benchId: string) => void;
   standUp: () => void;
+  /** Both of them inside their house, he walking (Task 45). */
+  homeTogether: () => boolean;
+  /** A night together (Task 45), implied and never shown: "hush" holds
+   *  the door shut, dims the lamp and lets the night be heard; "morning"
+   *  (behind the veil) holds a dawn through the window and sits them on
+   *  the bed together; "end" (behind the veil) gives the town back its
+   *  real hour and stands them up. */
+  nightTogether: (stage: "hush" | "morning" | "end") => void;
   isSeated: () => boolean;
   /** Pick up the loose stone the prompt is offering (he carries
    *  one at a time, visible in his right hand). */
@@ -5438,6 +5446,9 @@ export function createTownScene(
   })();
   let critterHumSent = 0;
   let critterChirpSent = 0;
+  let critterSound = { hum: 0, chirp: 0 };
+  /** A night together (Task 45): the night is heard in the dark. */
+  let nightHush = false;
 
   // The kitchen garden, east of the forecourt, mirroring the piscina
   // across the axis; what grows in its beds is pack flowers, not cones.
@@ -10583,6 +10594,11 @@ export function createTownScene(
   // fireflies out at noon (sky block), her awake beside him. Dreams
   // write nothing here either, no prompts, no systems, no saves.
   let dreamMode: "false" | "true" | null = null;
+  /** A morning together (Task 45): the town holds a dawn for the waking,
+   *  as a true dream holds its noon, then gives back the real hour. */
+  let heldDawn = false;
+  /** Set the sun at once on the next frame (behind a veil), no easing. */
+  let skySnap = false;
   let dreamGroup: THREE.Group | null = null;
   let dreamFigure: THREE.Group | null = null;
   let dreamFigureMat: THREE.MeshBasicMaterial | null = null;
@@ -11764,6 +11780,9 @@ export function createTownScene(
         // A true dream holds its impossible noon for as long as it
         // lasts, whatever the real local hour is doing.
         sunDirTgt.copy(dirFromAngles(54, 185));
+      } else if (heldDawn) {
+        // Just risen, low in the east-south-east, as Rome's sun rises.
+        sunDirTgt.copy(dirFromAngles(7, 112));
       } else if (skyMode === "auto") {
         const a = solarAngles(new Date());
         sunDirTgt.copy(dirFromAngles(a.elev, a.azim));
@@ -11772,7 +11791,10 @@ export function createTownScene(
       } else {
         sunDirTgt.copy(dirFromAngles(-32, 250));
       }
-      sunDirCur.lerp(sunDirTgt, 1 - Math.exp(-dt / 1.6)).normalize();
+      if (skySnap) {
+        sunDirCur.copy(sunDirTgt);
+        skySnap = false;
+      } else sunDirCur.lerp(sunDirTgt, 1 - Math.exp(-dt / 1.6)).normalize();
       skyElevDeg = (Math.asin(THREE.MathUtils.clamp(sunDirCur.y, -1, 1)) * 180) / Math.PI;
       skyAzimDeg = ((Math.atan2(sunDirCur.x, -sunDirCur.z) * 180) / Math.PI + 360) % 360;
       {
@@ -12241,14 +12263,7 @@ export function createTownScene(
             player: walking ? [walkPos.x, walkPos.z] : null,
             view: [camera.position.x, camera.position.z],
           });
-          if (Math.abs(sound.hum - critterHumSent) > 0.04 || (sound.hum === 0 && critterHumSent !== 0)) {
-            critterHumSent = sound.hum;
-            setBeeHumLevel(sound.hum);
-          }
-          if (Math.abs(sound.chirp - critterChirpSent) > 0.04 || (sound.chirp === 0 && critterChirpSent !== 0)) {
-            critterChirpSent = sound.chirp;
-            setCricketLevel(sound.chirp);
-          }
+          critterSound = sound;
         }
         // Forest birds by day: the flock circles its clearing,
         // flushes to another when he comes close, and settles again.
@@ -12358,7 +12373,20 @@ export function createTownScene(
             showMuseBubbleInternal(CLIFF_LINES[Math.floor(Math.random() * CLIFF_LINES.length)]!, t);
           }
           // The surf's sound, by how near the coast he walks.
-          const surf = walking ? THREE.MathUtils.smoothstep(walkPos.z, 50, 96) : 0;
+          const surf = Math.max(walking ? THREE.MathUtils.smoothstep(walkPos.z, 50, 96) : 0, nightHush ? 0.22 : 0);
+          // The small life's sounds (Task 46), and the crickets heard in the dark of a night together.
+          {
+            const hum = nightHush ? 0 : critterSound.hum;
+            const chirp = Math.max(critterSound.chirp, nightHush ? 0.55 : 0);
+            if (Math.abs(hum - critterHumSent) > 0.04 || (hum === 0 && critterHumSent !== 0)) {
+              critterHumSent = hum;
+              setBeeHumLevel(hum);
+            }
+            if (Math.abs(chirp - critterChirpSent) > 0.04 || (chirp === 0 && critterChirpSent !== 0)) {
+              critterChirpSent = chirp;
+              setCricketLevel(chirp);
+            }
+          }
           if (Math.abs(surf - surfLevelSent) > 0.03) {
             surfLevelSent = surf;
             setSurfLevel(surf);
@@ -12860,6 +12888,33 @@ export function createTownScene(
       else sitDownOnBench(bench);
     },
     standUp: () => standUpFromBench(),
+    homeTogether: () => walking && homeHouse.inside(walkPos.x, walkPos.z) && homeHouse.inside(museGroup.position.x, museGroup.position.z),
+    nightTogether: (stage) => {
+      if (stage === "hush") {
+        nightHush = true;
+        homeHouse.setHush({ doorShut: true, lampDim: 1, dawn: 0 });
+        return;
+      }
+      if (stage === "morning") {
+        nightHush = false;
+        heldDawn = true;
+        skySnap = true;
+        homeHouse.setHush({ doorShut: true, lampDim: 1, dawn: 1 });
+        const bed = BENCHES.find((b) => b.id === "home-bed");
+        if (bed && walking) {
+          if (seatPlayer) standUpFromBench();
+          sitDownOnBench(bed);
+          // She is already beside him: no walk across the room at dawn.
+          if (museSeatTarget) museGroup.position.set(museSeatTarget.x, museGroup.position.y, museSeatTarget.z);
+        }
+        return;
+      }
+      nightHush = false;
+      heldDawn = false;
+      skySnap = true;
+      homeHouse.setHush(null);
+      if (seatPlayer?.bench.id === "home-bed") standUpFromBench();
+    },
     isSeated: () => seatPlayer !== null,
     boardBoat: () => boardBoat(),
     disembarkBoat: () => disembarkBoat(false),

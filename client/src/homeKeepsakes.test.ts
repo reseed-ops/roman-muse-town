@@ -14,7 +14,7 @@ test("a fresh town has earned nothing; each keepsake comes from its own deed", (
   expect(earnedKeepsakes(fresh).size).toBe(0);
   const all = earnedKeepsakes({
     fish: [{ fish_id: "golden-carp" }], letters: [{}], postcards: [{}], inscriptions_complete: true, summit: { done: true },
-    phoenix: { feathers: 1 }, secret: { first_kiss: "2026-11-01" }, garden: { harvests: 1 }, tree: { waterings: 7 },
+    phoenix: { feathers: 1 }, secret: { first_kiss: "2026-11-01" }, garden: { harvests: 1 }, tree: { waterings: 7 }, dating: { firsts: { night: "2026-11-08" } },
   });
   expect([...all].sort()).toEqual(HOME_KEEPSAKES.map((k) => k.id).sort());
   expect(earnedKeepsakes({ ...fresh, fish: [{ fish_id: "carp" }] })).toEqual(new Set(["fish-plaque"]));

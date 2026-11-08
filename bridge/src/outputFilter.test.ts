@@ -96,3 +96,43 @@ test("the principal's own lines (Task 31): tender intimacy inside the town's gat
     expect(filterSpeak(line, { band: "reserved", endearments: "allow", principalRank: 0 }).ok).toBe(true);
   }
 });
+
+// Task 45: a night together, implied and never shown.
+import { NIGHT_INVITE_LINES, NIGHT_LINES, NIGHT_RANK } from "../../shared/nightTogether.js";
+
+test("Task 45: every night-together line passes the principal filter from rank 7", () => {
+  expect(NIGHT_RANK).toBe(PRINCIPAL_KISS_RANK);
+  for (const rank of [7, 8, 9, 10]) {
+    for (const line of NIGHT_LINES) {
+      const r = filterSpeak(line, { band: bandForRank(rank), principalRank: rank, endearments: "allow" });
+      expect(r.ok ? true : `${line} -> ${r.reason}`).toBe(true);
+    }
+  }
+});
+
+test("Task 45: the invitation is beyond the band below rank 7, unless spoken of as still to come", () => {
+  for (const rank of [0, 3, 6]) {
+    for (const line of NIGHT_INVITE_LINES) {
+      expect(filterSpeak(line, { band: bandForRank(rank), principalRank: rank }).ok).toBe(false);
+    }
+    expect(filterSpeak("One day you'll stay the night, when the time is right.", { band: bandForRank(rank), principalRank: rank }).ok).toBe(true);
+  }
+  // The resident, below devoted, never voices it.
+  expect(filterSpeak("Stay with me tonight?", { band: "close" }).ok).toBe(false);
+});
+
+test("Task 45: explicit lines are refused at every rank, the night included", () => {
+  const explicit = [
+    "Stay with me tonight, and I'll undress for you.",
+    "Spend the night with me, naked by the lamp.",
+    "Let's make love till morning.",
+    "That was the best sex of my life.",
+    "Last night I was so aroused.",
+  ];
+  for (let rank = 0; rank <= 10; rank++) {
+    for (const line of explicit) {
+      const r = filterSpeak(line, { band: bandForRank(rank), principalRank: rank });
+      expect(r.ok ? line : "refused").toBe("refused");
+    }
+  }
+});

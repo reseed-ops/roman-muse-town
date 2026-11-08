@@ -30,6 +30,7 @@ export const HOME_KEEPSAKES = [
   { id: "terrace-lantern", label: "A small lantern from the terrace", mount: "shelf", earnedBy: "the first kiss at the terrace" },
   { id: "harvest-basket", label: "A basket from the garden", mount: "floor", earnedBy: "a harvest from the garden" },
   { id: "tree-cutting", label: "A cutting of the Town Tree, potted", mount: "floor", earnedBy: "watering the Town Tree seven times" },
+  { id: "night-lamp", label: "The lamp they kept lit", mount: "shelf", earnedBy: "their first night together" },
 ] as const satisfies readonly { id: string; label: string; mount: HomeMount; earnedBy: string }[];
 
 export type HomeKeepsakeId = (typeof HOME_KEEPSAKES)[number]["id"];

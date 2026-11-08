@@ -43,13 +43,14 @@ const BAND_ORDER: AffectionBand[] = ["reserved", "warming", "close", "devoted"];
 const atLeast = (band: AffectionBand, from: AffectionBand) => BAND_ORDER.indexOf(band) >= BAND_ORDER.indexOf(from);
 
 /** Intimacies below devoted refuse the line (the resident's rule). */
-const INTIMACY_RE = /\b(kiss(es|ed|ing)?|lips|in (my|your) bed|undress|naked|make love)\b/i;
+const INTIMACY_RE = /\b(kiss(es|ed|ing)?|lips|in (my|your) bed|undress|naked|make love|stay (with me|together) tonight|stay the night|spend the night|(a|the) night together)\b/i;
 /** The principal's rule (Task 31): explicit content is refused at every
  *  rank, as the Nov 1, 2026 "tender only" decision says, ... */
 const EXPLICIT_RE = /\b(undress(es|ed|ing)?|naked|nude|make love|making love|made love|sex(ual|y)?|aroused|orgasm\w*|breasts?)\b/i;
-/** ... while tender intimacy (a kiss, lips, lying in bed together) is
- *  the town's own earnable moment, open from the terrace kiss's rank. */
-const TENDER_INTIMACY_RE = /\b(kiss(es|ed|ing)?|lips|in (my|your|our) bed|lie (in bed )?(with|beside) (me|you))\b/i;
+/** ... while tender intimacy (a kiss, lips, lying in bed together, a
+ *  night together asked for, never described: Task 45) is the town's
+ *  own earnable moment, open from the terrace kiss's rank. */
+const TENDER_INTIMACY_RE = /\b(kiss(es|ed|ing)?|lips|in (my|your|our) bed|lie (in bed )?(with|beside) (me|you)|stay (with me|together) tonight|stay the night|spend the night|(a|the) night together)\b/i;
 /** The town's first kiss, at the terrace, is earned at rank 7 (client/src/town.ts). */
 export const PRINCIPAL_KISS_RANK = 7;
 /** Below that rank she may still speak of it as something to come. */

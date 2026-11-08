@@ -226,6 +226,27 @@ import { HomePanel } from "./HomePanel";
 import { earnedKeepsakes } from "./homeKeepsakes";
 import { readArrangement } from "../../shared/homeDecor";
 import { SceneBuildError, describeSceneError } from "./sceneBuildError";
+import {
+  NIGHT_ACCEPT_LINES,
+  NIGHT_AFTERGLOW_LINE,
+  NIGHT_ASK_PROMPT,
+  NIGHT_DECLINE_LINES,
+  NIGHT_INVITE_DECLINED_LINES,
+  NIGHT_INVITE_LINES,
+  NIGHT_INVITE_NO,
+  NIGHT_INVITE_YES,
+  NIGHT_MORNING_LINES,
+  acceptsAsk,
+  darkBeatMs,
+  invitesTonight,
+  nightBlocked,
+  nightKey,
+} from "../../shared/nightTogether";
+
+/** A night together (Task 45): the last night had (per browser), and her afterglow line still to come. */
+const NIGHT_LAST_KEY = "muse-town-night-last";
+const NIGHT_AFTERGLOW_KEY = "muse-town-night-afterglow";
+const pickOne = <T,>(pool: readonly T[]): T => pool[Math.floor(Math.random() * pool.length)]!;
 import { useVisitNotice } from "./useVisitNotice";
 import { LAPSE_WARN_MS, UNREACHABLE_AFTER_FAILS, composingVisible, hostOf, visitChipLine, visitClosedLine, visitStatusLine, type VisitCloseReason, type VisitDirectorState, type VisitRoute } from "./visitStatus";
 import {
@@ -2304,8 +2325,10 @@ export function App() {
       } else if (kind === "rest") {
         // The bed nook: resting ends the town day: and some
         // nights, the town dreams back. No panel; the veil is the
-        // whole interface.
-        restInTownRef.current();
+        // whole interface. At their own bed, on a night it is offered,
+        // he asks her to stay together instead (Task 45).
+        if (id === "home-bed-rest" && nightBlockedNowRef.current() === null) askNightRef.current();
+        else restInTownRef.current();
       } else if (kind === "forage") {
         // Forest forage: the server keeps the days (one picking
         // per spot per real day) and grants the yield.
@@ -3078,6 +3101,213 @@ export function App() {
   const restInTownRef = useRef(restInTown);
   restInTownRef.current = restInTown;
 
+  // --- A night together (Task 45): implied and never shown ---------------
+  // At night, in their house, from the terrace kiss's rank: he asks by
+  // the bed, or she invites him. Either can say a kind no. A yes: the
+  // door shuts, the lamp dims, the screen goes dark with the night's
+  // sounds and nothing else, then a held dawn through the window, the
+  // two of them waking on the bed, one soft line, and the real hour back.
+  const nightRunningRef = useRef(false);
+  const nightPendingRef = useRef<"accept" | "decline" | "morning" | null>(null);
+  const nightInviteUiRef = useRef(false);
+  const nightInviteDecidedRef = useRef<string | null>(null);
+  const homeSinceRef = useRef<number | null>(null);
+  /** While true, no view frame is taken for a director (Task 45). */
+  const privateMomentRef = useRef(false);
+  const nightSkipRef = useRef<(() => void) | null>(null);
+  const [nightDark, setNightDark] = useState(false);
+  const nightBlockedNow = (): string | null => {
+    const s = stateRef.current;
+    const todayLocal = new Date().toLocaleDateString("en-CA");
+    const todayUtc = new Date().toISOString().slice(0, 10);
+    const dating = s?.dating;
+    const troubled =
+      !!dating?.friction ||
+      frictionLocalRef.current != null ||
+      dating?.last_friction_day === todayLocal ||
+      dating?.last_friction_day === todayUtc ||
+      (s?.facts ?? []).some((f) => f.source === "weather" && f.learned_on === todayLocal);
+    let lastNight: string | null = null;
+    try {
+      lastNight = localStorage.getItem(NIGHT_LAST_KEY);
+    } catch {
+      /* storage unavailable: once a night holds for this load only */
+    }
+    const v = visitRef.current;
+    return nightBlocked({
+      rank: affectionRef.current,
+      night: nightRef.current,
+      bothHome: !!sceneRef.current?.homeTogether(),
+      walking: walkingRef.current,
+      troubled,
+      busy: !!dreamingRef.current || !!summitScene || rowingRef.current || nightRunningRef.current,
+      tonight: nightKey(new Date()),
+      lastNight: lastNight ?? (nightRunningRef.current ? nightKey(new Date()) : null),
+      visitBeganAt: v.active ? v.beganAt : null,
+      now: Date.now(),
+    });
+  };
+  const nightBlockedNowRef = useRef(nightBlockedNow);
+  nightBlockedNowRef.current = nightBlockedNow;
+
+  /** The director's view goes dark with the screen: one black frame, then none until the morning ends. */
+  const beginPrivateMoment = () => {
+    privateMomentRef.current = true;
+    const s = visitRef.current;
+    if (!s.active) return;
+    const c = document.createElement("canvas");
+    c.width = 480;
+    c.height = 270;
+    const g = c.getContext("2d");
+    if (g) {
+      g.fillStyle = "#000";
+      g.fillRect(0, 0, c.width, c.height);
+    }
+    const dataUrl = c.toDataURL("image/jpeg", 0.6);
+    const check = validateFrameDataUrl(dataUrl);
+    if (check.ok) {
+      const now = Date.now();
+      visitRef.current = acceptFrame(s, { dataUrl, width: c.width, height: c.height, bytes: check.bytes }, now);
+      visitLastFrameAtRef.current = now;
+      bridgeNudgeRef.current();
+    }
+  };
+
+  /** He asks, by the bed: usually yes, sometimes a gentle no that ends as an ordinary rest. */
+  const askNight = () => {
+    const yes = acceptsAsk(Math.random(), { talkedToday: talkedTodayRef.current });
+    nightPendingRef.current = yes ? "accept" : "decline";
+    setMuseBubble({ lines: paginateLines([pickOne(yes ? NIGHT_ACCEPT_LINES : NIGHT_DECLINE_LINES)]), index: 0, cycle: false, invite: false, choice: null });
+  };
+  const askNightRef = useRef(askNight);
+  askNightRef.current = askNight;
+
+  const runNightTogether = () => {
+    if (nightRunningRef.current) return;
+    const scene = sceneRef.current;
+    if (!scene) return;
+    nightRunningRef.current = true;
+    const tonight = nightKey(new Date());
+    try {
+      localStorage.setItem(NIGHT_LAST_KEY, tonight);
+    } catch {
+      /* once a night holds for this load */
+    }
+    releaseHandHold();
+    setMenuOpen(false);
+    setMuseBubble(null);
+    setSelected(null);
+    setBoardOpen(false);
+    setQuestOpen(false);
+    setLettersOpen(false);
+    setMarketOpen(false);
+    setWeatherOpen(false);
+    setYouOpen(false);
+    setSecretOpen(false);
+    const reduced = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    scene.nightTogether("hush");
+    beginPrivateMoment();
+    let dark: number | null = null;
+    const morning = () => {
+      if (dark !== null) window.clearTimeout(dark);
+      dark = null;
+      nightSkipRef.current = null;
+      setNightDark(false);
+      // Their first night is kept: a keepsake for the house, nothing more.
+      if (!stateRef.current?.dating.firsts.night) {
+        void api
+          .recordFirst({ key: "night", day: new Date().toLocaleDateString("en-CA") })
+          .then(() => api.getState({}))
+          .then(applyState)
+          .catch(() => {});
+      }
+      try {
+        localStorage.setItem(NIGHT_AFTERGLOW_KEY, "1");
+      } catch {
+        /* the warmth is in the morning line alone */
+      }
+      sceneRef.current?.nightTogether("morning");
+      window.setTimeout(() => fadeVeil(false), 250);
+      window.setTimeout(() => {
+        nightPendingRef.current = "morning";
+        setMuseBubble({ lines: paginateLines([pickOne(NIGHT_MORNING_LINES)]), index: 0, cycle: false, invite: false, choice: null });
+      }, reduced ? 600 : 1700);
+    };
+    window.setTimeout(() => {
+      fadeVeil(true);
+      window.setTimeout(() => {
+        setNightDark(true);
+        nightSkipRef.current = morning;
+        dark = window.setTimeout(morning, darkBeatMs(reduced));
+      }, 1500);
+    }, reduced ? 900 : 2600);
+  };
+  const runNightTogetherRef = useRef(runNightTogether);
+  runNightTogetherRef.current = runNightTogether;
+
+  /** After her morning line: the veil, the real hour back, standing up. */
+  const endMorning = () => {
+    fadeVeil(true);
+    window.setTimeout(() => {
+      sceneRef.current?.nightTogether("end");
+      fadeVeil(false);
+      privateMomentRef.current = false;
+      nightRunningRef.current = false;
+    }, 1500);
+  };
+  const endMorningRef = useRef(endMorning);
+  endMorningRef.current = endMorning;
+
+  // Her lines in this moment act when their bubble closes.
+  useEffect(() => {
+    if (museBubble) return;
+    nightInviteUiRef.current = false;
+    const pending = nightPendingRef.current;
+    if (!pending) return;
+    nightPendingRef.current = null;
+    if (pending === "accept") runNightTogetherRef.current();
+    else if (pending === "decline") restInTownRef.current();
+    else endMorningRef.current();
+  }, [museBubble]);
+
+  // Her own invitation: at most once a night, after they have been home
+  // together a little while, when nothing else holds the moment.
+  useEffect(() => {
+    const iv = window.setInterval(() => {
+      if (nightBlockedNowRef.current()) {
+        homeSinceRef.current = null;
+        return;
+      }
+      const now = Date.now();
+      if (homeSinceRef.current === null) {
+        homeSinceRef.current = now;
+        return;
+      }
+      if (now - homeSinceRef.current < 8000 || museBubbleRef.current) return;
+      const tonight = nightKey(new Date());
+      if (nightInviteDecidedRef.current === tonight) return;
+      nightInviteDecidedRef.current = tonight;
+      if (!invitesTonight(Math.random(), { talkedToday: talkedTodayRef.current })) return;
+      nightInviteUiRef.current = true;
+      setMuseBubble({
+        lines: paginateLines([pickOne(NIGHT_INVITE_LINES)]),
+        index: 0,
+        cycle: false,
+        invite: false,
+        choice: {
+          id: "night-invite",
+          place: "generic",
+          line: "",
+          options: [
+            { label: NIGHT_INVITE_YES, kind: "attentive", follow: "" },
+            { label: NIGHT_INVITE_NO, kind: "neutral", follow: "" },
+          ],
+        },
+      });
+    }, 2000);
+    return () => window.clearInterval(iv);
+  }, []);
+
   // The opener she composed last (Task 24): reopening the talk
   // within a few minutes, by any way in, shows the same lines and
   // the same pages instead of composing a fresh greeting, so the
@@ -3107,6 +3337,15 @@ export function App() {
     } else if (dreamFlags?.morning_pending) {
       lines.push(MORNING_VISIT_LINE);
       void api.clearDreamFlag({ which: "morning" }).then(applyState).catch(() => {});
+    }
+    // The warmth of a night together carries into her next talk (Task 45).
+    try {
+      if (!nightRunningRef.current && localStorage.getItem(NIGHT_AFTERGLOW_KEY) === "1") {
+        localStorage.removeItem(NIGHT_AFTERGLOW_KEY);
+        lines.push(NIGHT_AFTERGLOW_LINE);
+      }
+    } catch {
+      /* storage unavailable */
     }
     if (pendingRankHintRef.current) {
       pendingRankHintRef.current = false;
@@ -3523,6 +3762,19 @@ export function App() {
    *  heart and a warmer follow-up; glib ones earn her wit, and only that. */
   const pickChoice = useCallback((option: DialogueChoiceOption) => {
     lastOpenerRef.current = null;
+    // Her invitation to stay the night (Task 45): either answer is kind.
+    if (nightInviteUiRef.current) {
+      nightInviteUiRef.current = false;
+      if (option.label === NIGHT_INVITE_YES) {
+        setMuseBubble(null);
+        runNightTogetherRef.current();
+        return;
+      }
+      if (option.label === NIGHT_INVITE_NO) {
+        setMuseBubble({ lines: paginateLines([pickOne(NIGHT_INVITE_DECLINED_LINES)]), index: 0, cycle: false, invite: false, choice: null });
+        return;
+      }
+    }
     // A Star Book answer: helping starts the chapter's small task.
     const pc = pendingChapterRef.current;
     if (pc) {
@@ -4746,7 +4998,8 @@ export function App() {
       case "forage":
         return FORAGE_SPOTS.find((s) => s.id === target.id)?.item === "wild-mushrooms" ? "Gather wild mushrooms" : "Gather forest herbs";
       case "rest":
-        return target.id === "home-bed-rest" ? "Rest together till morning" : "Rest";
+        if (target.id !== "home-bed-rest") return "Rest";
+        return nightBlockedNowRef.current() === null ? NIGHT_ASK_PROMPT : "Rest together till morning";
       case "home":
         return "Arrange our home";
       case "dock":
@@ -5413,7 +5666,8 @@ export function App() {
       s = setTelemetry(s, telemetry);
       const foreground = typeof document === "undefined" || document.visibilityState === "visible";
       let frameLanded = false;
-      if (frameDue({ lastFrameAt: visitLastFrameAtRef.current, now, lookRequested: s.lookRequested, foreground })) {
+      // A night together is private: no frame from the hush to the morning's end (Task 45).
+      if (!privateMomentRef.current && frameDue({ lastFrameAt: visitLastFrameAtRef.current, now, lookRequested: s.lookRequested, foreground })) {
         const shot = scene.captureVisitFrame(FRAME_MAX_EDGE, FRAME_JPEG_QUALITY);
         const check = shot ? validateFrameDataUrl(shot.dataUrl) : null;
         if (shot && check?.ok) {
@@ -6599,6 +6853,14 @@ export function App() {
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 z-50 bg-black transition-opacity duration-[1400ms]"
           style={{ opacity: veilOpaque ? 1 : 0 }}
+        />
+      )}
+      {nightDark && (
+        <button
+          type="button"
+          className="absolute inset-0 z-[51] cursor-default bg-transparent"
+          aria-label="Skip to morning"
+          onClick={() => nightSkipRef.current?.()}
         />
       )}
 

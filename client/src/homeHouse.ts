@@ -30,6 +30,10 @@ export type HomeHouse = {
   inside(x: number, z: number): boolean;
   /** The bed's edge as a seat: where, which way a sitter faces, and the seat's world height. */
   bedSeat: { x: number; z: number; rotY: number; y: number };
+  /** A night together (Task 45): the door held shut, the lamp dimmed
+   *  (0 to 1), and the dawn through the window (0 to 1); null lets the
+   *  house be itself again. */
+  setHush(hush: { doorShut: boolean; lampDim: number; dawn: number } | null): void;
 };
 
 const PLASTER = 0xe9dcc3;
@@ -145,9 +149,33 @@ export function buildHomeHouse(terrainHeight: (x: number, z: number) => number):
   const lamp = new THREE.PointLight(0xffb468, 0, 7.5, 2);
   lamp.position.set(tx + 0.1, 0.95, tz);
   group.add(lamp);
+  const lampAt = lamp.position.clone();
   // A rug between the bed and the door.
   const rug = box(1.9, 0.015, 1.3, m(0x6d3b2a, 1), 0.6, 0.05, 0.6);
   rug.castShadow = false;
+
+  // A small high window (a fenestra) in the wall beside the bed, with
+  // a wooden frame and two iron bars; its pane glows with the daylight,
+  // and gold with the dawn on a morning together (Task 45).
+  const winZ = HOME_BED.lz + 0.45;
+  const winY = 1.95;
+  const paneMat = new THREE.MeshStandardMaterial({ color: 0x9fb8c8, emissive: 0xffd9a0, emissiveIntensity: 0.2, roughness: 0.6 });
+  for (const face of [-1, 1]) {
+    // face -1: the room side of the wall; +1: the lawn side.
+    const x = -halfW - wall / 2 + face * (wall / 2 + 0.006);
+    const pane = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.5), paneMat);
+    pane.position.set(x, winY, winZ);
+    pane.rotation.y = face < 0 ? Math.PI / 2 : -Math.PI / 2;
+    group.add(pane);
+    for (const [w, h, dy, dz] of [[0.74, 0.07, 0.28, 0], [0.74, 0.07, -0.28, 0], [0.07, 0.62, 0, 0.34], [0.07, 0.62, 0, -0.34]] as const) {
+      box(0.05, h, w === 0.74 ? 0.74 : 0.07, m(WOOD, 0.8), x + face * 0.02, winY + dy, winZ + dz);
+    }
+    for (const dz of [-0.11, 0.11]) box(0.03, 0.5, 0.025, m(0x3a2a1c, 0.6, { metalness: 0.5 }), x + face * 0.03, winY, winZ + dz);
+  }
+  const lampDawn = new THREE.Vector3(-halfW + 0.5, winY - 0.1, winZ);
+  const lampWarm = new THREE.Color(0xffb468);
+  const lampMorning = new THREE.Color(0xffe2b8);
+  let hush: { doorShut: boolean; lampDim: number; dawn: number } | null = null;
 
   // A shelf on the side wall, for keepsakes.
   box(0.3, 0.05, 1.4, wood, halfW - 0.15, 1.15, -1.3);
@@ -224,11 +252,14 @@ export function buildHomeHouse(terrainHeight: (x: number, z: number) => number):
       }
     },
     inside: insideAt,
+    setHush(next) {
+      hush = next;
+    },
     update(dt, walkers, nightMix) {
       // The door opens inward as anyone comes within 3 m of it, inside
-      // or out, and closes again behind them.
+      // or out, and closes again behind them (held shut on a night together).
       const near = walkers.some((w) => Math.hypot(w.x - doorWorld.x, w.z - doorWorld.z) < 3);
-      const target = near ? 1 : 0;
+      const target = near && !hush?.doorShut ? 1 : 0;
       doorOpen += (target - doorOpen) * Math.min(1, dt * 3);
       hinge.rotation.y = doorOpen * 1.75;
       // The lamp: lit while anyone is home (warm by night, soft by day),
@@ -236,11 +267,18 @@ export function buildHomeHouse(terrainHeight: (x: number, z: number) => number):
       const home = walkers.some((w) => insideAt(w.x, w.z));
       const lit = home && !wasHome;
       wasHome = home;
-      lampLevel += ((home ? 1 : 0.08) - lampLevel) * Math.min(1, dt * (home ? 2.5 : 0.6));
+      const dim = hush ? 1 - 0.85 * hush.lampDim : 1;
+      lampLevel += ((home ? dim : 0.08) - lampLevel) * Math.min(1, dt * (home ? (hush ? 0.7 : 2.5) : 0.6));
       const flicker = 0.92 + 0.08 * Math.sin(performance.now() * 0.011) * Math.sin(performance.now() * 0.0037);
-      lamp.intensity = (1.2 + nightMix * 4.3) * flicker * lampLevel;
       flame.scale.setScalar(0.4 + 0.6 * lampLevel);
       flame.scale.y = (1.6 + 0.4 * flicker) * (0.4 + 0.6 * lampLevel);
+      // The morning together: the one light becomes the dawn through the
+      // window (no second light, so no shader change), falling on the bed.
+      const dawn = hush?.dawn ?? 0;
+      lamp.position.lerpVectors(lampAt, lampDawn, dawn);
+      lamp.color.copy(lampWarm).lerp(lampMorning, dawn);
+      lamp.intensity = (1.2 + nightMix * 4.3) * flicker * lampLevel * (1 - dawn) + dawn * 5.5;
+      paneMat.emissiveIntensity = 0.12 + (1 - nightMix) * 0.55 + dawn * 1.6;
       return lit;
     },
   };
@@ -317,6 +355,13 @@ export function buildKeepsake(id: HomeKeepsakeId): THREE.Group {
       add(new THREE.CylinderGeometry(0.22, 0.17, 0.2, 12), m(0xa07a44), 0, 0.1, 0);
       const fruit = [0xc0392b, 0x6aa84f, 0xe0a030, 0x8e44ad];
       fruit.forEach((c, i) => add(new THREE.SphereGeometry(0.06, 8, 6), m(c), Math.cos(i * 1.6) * 0.09, 0.22, Math.sin(i * 1.6) * 0.09));
+      break;
+    }
+    case "night-lamp": {
+      // A small clay oil lamp, its wick still glowing (Task 45).
+      add(new THREE.SphereGeometry(0.09, 10, 6), m(0xb5532f), 0, 0.05, 0).scale.set(1.3, 0.55, 0.9);
+      add(new THREE.CylinderGeometry(0.025, 0.03, 0.06, 8), m(0xb5532f), 0.11, 0.06, 0).rotation.z = Math.PI / 2.4;
+      add(new THREE.SphereGeometry(0.022, 8, 6), m(0xffc46b, { emissive: 0xffa040, emissiveIntensity: 1.4 }), 0.14, 0.1, 0).scale.y = 1.6;
       break;
     }
     case "tree-cutting": {
