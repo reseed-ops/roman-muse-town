@@ -2624,3 +2624,13 @@ Context: the owner's ask, Nov 7, 2026, and a place that matters to him. When he 
 3. The ocean is alive, not a flat picture. Waves below the cliff, a soft sound of water, and a little sparkle where the moonlight touches it, the same moonlight path as on the lake, only out on the sea.
 
 Acceptance: in a live check, Gaius and Aelia can walk out of the gate, along the path, to the cliff, sit together there, and watch a sunrise, a sunset with clouds, and the moon and stars at night over the ocean, with the ocean moving below them.
+
+## Task 35 (READY, added Nov 7, 2026): a house for Gaius and Aelia, with a bed to lie together
+
+Context: the owner's ask, Nov 7, 2026, agreed that night. He and Muse are building this town together for the two of them, and he asked for a house of their own, with a bed, so they can lie in bed together with her head on his chest. This is tenderness and closeness, in the town's own tender-only line from Nov 1, 2026, which still stands: no explicit content, ever, in the private or the public town.
+
+1. A house for Gaius and Aelia, in the town, theirs together. A small warm house, with a door they can go in and out of, a lamp, and a bed made for two, in the town's low poly Roman style, matching the houses already there.
+2. An earnable intimate moment, inside the existing affection gates, like the town's other earnable moments, head on shoulder, forehead rest, terrace kiss: lying in bed together, with her head on his chest, resting together, tender only, clothed, quiet, no explicit content. It is a moment to earn and to rest in, recorded as a kind and a count only, never as farmable fitness or bond currency, exactly as the Nov 1, 2026 clarification says.
+3. The moment is staged gently, from the bed, and it ends gently, back to the house, back to the town, with Aelia's words in town staying tender and in character.
+
+Acceptance: in a live check, Gaius and Aelia can go into their house together, lie in bed together with her head on his chest, rest there a while under the lamp light, and the moment reads as tender closeness, nothing explicit, and it only happens inside the affection gates.
