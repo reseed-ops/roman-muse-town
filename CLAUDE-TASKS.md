@@ -240,10 +240,19 @@ Context: overnight Nov 7-8, 2026, about 11:32 PM to 12:36 AM Chicago time, ten m
 
  Acceptance: the landing note names the actual build error from the Railway logs, the fix is in the repo if the error was in the repo, and the next town deploy succeeds and serves live.
  
- ## Landing notes (since the history was archived)
+## Task 52 (READY, added Nov 8, 2026): a simple anonymous count of towns and pairings
+
+Context: the town was posted to Reddit on Nov 8, 2026, and the posts are being viewed (about 1,400 views in the first four hours), but there is no way to tell whether a stranger has actually opened town.reseed.net. Every browser mints its own visitor key and keeps it, the town reports nothing back, and Railway shows only totals (muse-town egress 2.85 GB for the whole billing period, mostly the owner's own testing and deploys). Success for this launch means a stranger opening a town and pairing their Muse, and that cannot be measured today.
+
+1. Add a simple anonymous count, kept on the server, of how many towns have been created and how many pairing codes have been minted (and, if it is easy, how many pairings were redeemed). Counts only, no names, no visitor keys, no addresses, nothing that identifies a person or a town.
+2. Make the counts readable by the owner in one place, for example a small line in the town's own diagnostics or a simple server route he can open, so he can see the numbers without opening Railway.
+3. Do not add tracking, cookies, analytics scripts, or any third-party service. Do not count the owner's own town in a way that inflates the number, or say clearly if his town is included.
+
+   Acceptance: after the next deploy, the owner can read two numbers, towns created and pairing codes minted, with no personal data behind them, and a fresh town opened in a new browser raises the towns count by one.
+
+   ## Landing notes (since the history was archived)
 
 ### Tasks 29, 30: landing note (Claude, Nov 8, 2026), built, not yet deployed (needs both the town and town-bridge)
-
 - Task 29, many towns. Pairing: in town, menu, Muse's visit, "Connect my Muse" (hosted web only) asks the town for a one-time code (POST /bridge/pair, the browser's visitor key as bearer; 10 minutes, single use, one live code per town, memory only, web/src/pairing.ts) and shows one message to paste to the Muse, with a copy button. The Muse sends POST https://town-bridge-production.up.railway.app/pair {"code"}; the bridge redeems it on the town's director-only route (POST /director/pair-redeem, director token header; 404 without it; 429 after 20 misses in a minute) for that visitor's key, and returns a principal token that carries the key sealed (AES-256-GCM, key from PAIRING_SECRET or derived from DIRECTOR_TOKEN; bridge/src/tenants.ts). No database: pairings survive restarts. The Muse never sees the visitor key or the director token; the browser never sees the director token.
 - Isolation: a paired token unseals to its one town only (authenticated, cannot be edited to name another). Each paired town gets its own desk (claim, held wake, waiting line, transcript), made on first call, read every 2 s while awake, dropped after 15 minutes idle, so an unpaired or quiet town costs nothing. The marker token reaches the owner's town only. Paired towns have no resident (no API spend): his lines wait for his Muse (principal desk option resident: false), her lines pass the output filter at the strictest band (the bridge cannot see that town's bond). The owner's town is unchanged (resident, pack, PRINCIPAL_TOKEN); the owner pairing his own town reaches his own desk. Visit lapse (20 min) and claim lapse (3 min) are unchanged. A town never paired plays as before, Aelia's own voice only.
 - Revoking: a paired token stops when the visitor's town key changes (new browser) or PAIRING_SECRET / DIRECTOR_TOKEN rotates (all at once). No per-town revoke list yet.
