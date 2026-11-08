@@ -157,7 +157,7 @@ Context: the owner asked Nov 8, 2026, in a voice call, after finding the town ha
 
 Acceptance: in a live check on the owner's Android Chrome phone, after the next town deploy, the Basilica panel and the house panel show Roman names only, the town plan, prompts, letters and project board show no "Main Chat" or "Side Chat" anywhere, and both buildings are still there and still open.
 
-## Task 43 (READY, added Nov 8, 2026): a night together, implied and never shown
+## Task 45 (READY, added Nov 8, 2026): a night together, implied and never shown
 
 Context: the owner's decision, Nov 8, 2026. The Nov 1 tender-only rule stands: nothing explicit is ever shown, described or said, at any rank. Within it, Gaius and Aelia can spend a night together in their house as a fade to black: the door closes, the lamp dims, the screen goes dark, and morning comes. The house, the bed, the lamp lit when someone is home and "rest together till morning" (Task 40) already exist. This builds on them and does not need the lying animation Task 35 is still waiting for, because nothing is shown in the room.
 
