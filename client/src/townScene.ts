@@ -2328,6 +2328,8 @@ export function createTownScene(
     ...MARKET_BOOTHS.map(([x, z]) => [x, z, 1.9] as Shelter),
   ];
   let lastRainLevelAt = -10;
+  /** Above the house's roof ridge, rain may fall over it; below, never inside. */
+  const HOME_RAIN_ROOF = 6;
   /** How sheltered a spot is from the rain: the roofs above, and their
    *  house, whose inside is fully covered (its own rectangle, not a radius). */
   const shelterAt = (x: number, z: number): number =>
@@ -11730,6 +11732,13 @@ export function createTownScene(
             rainPos[i * 6 + 3] = d.x + slant * 0.09;
             rainPos[i * 6 + 4] = d.y + streak;
             rainPos[i * 6 + 5] = d.z;
+            // Under their roof it does not rain: a streak inside the house
+            // is folded away below the floor (seen through the door, the
+            // rain outside still falls).
+            if (d.y < HOME_RAIN_ROOF && homeHouse.inside(d.x, d.z)) {
+              rainPos[i * 6 + 1] = -50;
+              rainPos[i * 6 + 4] = -50;
+            }
           }
           const attr = rainGeo.attributes.position;
           if (attr) attr.needsUpdate = true;
