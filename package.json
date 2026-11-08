@@ -21,6 +21,7 @@
   "dependencies": {
     "@huggingface/transformers": "4.3.0",
     "@tanstack/react-query": "5.100.10",
+    "astronomy-engine": "2.1.19",
     "drizzle-orm": "0.45.2",
     "react": "19.2.5",
     "react-dom": "19.2.5",

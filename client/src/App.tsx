@@ -221,6 +221,7 @@ import { bridgeClose, bridgeConfigured, bridgeGlance, bridgeLeaving, bridgeLeg, 
 import { BRIDGE_BEAT_MS, FRAME_JPEG_QUALITY, FRAME_MAX_EDGE, VISIT_LAPSE_MS, VISIT_POLL_MS, type QueuedDirection } from "../../shared/visitProtocol";
 import { clearVisitResume, loadVisitResume, saveVisitResume, sessionStore } from "./visitResume";
 import { ConnectMusePanel, useConnectMuse } from "./ConnectMusePanel";
+import { HistoryBook, lessonForPlace, TownStoryTag } from "./HistoryBook";
 import { useVisitNotice } from "./useVisitNotice";
 import { LAPSE_WARN_MS, UNREACHABLE_AFTER_FAILS, composingVisible, hostOf, visitChipLine, visitClosedLine, visitStatusLine, type VisitCloseReason, type VisitDirectorState, type VisitRoute } from "./visitStatus";
 import {
@@ -268,6 +269,8 @@ function rememberInvite(change: (memory: InviteMemory) => InviteMemory) {
 /** How long a reopened talk shows the same opener (Task 24). */
 /** Away from the tab longer than this, and coming back says the visit held (Task 33). */
 const VISIT_AWAY_NOTICE_MS = 20_000;
+/** Which history lesson each building's panel offers (Task 37). */
+const PLACE_HISTORY: Record<string, string> = { mainchat: "basilica", stories: "villa", recipes: "kitchen", garden: "garden", stars: "pavilion" };
 const OPENER_REUSE_MS = 3 * 60 * 1000;
 
 export function App() {
@@ -669,6 +672,13 @@ export function App() {
   const [marketStall, setMarketStall] = useState("market-a");
   const [dockChoice, setDockChoice] = useState(false);
   const [inscriptionId, setInscriptionId] = useState<string | null>(null);
+  // The history book (Task 37): closed (undefined), its index (null), or a lesson.
+  const [historyLesson, setHistoryLesson] = useState<string | null | undefined>(undefined);
+  /** The real-history lesson behind a place in town, opened in the book. */
+  const openHistoryFor = (placeId: string) => {
+    const lesson = lessonForPlace(placeId);
+    if (lesson) setHistoryLesson(lesson.id);
+  };
   const inscriptionRef = useRef<string | null>(null);
   inscriptionRef.current = inscriptionId;
   const skyWatchDoneRef = useRef(false);
@@ -2290,6 +2300,10 @@ export function App() {
       } else if (kind === "inscription") {
         markInscription.mutate(id);
         setInscriptionId(id);
+      } else if (kind === "history") {
+        // A history tablet (Task 37): the real lesson for this place.
+        const lesson = lessonForPlace(id);
+        if (lesson) setHistoryLesson(lesson.id);
       } else if (kind === "bench") {
         // Sit (or stand, if it's his bench): the scene seats him at
         // the bench's facing and seat height, and Muse takes the
@@ -4682,6 +4696,8 @@ export function App() {
         return target.id === "boat" || rowingRef.current ? "Step ashore" : "Visit the lake dock";
       case "inscription":
         return "Read the inscription";
+      case "history":
+        return "Read the history of this place";
       case "tree":
         return "Water the town tree";
       case "board":
@@ -6094,6 +6110,9 @@ export function App() {
         </div>
       )}
 
+      {historyLesson !== undefined && (
+        <HistoryBook lessonId={historyLesson} onOpen={(id) => setHistoryLesson(id)} onClose={() => setHistoryLesson(undefined)} />
+      )}
       {connectMuse && (
         <ConnectMusePanel
           state={connectMuse}
@@ -6189,6 +6208,17 @@ export function App() {
         },
         {
           heading: "Your day", items: [{
+            key: "history",
+            icon: "📜",
+            label: "History book",
+            detail: "Short lessons on the real Rome, each with its sources",
+            active: historyLesson !== undefined,
+            action: () => {
+              setMenuOpen(false);
+              setHistoryLesson(null);
+            },
+            aria: "Open the history book: short sourced lessons on the real Rome",
+          }, {
             key: "letters",
             icon: "✉",
             label: "Letters",
@@ -7337,6 +7367,9 @@ export function App() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-lg leading-tight font-bold">🧺 The Market</h2>
+              <button type="button" className="mt-1 rounded-full bg-white/10 px-2.5 py-0.5 text-[12px] font-bold transition active:scale-95" onClick={() => openHistoryFor("market")}>
+                📜 Rome's history: markets
+              </button>
               <p className="text-xs font-semibold text-[#ffd34e]">
                 Purse: {purse.denarii} denarii · Seeds in hand: {purse.seeds}
               </p>
@@ -7862,9 +7895,19 @@ export function App() {
               ✕
             </button>
           </div>
-          <p className="mt-3 text-sm leading-relaxed text-white/92 italic">
+          <div className="mt-2"><TownStoryTag /></div>
+          <p className="mt-2 text-sm leading-relaxed text-white/92 italic">
             {INSCRIPTIONS.find((i) => i.id === inscriptionId)?.text ?? ""}
           </p>
+          {lessonForPlace(inscriptionId) && (
+            <button
+              type="button"
+              className="mt-2.5 rounded-full bg-white/10 px-3.5 py-1.5 text-sm font-bold transition active:scale-95"
+              onClick={() => openHistoryFor(inscriptionId)}
+            >
+              📜 Rome's history: {lessonForPlace(inscriptionId)!.title}
+            </button>
+          )}
           {state.data?.inscriptions_complete && (
             <p className="mt-2 text-[13px] leading-relaxed text-[#ffd34e]">
               That's the last fragment. The whole history is yours. The Villa of Stories keeps the telling of it.
@@ -8298,6 +8341,15 @@ export function App() {
           <p className="mt-0.5 text-sm text-[#ffd34e]">{selected.greeting}</p>
           <p className="mt-2 text-sm leading-relaxed text-white/90">{selected.body}</p>
           <p className="mt-2 text-[13px] leading-relaxed text-white/60 italic">{selected.tip}</p>
+          {lessonForPlace(PLACE_HISTORY[selected.id] ?? "") && (
+            <button
+              type="button"
+              className="mt-2.5 rounded-full bg-white/10 px-3.5 py-1.5 text-sm font-bold transition active:scale-95"
+              onClick={() => openHistoryFor(PLACE_HISTORY[selected.id] ?? "")}
+            >
+              📜 Rome's history: {lessonForPlace(PLACE_HISTORY[selected.id] ?? "")!.title}
+            </button>
+          )}
 
           {selected.id === "garden" && (
             <div className="mt-3 rounded-2xl bg-white/8 px-3 py-2.5">

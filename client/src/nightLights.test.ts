@@ -61,3 +61,14 @@ test("her skin takes the warm multiply by the night's share, and only her skin a
   lights.update(frame({ nightMix: 0 }));
   expect(skinMat.color.getHex()).toBe(base.getHex());
 });
+
+test("the moonlight follows the true moon: from its bearing, by its phase, gone while it is down", () => {
+  const lights = createNightLights(new THREE.Scene());
+  lights.update(frame({ moon: { elev: 40, azim: 90, illuminated: 1 } }));
+  expect(lights.moonLight.intensity).toBeCloseTo(MOON_LIGHT_MAX);
+  expect(lights.moonLight.position.x).toBeGreaterThan(50); // east
+  lights.update(frame({ moon: { elev: 40, azim: 90, illuminated: 0 } }));
+  expect(lights.moonLight.intensity).toBeCloseTo(MOON_LIGHT_MAX * 0.3);
+  lights.update(frame({ moon: { elev: -10, azim: 90, illuminated: 1 } }));
+  expect(lights.moonLight.intensity).toBe(0);
+});

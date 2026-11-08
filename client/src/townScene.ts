@@ -1,4 +1,5 @@
 import { createPlaceFootprints } from "./buildingFootprints";
+import { createTrueSky, skyDirection, SKY_REFRESH_S } from "./trueSky";
 import { armsVisibility, createGaiusArms } from "./gaiusArms";
 import { createNightLights } from "./nightLights";
 import { BUBBLE_SPEAKERS, bubblePageDuration, drawBubblePlate, paginateBubbleText, type BubbleSpeaker } from "./bubblePlate";
@@ -215,7 +216,7 @@ import boatSmallUrl from "./assets/roman/boat_small.glb";
 import paddleUrl from "./assets/roman/paddle.glb";
 import waterNormalUrl from "./assets/roman/water_normal.png";
 
-export type PickKind = "place" | "collectible" | "tree" | "muse" | "board" | "secret" | "landmark" | "questboard" | "letters" | "goals" | "market" | "bench" | "dock" | "inscription" | "summit" | "piscina" | "baths" | "cat" | "phoenix" | "sky" | "stone" | "rest" | "forage";
+export type PickKind = "place" | "collectible" | "tree" | "muse" | "board" | "secret" | "landmark" | "questboard" | "letters" | "goals" | "market" | "bench" | "dock" | "inscription" | "summit" | "piscina" | "baths" | "cat" | "phoenix" | "sky" | "stone" | "rest" | "forage" | "history";
 
 /** The nearest walk-mode interactable, reported by the scene so the
  *  shell can show a small "A, …" prompt. Panels open only when the
@@ -1126,6 +1127,9 @@ async function placeCachedModel(
     return null;
   }
 }
+
+/** Where the forum's history tablet stands, by the Town Tree (Task 37). */
+const HISTORY_TABLET_FORUM: [number, number] = [-3.8, 4.6];
 
 export function createTownScene(
   canvas: HTMLCanvasElement,
@@ -3529,13 +3533,9 @@ export function createTownScene(
     }
     return new THREE.CanvasTexture(c);
   })();
-  // The moon hangs low beyond the lake (Task 27): at its old place,
-  // 21-32 degrees up in the north-west, it sat above the top of the
-  // frame in every level view of the lake (the camera sees 23 degrees
-  // above centre). Now about 11 degrees over the far shore, on the
-  // line from the town through the lake, so the dock and the arch
-  // views both have it in the sky above the water.
-  const MOON_POS = new THREE.Vector3(LAKE_CX - 40, 19, LAKE_CZ - 86);
+  // The moonlight path on the lake (Tasks 27 and 37): it runs across
+  // the water toward the true moon's bearing, and brightens with its
+  // phase while it is up; the moon itself is drawn by trueSky.ts.
   const moonGlitterMat = new THREE.MeshBasicMaterial({
     color: 0xdceaff,
     map: glitterMap,
@@ -3544,47 +3544,20 @@ export function createTownScene(
     blending: THREE.AdditiveBlending,
     depthWrite: false,
   });
-  let moonSpriteMat: THREE.SpriteMaterial | null = null;
-  {
-    const glitter = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 8.6), moonGlitterMat);
-    glitter.rotation.x = -Math.PI / 2;
-    // The path runs across the water toward the moon (Task 27).
-    {
-      const dx = MOON_POS.x - LAKE_CX;
-      const dz = MOON_POS.z - LAKE_CZ;
-      glitter.rotation.z = Math.atan2(-dx, -dz);
-    }
-    glitter.position.set(LAKE_CX, LAKE_Y + 0.015, LAKE_CZ);
-    world.add(glitter);
-    // The moon itself: a pale disc hung in the north-west sky, over
-    // the aqueduct, fading in with the night like the stars do.
-    const moonCanvas = document.createElement("canvas");
-    moonCanvas.width = 128;
-    moonCanvas.height = 128;
-    const mg = moonCanvas.getContext("2d");
-    if (mg) {
-      const grad = mg.createRadialGradient(64, 64, 18, 64, 64, 62);
-      grad.addColorStop(0, "rgba(240,246,255,1)");
-      grad.addColorStop(0.55, "rgba(214,228,252,0.95)");
-      grad.addColorStop(0.8, "rgba(180,200,240,0.28)");
-      grad.addColorStop(1, "rgba(180,200,240,0)");
-      mg.fillStyle = grad;
-      mg.fillRect(0, 0, 128, 128);
-    }
-    const moonMat = new THREE.SpriteMaterial({
-      map: new THREE.CanvasTexture(moonCanvas),
-      transparent: true,
-      opacity: 0,
-      depthWrite: false,
-      // Never fogged into the night sky's colour (Task 27).
-      fog: false,
-    });
-    const moon = new THREE.Sprite(moonMat);
-    moon.scale.set(12, 12, 1);
-    moon.position.copy(MOON_POS);
-    world.add(moon);
-    moonSpriteMat = moonMat;
-  }
+  const moonGlitter = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 8.6), moonGlitterMat);
+  moonGlitter.rotation.x = -Math.PI / 2;
+  moonGlitter.position.set(LAKE_CX, LAKE_Y + 0.015, LAKE_CZ);
+  world.add(moonGlitter);
+  /** Moon up (0..1) and its light share (phase), refreshed with the sky. */
+  let moonUp = 0;
+  let moonShare = 0;
+  /** Turn the lake's moon path toward the true moon (and any water's, given its mesh). */
+  const aimMoonPath = (mesh: THREE.Mesh, elev: number, azim: number) => {
+    const d = skyDirection(Math.max(elev, 0), azim);
+    mesh.rotation.z = Math.atan2(-d.x, -d.z);
+    // A low moon lays a long path; a high one a short bright pool.
+    mesh.scale.y = 0.7 + 0.8 * (1 - Math.min(1, Math.max(0, elev) / 60));
+  };
   // The dock: wooden planks on posts at the east shore, a lantern at
   // its end (it joins the town's lamp circuit after dark), and the
   // rowboat moored alongside. Built from boxes so its top sits at
@@ -5388,6 +5361,30 @@ export function createTownScene(
   world.add(key);
   pickRoots.push(key);
 
+  // The forum's history tablet (Task 37): a plain stone stele by the
+  // Town Tree that opens Rome's real history of the forum, sourced, in
+  // the history book. Its inscription is real history, not the town's
+  // story, so it reads differently from the fragments on the statues.
+  {
+    const [hx, hz] = HISTORY_TABLET_FORUM;
+    const stele = new THREE.Group();
+    const stone = new THREE.Mesh(new THREE.BoxGeometry(0.72, 1.05, 0.16), mat(0xd9d0bd, { rough: 0.9 }));
+    stone.position.y = 0.6;
+    stone.castShadow = true;
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.1, 0.24), mat(0xc4b89f, { rough: 0.9 }));
+    cap.position.y = 1.17;
+    const plaque = new THREE.Mesh(new THREE.PlaneGeometry(0.52, 0.6), mat(0x6a5a44, { rough: 0.8 }));
+    plaque.position.set(0, 0.66, 0.081);
+    stele.add(stone, cap, plaque);
+    stele.position.set(hx, terrainHeight(hx, hz), hz);
+    stele.rotation.y = Math.atan2(-hx, -hz) + Math.PI;
+    stele.traverse((o) => {
+      o.userData.pick = { kind: "history", id: "forum" } satisfies { kind: PickKind; id: string };
+    });
+    world.add(stele);
+    pickRoots.push(stele);
+  }
+
   // --- Walk-around avatar: YOU (the player) ---
   // The visitor's Centurion VRM: legs and arms swung from the model's
   // own bones while walking, and a salute when you reach Muse.
@@ -6992,6 +6989,8 @@ export function createTownScene(
       ["inscription", "temple", 22.8, -14, 3.4],
       ["inscription", "aqueduct", -29.5, -24, 3.4],
       ["inscription", "terrace-hint", -18.4, -22.9, 3.0],
+      // The forum's history tablet (Task 37), by the Town Tree.
+      ["history", "forum", HISTORY_TABLET_FORUM[0], HISTORY_TABLET_FORUM[1], 2.4],
     ];
     for (const [kind, id, sx, sz, trigger] of promptSpots) {
       const d = Math.hypot(walkPos.x - sx, walkPos.z - sz);
@@ -8367,30 +8366,12 @@ export function createTownScene(
     });
   }
 
-  // Stars (night only).
-  const starCount = 260;
-  const starPos = new Float32Array(starCount * 3);
-  for (let i = 0; i < starCount; i++) {
-    const theta = Math.random() * Math.PI * 2;
-    const phi = Math.random() * Math.PI * 0.42;
-    const r = 120;
-    starPos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-    starPos[i * 3 + 1] = r * Math.cos(phi) + 4;
-    starPos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
-  }
-  const starGeo = new THREE.BufferGeometry();
-  starGeo.setAttribute("position", new THREE.BufferAttribute(starPos, 3));
-  const starMat = new THREE.PointsMaterial({
-    size: 1.5,
-    map: new THREE.CanvasTexture(spriteCanvas),
-    transparent: true,
-    opacity: 0,
-    depthWrite: false,
-    color: 0xffffff,
-    sizeAttenuation: false,
-  });
-  const stars = new THREE.Points(starGeo, starMat);
-  scene.add(stars);
+  // Stars (night only): Rome's true sky (Task 37), the naked-eye stars
+  // of the Yale Bright Star Catalogue, the planets and the moon, each
+  // where it really is over Rome now (trueSky.ts, romanSky.ts).
+  const trueSky = createTrueSky(scene, new THREE.CanvasTexture(spriteCanvas));
+  trueSky.update(new Date());
+  let skyRefreshAt = 0;
 
   // The shared constellation, The Two Lanterns: two small lantern
   // figures of stars, side by side in the sky over the lake, joined
@@ -10827,8 +10808,9 @@ export function createTownScene(
       player: avatar.position,
       walking,
       camera: camera.position,
+      moon: trueSky.moon(),
     });
-    starMat.opacity = nightMix * 0.95 * (1 - Math.min(1, wCur.rain + wCur.snow)) * (weatherId === "fog" ? 0.25 : 1);
+    trueSky.setOpacity(nightMix * 0.95 * (1 - Math.min(1, wCur.rain + wCur.snow)) * (weatherId === "fog" ? 0.25 : 1));
     // Fireflies belong to warm-season nights, and they keep to the
     // lake and its willows.
     fireflyMat.opacity =
@@ -12132,8 +12114,19 @@ export function createTownScene(
           (fountainWater.material as THREE.MeshStandardMaterial).opacity = 0.78 + Math.sin(t * 1.7) * 0.08;
           if (metaSweat) (metaSweat.material as THREE.MeshStandardMaterial).opacity = 0.3 + Math.sin(t * 0.9) * 0.08;
         }
-        moonGlitterMat.opacity = nightMix * (0.5 + 0.1 * Math.sin(t * 2.3) + 0.06 * Math.sin(t * 5.1));
-        if (moonSpriteMat) moonSpriteMat.opacity = nightMix * 0.95;
+        if (t >= skyRefreshAt) {
+          // The sky turns a quarter of a degree a minute: every
+          // SKY_REFRESH_S seconds is plenty.
+          skyRefreshAt = t + SKY_REFRESH_S;
+          trueSky.update(new Date());
+          const moon = trueSky.moon();
+          moonUp = THREE.MathUtils.smoothstep(moon.elev, -1, 3);
+          moonShare = 0.3 + 0.7 * moon.illuminated;
+          aimMoonPath(moonGlitter, moon.elev, moon.azim);
+        }
+        moonGlitterMat.opacity = nightMix * moonUp * moonShare * (0.5 + 0.1 * Math.sin(t * 2.3) + 0.06 * Math.sin(t * 5.1));
+        // The moon shows by night, faintly by day when it is up (as it does).
+        trueSky.moonMaterial.opacity = moonUp * (nightMix * 0.95 + (1 - nightMix) * 0.22);
         waterMat.emissive.setHex(0x0a2e4a);
         waterMat.emissiveIntensity = nightMix * 0.55;
         for (const s of willowStrands) {

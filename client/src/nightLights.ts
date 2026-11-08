@@ -29,6 +29,9 @@ export type NightFrame = {
   player: THREE.Vector3;
   walking: boolean;
   camera: THREE.Vector3;
+  /** The true moon (Task 37): its light comes from it, by its phase,
+   *  and is gone while it is down. Without it, the old fixed bearing. */
+  moon?: { elev: number; azim: number; illuminated: number };
 };
 
 export type NightLights = {
@@ -71,7 +74,16 @@ export function createNightLights(scene: THREE.Object3D): NightLights {
       skinApplied = -1;
     },
     update(f) {
-      moonLight.intensity = f.nightMix * MOON_LIGHT_MAX * (1 - Math.min(1, f.rain + f.snow) * 0.6) * (f.fog ? 0.5 : 1);
+      let moonFactor = 1;
+      if (f.moon) {
+        const up = Math.min(1, Math.max(0, (f.moon.elev + 2) / 6));
+        moonFactor = up * (0.3 + 0.7 * Math.min(1, Math.max(0, f.moon.illuminated)));
+        // Raised to at least 15 degrees, so a low moon still reaches the ground.
+        const el = (Math.max(15, f.moon.elev) * Math.PI) / 180;
+        const az = (f.moon.azim * Math.PI) / 180;
+        moonLight.position.set(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el)).multiplyScalar(100);
+      }
+      moonLight.intensity = f.nightMix * MOON_LIGHT_MAX * moonFactor * (1 - Math.min(1, f.rain + f.snow) * 0.6) * (f.fog ? 0.5 : 1);
       faceFill.intensity = f.nightMix * FACE_FILL_MAX;
       if (skin.length > 0 && Math.abs(f.nightMix - skinApplied) > 0.01) {
         skinApplied = f.nightMix;
