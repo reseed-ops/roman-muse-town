@@ -16,6 +16,7 @@
  * process speaks plain HTTP on PORT, bound to every interface so the
  * platform can reach it.
  */
+import { BRIDGE_HOLD_S } from "../../shared/visitProtocol.js";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { SlateFace } from "./slateFace.js";
@@ -110,6 +111,19 @@ export function startBridgeServer(opts: BridgeServerOptions): Promise<BridgeServ
       }
       if (method === "GET" && path === "/bridge/directions") {
         const since = Number(url.searchParams.get("since") ?? 0) || 0;
+        // A held read (Task 41): wait up to BRIDGE_HOLD_S for news.
+        const waitS = Math.min(BRIDGE_HOLD_S, Math.max(0, Number(url.searchParams.get("wait") ?? 0) || 0));
+        const composingParam = url.searchParams.get("composing");
+        const composingHeld = composingParam === null ? undefined : composingParam === "1";
+        if (waitS > 0) {
+          let gone = false;
+          res.on("close", () => {
+            gone = true;
+          });
+          const deadline = Date.now() + waitS * 1000;
+          while (!gone && Date.now() < deadline && !face.hasNews(since, composingHeld)) await new Promise((r) => setTimeout(r, 250));
+          if (gone) return;
+        }
         return send(res, 200, face.pull(since));
       }
       return send(res, 405, { error: "method not allowed" });

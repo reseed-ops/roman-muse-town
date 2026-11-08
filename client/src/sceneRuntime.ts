@@ -9,19 +9,22 @@ import { ProximityLoader, type LoadPosition } from "./proximityLoader";
 export class SceneRuntime {
   readonly streaming = new ProximityLoader();
   readonly graphics: GraphicsQuality;
-  private adaptive = new AdaptiveQuality();
+  private adaptive: AdaptiveQuality;
   private monitor = new PerformanceMonitor();
   private tuner: PixelRatioTuner;
   private light: boolean;
   private automatic = true;
   private lastFocus = -Infinity;
 
-  constructor(private renderer: THREE.WebGLRenderer, scene: THREE.Scene, private fullRatio: number, private software: boolean, private resize: () => void) {
+  constructor(private renderer: THREE.WebGLRenderer, scene: THREE.Scene, private fullRatio: number, private software: boolean, private resize: () => void, phone = false) {
+    this.adaptive = new AdaptiveQuality({ phone });
     this.graphics = new GraphicsQuality(renderer, scene, fullRatio, software);
     this.tuner = new PixelRatioTuner(fullRatio);
     this.light = software;
     try { this.automatic = localStorage.getItem("muse-town-auto-graphics") !== "0"; } catch { /* defaults */ }
     this.updateMode(performance.now());
+    // A phone starts light at once (ratio 1, no shadows): nothing to recompile yet.
+    if (phone) this.applyQuality(false);
   }
   private updateMode(now: number) {
     this.adaptive.setMode(this.light || this.software ? "light" : this.automatic ? "auto" : "full", now);
@@ -62,7 +65,13 @@ export class SceneRuntime {
       this.streaming.updateFocus(focus, overview);
     }
   }
-  afterFrame(dt: number, cpuMs: number, visible: boolean): void { this.monitor.sample(dt, cpuMs, visible); }
+  afterFrame(dt: number, cpuMs: number, visible: boolean): void {
+    this.monitor.sample(dt, cpuMs, visible);
+    // A phone steps up (shadows on) only after sustained work-time headroom (Task 41).
+    if (visible && this.automatic && !this.light && !this.software && this.adaptive.noteWork(cpuMs, performance.now())) this.applyQuality(true);
+  }
+  /** The tier the town has settled on (0 light, 1 balanced, 2 full), for the perf line and the report. */
+  get tier(): number { return this.adaptive.tier; }
   get grassHz(): number { return this.adaptive.tier === 2 ? 30 : this.adaptive.tier === 1 ? 15 : 0; }
   snapshot() { return this.monitor.snapshot(this.renderer.info, this.renderer.getPixelRatio(), this.adaptive.tier, this.streaming.progress()); }
   /** The town menu's perf line (v44): rolling fps and p95 from the

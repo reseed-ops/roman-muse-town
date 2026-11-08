@@ -94,6 +94,22 @@ describe.skipIf(!onPostgres)("the town on the web", () => {
   const bridge = (token: string, path: string, init: RequestInit = {}) =>
     server.fetch(new Request(`http://town.test${path}`, { ...init, headers: { ...(init.headers as Record<string, string> | undefined), authorization: `Bearer ${token}`, "content-type": "application/json" } }));
 
+  test("the state read carries a digest, and asked again unchanged it answers 304 with nothing (Task 41)", async () => {
+    const first = await call(A, "getState");
+    expect(first.status).toBe(200);
+    const tag = first.headers.get("etag");
+    expect(tag).toMatch(/^"[0-9a-z]+"$/);
+    await first.json();
+    const again = await call(A, "getState", {}, { "if-none-match": tag! });
+    expect(again.status).toBe(304);
+    expect(await again.text()).toBe("");
+    // A changed town answers whole again, with a new digest.
+    expect((await call(A, "waterTree", { request_id: crypto.randomUUID() })).status).toBe(200);
+    const changed = await call(A, "getState", {}, { "if-none-match": tag! });
+    expect(changed.status).toBe(200);
+    expect(changed.headers.get("etag")).not.toBe(tag);
+  });
+
   test("no visitor token, no town", async () => {
     expect((await call(null, "getState")).status).toBe(401);
     expect((await call("too-short", "getState")).status).toBe(401);

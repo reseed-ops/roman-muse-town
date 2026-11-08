@@ -9,7 +9,7 @@
 // and the one addition is the meta tag that tells it it is hosted.
 
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { drawIcon } from "./icon";
 import { buildPacks } from "./assetPack";
@@ -186,6 +186,9 @@ export async function buildWeb(): Promise<{ version: string; files: string[]; pa
     writeFileSync(join(CLIENT_OUT, name), drawIcon(size, maskable));
   }
   writeFileSync(join(CLIENT_OUT, "manifest.webmanifest"), manifest());
+  // The first paint (Task 41): a still of the town, shown by the splash
+  // and the loading screen while WebGL, the bodies and the packs arrive.
+  copyFileSync(join(ROOT, "web", "town-still.jpg"), join(CLIENT_OUT, "town-still.jpg"));
   const hash = createHash("sha256");
   for (const file of [...client.files].sort((a, b) => a.path.localeCompare(b.path))) hash.update(`${file.path}:${file.bytes}\n`);
   const version = hash.digest("hex").slice(0, 12);
@@ -193,7 +196,7 @@ export async function buildWeb(): Promise<{ version: string; files: string[]; pa
   writeFileSync(join(CLIENT_OUT, "index.html"), html);
   const files = [
     ...client.files,
-    ...["icon-192.png", "icon-512.png", "icon-maskable-512.png", "manifest.webmanifest", "index.html"].map((path) => ({ path, bytes: statSync(join(CLIENT_OUT, path)).size })),
+    ...["icon-192.png", "icon-512.png", "icon-maskable-512.png", "manifest.webmanifest", "town-still.jpg", "index.html"].map((path) => ({ path, bytes: statSync(join(CLIENT_OUT, path)).size })),
   ];
   await buildServiceWorker(precacheList(files), version);
   await buildServer();

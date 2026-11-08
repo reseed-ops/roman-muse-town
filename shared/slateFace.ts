@@ -57,6 +57,10 @@ export type SlateFace = {
   /** A director asks the town to open a visit (Task 8's door): the
    *  client hears it on its next pull, idle glances included. */
   requestBegin(): void;
+  /** Is there anything a pull past `since` would bring (a direction, a
+   *  begin or end request, or composing differing from what the client
+   *  holds)? Spends nothing: a held read waits on this (Task 41). */
+  hasNews(since: number, composingHeld?: boolean): boolean;
   /** A director asks the town to end the visit: the client hears it on
    *  its next pull and folds the visit itself. */
   requestEnd(): void;
@@ -367,6 +371,10 @@ export function createSlateFace(opts: SlateFaceOptions = {}): SlateFace {
     intake,
     pull,
     held: () => held,
+    hasNews: (since, composingHeld) => {
+      settle(now());
+      return queue.some((q) => q.id > since) || beginRequested || endRequested || (composingHeld !== undefined && composingHeld !== composing);
+    },
     requestBegin: () => {
       touch(now());
       beginRequested = true;

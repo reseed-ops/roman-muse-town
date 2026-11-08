@@ -1228,16 +1228,18 @@ export function createTownScene(
   };
   const placeModel = (url: string, parent: THREE.Object3D, options: Parameters<typeof placeCachedModel>[2]) =>
     placeCachedModel(url, parent, options, resources, runtime.streaming);
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   // Pixel ratio is capped at 1.5: at phone viewing distances the
   // extra pixels of a full 2–3x ratio cost GPU memory and battery
   // without a visible gain, and they were part of the black-screen
-  // memory pressure on Android. Small screens cap lower still (1.25):
-  // fewer pixels to fill, same readable town.
+  // memory pressure on Android. Phones (Task 41: a small screen, or a
+  // touch-first pointer) render at ratio 1.0 without antialiasing, at a
+  // capped frame rate, and start a quality tier down (see SceneRuntime).
   const smallScreen =
     Math.min(window.innerWidth || 9999, window.innerHeight || 9999) <= 430 ||
     (window.innerWidth || 9999) <= 540;
-  const FULL_PIXEL_RATIO = Math.min(window.devicePixelRatio || 1, smallScreen ? 1.25 : 1.5);
+  const phone = smallScreen || (typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches);
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: !phone });
+  const FULL_PIXEL_RATIO = phone ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
   renderer.setPixelRatio(FULL_PIXEL_RATIO);
   // Software GL (SwiftShader / llvmpipe, some webviews, emulators,
   // and headless browsers) can take seconds per frame on a scene this
@@ -1295,7 +1297,7 @@ export function createTownScene(
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const scene = new THREE.Scene();
-  const runtime = new SceneRuntime(renderer, scene, FULL_PIXEL_RATIO, softwareGl, () => resize());
+  const runtime = new SceneRuntime(renderer, scene, FULL_PIXEL_RATIO, softwareGl, () => resize(), phone);
   resources.adopt(scene);
   scene.background = new THREE.Color().copy(DAY_SKY);
   scene.fog = new THREE.Fog(DAY_SKY.getHex(), 95, 235);
@@ -11636,9 +11638,45 @@ export function createTownScene(
     if ((seatMuse || boatState?.museAboard || bathState?.museIn) && !museAnim?.hasSit) applySeatedProcedural(museRig);
   }
 
+  // Frame pacing state (Task 41).
+  const PHONE_FRAME_MS = 1000 / 30;
+  const PHONE_IDLE_FRAME_MS = 1000 / 15;
+  const STILL_AFTER_MS = 2000;
+  let lastStirAt = performance.now();
+  const lastCamPose = new THREE.Vector3(Number.NaN, 0, 0);
+  const lastCamQuat = new THREE.Quaternion();
+  const stir = () => {
+    lastStirAt = performance.now();
+  };
+  for (const ev of ["pointerdown", "pointermove", "keydown", "wheel", "touchstart"] as const) window.addEventListener(ev, stir, { passive: true });
+  /** Note whether anything moved this frame: the camera, him, or her. */
+  function noteStillness(now: number) {
+    const moved =
+      camera.position.distanceToSquared(lastCamPose) > 1e-6 ||
+      Math.abs(camera.quaternion.dot(lastCamQuat)) < 0.999999 ||
+      (walking && playerSpeedSm > 0.05) ||
+      museIsMoving ||
+      flight !== null;
+    if (moved) lastStirAt = now;
+    lastCamPose.copy(camera.position);
+    lastCamQuat.copy(camera.quaternion);
+  }
+  /** The minimum gap between rendered frames now (0: every display frame). */
+  function framePaceMs(now: number): number {
+    if (!phone) return 0;
+    return now - lastStirAt > STILL_AFTER_MS ? PHONE_IDLE_FRAME_MS : PHONE_FRAME_MS;
+  }
   function frame() {
     if (disposed) return;
     raf = requestAnimationFrame(frame);
+    // Frame pacing (Task 41): phones render about 30 times a second, and
+    // about 15 once nothing has moved for a while (the camera still, no
+    // input, nobody walking); the town keeps breathing at the slower
+    // rate, idle clips, water and sky included, rather than freezing.
+    {
+      const pace = framePaceMs(performance.now());
+      if (pace > 0 && performance.now() - lastFrameMs < pace - 2) return;
+    }
     try {
       const nowMs = performance.now();
       const rawDtMs = nowMs - lastFrameMs;
@@ -12270,6 +12308,7 @@ export function createTownScene(
       updateNewSystems(dt, t);
       renderer.render(scene, camera);
       runtime.afterFrame(rawDtMs, performance.now() - nowMs, document.visibilityState !== "hidden");
+      noteStillness(nowMs);
       frameErrorStreak = 0;
       mtFlags.__mtLastFrameAt = performance.now();
       if (!readyFired) {
@@ -13088,6 +13127,7 @@ export function createTownScene(
       canvas.removeEventListener("pointermove", onPointerMove);
       canvas.removeEventListener("pointercancel", onPointerCancel);
       window.removeEventListener("pointerup", onWindowPointerEnd);
+      for (const ev of ["pointerdown", "pointermove", "keydown", "wheel", "touchstart"] as const) window.removeEventListener(ev, stir);
       window.removeEventListener("pointercancel", onWindowPointerEnd);
       window.removeEventListener("blur", dropAllPointers);
       document.removeEventListener("visibilitychange", onVisibility);

@@ -49,16 +49,21 @@ page's own origin, with the browser's own visitor key as the bearer:
 
 | When | Call | Cadence |
 | --- | --- | --- |
-| A visit is open | `POST /bridge/snapshot` (state, new mail, a new frame), then `GET /bridge/directions?since=<cursor>` | About every 2 s (`BRIDGE_BEAT_MS`), and promptly when mail or a frame lands |
-| No visit is open | `GET /bridge/directions?since=0`, listening only for a director's `begin` request | Every 10 s (`IDLE_GLANCE_MS`) |
+| A visit is open | `POST /bridge/snapshot` (state, new mail, a new frame) | At once on new mail or a frame, otherwise every 15 s (`SNAPSHOT_HEARTBEAT_MS`) |
+| A visit is open | `GET /bridge/directions?since=<cursor>&wait=25&composing=<0|1>` | One held read at a time: answered the moment a direction, a begin or end request, or a composing change is there, or after 25 s (`BRIDGE_HOLD_S`), then asked again |
+| No visit is open | `GET /bridge/directions?since=0&wait=25`, listening only for a director's `begin` request | One held read at a time (an older bridge that does not hold is asked every 10 s, `IDLE_GLANCE_MS`) |
 | The visit ends | One closed snapshot so the face forgets it now | Once |
 
-The browser enacts pulled directions after checking them again with the
-same validator the door uses. Frames are captured at most every 30 s
-(`FRAME_CADENCE_MS`, 720 px on the long edge, JPEG). The face treats a
-visit as gone after 30 s without a snapshot (`BRIDGE_SNAPSHOT_LAPSE_MS`).
-The town folds a visit by its own heartbeat after 20 minutes
-(`VISIT_LAPSE_MS`).
+Held reads (Task 41, Nov 8, 2026) replaced a snapshot and a pull every 2 s
+(`BRIDGE_BEAT_MS`, now only the shortest gap between reads when a bridge
+answers at once). The browser enacts pulled directions after checking them
+again with the same validator the door uses. Frames are taken only when a
+visit opens and when a director asks for a `look` (480 px on the long edge,
+JPEG quality 0.6; `FRAME_MAX_EDGE`, `FRAME_JPEG_QUALITY`); a periodic cadence
+(`FRAME_CADENCE_MS`, 60 s) is an opt-in. With no snapshot for 30 s
+(`BRIDGE_SNAPSHOT_LAPSE_MS`) the face holds the visit in the background
+rather than ending it (Task 33). The town folds a visit by its own heartbeat
+after 20 minutes (`VISIT_LAPSE_MS`).
 
 The two `/bridge/*` routes belong to the browser. A director never
 calls them: posting a snapshot would overwrite the browser's real state,
@@ -203,13 +208,13 @@ browser. The browser then shows:
 
 | Status | Condition in code |
 | --- | --- |
-| "A director is reading the slate." | `directorSeenAt` within the last 15 s |
-| "Nobody is directing yet." | `directorSeenAt` null, or older than 15 s |
+| "A director is reading the slate." | `directorSeenAt` within the last 45 s (held reads see a director's touches at most every 25 s) |
+| "Nobody is directing yet." | `directorSeenAt` null, or older than 45 s |
 | "The director is unreachable; nobody is directing." | The snapshot or the pull failed (network, or a non-200 answer) |
 | "The bridge refused the token; check Settings." | The bridge answered 401 |
 
 So "Nobody is directing yet" is not an error. It means no director has
-touched this town's slate in the last 15 s. In Tuan's town, with
+touched this town's slate in the last 45 s. In Tuan's town, with
 town-bridge running, it reads "A director is reading the slate."
 
 ## 5. The Live Bridge alternative (Settings, Muse Visits)

@@ -8,6 +8,8 @@
          lives outside the space's routes and fails auth. -->
     <link rel="icon" href="data:," />
     <title>Muse Town</title>
+    <!-- The first paint (Task 41): a still of the town, there before any script. -->
+    <link rel="preload" as="image" href="./town-still.jpg" />
     <script src="./src/main.tsx" type="module"></script>
     <style>
       /* Pre-app splash: painted by the HTML itself, before any script
@@ -17,12 +19,16 @@
       .mt-splash {
         position: fixed; inset: 0; display: flex; flex-direction: column;
         align-items: center; justify-content: center; gap: 14px;
-        background: linear-gradient(to bottom, #7db8e6, #a8d4ee 55%, #d8f0e2);
+        background:
+          linear-gradient(to bottom, rgba(125, 184, 230, 0.35), rgba(216, 240, 226, 0.55)),
+          url("./town-still.jpg") center / cover no-repeat,
+          linear-gradient(to bottom, #7db8e6, #a8d4ee 55%, #d8f0e2);
         font-family: "Quicksand", system-ui, sans-serif; color: #22332b;
         text-align: center; padding: 24px;
       }
       .mt-splash .arch { font-size: 52px; line-height: 1; }
-      .mt-splash h1 { font-size: 26px; margin: 0; font-weight: 700; }
+      .mt-splash h1 { font-size: 26px; margin: 0; font-weight: 700; text-shadow: 0 1px 6px rgba(255, 255, 255, 0.85); }
+      .mt-splash > * { position: relative; }
       .mt-splash p { font-size: 14px; margin: 0; font-weight: 600; opacity: 0.75; }
       .mt-splash .spin {
         width: 36px; height: 36px; border-radius: 50%;

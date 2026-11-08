@@ -100,9 +100,14 @@ type Call = { status: number; json: unknown } | null;
 export const BRIDGE_CALL_TIMEOUT_MS = Math.max(8_000, BRIDGE_BEAT_MS * 4);
 export const BRIDGE_FRAME_CALL_TIMEOUT_MS = 20_000;
 
-async function call(url: string, token: string, init: RequestInit, fetchImpl: typeof fetch, timeoutMs = BRIDGE_CALL_TIMEOUT_MS): Promise<Call> {
+async function call(url: string, token: string, init: RequestInit, fetchImpl: typeof fetch, timeoutMs = BRIDGE_CALL_TIMEOUT_MS, outer?: AbortSignal): Promise<Call> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const onOuter = () => controller.abort();
+  if (outer) {
+    if (outer.aborted) controller.abort();
+    else outer.addEventListener("abort", onOuter, { once: true });
+  }
   try {
     const res = await fetchImpl(url, { ...init, headers: { ...(init.headers as Record<string, string> | undefined), authorization: `Bearer ${token}` }, signal: controller.signal });
     const text = await res.text();
@@ -111,6 +116,7 @@ async function call(url: string, token: string, init: RequestInit, fetchImpl: ty
     return null;
   } finally {
     clearTimeout(timer);
+    outer?.removeEventListener("abort", onOuter);
   }
 }
 
@@ -126,19 +132,18 @@ export function buildSnapshot(slate: VisitSlate, cursor: BridgeCursor): BridgeSn
 }
 
 /**
- * One beat of the leg. `read` is the live slate accessor: the network
- * waits happen before it is read, so a letter sent meanwhile is kept.
- * Returns null, having made no call, when no bridge is configured or
- * no visit is open.
+ * The leg's send half (Task 41): the snapshot, posted at once on new mail
+ * or a frame and on a slow heartbeat otherwise. Returns the cursor's
+ * send fields as they now stand, or the failure. Null when no bridge is
+ * configured or no visit is open.
  */
-export async function bridgeLeg(input: {
+export async function bridgePush(input: {
   settings: BridgeSettings | null | undefined;
   read: () => VisitSlate;
   cursor: BridgeCursor;
-  now: () => number;
   fetchImpl?: typeof fetch;
-}): Promise<BridgeLegResult | null> {
-  const { settings, read, now } = input;
+}): Promise<{ outcome: BridgeLegOutcome; ackedSeq: number; sentFrameId: number } | null> {
+  const { settings, read } = input;
   const fetchImpl = input.fetchImpl ?? fetch;
   if (!bridgeConfigured(settings)) return null;
   const before = read();
@@ -149,25 +154,54 @@ export async function bridgeLeg(input: {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(snapshot),
   }, fetchImpl, snapshot.frame ? BRIDGE_FRAME_CALL_TIMEOUT_MS : BRIDGE_CALL_TIMEOUT_MS);
-  const fail = (outcome: BridgeLegOutcome): BridgeLegResult => ({ slate: read(), cursor: input.cursor, outcome, directorSeenAt: null, queued: 0, refused: 0, ended: false });
-  if (!posted) return fail("unreachable");
-  if (posted.status === 401) return fail("refused");
+  const keep = { ackedSeq: input.cursor.ackedSeq, sentFrameId: input.cursor.sentFrameId };
+  if (!posted) return { outcome: "unreachable", ...keep };
+  if (posted.status === 401) return { outcome: "refused", ...keep };
   const ack = posted.json as BridgeSnapshotResponse | null;
-  if (posted.status !== 200 || !ack || ack.ok !== true) return fail("unreachable");
-  const pulled = await call(`${settings.url}/bridge/directions?since=${encodeURIComponent(String(input.cursor.pulledThrough))}`, settings.token, { method: "GET" }, fetchImpl);
+  if (posted.status !== 200 || !ack || ack.ok !== true) return { outcome: "unreachable", ...keep };
+  return {
+    outcome: "ok",
+    ackedSeq: Math.max(input.cursor.ackedSeq, ...snapshot.mail.map((m) => m.seq)),
+    sentFrameId: Math.max(input.cursor.sentFrameId, snapshot.frame?.id ?? 0),
+  };
+}
+
+/**
+ * The leg's read half: one pull, held up to `waitS` seconds for news
+ * (Task 41) where the bridge supports it (an older bridge simply answers
+ * at once). `read` is the live slate accessor: it is read after the
+ * wait, so a letter sent meanwhile is kept. Directions come in through
+ * the seam validator. Null when no bridge is configured or no visit is
+ * open.
+ */
+export async function bridgePull(input: {
+  settings: BridgeSettings | null | undefined;
+  read: () => VisitSlate;
+  cursor: BridgeCursor;
+  now: () => number;
+  waitS?: number;
+  signal?: AbortSignal;
+  fetchImpl?: typeof fetch;
+}): Promise<BridgeLegResult | null> {
+  const { settings, read, now } = input;
+  const fetchImpl = input.fetchImpl ?? fetch;
+  if (!bridgeConfigured(settings)) return null;
+  const before = read();
+  if (!before.active) return null;
+  const waitS = Math.max(0, Math.round(input.waitS ?? 0));
+  const held = waitS > 0 ? `&wait=${waitS}&composing=${before.composing ? 1 : 0}` : "";
+  const fail = (outcome: BridgeLegOutcome): BridgeLegResult => ({ slate: read(), cursor: input.cursor, outcome, directorSeenAt: null, queued: 0, refused: 0, ended: false });
+  const pulled = await call(`${settings.url}/bridge/directions?since=${encodeURIComponent(String(input.cursor.pulledThrough))}${held}`, settings.token, { method: "GET" }, fetchImpl, BRIDGE_CALL_TIMEOUT_MS + waitS * 1000, input.signal);
   if (!pulled) return fail("unreachable");
   if (pulled.status === 401) return fail("refused");
   const pull = pulled.json as BridgePullResponse | null;
   if (pulled.status !== 200 || !pull || !Array.isArray(pull.directions)) return fail("unreachable");
-  // Past the waits: the slate now, which may have grown meanwhile.
+  // Past the wait: the slate now, which may have grown meanwhile.
   let slate = read();
-  const cursor: BridgeCursor = {
-    ackedSeq: Math.max(input.cursor.ackedSeq, ...snapshot.mail.map((m) => m.seq)),
-    sentFrameId: Math.max(input.cursor.sentFrameId, snapshot.frame?.id ?? 0),
-    pulledThrough: input.cursor.pulledThrough,
-  };
-  if (!slate.active) return { slate, cursor, outcome: "ok", directorSeenAt: pull.directorSeenAt ?? null, queued: 0, refused: 0, ended: false };
-  if (pull.end === true) return { slate, cursor, outcome: "ok", directorSeenAt: typeof pull.directorSeenAt === "number" ? pull.directorSeenAt : null, queued: 0, refused: 0, ended: true };
+  const cursor: BridgeCursor = { ...input.cursor };
+  const seenAt = typeof pull.directorSeenAt === "number" ? pull.directorSeenAt : null;
+  if (!slate.active) return { slate, cursor, outcome: "ok", directorSeenAt: seenAt, queued: 0, refused: 0, ended: false };
+  if (pull.end === true) return { slate, cursor, outcome: "ok", directorSeenAt: seenAt, queued: 0, refused: 0, ended: true };
   let queued = 0;
   let refused = 0;
   const t = now();
@@ -175,23 +209,41 @@ export async function bridgeLeg(input: {
   for (const q of incoming) {
     if (q.id <= cursor.pulledThrough) continue;
     cursor.pulledThrough = q.id;
-    // The seam validator, exactly as harness directions pass it: a
-    // refused shape is dropped here and never reaches the scene.
     const step = enqueueDirection(slate, q.direction, t);
     slate = step.slate;
     if (step.result.ok) queued += 1;
     else refused += 1;
   }
   slate = setComposing(slate, pull.composing === true);
-  return { slate, cursor, outcome: "ok", directorSeenAt: typeof pull.directorSeenAt === "number" ? pull.directorSeenAt : null, queued, refused, ended: false };
+  return { slate, cursor, outcome: "ok", directorSeenAt: seenAt, queued, refused, ended: false };
+}
+
+/**
+ * One whole beat (the snapshot, then an immediate pull), as the leg
+ * worked before held reads; kept for callers and tests that want both.
+ */
+export async function bridgeLeg(input: {
+  settings: BridgeSettings | null | undefined;
+  read: () => VisitSlate;
+  cursor: BridgeCursor;
+  now: () => number;
+  fetchImpl?: typeof fetch;
+}): Promise<BridgeLegResult | null> {
+  if (!bridgeConfigured(input.settings) || !input.read().active) return null;
+  const pushed = await bridgePush(input);
+  if (!pushed) return null;
+  if (pushed.outcome !== "ok") return { slate: input.read(), cursor: input.cursor, outcome: pushed.outcome, directorSeenAt: null, queued: 0, refused: 0, ended: false };
+  const cursor = { ...input.cursor, ackedSeq: pushed.ackedSeq, sentFrameId: pushed.sentFrameId };
+  return bridgePull({ ...input, cursor });
 }
 
 /** The idle glance (hosted town only): with no visit open, one pull on
  *  a slow cadence to hear a director's begin request through the door.
  *  Null when nothing was heard or the door could not be reached. */
-export async function bridgeGlance(settings: BridgeSettings | null | undefined, fetchImpl: typeof fetch = fetch): Promise<{ begin: boolean } | null> {
+export async function bridgeGlance(settings: BridgeSettings | null | undefined, fetchImpl: typeof fetch = fetch, waitS = 0, signal?: AbortSignal): Promise<{ begin: boolean } | null> {
   if (!bridgeConfigured(settings)) return null;
-  const pulled = await call(`${settings.url}/bridge/directions?since=0`, settings.token, { method: "GET" }, fetchImpl);
+  const held = waitS > 0 ? `&wait=${Math.round(waitS)}` : "";
+  const pulled = await call(`${settings.url}/bridge/directions?since=0${held}`, settings.token, { method: "GET" }, fetchImpl, BRIDGE_CALL_TIMEOUT_MS + waitS * 1000, signal);
   if (!pulled || pulled.status !== 200) return null;
   const pull = pulled.json as BridgePullResponse | null;
   return pull ? { begin: pull.begin === true } : null;

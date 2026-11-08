@@ -25,7 +25,13 @@
 import { resolve } from "node:path";
 import type { z } from "zod";
 import type { SlateFace } from "../../shared/slateFace";
-import { DIRECTOR_TOKEN_HEADER } from "../../shared/visitProtocol";
+import { BRIDGE_HOLD_S, DIRECTOR_TOKEN_HEADER } from "../../shared/visitProtocol";
+
+/** Read actions whose answers carry a digest, answered 304 when unchanged (Task 41). */
+const DIGEST_ACTIONS = new Set(["getState"]);
+
+/** How often a held read looks for news. */
+const HOLD_LOOK_MS = 250;
 import { postgresStorage, ensureTown, townSchemaName, withTown, type PgTownDb } from "../../server/src/storage.pg";
 import { isDoorAction, type DoorDefinition } from "../../server/src/visitActions";
 import { createBlobStore, readBlob, verifyBlobPath, BLOB_PATH_PREFIX } from "./blobStore";
@@ -159,7 +165,17 @@ export function createTownServer(opts: TownServerOptions): TownServer {
         log(`action ${action} answered an invalid shape`);
         return json(500, { error: "the town answered an invalid shape" });
       }
-      return json(200, { result: checked.data, invalidate });
+      const payload = { result: checked.data, invalidate };
+      if (DIGEST_ACTIONS.has(action)) {
+        // Unchanged answers (Task 41, after Musebook's seen=<digest>): the
+        // town's state read carries a digest of itself; asked again with
+        // the same digest, it answers 304 and sends nothing.
+        const text = JSON.stringify(payload);
+        const tag = `"${Bun.hash(text).toString(36)}"`;
+        if (req.headers.get("if-none-match") === tag) return new Response(null, { status: 304, headers: { etag: tag, "cache-control": "no-store" } });
+        return new Response(text, { status: 200, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", etag: tag } });
+      }
+      return json(200, payload);
     } catch (error) {
       // The detail stays in the log; the browser gets a plain answer and
       // a reference that finds the log line, never the exception itself.
@@ -200,8 +216,18 @@ export function createTownServer(opts: TownServerOptions): TownServer {
     }
     if (url.pathname === "/bridge/directions") {
       if (req.method !== "GET") return json(405, { error: "method not allowed" });
-      const since = Number(url.searchParams.get("since") ?? "0");
-      return json(200, face.pull(Number.isFinite(since) ? since : 0));
+      const sinceRaw = Number(url.searchParams.get("since") ?? "0");
+      const since = Number.isFinite(sinceRaw) ? sinceRaw : 0;
+      // A held read (Task 41): wait up to BRIDGE_HOLD_S for news, then answer as ever.
+      const waitS = Math.min(BRIDGE_HOLD_S, Math.max(0, Number(url.searchParams.get("wait") ?? 0) || 0));
+      const composingParam = url.searchParams.get("composing");
+      const composingHeld = composingParam === null ? undefined : composingParam === "1";
+      if (waitS > 0) {
+        const deadline = now() + waitS * 1000;
+        while (!face.hasNews(since, composingHeld) && now() < deadline && !req.signal.aborted) await Bun.sleep(HOLD_LOOK_MS);
+        if (req.signal.aborted) return json(499, { error: "gone" });
+      }
+      return json(200, face.pull(since));
     }
     return json(404, { error: "not found" });
   }

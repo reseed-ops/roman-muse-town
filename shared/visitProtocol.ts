@@ -59,10 +59,13 @@ export const VISIT_INBOX_CAP = 20;
 export const VISIT_FRAME_KEEP = 2;
 /** The capped ring of small world events. */
 export const VISIT_EVENT_CAP = 24;
-/** Frame shape: long edge cap, JPEG quality, cadence, decoded byte cap. */
-export const FRAME_MAX_EDGE = 720;
-export const FRAME_JPEG_QUALITY = 0.7;
-export const FRAME_CADENCE_MS = 30_000;
+/** Frame shape: long edge cap, JPEG quality, cadence, decoded byte cap.
+ *  Task 41 (mobile performance): smaller and rarer, a frame is taken only
+ *  when a visit opens and when a director asks for a look; the cadence is
+ *  an opt-in for a caller that wants periodic frames. */
+export const FRAME_MAX_EDGE = 480;
+export const FRAME_JPEG_QUALITY = 0.6;
+export const FRAME_CADENCE_MS = 60_000;
 export const FRAME_MAX_BYTES = 400_000;
 /** A visit lapses when its heartbeat is this old (a generous stretch). */
 export const VISIT_LAPSE_MS = 20 * 60 * 1000;
@@ -321,6 +324,15 @@ export type DirectorPack = { text: string; updatedAt: number | null };
 // same beat. Frame bytes travel only in a snapshot, and only once.
 
 export const BRIDGE_BEAT_MS = 2000;
+/** Held reads (Task 41, after Musebook's wait=30): a pull may wait up to
+ *  this many seconds for something new (a direction, a begin or end
+ *  request, the composing flag turning over) instead of the client
+ *  asking every BRIDGE_BEAT_MS. BRIDGE_BEAT_MS stays the shortest gap
+ *  between reads, for a bridge that answers at once. */
+export const BRIDGE_HOLD_S = 25;
+/** While a visit is open the town reports its state at least this often
+ *  (and at once on new mail or a frame), well inside the snapshot lapse. */
+export const SNAPSHOT_HEARTBEAT_MS = 15_000;
 /** No snapshot for this long and the visit reads as in the background
  *  (the town's tab is away): still open, its directions queued for the
  *  tab's return (Task 33). Before Task 33 this ended the visit. */

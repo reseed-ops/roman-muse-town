@@ -30,4 +30,7 @@ test.skipIf(!built)("the built town is whole and the server serves it", async ()
   expect(manifest.status).toBe(200);
   expect(Object.keys(((await manifest.json()) as { entries: Record<string, unknown> }).entries).length).toBeGreaterThan(100);
   expect(await (await get("/healthz")).json()).toEqual({ ok: true });
+  // The first paint's still (Task 41), named by the page and served.
+  expect(html).toContain("town-still.jpg");
+  expect((await get("/town-still.jpg")).status).toBe(200);
 });

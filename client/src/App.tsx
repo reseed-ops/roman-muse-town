@@ -217,8 +217,8 @@ import {
 } from "./visitSlate";
 import { frameDue, validateFrameDataUrl } from "./visitFrames";
 import { HARNESS_STORAGE_KEY, IDLE_GLANCE_MS, resolveHarnessUrl, syncWithHarness } from "./visitHarnessClient";
-import { bridgeClose, bridgeConfigured, bridgeGlance, bridgeLeaving, bridgeLeg, emptyBridgeCursor, hostedBridgeSettings, readBridgeSettings, resolveBridge, storeBridgeSettings, type BridgeCursor, type BridgeSettings } from "./visitBridgeClient";
-import { BRIDGE_BEAT_MS, FRAME_JPEG_QUALITY, FRAME_MAX_EDGE, VISIT_LAPSE_MS, VISIT_POLL_MS, type QueuedDirection } from "../../shared/visitProtocol";
+import { bridgeClose, bridgeConfigured, bridgeGlance, bridgeLeaving, bridgePull, bridgePush, emptyBridgeCursor, hostedBridgeSettings, readBridgeSettings, resolveBridge, storeBridgeSettings, type BridgeCursor, type BridgeSettings } from "./visitBridgeClient";
+import { BRIDGE_BEAT_MS, BRIDGE_HOLD_S, FRAME_JPEG_QUALITY, FRAME_MAX_EDGE, SNAPSHOT_HEARTBEAT_MS, VISIT_LAPSE_MS, VISIT_POLL_MS, type QueuedDirection } from "../../shared/visitProtocol";
 import { clearVisitResume, loadVisitResume, saveVisitResume, sessionStore } from "./visitResume";
 import { ConnectMusePanel, useConnectMuse } from "./ConnectMusePanel";
 import { HistoryBook, lessonForPlace, TownStoryTag } from "./HistoryBook";
@@ -274,6 +274,19 @@ function rememberInvite(change: (memory: InviteMemory) => InviteMemory) {
 const VISIT_AWAY_NOTICE_MS = 20_000;
 /** Which history lesson each building's panel offers (Task 37). */
 const PLACE_HISTORY: Record<string, string> = { mainchat: "basilica", stories: "villa", recipes: "kitchen", garden: "garden", stars: "pavilion" };
+/** A director touched the slate this recently: "a director is reading" (held reads see touches at most every BRIDGE_HOLD_S). */
+const DIRECTOR_LIVE_WINDOW_MS = 45_000;
+/** Wait, or stop at once when the signal fires. */
+function sleepFor(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    if (signal.aborted) return resolve();
+    const timer = window.setTimeout(resolve, ms);
+    signal.addEventListener("abort", () => {
+      window.clearTimeout(timer);
+      resolve();
+    }, { once: true });
+  });
+}
 const OPENER_REUSE_MS = 3 * 60 * 1000;
 
 export function App() {
@@ -5444,86 +5457,129 @@ export function App() {
     const timer = window.setInterval(tick, period);
     return () => window.clearInterval(timer);
   }, [visitUi.active]);
-  // The Live Bridge leg (Task 7): about every BRIDGE_BEAT_MS while a
-  // visit is open and a bridge URL is set, and promptly on new mail or
-  // a fresh frame. The snapshot goes out; the directions come back in
-  // through the seam validator and the same enactment as the harness;
-  // the bridge's composing state drives the panel's writing line.
-  const bridgeBeat = async () => {
-    const result = await bridgeLeg({ settings: bridgeRef.current, read: () => visitRef.current, cursor: bridgeCursorRef.current, now: Date.now });
-    if (!result || !result.slate.active) return;
-    bridgeCursorRef.current = result.cursor;
-    if (result.outcome !== "ok") {
-      // One slow beat is not an outage: "unreachable" only after a few
-      // in a row; a refused token says so at once.
-      bridgeFailsRef.current += 1;
-      if (result.outcome === "refused" || bridgeFailsRef.current >= UNREACHABLE_AFTER_FAILS) publishVisit(result.outcome);
-      else publishVisit();
-      return;
+  // The Live Bridge leg (Task 7; held reads since Task 41). Two halves:
+  // the snapshot goes out at once on new mail or a fresh frame, and on a
+  // slow heartbeat (SNAPSHOT_HEARTBEAT_MS) otherwise; the directions come
+  // back on one held read at a time, which the bridge answers the moment
+  // something new is there (a direction, a begin or end, the composing
+  // flag turning over) or after BRIDGE_HOLD_S. In through the seam
+  // validator and the same enactment as the harness.
+  const noteBridgeOutcome = (outcome: "ok" | "unreachable" | "refused") => {
+    if (outcome === "ok") {
+      bridgeFailsRef.current = 0;
+      return true;
     }
-    bridgeFailsRef.current = 0;
+    // One slow call is not an outage: "unreachable" only after a few in
+    // a row; a refused token says so at once.
+    bridgeFailsRef.current += 1;
+    if (outcome === "refused" || bridgeFailsRef.current >= UNREACHABLE_AFTER_FAILS) publishVisit(outcome);
+    else publishVisit();
+    return false;
+  };
+  const bridgeSend = async () => {
+    const pushed = await bridgePush({ settings: bridgeRef.current, read: () => visitRef.current, cursor: bridgeCursorRef.current });
+    if (!pushed) return;
+    if (!noteBridgeOutcome(pushed.outcome)) return;
+    bridgeCursorRef.current = { ...bridgeCursorRef.current, ackedSeq: pushed.ackedSeq, sentFrameId: pushed.sentFrameId };
+    // The bridge answered: the visit is alive as long as the tab is
+    // open and reaching it; it lapses only after VISIT_LAPSE_MS with no
+    // contact at all.
+    visitRef.current = heartbeat(visitRef.current, Date.now());
+  };
+  const bridgeRead = async (signal: AbortSignal) => {
+    const result = await bridgePull({ settings: bridgeRef.current, read: () => visitRef.current, cursor: bridgeCursorRef.current, now: Date.now, waitS: BRIDGE_HOLD_S, signal });
+    if (signal.aborted) return { got: false, ok: false };
+    if (!result || !result.slate.active) return { got: false, ok: true };
+    if (!noteBridgeOutcome(result.outcome)) return { got: false, ok: false };
+    bridgeCursorRef.current = { ...bridgeCursorRef.current, pulledThrough: result.cursor.pulledThrough };
     if (result.ended) {
       // The director ended it through the hosted door: the town folds
       // the visit itself, exactly as it folds a harness end.
       visitRef.current = result.slate;
       visitRefs.current.endVisitNow("director");
-      return;
+      return { got: true, ok: true };
     }
-    // The bridge answered: the visit is alive as long as the tab is
-    // open and reaching it (fix list, Nov 7, 2026); it lapses only
-    // after VISIT_LAPSE_MS with no contact at all.
     if (result.directorSeenAt !== null) directorSeenAtRef.current = result.directorSeenAt;
     visitRef.current = drainVisitQueue(heartbeat(result.slate, Date.now()));
-    publishVisit(result.directorSeenAt !== null && Date.now() - result.directorSeenAt < 15_000 ? "live" : "none");
+    publishVisit(result.directorSeenAt !== null && Date.now() - result.directorSeenAt < DIRECTOR_LIVE_WINDOW_MS ? "live" : "none");
+    return { got: result.queued + result.refused > 0, ok: true };
   };
-  const bridgeBeatRef = useRef(bridgeBeat);
-  bridgeBeatRef.current = bridgeBeat;
+  const bridgeSendRef = useRef(bridgeSend);
+  bridgeSendRef.current = bridgeSend;
+  const bridgeReadRef = useRef(bridgeRead);
+  bridgeReadRef.current = bridgeRead;
   const bridgeOn = visitUi.active && bridgeConfigured(activeBridge);
   useEffect(() => {
     if (!bridgeOn) return;
+    let alive = true;
+    const stop = new AbortController();
+    // The send half: at once when nudged (new mail, a frame), else on the heartbeat.
     let busy = false;
     let again = false;
-    const tick = () => {
+    const send = () => {
       if (busy) {
         again = true;
         return;
       }
       busy = true;
-      void bridgeBeatRef.current().finally(() => {
+      void bridgeSendRef.current().finally(() => {
         busy = false;
-        if (again) {
+        if (again && alive) {
           again = false;
-          tick();
+          send();
         }
       });
     };
-    bridgeNudgeRef.current = tick;
-    tick();
-    const timer = window.setInterval(tick, BRIDGE_BEAT_MS);
+    bridgeNudgeRef.current = send;
+    send();
+    const heartbeatTimer = window.setInterval(send, SNAPSHOT_HEARTBEAT_MS);
+    // The read half: one held read after another, never closer than
+    // BRIDGE_BEAT_MS when an answer comes back at once with nothing in it
+    // (an older bridge that does not hold), and backing off on failure.
+    void (async () => {
+      while (alive) {
+        const started = Date.now();
+        const r = await bridgeReadRef.current(stop.signal);
+        if (!alive) break;
+        const quick = Date.now() - started < 1000;
+        if (!r.ok) await sleepFor(BRIDGE_BEAT_MS * 2, stop.signal);
+        else if (quick && !r.got) await sleepFor(BRIDGE_BEAT_MS, stop.signal);
+      }
+    })();
     return () => {
-      window.clearInterval(timer);
+      alive = false;
+      stop.abort();
+      window.clearInterval(heartbeatTimer);
       bridgeNudgeRef.current = () => {};
     };
   }, [bridgeOn, activeBridge?.url, activeBridge?.token]);
-  // The hosted town's idle glance (Task 8): with no visit open and the
-  // town's own door as the bridge, one slow pull to hear a director's
-  // begin request. An owner-entered bridge is never glanced at idle.
+  // The hosted town's idle glance (Task 8; held since Task 41): with no
+  // visit open and the town's own door as the bridge, one held read at a
+  // time to hear a director's begin request. An owner-entered bridge is
+  // never glanced at idle.
   const glanceOn = !visitUi.active && !!hostedBridge && !bridgeConfigured(bridgeSettings);
   useEffect(() => {
     if (!glanceOn) return;
-    let busy = false;
-    const tick = () => {
-      if (busy) return;
-      busy = true;
-      void bridgeGlance(hostedBridge).then((heard) => {
-        if (heard?.begin) visitRefs.current.beginVisitNow("director");
-      }).finally(() => {
-        busy = false;
-      });
+    let alive = true;
+    const stop = new AbortController();
+    void (async () => {
+      while (alive) {
+        const started = Date.now();
+        const heard = await bridgeGlance(hostedBridge, fetch, BRIDGE_HOLD_S, stop.signal);
+        if (!alive) break;
+        if (heard?.begin) {
+          visitRefs.current.beginVisitNow("director");
+          break;
+        }
+        // An answer that came back at once (no hold, or the door away)
+        // waits the old idle glance's gap before asking again.
+        if (Date.now() - started < 1000) await sleepFor(IDLE_GLANCE_MS, stop.signal);
+      }
+    })();
+    return () => {
+      alive = false;
+      stop.abort();
     };
-    tick();
-    const timer = window.setInterval(tick, IDLE_GLANCE_MS);
-    return () => window.clearInterval(timer);
   }, [glanceOn, hostedBridge]);
 
   // A visit picked up after a reload (fix list, Nov 7, 2026): the
@@ -5925,6 +5981,8 @@ export function App() {
           className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-gradient-to-b from-[#7db8e6] via-[#a8d4ee] to-[#d8f0e2] px-6 text-center"
           role="status"
           aria-label="Muse Town is loading"
+          // The town itself, still, while it loads (Task 41): the same picture the HTML splash shows.
+          style={{ background: 'linear-gradient(to bottom, rgba(125,184,230,0.35), rgba(216,240,226,0.6)), url("./town-still.jpg") center / cover no-repeat, linear-gradient(to bottom, #7db8e6, #a8d4ee 55%, #d8f0e2)' }}
         >
           <span aria-hidden="true" className="text-5xl">🏛️</span>
           <h1 className="text-2xl font-bold text-[#22332b]">Muse Town</h1>
