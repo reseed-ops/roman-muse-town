@@ -5,6 +5,7 @@ import { aimSeaPath, buildSeaCliff, CLIFF, clampToWorld, walkable as onCliffPath
 import { createTrueSky, skyDirection, SKY_REFRESH_S } from "./trueSky";
 import { armsVisibility, createGaiusArms } from "./gaiusArms";
 import { createNightLights } from "./nightLights";
+import { createStreetLampSystem } from "./streetLamps";
 import { BUBBLE_SPEAKERS, bubblePageDuration, drawBubblePlate, paginateBubbleText, type BubbleSpeaker } from "./bubblePlate";
 import { samplePath } from "./pathGeometry";
 import { streetWidth } from "./town";
@@ -56,7 +57,7 @@ import {
   type VisitTelemetry,
 } from "../../shared/visitProtocol";
 import { frameDimensions } from "./visitFrames";
-import { playLampIgnite, setBeeHumLevel, setCricketLevel, setRainLevel, setRainShelter, setSurfLevel } from "./audio";
+import { playLampIgnite, setBeeHumLevel, setCricketLevel, setLampCrackleLevel, setRainLevel, setRainShelter, setSurfLevel } from "./audio";
 import { HOME } from "./town";
 import { createCritters, type XZ } from "./townCritters";
 import { FEEL } from "./feel";
@@ -2513,92 +2514,16 @@ export function createTownScene(
   lightningLight.position.set(-10, 30, -14);
   scene.add(lightningLight);
 
-  // --- Roman lantern posts (redesigned Nov 1: the old cone-cap over a
-  // bare glowing sphere read as "a head with a hat" in the user's night
-  // screenshot). No pack holds a street lamp (the Roman pack has only a
-  // wall torch), so the lantern is built from primitives in the town
-  // palette: a slender bronze post with a banded shaft and small
-  // capital, topped by a square tapered lantern cage, thin frame bars,
-  // warm amber glass (one shared material on the lamp circuit, so the
-  // night glow is sourced from inside the cage), a peaked pyramid cap
-  // with a finial ball and hanging ring. Positions, light counts, and
-  // colliders are exactly the old lamps'; only the model changed.
-  const lanternGlassMat = new THREE.MeshStandardMaterial({
-    color: 0xe8a84c,
-    roughness: 0.4,
-    emissive: 0xffb845,
-    emissiveIntensity: 0,
-  });
+  // --- Roman oil lanterns -------------------------------------------------
+  // Stone-and-bronze standards carry small hanging oil cages over the road.
+  // Their flames, halos, wet reflections, moths, staggered dusk lighting and
+  // camera-budgeted local lights live in one circuit. Unlike the old broad
+  // plaza wash, light now visibly comes from the individual cages.
+  const streetLamps = createStreetLampSystem(scene, world);
+  const buildLanternCage = streetLamps.buildCage;
+  const buildLanternPost = streetLamps.buildPost;
   const lanternBronze = mat(0x3a3128, { rough: 0.55, metal: 0.45 });
   const lanternIron = mat(0x2b241d, { rough: 0.6, metal: 0.35 });
-  /** A lantern cage centred on the origin (glass centre at y 0):
-   *  frame plates top and bottom, four corner bars, tapered amber
-   *  panes, an emissive core, and the peaked cap with finial + ring.
-   *  `s` scales the whole cage (dock/terrace lanterns are smaller). */
-  function buildLanternCage(s: number): THREE.Group {
-    const cage = new THREE.Group();
-    const plateB = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.05, 0.4), lanternBronze);
-    plateB.position.y = -0.24;
-    cage.add(plateB);
-    const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.155, 0.195, 0.42, 4), lanternGlassMat);
-    glass.rotation.y = Math.PI / 4;
-    cage.add(glass);
-    const core = new THREE.Mesh(new THREE.SphereGeometry(0.085, 10, 8), lanternGlassMat);
-    cage.add(core);
-    for (const cx of [-0.155, 0.155]) {
-      for (const cz of [-0.155, 0.155]) {
-        const bar = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.47, 0.04), lanternIron);
-        bar.position.set(cx, 0, cz);
-        bar.castShadow = true;
-        cage.add(bar);
-      }
-    }
-    const plateT = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.05, 0.42), lanternBronze);
-    plateT.position.y = 0.24;
-    cage.add(plateT);
-    const cap = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.2, 4), lanternIron);
-    cap.rotation.y = Math.PI / 4;
-    cap.position.y = 0.36;
-    cap.castShadow = true;
-    cage.add(cap);
-    const finial = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 8), lanternBronze);
-    finial.position.y = 0.49;
-    cage.add(finial);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.013, 6, 14), lanternBronze);
-    ring.position.y = 0.58;
-    cage.add(ring);
-    cage.scale.setScalar(s);
-    return cage;
-  }
-  /** A full lantern post: stepped plinth, banded shaft, capital, cage.
-   *  The cage's glass centre stands at y ≈ 2.86, where the old lamp
-   *  heads sat, so bunting heights and the night light feel are
-   *  unchanged. */
-  function buildLanternPost(): THREE.Group {
-    const lamp = new THREE.Group();
-    const plinth = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.23, 0.22, 8), lanternIron);
-    plinth.position.y = 0.11;
-    lamp.add(plinth);
-    const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.1, 8), lanternBronze);
-    collar.position.y = 0.27;
-    lamp.add(collar);
-    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.07, 2.2, 8), lanternIron);
-    shaft.position.y = 1.35;
-    shaft.castShadow = true;
-    lamp.add(shaft);
-    for (const by of [0.8, 1.45, 2.1]) {
-      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.07, 8), lanternBronze);
-      band.position.y = by;
-      lamp.add(band);
-    }
-    const capital = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.11, 0.14, 8), lanternBronze);
-    capital.position.y = 2.52;
-    lamp.add(capital);
-    const cage = buildLanternCage(1);
-    cage.position.y = 2.86;
-    lamp.add(cage);
-    return lamp;
-  }
 
   // Lamp posts. The south-east and north-west plaza lamps were nudged
   // outward onto the grass verge (were [3.6, 3.6] and [-3.6, -3.6]):
@@ -2614,9 +2539,13 @@ export function createTownScene(
     [6.4, 19.6],
     [-6.4, 19.6],
   ];
-  lampHeads.push(lanternGlassMat);
-  for (const [lx, lz] of lampPositions) {
-    const lamp = buildLanternPost();
+  for (let i = 0; i < lampPositions.length; i++) {
+    const [lx, lz] = lampPositions[i]!;
+    const lamp = buildLanternPost({
+      inward: lx > 0 ? -1 : 1,
+      variant: (i % 2) as 0 | 1,
+      ignitionOrder: Math.min(1, Math.hypot(lx, lz) / 42),
+    });
     lamp.position.set(lx, terrainHeight(lx, lz), lz);
     world.add(lamp);
   }
@@ -2631,8 +2560,14 @@ export function createTownScene(
   {
     // Extra lanterns up the avenue (heads join the lamp circuit).
     const lanternGroup = new THREE.Group();
-    for (const [lx, lz] of [[3, 27.2], [-3, 27.2], [3, 37], [-3, 37]] as [number, number][]) {
-      const lamp = buildLanternPost();
+    const avenueLamps = [[3, 27.2], [-3, 27.2], [3, 37], [-3, 37]] as [number, number][];
+    for (let i = 0; i < avenueLamps.length; i++) {
+      const [lx, lz] = avenueLamps[i]!;
+      const lamp = buildLanternPost({
+        inward: lx > 0 ? -1 : 1,
+        variant: (i % 2) as 0 | 1,
+        ignitionOrder: 0.62 + i * 0.08,
+      });
       lamp.position.set(lx, terrainHeight(lx, lz), lz);
       lanternGroup.add(lamp);
     }
@@ -3672,12 +3607,9 @@ export function createTownScene(
     pole.position.set(-13.45, DOCK_TOP + 0.75, LAKE_CZ + 0.45);
     pole.castShadow = true;
     dockGroup.add(pole);
-    const dockLamp = buildLanternCage(0.62);
+    const dockLamp = buildLanternCage(0.62, { groundOffset: 1.58, ignitionOrder: 0.58 });
     dockLamp.position.set(-13.45, DOCK_TOP + 1.58, LAKE_CZ + 0.45);
     dockGroup.add(dockLamp);
-    const dockGlow = new THREE.PointLight(0xffb86b, 9, 8, 1.8);
-    dockGlow.position.set(-13.45, DOCK_TOP + 1.7, LAKE_CZ + 0.45);
-    dockGroup.add(dockGlow);
     dockGroup.traverse((o) => {
       o.userData.pick = { kind: "dock", id: "dock" } satisfies { kind: PickKind; id: string };
     });
@@ -4191,13 +4123,10 @@ export function createTownScene(
       pole.position.set(lx, 0.8, 0.7);
       pole.castShadow = true;
       secretGroup.add(pole);
-      const lampHead = buildLanternCage(0.68);
+      const lampHead = buildLanternCage(0.68, { groundOffset: 1.68, ignitionOrder: 0.74 });
       lampHead.position.set(lx, 1.68, 0.7);
       secretGroup.add(lampHead);
     }
-    const secretGlow = new THREE.PointLight(0xffb86b, 14, 10, 1.8);
-    secretGlow.position.set(0, 1.9, 0.2);
-    secretGroup.add(secretGlow);
     secretGroup.position.set(sx, terrainHeight(sx, sz), sz);
     secretGroup.rotation.y = Math.atan2(-sx, -sz);
     world.add(secretGroup);
@@ -4588,20 +4517,15 @@ export function createTownScene(
       flask.position.set(bx + 0.6, 0.61, -3.5);
       g.add(flask);
     }
-    // Two lanterns, warm against the steam.
+    // Two oil lanterns, warm against the steam and on the same dusk
+    // circuit as every street fixture (no fixed daylight point lights).
     for (const lx of [-4.6, 4.6]) {
       const post = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 1.6, 6), mat(0x5a4632, { rough: 1 }));
       post.position.set(lx, 0.8, 1.8);
       g.add(post);
-      const lampHead = new THREE.Mesh(
-        new THREE.BoxGeometry(0.2, 0.24, 0.2),
-        new THREE.MeshStandardMaterial({ color: 0xffc873, emissive: 0xffb845, emissiveIntensity: 1.2 }),
-      );
+      const lampHead = buildLanternCage(0.56, { groundOffset: 1.72, ignitionOrder: 0.46 });
       lampHead.position.set(lx, 1.72, 1.8);
       g.add(lampHead);
-      const light = new THREE.PointLight(0xffb86b, 9, 10, 1.8);
-      light.position.set(lx, 1.85, 1.8);
-      g.add(light);
     }
     world.add(g);
     treePlacement.addBuilding(g, "The Baths");
@@ -10960,7 +10884,9 @@ export function createTownScene(
     // Lamps come on at night, and early under fog or rain, where a
     // warm window against the grey does most of the cosy work.
     const lampLevel = Math.min(1, nightMix + (weatherId === "fog" ? 0.45 : 0) + wCur.rain * FEEL.rainLampGlow);
-    plazaGlow.intensity = lampLevel * 60;
+    // A faint shared lift prevents crushed blacks; the visible pools come
+    // from the individual fixtures below, not one implausible plaza bulb.
+    plazaGlow.intensity = lampLevel * 8;
     // Night faces: the soft moon and the warm fill on the pair.
     nightLights.update({
       nightMix,
@@ -10989,6 +10915,22 @@ export function createTownScene(
       headMat.emissive.setHex(dreamMode === "false" ? 0xff6a2a : 0xffb845);
       headMat.emissiveIntensity = dreamMode === "false" ? 1.5 : lampLevel * 1.6;
     }
+    const lampState = streetLamps.update({
+      t: performance.now() / 1000,
+      lampLevel,
+      wetness,
+      fog: weatherId === "fog",
+      rain: wCur.rain,
+      wind: wCur.wind,
+      season: currentTreeSeason,
+      tier: runtime.tier,
+      camera,
+      listener: walking ? walkPos : camera.position,
+      reducedMotion: opts.reducedMotion,
+      falseDream: dreamMode === "false",
+    });
+    if (lampState.ignitedNear) playLampIgnite();
+    setLampCrackleLevel(lampState.crackle);
     // The grass texture carries the green; tint it toward the weather,
     // then night, then darken it while wet and whiten it under snow cover.
     const g = (ground.material as THREE.MeshStandardMaterial).color;
@@ -13298,6 +13240,7 @@ export function createTownScene(
       critters.dispose();
       setBeeHumLevel(0);
       setCricketLevel(0);
+      setLampCrackleLevel(0);
       runtime.dispose();
       resources.dispose();
       renderer.dispose();

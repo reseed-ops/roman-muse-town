@@ -598,6 +598,25 @@ function setLoopLevel(
 }
 
 let beeHum: Loop | null = null;
+
+let lampCrackle: Loop | null = null;
+/** The oil lamps' close, nearly subliminal flame bed. The scene sends
+ *  distance attenuation, so it exists only while someone stands in a
+ *  pool of light and never becomes a town-wide fireplace. */
+export function setLampCrackleLevel(level: number) {
+  lampCrackle = setLoopLevel(lampCrackle, level, 0.018, (ac, master) => {
+    const noise = ac.createBufferSource();
+    noise.buffer = noiseBuffer(ac);
+    noise.loop = true;
+    const band = ac.createBiquadFilter();
+    band.type = "bandpass";
+    band.frequency.value = 720;
+    band.Q.value = 0.55;
+    noise.connect(band).connect(master);
+    return [noise];
+  });
+}
+
 /** A bee's soft hum, only when he is close to one (Task 46). */
 export function setBeeHumLevel(level: number) {
   beeHum = setLoopLevel(beeHum, level, 0.05, (ac, master) => {
