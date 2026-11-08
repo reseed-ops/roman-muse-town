@@ -37,7 +37,7 @@ Copy the complete assets folder from the earlier builds into
 (`muse-avatar.vrm`, `trees_pack.glb`); `.gitignore` keeps all the others
 out of git, which is correct. Never commit or push the licensed files.
 
-Expected contents, 121 files in total (the two tracked files plus the 119 itemised in `ASSETS.md`):
+Expected contents, 123 files in total (the two tracked files plus the 121 itemised in `ASSETS.md`):
 
 - Root of `assets/` (8): `muse-avatar.vrm`, `trees_pack.glb`,
   `centurion.vrm`, `phoenix.fbx`, `phoenix_tex.png`, `wolf.glb`,
@@ -49,15 +49,15 @@ Expected contents, 121 files in total (the two tracked files plus the 119 itemis
 - `anim/outdoor/` (18 FBX): `f_` and `m_` versions of `bench1`,
   `bench2`, `flirt`, `hug`, `sittalk1`, `sittalk2`, `talk1`, `talk2`,
   `talk3`
-- `roman/` (56): 53 `.glb` (annex_sidechat, apple, aqueduct,
+- `roman/` (58): 55 `.glb` (annex_sidechat, apple, aqueduct,
   aqueduct_connector, arch_round, ballista, banner, banner_triangle,
   barrel, bench_stone, bench_wooden, boat_small, booth_a, booth_b,
   booth_c, bowl, bread, bush_a, bush_b, bush_c, bush_d, bush_e,
   bush_roman, colosseum, column_ionic, column_simple, conifer, crate,
-  cypress, flower_a, flower_group, flower_med, grapes, grass_patch,
+  cypress, flower_a, flower_group, flower_med, gladius, grapes, grass_patch,
   house_garden, house_sounds, insulae_recipes, olive, paddle,
   pavilion_stars, platform_wooden, pottery1, pottery2, rock_pack, senate,
-  statue_mars, temple, tree_a, tree_b, tree_c, tree_d, triumphal_arch,
+  shield_legionaire, statue_mars, temple, tree_a, tree_b, tree_c, tree_d, triumphal_arch,
   villa_stories), plus `torch.fbx`, `palette.png`, `water_normal.png`
 - `greek/` (13 FBX): `greek_bench_1`, `greek_bench_2`, `greek_bowl`,
   `greek_bucket`, `greek_decorative_bowl`, `greek_dock`,
@@ -72,20 +72,20 @@ Expected contents, 121 files in total (the two tracked files plus the 119 itemis
 
 Run this from the checkout root. It prints every missing file and the
 total count; proceed only when nothing is listed as missing and the count
-is 121.
+is 123.
 
 ```bash
 A=client/src/assets; missing=0
 for f in muse-avatar.vrm trees_pack.glb centurion.vrm phoenix.fbx phoenix_tex.png wolf.glb greek_atlas.png stars-fall-song.mp3 \
   anim/{f_idle,f_walk,f_run,f_wave,f_sit,f_dance,f_pose_a,f_pose_b,m_idle,m_walk,m_run,m_wave,m_sit,m_dance,m_jump_start,m_jump_air,m_jump_end,m_slide}.fbx \
   anim/outdoor/{f,m}_{bench1,bench2,flirt,hug,sittalk1,sittalk2,talk1,talk2,talk3}.fbx \
-  roman/{annex_sidechat,apple,aqueduct,aqueduct_connector,arch_round,ballista,banner,banner_triangle,barrel,bench_stone,bench_wooden,boat_small,booth_a,booth_b,booth_c,bowl,bread,bush_a,bush_b,bush_c,bush_d,bush_e,bush_roman,colosseum,column_ionic,column_simple,conifer,crate,cypress,flower_a,flower_group,flower_med,grapes,grass_patch,house_garden,house_sounds,insulae_recipes,olive,paddle,pavilion_stars,platform_wooden,pottery1,pottery2,rock_pack,senate,statue_mars,temple,tree_a,tree_b,tree_c,tree_d,triumphal_arch,villa_stories}.glb \
+  roman/{annex_sidechat,apple,aqueduct,aqueduct_connector,arch_round,ballista,banner,banner_triangle,barrel,bench_stone,bench_wooden,boat_small,booth_a,booth_b,booth_c,bowl,bread,bush_a,bush_b,bush_c,bush_d,bush_e,bush_roman,colosseum,column_ionic,column_simple,conifer,crate,cypress,flower_a,flower_group,flower_med,gladius,grapes,grass_patch,house_garden,house_sounds,insulae_recipes,olive,paddle,pavilion_stars,platform_wooden,pottery1,pottery2,rock_pack,senate,shield_legionaire,statue_mars,temple,tree_a,tree_b,tree_c,tree_d,triumphal_arch,villa_stories}.glb \
   roman/torch.fbx roman/palette.png roman/water_normal.png \
   greek/{greek_bench_1,greek_bench_2,greek_bowl,greek_bucket,greek_decorative_bowl,greek_dock,greek_drying_rack,greek_garden_1,greek_pool_1,greek_pot_1,greek_pot_2,greek_table_1,greek_wood_pile}.fbx \
   pets/{cat.fbx,cat_05.png,chicken.fbx,chicken_01.png,pig.fbx,pig_01.png,sheep.fbx,sheep_05.png}; do
   [ -f "$A/$f" ] || { echo "MISSING: $f"; missing=$((missing+1)); }
 done
-echo "missing: $missing"; echo "present: $(find $A -type f | wc -l) (expect 121)"
+echo "missing: $missing"; echo "present: $(find $A -type f | wc -l) (expect 123)"
 git status --short client/src/assets   # must print nothing
 ```
 
@@ -117,7 +117,7 @@ railway status                                       # confirms project Reseed, 
 E=$(mktemp -d)/upload; mkdir -p "$E"
 git ls-files -z | grep -z -v -x '.gitignore' | tar --null -T - -cf - | tar -xf - -C "$E"
 cp -r client/src/assets/. "$E/client/src/assets/"
-echo "assets in export: $(find "$E/client/src/assets" -type f | wc -l) (expect 121)"
+echo "assets in export: $(find "$E/client/src/assets" -type f | wc -l) (expect 123)"
 
 # Upload from INSIDE the export (a path argument outside the working
 # directory fails with "prefix not found"); the link lives in the

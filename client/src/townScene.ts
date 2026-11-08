@@ -180,6 +180,8 @@ import benchWoodenUrl from "./assets/roman/bench_wooden.glb";
 import bannerUrl from "./assets/roman/banner.glb";
 import bannerTriangleUrl from "./assets/roman/banner_triangle.glb";
 import ballistaUrl from "./assets/roman/ballista.glb";
+import gladiusUrl from "./assets/roman/gladius.glb";
+import shieldLegionaireUrl from "./assets/roman/shield_legionaire.glb";
 import statueMarsUrl from "./assets/roman/statue_mars.glb";
 import barrelUrl from "./assets/roman/barrel.glb";
 import crateUrl from "./assets/roman/crate.glb";
@@ -740,8 +742,11 @@ const LOAD_TIER_BY_URL = new Map<string, LoadTier>([
   [aqueductUrl, 2],
   [aqueductConnectorUrl, 2],
   [ballistaUrl, 2],
-  // Tier 0, the characters, before everything.
+  // Tier 0, the characters, before everything (his gladius and
+  // shield ride with him, two small files).
   [centurionUrl, 0],
+  [gladiusUrl, 0],
+  [shieldLegionaireUrl, 0],
   [museAvatarUrl, 0],
 ]);
 
@@ -5592,6 +5597,78 @@ export function createTownScene(
   // VRM's own leg and arm bones. He keeps his spawn on the peristyle,
   // and his greeting salute when he reaches Muse.
   let playerRig: VrmRig | null = null;
+  // Gaius's arms (the owner, Nov 8, 2026): the Roman pack's gladius,
+  // sheathed at his right hip as a legionary wore it, and the
+  // legionary's scutum slung across his back, face out. Both ride his
+  // bones (the gladius the hips, the shield the upper chest), so they
+  // move with every clip; neither is held, which would fight the walk
+  // and talk clips. The pack has no scabbard, so a plain leather one
+  // with brass bands is built here and only the hilt shows. They step
+  // aside where they would pass through someone: both in the bath and
+  // in the embrace, the shield also while he sits against a bench.
+  const gaiusSword = new THREE.Group();
+  const gaiusShield = new THREE.Group();
+  function attachGaiusArms(model: THREE.Object3D) {
+    const hips = model.getObjectByName("J_Bip_C_Hips");
+    const back =
+      model.getObjectByName("J_Bip_C_UpperChest") ?? model.getObjectByName("J_Bip_C_Chest") ?? model.getObjectByName("J_Bip_C_Spine");
+    if (!hips || !back) return;
+    // Offsets are set in his facing frame (the avatar group: forward
+    // +Z, up +Y, his right -X), at bind pose, then handed to the bone
+    // with attach(), which keeps the world placement.
+    const mount = (holder: THREE.Object3D, bone: THREE.Object3D, offset: THREE.Vector3, rot: THREE.Quaternion) => {
+      avatar.updateWorldMatrix(true, true);
+      const at = avatar.worldToLocal(bone.getWorldPosition(new THREE.Vector3()));
+      holder.position.copy(at).add(offset);
+      holder.quaternion.copy(rot);
+      avatar.add(holder);
+      holder.updateMatrixWorld(true);
+      bone.attach(holder);
+    };
+    // The gladius, built blade up from the pommel at y 0, then turned
+    // blade down so it hangs from the hilt.
+    const SWORD_LEN = 0.74;
+    const HILT = 0.19;
+    const blade = new THREE.Group();
+    const leather = mat(0x4a2f1c, { rough: 0.85 });
+    const brass = mat(0xc9a24a, { rough: 0.4, metal: 0.6 });
+    const sheath = new THREE.Mesh(new THREE.BoxGeometry(0.075, SWORD_LEN - HILT + 0.02, 0.032), leather);
+    sheath.position.y = (HILT + SWORD_LEN + 0.02) / 2;
+    const locket = new THREE.Mesh(new THREE.BoxGeometry(0.084, 0.035, 0.038), brass);
+    locket.position.y = HILT + 0.03;
+    const band = new THREE.Mesh(new THREE.BoxGeometry(0.082, 0.025, 0.037), brass);
+    band.position.y = HILT + 0.24;
+    const chape = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.045, 0.038), brass);
+    chape.position.y = SWORD_LEN;
+    for (const m of [sheath, locket, band, chape]) {
+      m.castShadow = true;
+      blade.add(m);
+    }
+    void placeModel(gladiusUrl, blade, { x: 0, z: 0, height: SWORD_LEN });
+    blade.rotation.z = Math.PI;
+    gaiusSword.clear();
+    gaiusSword.add(blade);
+    mount(
+      gaiusSword,
+      hips,
+      new THREE.Vector3(-0.21, 0.17, 0.08),
+      new THREE.Quaternion().setFromEuler(new THREE.Euler(0.35, 0, -0.12, "XYZ")),
+    );
+    // The scutum: centred on the holder, face (boss) turned backward,
+    // its curve hugging his back, hung a touch askew like a sling.
+    const SHIELD_H = 1.0;
+    const shieldInner = new THREE.Group();
+    shieldInner.position.y = -SHIELD_H / 2;
+    void placeModel(shieldLegionaireUrl, shieldInner, { x: 0, z: 0, height: SHIELD_H });
+    gaiusShield.clear();
+    gaiusShield.add(shieldInner);
+    mount(
+      gaiusShield,
+      back,
+      new THREE.Vector3(0, -0.22, -0.22),
+      new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), 0.1)),
+    );
+  }
   let playerAnim: CharAnimator | null = null;
   let playerBlink: { mesh: THREE.Mesh; index: number }[] = [];
   // Reveal gate (same shape as Muse's): his body stays hidden until
@@ -5635,6 +5712,7 @@ export function createTownScene(
         if (walking) avatar.visible = true;
         playerBlink = collectBlinkMorphs(model);
         playerRig = collectRig(model);
+        attachGaiusArms(model);
         // His real motion clips, same arrangement as Muse's. If
         // they fail their gate he simply keeps the procedural
         // posing below, this model renders either way. Like hers,
@@ -11497,6 +11575,11 @@ export function createTownScene(
     if (playerAnim?.ready) {
       // A moving landing runs straight on; only a standing one takes a knee.
       const hopMode = sliding(run) ? "slide" : airborne(hop) ? (hop.vy > 0 ? "jumpUp" : "jumpFall") : t - hopLandedAt < 0.2 && playerSpeedSm < 1 ? "jumpLand" : null;
+      {
+        const embracing = !!pairState && pairState.kind === "hug";
+        gaiusSword.visible = !bathState && !embracing;
+        gaiusShield.visible = !bathState && !embracing && !seatPlayer;
+      }
       playerAnim.update(dt, walking ? playerSpeedSm : 0, playerAnim.hasWave && playerSpeedSm < 0.4 && playerWaveAge >= 0 && playerWaveAge < WAVE_LEN, !!seatPlayer || !!boatState || !!bathState, hopMode ?? (pairState && !pairState.glide ? pairState.kind : danceState ? "dance" : talkAnimOpen ? "talk" : null), !!seatPlayer);
       playerInner.position.y = 0;
       playerInner.rotation.z = 0;

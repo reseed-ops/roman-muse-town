@@ -1,7 +1,7 @@
 # ASSETS.md: the binary manifest
 
 This repository is **code and text only**. Every binary asset the town
-needs was excluded from the copy (121 files), because nearly all of them
+needs was excluded from the copy (123 files), because nearly all of them
 are commercial assets whose licences allow them to be *embedded in a
 shipped product* but **never redistributed as files**. This manifest lists
 everything excluded, grouped by source pack, with the exact folder path
@@ -77,10 +77,11 @@ original builder a day. Buy/convert the FBX one.
 
 ## 5. Roman Empire, Stylized Low Poly, by HALBERSTRAM ART (Unity Asset Store)
 
-Drop at: `client/src/assets/roman/`, 53 GLB + 1 FBX + 2 PNG. The whole
+Drop at: `client/src/assets/roman/`, 55 GLB + 1 FBX + 2 PNG. The whole
 visible Roman district: buildings, forum, basilica ("senate"), Colosseum,
 temple, aqueduct, houses, market booths, columns, benches, banners,
-ballista, statue, trees, bushes, flowers, rocks, grass, pottery, boat.
+ballista, statue, trees, bushes, flowers, rocks, grass, pottery, boat,
+and Gaius's gladius and legionary shield.
 Converted FBX→glTF from the owner's purchased pack; the two PNGs are the
 pack's shared palette and a water normal map the scene depends on. Same
 EULA terms.
@@ -92,11 +93,11 @@ EULA terms.
 `bread.glb`, `bush_a.glb`, `bush_b.glb`, `bush_c.glb`, `bush_d.glb`,
 `bush_e.glb`, `bush_roman.glb`, `colosseum.glb`, `column_ionic.glb`,
 `column_simple.glb`, `conifer.glb`, `crate.glb`, `cypress.glb`,
-`flower_a.glb`, `flower_group.glb`, `flower_med.glb`, `grapes.glb`,
+`flower_a.glb`, `flower_group.glb`, `gladius.glb`, `flower_med.glb`, `grapes.glb`,
 `grass_patch.glb`, `house_garden.glb`, `house_sounds.glb`,
 `insulae_recipes.glb`, `olive.glb`, `paddle.glb`, `pavilion_stars.glb`,
 `platform_wooden.glb`, `pottery1.glb`, `pottery2.glb`, `rock_pack.glb`,
-`senate.glb`, `statue_mars.glb`, `temple.glb`,
+`senate.glb`, `shield_legionaire.glb`, `statue_mars.glb`, `temple.glb`,
 `tree_a.glb`, `tree_b.glb`, `tree_c.glb`, `tree_d.glb`,
 `triumphal_arch.glb`, `villa_stories.glb`, `torch.fbx`, `palette.png`,
 `water_normal.png`
@@ -250,4 +251,8 @@ Not rebuilt, still missing from the owner's folder:
 - `stars-fall-song.mp3`: no candidate on the device at rebuild time; the file in use is the project's own AI-generated song (see section 11), restored to the folder the same day.
 
 `townScene.ts` and `App.tsx` import every one of these files statically,
-so the web build fails until all 121 are present (see `CLAUDE.md`).
+so the web build fails until all 123 are present (see `CLAUDE.md`).
+
+### Added Nov 8, 2026: Gaius's arms
+
+- `roman/gladius.glb` from `SM_weapon_gladius.FBX` and `roman/shield_legionaire.glb` from `SM_shield_legionaire.FBX`, both in `Roman Empire - Stylized Low Poly.unitypackage` (`MESHES/Military/Weapons and Shields/`), converted in Blender like the rest (FBX to GLB, no images, transforms applied, Y up). The gladius FBX carries a second object, `Box069`, a helper box scaled to zero, dropped in the conversion. Both use the pack palette material (`M_colorpallete_roman`); the town's loader assigns `palette.png`. The pack has no scabbard; the town builds one.
