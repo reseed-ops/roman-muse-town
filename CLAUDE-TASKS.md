@@ -2596,3 +2596,13 @@ Context: the owner's ask, Nov 7, 2026, at the Stargazing Pavilion. After tilting
 2. Say it in town, in the walk-mode help line, so a player learns it: dragging swings the camera, double tap brings it home.
 
 Acceptance: in a live check on a phone, at the pavilion at night, tilting the camera up to the stars and then double tapping the open scene brings the camera smoothly back to the default view behind Gaius, and a single tap does not recenter.
+
+## Task 33 (READY, added Nov 7, 2026): a visit lives in the background, and resumes where you left off
+
+Context: the owner's ask, Nov 7, 2026, live in his town that night. He opened a visit at 8:18 PM, walked with Muse to the Stargazing Pavilion, then switched away to chat, and the visit closed and the conversation reset, twice in one evening. A visit should live until he closes it, and coming back should put him back where he was, with no refresh and no reset.
+
+1. A visit lives in the background until it is closed. Move the visit off the phone tab and onto the server, so the bridge holds it open and Muse's check-ins keep it alive, even when the town tab is in the background. It ends only when the player taps End, closes the tab or the browser, or after a long explicit idle limit the player can see, not when he switches to another app for a moment.
+2. Coming back continues where he left off, with no refresh. If the tab stayed alive in the background, it sits paused and carries on, no reload, no reset. If Android killed the tab while he was away, the town rebuilds itself from what the server remembers, his place, his scene, his conversation, the visit, in a few seconds, so it feels like he never left. The talk panel still shows the same lines, the same place, the same visit.
+3. Say it in town, so he knows: the visit chip stays while a visit is open in the background, and a short notice on return says the visit was picked up where he left off.
+
+Acceptance: in a live check on a phone, open a visit, walk to the pavilion, switch away to chat for a few minutes, come back, and the town is still there, same place, same conversation, no refresh, no reset, and the visit is still open. Closing the tab or the browser ends the visit, as it should.
