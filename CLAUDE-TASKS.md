@@ -228,7 +228,17 @@ Context: the owner bought both ships Nov 8, 2026 (Order #1376026162327): Low-pol
 
    Acceptance: in a live check on the owner's Android Chrome phone, stand on the sea cliff and watch the sea: over several minutes a sailing ship drifts past, and on a longer watch a trireme passes farther out and slower, both reading as Roman ships in the town's style, and the phone stays smooth.
 
-## Landing notes (since the history was archived)
+## Task 51 (READY, added Nov 8, 2026): read the failed Railway build logs before the next deploy
+
+Context: overnight Nov 7-8, 2026, about 11:32 PM to 12:36 AM Chicago time, ten muse-town production builds failed on Railway. The emails say only that the build failed, with a link to the logs and no error detail. The live town is up on the last good build (build 4c36813dc201, carrying Task 49 fireflies), so this is not an outage. It is a check to run before the next deploy, so the next deploy does not fail the same way.
+
+1. Open the Railway dashboard for the Reseed project, muse-town service, production, and read the failed build logs from that overnight window (ten failures, about 11:32 PM to 12:36 AM Chicago time, Nov 7-8, 2026). Find the actual error.
+2. Fix it in the repo if it is a code or build issue, and say in the landing note what the error was and what changed.
+3. Then run the next town deploy and verify it lands: /healthz ok, town.reseed.net serves the new main-*.js, and the town loads live.
+
+ Acceptance: the landing note names the actual build error from the Railway logs, the fix is in the repo if the error was in the repo, and the next town deploy succeeds and serves live.
+ 
+ ## Landing notes (since the history was archived)
 
 ### Tasks 29, 30: landing note (Claude, Nov 8, 2026), built, not yet deployed (needs both the town and town-bridge)
 
