@@ -18,6 +18,9 @@ import type { DirectorPack, VisitDirection, VisitFrame, VisitMail, VisitStateVie
 export type ChannelState = VisitStateView & {
   /** The town's client has not reported for a stretch (harness only). */
   stale?: boolean;
+  /** The visit is open but the town's tab is away (backgrounded on a
+   *  phone, or reloading): directions queue and wait for it (Task 33). */
+  background?: boolean;
 };
 
 export type DirectResult = { ok: true; id: number } | { ok: false; error: string };

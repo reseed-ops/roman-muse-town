@@ -42,6 +42,7 @@ const stateView = z.object({
   queueLength: z.number(),
   enactedThrough: z.number(),
   stale: z.boolean().optional(),
+  background: z.boolean().optional(),
 });
 const mail = z.object({ seq: z.number(), text: z.string(), at: z.number() });
 const directResult = z.union([z.object({ ok: z.literal(true), id: z.number() }), z.object({ ok: z.literal(false), error: z.string() })]);

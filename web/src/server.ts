@@ -191,6 +191,13 @@ export function createTownServer(opts: TownServerOptions): TownServer {
       const result = face.intake(parsed.body);
       return result.ok ? json(200, result) : json(400, result);
     }
+    if (url.pathname === "/bridge/leaving") {
+      // The tab is closing or navigating away (Task 33): the visit ends
+      // after a short grace unless it reports again (a reload does).
+      if (req.method !== "POST") return json(405, { error: "method not allowed" });
+      face.leaving();
+      return json(200, { ok: true });
+    }
     if (url.pathname === "/bridge/directions") {
       if (req.method !== "GET") return json(405, { error: "method not allowed" });
       const since = Number(url.searchParams.get("since") ?? "0");

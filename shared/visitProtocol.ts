@@ -321,10 +321,18 @@ export type DirectorPack = { text: string; updatedAt: number | null };
 // same beat. Frame bytes travel only in a snapshot, and only once.
 
 export const BRIDGE_BEAT_MS = 2000;
-/** The bridge treats a visit as gone when no snapshot has arrived for
- *  this long; it goes quiet, and the town folds the visit by its own
- *  heartbeat. */
+/** No snapshot for this long and the visit reads as in the background
+ *  (the town's tab is away): still open, its directions queued for the
+ *  tab's return (Task 33). Before Task 33 this ended the visit. */
 export const BRIDGE_SNAPSHOT_LAPSE_MS = 30_000;
+/** A visit held in the background ends after this long with no contact
+ *  from either side (no snapshot from the town, no direction from a
+ *  director): the same no-contact limit the town shows on its chip. */
+export const VISIT_BACKGROUND_HOLD_MS = VISIT_LAPSE_MS;
+/** The town tab said it is leaving (closed, or navigating away): the
+ *  visit ends unless the same visit reports again within this grace, as
+ *  a reload does. */
+export const VISIT_LEAVE_GRACE_MS = 15_000;
 
 export type BridgeSnapshotRequest = {
   state: VisitStateView;

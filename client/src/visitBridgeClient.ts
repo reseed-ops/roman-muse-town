@@ -197,6 +197,19 @@ export async function bridgeGlance(settings: BridgeSettings | null | undefined, 
   return pull ? { begin: pull.begin === true } : null;
 }
 
+/** The tab is closing or navigating away (Task 33): tell the bridge,
+ *  which ends the visit after a short grace unless the same visit
+ *  reports again (a reload). keepalive lets it outlive the page;
+ *  sendBeacon cannot carry the bearer header. Best effort. */
+export function bridgeLeaving(settings: BridgeSettings | null | undefined, fetchImpl: typeof fetch = fetch): void {
+  if (!bridgeConfigured(settings)) return;
+  try {
+    void fetchImpl(`${settings.url}/bridge/leaving`, { method: "POST", keepalive: true, headers: { authorization: `Bearer ${settings.token}` } }).catch(() => {});
+  } catch {
+    /* the page is going; nothing to do */
+  }
+}
+
 /** The visit ended on the town: one closed snapshot so the bridge
  *  forgets it now rather than at the lapse. Best effort, no result. */
 export async function bridgeClose(settings: BridgeSettings | null | undefined, fetchImpl: typeof fetch = fetch): Promise<void> {

@@ -75,7 +75,7 @@ export type DeskReport =
 export type PrincipalSlate = {
   now: number;
   claim: { live: boolean; since: number | null; lastCallAt: number | null; expiresAt: number | null; lapseMs: number };
-  visit: { active: boolean; beganAt: number | null };
+  visit: { active: boolean; beganAt: number | null; /** The town tab is away; her lines wait for it (Task 33). */ background?: boolean };
   /** Her scene and position, and his, as the town reports them. */
   scene: VisitTelemetry | null;
   intention: string | null;
@@ -448,7 +448,7 @@ export function createPrincipalDesk(opts: PrincipalDeskOptions): PrincipalDesk {
     const out: PrincipalSlate = {
       now: t,
       claim: { live, since: live ? claimSince : null, lastCallAt, expiresAt: live && lastCallAt !== null ? lastCallAt + claimMs : null, lapseMs: claimMs },
-      visit: { active: !!s?.active, beganAt: s?.active ? s.beganAt : null },
+      visit: { active: !!s?.active, beganAt: s?.active ? s.beganAt : null, ...(s?.active && s.background ? { background: true } : {}) },
       scene: s?.telemetry ?? null,
       intention: s?.intention ?? null,
       composing,

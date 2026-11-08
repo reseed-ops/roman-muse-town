@@ -217,7 +217,7 @@ import {
 } from "./visitSlate";
 import { frameDue, validateFrameDataUrl } from "./visitFrames";
 import { HARNESS_STORAGE_KEY, IDLE_GLANCE_MS, resolveHarnessUrl, syncWithHarness } from "./visitHarnessClient";
-import { bridgeClose, bridgeConfigured, bridgeGlance, bridgeLeg, emptyBridgeCursor, hostedBridgeSettings, readBridgeSettings, resolveBridge, storeBridgeSettings, type BridgeCursor, type BridgeSettings } from "./visitBridgeClient";
+import { bridgeClose, bridgeConfigured, bridgeGlance, bridgeLeaving, bridgeLeg, emptyBridgeCursor, hostedBridgeSettings, readBridgeSettings, resolveBridge, storeBridgeSettings, type BridgeCursor, type BridgeSettings } from "./visitBridgeClient";
 import { BRIDGE_BEAT_MS, FRAME_JPEG_QUALITY, FRAME_MAX_EDGE, VISIT_LAPSE_MS, VISIT_POLL_MS, type QueuedDirection } from "../../shared/visitProtocol";
 import { clearVisitResume, loadVisitResume, saveVisitResume, sessionStore } from "./visitResume";
 import { ConnectMusePanel, useConnectMuse } from "./ConnectMusePanel";
@@ -266,6 +266,8 @@ function rememberInvite(change: (memory: InviteMemory) => InviteMemory) {
 }
 
 /** How long a reopened talk shows the same opener (Task 24). */
+/** Away from the tab longer than this, and coming back says the visit held (Task 33). */
+const VISIT_AWAY_NOTICE_MS = 20_000;
 const OPENER_REUSE_MS = 3 * 60 * 1000;
 
 export function App() {
@@ -5498,20 +5500,42 @@ export function App() {
     visitLastFrameAtRef.current = null;
     sceneRef.current?.setVisitActive(true);
     publishVisit("none");
-    setVisitNotice({ text: "Visit picked up again after the reload. Muse can carry on.", at: Date.now(), holdMs: 20_000 });
+    setVisitNotice({ text: "Back where you left off: the visit is still open, and Muse can carry on.", at: Date.now(), holdMs: 20_000 });
   }, [sceneReady, publishVisit]);
   // Coming back to the tab counts as the tab being open: the heartbeat
   // is refreshed and the bridge is asked at once, not on the next tick.
+  // A visit lives on while the tab is away (Task 33): the bridge holds
+  // it in the background and queues her lines; coming back says so.
+  // Closing the tab (or leaving the page) tells the bridge, which ends
+  // the visit after a short grace unless a reload reports it again.
   useEffect(() => {
+    let hiddenAt: number | null = null;
     const onShow = () => {
-      if (document.visibilityState !== "visible" || !visitRef.current.active) return;
+      if (document.visibilityState !== "visible") {
+        hiddenAt = Date.now();
+        return;
+      }
+      const away = hiddenAt === null ? 0 : Date.now() - hiddenAt;
+      hiddenAt = null;
+      if (!visitRef.current.active) return;
       visitRef.current = heartbeat(visitRef.current, Date.now());
       publishVisit();
       bridgeNudgeRef.current();
+      if (away > VISIT_AWAY_NOTICE_MS) {
+        setVisitNotice({ text: "Back where you left off. The visit stayed open while you were away.", at: Date.now(), holdMs: 10_000 });
+      }
+    };
+    const onPageHide = (e: PageTransitionEvent) => {
+      if (e.persisted || !visitRef.current.active) return;
+      bridgeLeaving(bridgeRef.current);
     };
     document.addEventListener("visibilitychange", onShow);
-    return () => document.removeEventListener("visibilitychange", onShow);
-  }, [publishVisit]);
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      document.removeEventListener("visibilitychange", onShow);
+      window.removeEventListener("pagehide", onPageHide);
+    };
+  }, [publishVisit, setVisitNotice]);
 
   const selectPlace = (place: Place) => {
     exitWalkMode();

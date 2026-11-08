@@ -6,6 +6,7 @@
  *
  *   POST /bridge/snapshot          BridgeSnapshotRequest -> BridgeSnapshotResponse
  *   GET  /bridge/directions?since=N                      -> BridgePullResponse
+ *   POST /bridge/leaving                                 -> {"ok":true}  (Task 33)
  *
  * The token rides as `Authorization: Bearer <token>`; it is compared
  * in constant time over digests, so neither its length nor its bytes
@@ -91,7 +92,7 @@ export function startBridgeServer(opts: BridgeServerOptions): Promise<BridgeServ
       // The preflight carries no token (browsers send none); it learns
       // only which headers the real request may carry.
       if (method === "OPTIONS") return send(res, 204, {});
-      if (path !== "/bridge/snapshot" && path !== "/bridge/directions") return send(res, 404, { error: "no such route" });
+      if (path !== "/bridge/snapshot" && path !== "/bridge/directions" && path !== "/bridge/leaving") return send(res, 404, { error: "no such route" });
       const presented = bearerToken(req.headers.authorization);
       if (!tokenMatches(presented, token)) {
         log(`refused ${method} ${path}: ${presented === null ? "no token" : "wrong token"}`);
@@ -101,6 +102,11 @@ export function startBridgeServer(opts: BridgeServerOptions): Promise<BridgeServ
         const raw: unknown = JSON.parse(await readBody(req));
         const out = face.intake(raw);
         return out.ok ? send(res, 200, out) : send(res, 400, out);
+      }
+      if (method === "POST" && path === "/bridge/leaving") {
+        // The town tab is closing (Task 33): ends after a grace unless it reports again.
+        face.leaving();
+        return send(res, 200, { ok: true });
       }
       if (method === "GET" && path === "/bridge/directions") {
         const since = Number(url.searchParams.get("since") ?? 0) || 0;

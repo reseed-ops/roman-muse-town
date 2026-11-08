@@ -69,15 +69,31 @@ test("directions are validated, numbered, and pulled by cursor; composing rides 
   expect((await face.channel.readState()).queueLength).toBe(0);
 });
 
-test("the lapse: snapshots stop, the slate dies, nothing is enqueued; a closed snapshot forgets the visit", async () => {
+test("the background (Task 33): snapshots stop, the visit stays open and queues; no contact for the hold, and it dies", async () => {
   let t = 7_000_000;
-  const face = createSlateFace({ now: () => t, lapseMs: 10_000 });
+  const face = createSlateFace({ now: () => t, lapseMs: 10_000, holdMs: 60_000 });
   let slate = beginVisit(emptySlate(), t);
   slate = captureMail(slate, "hello", t).slate;
   face.intake(snapshotOf(slate));
   t += 10_000;
-  expect((await face.channel.readState()).active).toBe(true);
+  expect((await face.channel.readState()).background).toBeUndefined();
   t += 1;
+  // The tab is away: still open, marked background, and a director's line queues for its return.
+  const away = await face.channel.readState();
+  expect(away.active).toBe(true);
+  expect(away.background).toBe(true);
+  expect((await face.channel.readInbox(0)).length).toBe(1);
+  t += 30_000;
+  expect((await face.channel.direct({ kind: "speak", text: "I'm here when you're back." })).ok).toBe(true);
+  // Her direction was contact: the hold runs from it.
+  t += 59_000;
+  expect((await face.channel.readState()).active).toBe(true);
+  // The tab returns: it pulls what waited, and the background flag goes.
+  face.intake(snapshotOf(slate));
+  expect(face.pull(0).directions.map((d) => d.direction.kind)).toEqual(["speak"]);
+  expect((await face.channel.readState()).background).toBeUndefined();
+  // Gone again, and no contact from either side for the whole hold: it dies.
+  t += 60_001;
   const gone = await face.channel.readState();
   expect(gone.active).toBe(false);
   expect(gone.stale).toBe(true);
@@ -104,4 +120,22 @@ test("the lapse: snapshots stop, the slate dies, nothing is enqueued; a closed s
   const fresh = beginVisit(emptySlate(), t + 50);
   face.intake(snapshotOf(fresh));
   expect(await face.channel.readInbox(0)).toEqual([]);
+});
+
+test("the tab leaving (Task 33): the visit ends after the grace, unless the same visit reports again (a reload)", async () => {
+  let t = 9_000_000;
+  const face = createSlateFace({ now: () => t, lapseMs: 10_000, holdMs: 60_000, leaveGraceMs: 15_000 });
+  const slate = beginVisit(emptySlate(), t);
+  face.intake(snapshotOf(slate));
+  // A reload: leaving, then the same visit reports inside the grace.
+  face.leaving();
+  t += 5_000;
+  face.intake(snapshotOf(slate));
+  t += 20_000;
+  expect((await face.channel.readState()).active).toBe(true);
+  // A real close: leaving, and nothing comes back.
+  face.leaving();
+  t += 15_001;
+  expect((await face.channel.readState()).active).toBe(false);
+  expect(face.held()).toBeNull();
 });

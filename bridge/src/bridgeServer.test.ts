@@ -29,7 +29,7 @@ function stubMind(): Mind {
 
 async function setup(lapseMs = 10_000) {
   const clock = { t: 8_000_000 };
-  const face = createSlateFace({ now: () => clock.t, lapseMs });
+  const face = createSlateFace({ now: () => clock.t, lapseMs, holdMs: lapseMs });
   const log: string[] = [];
   const server = await startBridgeServer({ face, token: TOKEN, port: 0, host: "127.0.0.1", log: (l) => log.push(l) });
   const base = `http://127.0.0.1:${server.port}`;

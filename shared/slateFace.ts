@@ -14,13 +14,17 @@
  * The director loop reads the held snapshot through the same narrow
  * DirectorChannel it reads the harness through, so director.ts is
  * untouched. When no snapshot has arrived inside the lapse window the
- * face reads as a closed visit: the bridge goes quiet, and the town
- * folds the visit by its own heartbeat. The surface stays slate-only:
+ * visit is in the background (Task 33): still open, the director's
+ * directions queued for the tab's return; it ends after the
+ * no-contact hold, when the client reports it closed, or a short grace
+ * after the tab says it is leaving. The surface stays slate-only:
  * nothing here can reach facts, letters, bond, or digest. Nothing here
  * is ever persisted: a face lives in memory and dies with the visit.
  */
 import {
   BRIDGE_SNAPSHOT_LAPSE_MS,
+  VISIT_BACKGROUND_HOLD_MS,
+  VISIT_LEAVE_GRACE_MS,
   VISIT_FRAME_KEEP,
   VISIT_INBOX_CAP,
   validateDirection,
@@ -56,13 +60,25 @@ export type SlateFace = {
   /** A director asks the town to end the visit: the client hears it on
    *  its next pull and folds the visit itself. */
   requestEnd(): void;
+  /** The town tab is leaving (closed or navigating away, Task 33): the
+   *  visit ends after a short grace unless the same visit reports
+   *  again, as it does after a reload. */
+  leaving(): void;
   /** When anything last touched this face (for a host's housekeeping). */
   touchedAt(): number;
   /** For tests and logs: what is held right now. */
   held(): { state: VisitStateView; inbox: VisitMail[]; frames: VisitFrame[]; receivedAt: number } | null;
 };
 
-export type SlateFaceOptions = { now?: () => number; lapseMs?: number };
+export type SlateFaceOptions = {
+  now?: () => number;
+  /** No snapshot for this long: the visit is in the background. */
+  lapseMs?: number;
+  /** In the background, no contact from either side for this long: it ends. */
+  holdMs?: number;
+  /** After the tab says it is leaving: it ends unless it reports again. */
+  leaveGraceMs?: number;
+};
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const isNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
@@ -185,6 +201,12 @@ const closedView = (): VisitStateView => ({
 export function createSlateFace(opts: SlateFaceOptions = {}): SlateFace {
   const now = opts.now ?? (() => Date.now());
   const lapseMs = opts.lapseMs ?? BRIDGE_SNAPSHOT_LAPSE_MS;
+  const holdMs = Math.max(lapseMs, opts.holdMs ?? VISIT_BACKGROUND_HOLD_MS);
+  const leaveGraceMs = opts.leaveGraceMs ?? VISIT_LEAVE_GRACE_MS;
+  /** A director's last direction: contact that keeps a background visit open. */
+  let directedAt = 0;
+  /** When the tab said it was leaving, or null. */
+  let leavingAt: number | null = null;
   let held: ReturnType<SlateFace["held"]> = null;
   let queue: QueuedDirection[] = [];
   let nextDirectionId = 1;
@@ -201,12 +223,19 @@ export function createSlateFace(opts: SlateFaceOptions = {}): SlateFace {
     held = null;
     queue = [];
     composing = false;
+    leavingAt = null;
   };
-  const lapsed = (t: number): boolean => held !== null && t - held.receivedAt > lapseMs;
-  /** The lapse, settled lazily on every touch: once no snapshot has
-   *  arrived inside the window the whole slate dies here, directions
-   *  queued for the gone client included. The next touch reads it as
-   *  closed and stale; the one after that, as simply closed. */
+  /** Task 33: a snapshot gap no longer ends a visit. Past lapseMs the
+   *  visit is in the background (still open, directions queued for the
+   *  tab's return); it ends only after holdMs with no contact from
+   *  either side, or a short grace after the tab said it was leaving. */
+  const background = (t: number): boolean => held !== null && t - held.receivedAt > lapseMs;
+  const lapsed = (t: number): boolean =>
+    held !== null && (t - Math.max(held.receivedAt, directedAt) > holdMs || (leavingAt !== null && t - leavingAt > leaveGraceMs));
+  /** The lapse, settled lazily on every touch: once it lapses the whole
+   *  slate dies here, directions queued for the gone client included.
+   *  The next touch reads it as closed and stale; the one after that,
+   *  as simply closed. */
   let staleOnce = false;
   const settle = (t: number): void => {
     if (!lapsed(t)) return;
@@ -232,6 +261,9 @@ export function createSlateFace(opts: SlateFaceOptions = {}): SlateFace {
     if (!mail) return { ok: false, error: "mail is a list of { seq, text, at }" };
     // A different visit (or none held): everything of the old one dies.
     if (!held || held.state.beganAt !== state.state.beganAt) forget();
+    // The same visit reporting again (a reload, a tab come back): any
+    // leaving notice is withdrawn.
+    leavingAt = null;
     let inbox = held?.inbox ?? [];
     const top = inbox.length > 0 ? inbox[inbox.length - 1]!.seq : 0;
     const fresh = mail.filter((m) => m.seq > top).sort((a, b) => a.seq - b.seq);
@@ -287,7 +319,7 @@ export function createSlateFace(opts: SlateFaceOptions = {}): SlateFace {
         staleOnce = false;
         return { ...closedView(), stale };
       }
-      return { ...held.state, composing, queueLength: queue.length, stale: false };
+      return { ...held.state, composing, queueLength: queue.length, stale: false, ...(background(t) ? { background: true } : {}) };
     },
     async readInbox(since: number): Promise<VisitMail[]> {
       const t = now();
@@ -313,6 +345,7 @@ export function createSlateFace(opts: SlateFaceOptions = {}): SlateFace {
       const check = validateDirection(direction);
       if (!check.ok) return { ok: false, error: check.error };
       if (!open(t)) return { ok: false, error: "no visit is open" };
+      directedAt = t;
       const id = nextDirectionId++;
       queue = [...queue, { id, at: t, direction: check.direction }];
       return { ok: true, id };
@@ -343,6 +376,11 @@ export function createSlateFace(opts: SlateFaceOptions = {}): SlateFace {
       touch(now());
       endRequested = true;
       beginRequested = false;
+    },
+    leaving: () => {
+      const t = now();
+      touch(t);
+      if (held) leavingAt = t;
     },
     touchedAt: () => lastTouch,
   };
