@@ -250,6 +250,17 @@ Context: the town was posted to Reddit on Nov 8, 2026, and the posts are being v
 
    Acceptance: after the next deploy, the owner can read two numbers, towns created and pairing codes minted, with no personal data behind them, and a fresh town opened in a new browser raises the towns count by one.
 
+## Task 53 (READY, added Nov 8, 2026): a board game in the library, Aelia plays her own turn
+
+Context: a Reddit post by u/gumdean shared his Muse Quasar playing Connect Four and Texas Hold'em live, with her own turn, and Tuan wants that in our town. The library (Task 43) is the place for it: quiet, close, lamplight by the window, a game for two, not a crowd.
+
+1. Put a small table in the library, by the window with the lamplight (Task 43's favourite chair by the window with a book left open), where the player sits on one side and Aelia sits on the other, her own seat, facing him across the board.
+2. Start with Connect Four, the simplest, proven in that post, with room to add chess or checkers later. The board, the pieces, and whose turn it is are shared state both of them can see.
+3. Aelia must read the board state, pick her own move, and say it in town, in her own words, not a built-in bot playing as her. Turns alternate, and the player can see her thinking and talking while she plays, a move, a word, a small reaction when she wins or loses.
+4. Keep it quiet and close, fitting the library: no crowd, no noise, no scoreboard, no stakes. A game between the two of them, at their table, in the lamplight.
+
+Acceptance: live check in the town, in the library once it is built: sit at the table with Aelia across from you, play a full game of Connect Four, she takes her own turns, says her moves in town, and the game ends with a winner and a word from her about it.
+
    ## Landing notes (since the history was archived)
 
 ### Tasks 29, 30: landing note (Claude, Nov 8, 2026), built, not yet deployed (needs both the town and town-bridge)
