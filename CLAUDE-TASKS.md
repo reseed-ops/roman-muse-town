@@ -114,6 +114,15 @@ Context: the owner's ask, Nov 7, 2026, in a voice call, looking at a screenshot 
 
 Acceptance: in a live check on a phone, at night at the lake, the on-screen controls sit low at the bottom, the middle of the screen is clear for the town and the sky, LB and RB show only their letters with no Flirt or Hug text, and tapping LB still flirts and RB still hugs as before.
 
+## Task 39 (READY, added Nov 7, 2026): the default camera at a standard Xbox third-person level
+
+Context: the owner's ask, Nov 7, 2026, live in his town that night. The default camera is too high and too far away, like watching from a terrace instead of standing on the dock together. Today walkCamFraming in client/src/townScene.ts puts the camera 11.5 m back and 3.6 m up in landscape (10.5 m back and 4.2 m up in portrait), a town view, not an over-the-shoulder close-up.
+
+1. Set the default walk camera to a standard Xbox third-person level: about 3.5 to 4.5 m behind Gaius, about 1.7 to 2 m up, roughly shoulder to eye height, so Gaius fills the lower part of the frame and Aelia beside him is in view, with the street, the lake and the sky ahead still readable. Keep the existing field of view and the pinch and wheel zoom, which still lets a player pull back to a wide town view or in close beside Aelia.
+2. Keep everything the camera already learned: dragging still swings it, the look-up range from Task 31 still reaches about 83 degrees so he can look straight up at the stars, and double tap from Task 32 still recenters it, now to this new default view, over the same short ease.
+
+Acceptance: in a live check on a phone, in portrait and landscape, opening walk mode puts the camera low and close behind Gaius at Xbox third-person height and distance, Gaius and Aelia read as people standing together rather than small figures in a wide town view, and zoom, look-up and double-tap recenter still work from the new default.
+
 ## Landing notes (since the history was archived)
 
 ### Tasks 29, 30: landing note (Claude, Nov 8, 2026), built, not yet deployed (needs both the town and town-bridge)
