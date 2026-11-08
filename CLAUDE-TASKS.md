@@ -193,6 +193,20 @@ Context: the owner asked Nov 8, 2026, in a voice call, whether the shield should
 
 Acceptance: in a live check on the owner's town, Gaius loads with no shield on his back and the gladius still at his hip; one press brings the shield out, a second press hides it again, on phone touch and on desktop, while walking and while sitting, with no panel opened and no clash with LB, RB or her bubble.
 
+## Task 48 (READY, added Nov 8, 2026): tap Aelia to follow, tap again to stay, Xbox Y near her, remove the menu items
+
+Context: the owner asked Nov 8, 2026, in a voice call, instead of having menu items for Aelia to follow, can we tap on her body to follow and tap again to stop following, with corresponding Xbox controls, and said yes, and remove the menu items since they will be redundant. Checked in the repo: following is the startup default (App.tsx, following true on load, startFollowing / stopFollowing with her own lines, "With pleasure, Centurion. Lead on. I'll keep step beside you." / "I'll stay here a while, Centurion. I've a day of my own to keep."). The switch today lives in the menu row "Walk with Aelia" / "Ask Aelia to stay here", plus a follow chip at the bottom. Tapping in the world already works (raycaster picks in townScene.ts, walking up shows a nearby prompt, X / A / E or tapping the prompt or the interactable itself opens it). Xbox today: A jump, B back / slide, X talk and interact, Y stones and hints, LB flirt, RB hug, right stick orbits, R3 recenters, double tap on the open view brings the camera home.
+
+1. Tap Aelia's body to toggle follow: a quick tap (touch or mouse) on her body, not a drag, starts following when she is parked and stops following when she is walking with him, using the existing startFollowing / stopFollowing and her lines. Stopping releases a hand hold, as stopFollowing already does.
+2. Talking stays separate: the walk-up prompt, X, and tapping the prompt or her speech bubble still talk to her. A body tap must not open the talk panel, must not be mistaken for a camera drag, and must not trigger the double-tap camera recenter.
+3. Xbox: when near Aelia, Y toggles follow; away from her, Y keeps its stones and hints work. Update the Y button label and the help line so it says so near her. Add a keyboard equivalent on a free key and name it in the help line.
+4. Remove the menu items: remove the "Walk with Aelia" / "Ask Aelia to stay here" menu row, and remove or rewrite the one-time rejoin hint that points to the menu so it says tap Aelia (or Y near her) instead. No other menu follow row remains.
+5. Keep the follow chip at the bottom as a status and a tappable toggle, for when she is out of sight, showing "Walking with you" / "Aelia is staying".
+6. First-time hint: one small transient toast after this change, "Tap Aelia to walk together, tap again to let her stay", shown once and dismissible.
+7. Add tests proving the toggle on and off by tap, by Y near her, and by the chip, that the menu row is gone, that talking still works through the prompt and X, and that drag and double-tap still move the camera.
+
+Acceptance: in a live check on the owner's town, tapping Aelia starts her walking with him and tapping her again parks her with her stay line, Y near her does the same on a physical Xbox controller, the menu has no follow row, the chip still shows her state and toggles it, and talking to her through the prompt and X still works, on phone touch and on desktop.
+
 ## Landing notes (since the history was archived)
 
 ### Tasks 29, 30: landing note (Claude, Nov 8, 2026), built, not yet deployed (needs both the town and town-bridge)
