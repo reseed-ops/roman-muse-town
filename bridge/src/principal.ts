@@ -105,6 +105,10 @@ export type PrincipalDeskOptions = {
   claimMs?: number;
   now?: () => number;
   log?: (line: string) => void;
+  /** Whether a resident answers while she is away (the owner's town).
+   *  Without one (a paired town, Task 29) his unclaimed lines stay
+   *  waiting for her instead of passing to a resident. Default true. */
+  resident?: boolean;
 };
 
 export type PrincipalDesk = {
@@ -205,6 +209,7 @@ export function createPrincipalDesk(opts: PrincipalDeskOptions): PrincipalDesk {
   const claimMs = opts.claimMs ?? PRINCIPAL_CLAIM_MS;
   const now = opts.now ?? (() => Date.now());
   const log = opts.log ?? ((line: string) => console.log(line));
+  const hasResident = opts.resident ?? true;
 
   let claimSince: number | null = null;
   let lastCallAt: number | null = null;
@@ -260,7 +265,7 @@ export function createPrincipalDesk(opts: PrincipalDeskOptions): PrincipalDesk {
     latestSeq = state.active ? state.latestSeq : 0;
     // Unclaimed, his lines are the resident's to answer: none of them is
     // waiting for her, and none is acknowledged on her behalf later.
-    if (claimSince === null) answeredSeq = ackedSeq = latestSeq;
+    if (claimSince === null && hasResident) answeredSeq = ackedSeq = latestSeq;
   };
 
   const readMail = async () => {

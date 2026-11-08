@@ -16,6 +16,12 @@
  * the start and at the answer, so a watcher looping on it holds the
  * visit without a wake; the marker token can never claim.
  *
+ * Many towns (Task 29): besides the owner's token, a paired token
+ * (tenants.ts) opens the same two routes for its own town's desk only,
+ * and `POST /pair {"code"}` trades a town's pairing code for such a
+ * token. Neither the owner's marker token nor any other token reaches a
+ * paired town.
+ *
  * The token rides as `Authorization: Bearer <token>`, compared in
  * constant time over digests (bridgeServer.ts). A refused call gets a
  * bare 401 and one log line that never carries the value. Rotating the
@@ -35,9 +41,16 @@ const MAX_BODY_BYTES = 64_000;
 export const WAIT_MAX_S = 25;
 const WAIT_LOOK_MS = 250;
 
+export type PairOutcome = { ok: true; principalToken: string } | { ok: false; status: number; error: string };
+
 export type PrincipalServerOptions = {
-  desk: PrincipalDesk;
-  token: string;
+  /** The owner's desk and token; without a token only paired towns are served. */
+  desk: PrincipalDesk | null;
+  token: string | null;
+  /** A paired town's desk for a presented token, or null (Task 29). */
+  resolve?: (presented: string | null) => PrincipalDesk | null;
+  /** Trade a pairing code for a paired token (Task 29); absent, POST /pair is 404. */
+  pair?: (code: unknown) => Promise<PairOutcome>;
   markerToken?: string | null;
   port?: number;
   host?: string;
@@ -86,10 +99,24 @@ export function startPrincipalServer(opts: PrincipalServerOptions): Promise<Prin
       const method = req.method ?? "GET";
       if (method === "OPTIONS") return send(res, 204, {});
       if (path === "/healthz" && method === "GET") return send(res, 200, { ok: true });
+      if (path === "/pair" && opts.pair) {
+        if (method !== "POST") return send(res, 405, { error: "method not allowed" });
+        let raw: unknown = null;
+        try {
+          raw = JSON.parse((await readBody(req)) || "null");
+        } catch {
+          return send(res, 400, { error: "the body is not JSON" });
+        }
+        const out = await opts.pair((raw as { code?: unknown } | null)?.code);
+        return out.ok ? send(res, 200, { principalToken: out.principalToken }) : send(res, out.status, { error: out.error });
+      }
       if (path !== "/principal/wake" && path !== "/principal/waiting") return send(res, 404, { error: "no such route" });
       const presented = bearerToken(req.headers.authorization);
-      const principal = tokenMatches(presented, token);
-      const marker = !principal && markerToken !== null && path === "/principal/waiting" && tokenMatches(presented, markerToken);
+      const owner = token !== null && desk !== null && tokenMatches(presented, token);
+      const marker = !owner && markerToken !== null && desk !== null && path === "/principal/waiting" && tokenMatches(presented, markerToken);
+      const paired = !owner && !marker && opts.resolve ? opts.resolve(presented) : null;
+      const principal = owner || paired !== null;
+      const d = (paired ?? desk)!;
       if (!principal && !marker) {
         log(`principal: refused ${method} ${path}: ${presented === null ? "no token" : "wrong token"}`);
         return send(res, 401, { error: "refused" });
@@ -100,23 +127,23 @@ export function startPrincipalServer(opts: PrincipalServerOptions): Promise<Prin
         const waitS = Math.min(WAIT_MAX_S, Math.max(0, Number(url.searchParams.get("wait") ?? 0) || 0));
         const afterRaw = url.searchParams.get("after");
         const after = afterRaw !== null && Number.isFinite(Number(afterRaw)) ? Number(afterRaw) : null;
-        if (claim) desk.keepClaim();
+        if (claim) d.keepClaim();
         if (waitS > 0) {
-          const first = desk.marker();
+          const first = d.marker();
           const deadline = Date.now() + waitS * 1000;
           let gone = false;
           res.on("close", () => {
             gone = true;
           });
           const changed = () => {
-            const m = desk.marker();
+            const m = d.marker();
             return (m.waiting && m.seq !== null && (after === null || m.seq > after)) || m.composing !== first.composing;
           };
           while (!gone && Date.now() < deadline && !changed()) await new Promise((r) => setTimeout(r, WAIT_LOOK_MS));
           if (gone) return;
-          if (claim) desk.keepClaim();
+          if (claim) d.keepClaim();
         }
-        return send(res, 200, desk.marker());
+        return send(res, 200, d.marker());
       }
       if (method !== "POST") return send(res, 405, { error: "method not allowed" });
       const text = await readBody(req);
@@ -128,7 +155,7 @@ export function startPrincipalServer(opts: PrincipalServerOptions): Promise<Prin
           return send(res, 400, { error: "the body is not JSON" });
         }
       }
-      const out = await desk.wake(raw);
+      const out = await d.wake(raw);
       return out.ok ? send(res, 200, out.slate) : send(res, 400, { error: out.error });
     } catch (error) {
       return send(res, 400, { error: error instanceof Error ? error.message : String(error) });

@@ -31,6 +31,7 @@ import { isDoorAction, type DoorDefinition } from "../../server/src/visitActions
 import { createBlobStore, readBlob, verifyBlobPath, BLOB_PATH_PREFIX } from "./blobStore";
 import { createSlateKeeper, type SlateKeeper } from "./slates";
 import { readVisitorToken, tokenMatches } from "./tokens";
+import { createPairingDesk, type PairingDesk } from "./pairing";
 
 export interface TownAction {
   request: z.ZodType;
@@ -60,6 +61,7 @@ export interface TownServerOptions {
 export interface TownServer {
   fetch(req: Request): Promise<Response>;
   slates: SlateKeeper;
+  pairing: PairingDesk;
 }
 
 const json = (status: number, body: unknown, headers: Record<string, string> = {}): Response =>
@@ -73,6 +75,7 @@ export function createTownServer(opts: TownServerOptions): TownServer {
   const maxBody = opts.maxBodyBytes ?? 2 * 1024 * 1024;
   const slates = createSlateKeeper({ now, ...(opts.snapshotLapseMs !== undefined ? { lapseMs: opts.snapshotLapseMs } : {}) });
   const door = opts.door ?? {};
+  const pairing = createPairingDesk({ now });
   const dist = opts.distDir ? resolve(opts.distDir) : null;
 
   const readJson = async (req: Request): Promise<{ ok: true; body: unknown } | { ok: false; response: Response }> => {
@@ -171,6 +174,12 @@ export function createTownServer(opts: TownServerOptions): TownServer {
       log(`refused ${req.method} ${url.pathname}: no visitor token`);
       return json(401, { error: "refused" });
     }
+    if (url.pathname === "/bridge/pair") {
+      // Connect my Muse (Task 29): a single-use code for this town, which
+      // only the hosted bridge (with the director token) can redeem.
+      if (req.method !== "POST") return json(405, { error: "method not allowed" });
+      return json(200, pairing.mint(visitorToken));
+    }
     const face = slates.faceFor(townSchemaName(visitorToken));
     if (url.pathname === "/bridge/snapshot") {
       if (req.method !== "POST") return json(405, { error: "method not allowed" });
@@ -185,6 +194,28 @@ export function createTownServer(opts: TownServerOptions): TownServer {
       return json(200, face.pull(Number.isFinite(since) ? since : 0));
     }
     return json(404, { error: "not found" });
+  }
+
+  // The other half of pairing (Task 29): the bridge trades a code for
+  // the visitor key it names. Director token only; without it the route
+  // does not exist, the same quiet refusal as the door's.
+  async function pairRedeemRoute(req: Request): Promise<Response> {
+    if (req.method !== "POST" || !opts.directorToken || !tokenMatches(req.headers.get(DIRECTOR_TOKEN_HEADER), opts.directorToken)) {
+      return json(404, { error: "not found" });
+    }
+    const parsed = await readJson(req);
+    if (!parsed.ok) return parsed.response;
+    const code = (parsed.body as { code?: unknown } | null)?.code;
+    const out = pairing.redeem(code);
+    if (out.ok) {
+      log("pair: a code was redeemed");
+      return json(200, { visitorToken: out.visitorToken });
+    }
+    if (out.reason === "locked") {
+      log("pair: redeem locked after repeated misses");
+      return json(429, { error: "too many attempts; wait a minute" });
+    }
+    return json(404, { error: "no such code" });
   }
 
   async function blobRoute(req: Request, url: URL): Promise<Response> {
@@ -221,9 +252,11 @@ export function createTownServer(opts: TownServerOptions): TownServer {
 
   return {
     slates,
+    pairing,
     async fetch(req) {
       const url = new URL(req.url);
       if (url.pathname === "/actions") return actionsRoute(req);
+      if (url.pathname === "/director/pair-redeem") return pairRedeemRoute(req);
       if (url.pathname.startsWith("/bridge/")) return bridgeRoute(req, url);
       if (url.pathname.startsWith(BLOB_PATH_PREFIX)) return blobRoute(req, url);
       if (url.pathname === "/healthz") return json(200, { ok: true });

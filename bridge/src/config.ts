@@ -33,6 +33,11 @@ export type BridgeConfig = {
   principalToken: string | null;
   principalMarkerToken: string | null;
   principalClaimMs: number;
+  /** Many towns (Task 29): pairing is on with the town channel unless
+   *  PAIRING=off; PAIRING_SECRET seals paired tokens (else derived from
+   *  the director token). Never in the repo. */
+  pairing: boolean;
+  pairingSecret: string | null;
 };
 
 const num = (v: string | undefined, fallback: number): number => {
@@ -66,5 +71,7 @@ export function readConfig(env: Record<string, string | undefined> = process.env
     principalToken: env.PRINCIPAL_TOKEN || null,
     principalMarkerToken: env.PRINCIPAL_MARKER_TOKEN || null,
     principalClaimMs: num(env.PRINCIPAL_CLAIM_MS, 3 * 60 * 1000),
+    pairing: env.PAIRING !== "off",
+    pairingSecret: env.PAIRING_SECRET || null,
   };
 }

@@ -16,7 +16,9 @@ import { createTownChannel } from "./townChannel.js";
 import type { DirectorChannel } from "./channel.js";
 import { createFakeChannel } from "./fakeChannel.js";
 import { createPrincipalDesk, type PrincipalDesk } from "./principal.js";
-import { startPrincipalServer } from "./principalServer.js";
+import { startPrincipalServer, type PairOutcome } from "./principalServer.js";
+import { createTenantRegistry, sealKey, sealVisitorKey, unsealVisitorKey, TENANT_POLL_MS } from "./tenants.js";
+import { DIRECTOR_TOKEN_HEADER } from "../../shared/visitProtocol.js";
 
 const log = (line: string) => console.log(`${new Date().toISOString()} ${line}`);
 
@@ -88,10 +90,70 @@ async function main(): Promise<void> {
   if (cfg.channel === "town" && cfg.principalToken && cfg.townUrl && cfg.directorToken && cfg.visitorToken) {
     // The principal channel (Task 22): her own door on this bridge.
     principal = createPrincipalDesk({ channel, rank: () => pack.current().rank ?? 0, claimMs: cfg.principalClaimMs, log });
-    const server = await startPrincipalServer({ desk: principal, token: cfg.principalToken, markerToken: cfg.principalMarkerToken, port: cfg.port, log });
     const desk = principal;
     setInterval(() => void desk.pump(), 250).unref();
-    principalFace = ` principal=serving on :${server.port} (claim lapses after ${Math.round(cfg.principalClaimMs / 1000)} s; marker token ${cfg.principalMarkerToken ? "set" : "not set"})`;
+    principalFace = ` principal=on (claim lapses after ${Math.round(cfg.principalClaimMs / 1000)} s; marker token ${cfg.principalMarkerToken ? "set" : "not set"})`;
+  }
+  // Many towns (Task 29): any visitor's town pairs to its own Muse.
+  let resolvePaired: ((presented: string | null) => PrincipalDesk | null) | undefined;
+  let pair: ((code: unknown) => Promise<PairOutcome>) | undefined;
+  if (cfg.channel === "town" && cfg.pairing && cfg.townUrl && cfg.directorToken) {
+    const townUrl = cfg.townUrl.replace(/\/+$/, "");
+    const directorToken = cfg.directorToken;
+    const key = sealKey({ pairingSecret: cfg.pairingSecret, directorToken });
+    const tenants = createTenantRegistry({
+      channelFor: (visitorToken) => createTownChannel({ townUrl, directorToken, visitorToken }),
+      claimMs: cfg.principalClaimMs,
+      log,
+    });
+    setInterval(() => void tenants.pumpAll(), 250).unref();
+    let observing = false;
+    setInterval(() => {
+      if (observing) return;
+      observing = true;
+      void tenants.observeAll().finally(() => {
+        observing = false;
+      });
+    }, TENANT_POLL_MS).unref();
+    const owner = principal;
+    resolvePaired = (presented) => {
+      const visitorToken = unsealVisitorKey(key, presented);
+      if (!visitorToken) return null;
+      // The owner pairing his own town reaches his own desk, not a second one.
+      if (owner && visitorToken === cfg.visitorToken) return owner;
+      return tenants.deskFor(visitorToken);
+    };
+    pair = async (code) => {
+      if (typeof code !== "string" || code.length > 40) return { ok: false, status: 400, error: "a pairing code is required" };
+      try {
+        const res = await fetch(`${townUrl}/director/pair-redeem`, {
+          method: "POST",
+          headers: { "content-type": "application/json", [DIRECTOR_TOKEN_HEADER]: directorToken },
+          body: JSON.stringify({ code }),
+          signal: AbortSignal.timeout(6000),
+        });
+        if (res.status === 429) return { ok: false, status: 429, error: "too many attempts; wait a minute and try again" };
+        if (res.status !== 200) return { ok: false, status: 404, error: "that code is unknown or has expired; make a new one in the town (menu, Connect my Muse)" };
+        const body = (await res.json()) as { visitorToken?: unknown };
+        if (typeof body.visitorToken !== "string") return { ok: false, status: 502, error: "the town answered oddly; try again" };
+        log("pair: a town was paired");
+        return { ok: true, principalToken: sealVisitorKey(key, body.visitorToken) };
+      } catch {
+        return { ok: false, status: 502, error: "the town could not be reached; try again" };
+      }
+    };
+  }
+  if (principal || pair) {
+    const server = await startPrincipalServer({
+      desk: principal ?? null,
+      token: principal ? cfg.principalToken : null,
+      markerToken: cfg.principalMarkerToken,
+      ...(resolvePaired ? { resolve: resolvePaired } : {}),
+      ...(pair ? { pair } : {}),
+      port: cfg.port,
+      log,
+    });
+    principalFace += ` principal=serving on :${server.port}${pair ? " pairing=on" : ""}`;
   }
   const mind = createAnthropicMind({ apiKey: cfg.apiKey ?? undefined, model: cfg.model });
   const director = createDirector({

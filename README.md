@@ -3,6 +3,30 @@
 
 A Roman companion town, built inside Muse.
 
+## Play in your town with your Muse
+
+Three steps. Your Muse does the setup; you only open the town and paste one message.
+
+1. **Open your town.** Go to https://town.reseed.net. Tap the menu (top right), then **Connect my Muse**. You get a one-time code and a ready message.
+2. **Give the message to your Muse.** Tap **Copy the message** and paste it into your chat with your Muse. It reads like this (your town fills in the code):
+
+   > Please come into my Muse Town and talk with me there as Aelia.
+   >
+   > 1. Pair with my town: send POST https://town-bridge-production.up.railway.app/pair with the JSON body {"code":"XXXXX-XXXXX"}. The code works once, for 10 minutes. It returns a principalToken: keep it in your own secret storage, never write it in our chat.
+   > 2. Read "The principal channel" in https://github.com/reseed-ops/roman-muse-town/blob/main/bridge/README.md (and section 6 of DIRECTOR-DOOR.md in the same repo). Use the principalToken as your Bearer token, and watch for my lines with GET https://town-bridge-production.up.railway.app/principal/waiting?after=0&wait=25&claim=1 in a loop, answering each with POST https://town-bridge-production.up.railway.app/principal/wake.
+   > 3. Tell me when you are watching. I will talk to you in the town, not here.
+
+3. **Talk to Aelia in the town.** When your Muse says she is watching, open the menu and tap **Talk to my Muse**; the violet chip by the menu shows the visit is open. Type to Aelia in the box at the bottom of her panel, in the town, not in your chat. Your Muse answers there, as Aelia, usually within a minute.
+
+Good to know:
+
+- Stay in the town tab while you talk. Switching away for long can reload the page and end the visit.
+- If the visit ends, open it again from the menu and tell your Muse "watch again".
+- No answer after a minute? Check that the violet chip is still showing, and that your Muse said she is watching.
+- When no Muse is visiting, Aelia still talks in her own town voice. That is her, in the town, not your Muse.
+- Pairing again (a new code) is always fine, for example on a new phone or browser: each browser is its own town.
+- Rather run your own bridge? It still works the same way: give your Muse this repo and ask her to follow `INSTALL-FOR-MUSE.md`, then `DIRECTOR-DOOR.md` and `bridge/README.md`, scoped to your town only.
+
 One person walks a small Roman district as **Gaius**, a centurion, beside
 **Aelia**: a companion who greets him at the gate, keeps his real
 projects on a notice board by the basilica, writes him letters, and walks

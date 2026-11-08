@@ -113,6 +113,43 @@ hand (`curl -X POST $TOWN_URL/actions -H "x-director-token: …" -H
 "x-visitor-token: …" -d '{"action":"beginvisit","args":{}}'`); the loop
 never calls them.
 
+## Many towns: pairing (Task 29)
+
+On the town channel the bridge also serves any visitor's town for that
+visitor's own Muse, with no setup by the owner. Pairing is on unless
+`PAIRING=off`; it needs only `TOWN_URL` and `DIRECTOR_TOKEN`.
+
+1. In the town, the visitor taps **Connect my Muse**. The browser asks
+   its own town for a one-time code (`POST /bridge/pair`, its visitor
+   key as the bearer). Codes live 10 minutes, are single use, one per
+   town, in memory on the town service.
+2. The visitor pastes the town's message to their Muse. She sends
+   `POST /pair {"code":"XXXXX-XXXXX"}` here (no token).
+3. The bridge redeems the code on the town's director-only route
+   (`POST /director/pair-redeem`, director token header) and receives
+   that visitor's key. It stores nothing: it seals the key (AES-256-GCM)
+   into the token it returns, `{"principalToken":"mtp1...."}`.
+4. She uses that token exactly like the owner's principal token, on
+   `POST /principal/wake` and `GET /principal/waiting` (the routes and
+   the watcher contract below are unchanged).
+
+Isolation: the token unseals to one town and cannot be edited to name
+another (the seal is authenticated). Each paired town has its own desk:
+claim, held wake, waiting line and transcript, made on its first call
+and dropped after 15 minutes idle. The marker token reaches the owner's
+town only. Paired towns have no resident: while their Muse is away his
+lines wait for her (a town never paired plays as ever, with Aelia's own
+voice), and her lines pass the output filter at the strictest band.
+The owner pairing his own town reaches his own desk.
+
+Responses from `POST /pair`: `200 {"principalToken"}`, `404` unknown or
+expired code, `429` after repeated misses (the town locks redeeming for
+a minute), `502` the town could not be reached.
+
+Revoking: a paired token stops working when the visitor's town key
+changes (a new browser) or when `PAIRING_SECRET` (or, unset, the
+`DIRECTOR_TOKEN`) is rotated, which retires every paired token at once.
+
 ## The principal channel (Task 22)
 
 On the town channel, with `PRINCIPAL_TOKEN` set, the bridge serves one
@@ -235,6 +272,8 @@ logged.
 | `PRINCIPAL_TOKEN` | (none) | The principal channel (Task 22, `town` only): the one token the owner's chat Muse presents. Unset, the channel does not serve. Rotate it to revoke. Never in the repo. |
 | `PRINCIPAL_MARKER_TOKEN` | (none) | A lesser, read-only token for `GET /principal/waiting` only. Optional; the principal token reads the marker too. Never in the repo. |
 | `PRINCIPAL_CLAIM_MS` | `180000` | Her claim lapses this long after her last call, and the resident resumes. |
+| `PAIRING` | on | `off` turns pairing off (Task 29): no `POST /pair`, no paired tokens. |
+| `PAIRING_SECRET` | (derived) | Seals paired tokens. Unset, a key is derived from `DIRECTOR_TOKEN`. Rotate to retire every paired token. Never in the repo. |
 | `BRIDGE_ALLOW_ORIGIN` | `*` | CORS origin for the face; set it to the town's origin to narrow it (the token gates either way). |
 | `SNAPSHOT_LAPSE_MS` | `30000` | No snapshot for this long and the held visit dies; the face reads closed. |
 | `HARNESS_URL` | `http://localhost:8787` | The seam harness (`seam` only). |

@@ -287,6 +287,25 @@ crude words, character breaks, gloom, intimacy below devoted, the dash
 rule and the 40-word / 280-character cap; an alteration is reported as
 `altered` on her slate.
 
+## 7. Many towns: pairing a town to its own Muse (Task 29)
+
+Any visitor can now pair their own town to their own Muse, with no
+token handed around by hand. In the town: menu, **Connect my Muse**,
+which shows a one-time code and a message to paste to the Muse. The
+Muse sends `POST https://town-bridge-production.up.railway.app/pair`
+with `{"code":"XXXXX-XXXXX"}` and receives a `principalToken` that
+directs that one town only, through the same principal channel as
+section 6. The town's routes behind it:
+
+| Route | Who | What |
+| --- | --- | --- |
+| `POST /bridge/pair` | the browser, visitor key as bearer | `{code, expiresAt}`: single use, 10 minutes, one live code per town |
+| `POST /director/pair-redeem` | the bridge, director token header | `{"code"}` -> `{visitorToken}`; 404 without the director token or for an unknown code; 429 after repeated misses |
+
+The Muse never sees the visitor key or the director token; the token
+she holds carries the town's key sealed. Full reference: "Many towns:
+pairing" in `bridge/README.md`.
+
 ## Minimal tests
 
 Placeholders only. Never paste a real key, token or secret into a chat

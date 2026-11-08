@@ -220,6 +220,8 @@ import { HARNESS_STORAGE_KEY, IDLE_GLANCE_MS, resolveHarnessUrl, syncWithHarness
 import { bridgeClose, bridgeConfigured, bridgeGlance, bridgeLeg, emptyBridgeCursor, hostedBridgeSettings, readBridgeSettings, resolveBridge, storeBridgeSettings, type BridgeCursor, type BridgeSettings } from "./visitBridgeClient";
 import { BRIDGE_BEAT_MS, FRAME_JPEG_QUALITY, FRAME_MAX_EDGE, VISIT_LAPSE_MS, VISIT_POLL_MS, type QueuedDirection } from "../../shared/visitProtocol";
 import { clearVisitResume, loadVisitResume, saveVisitResume, sessionStore } from "./visitResume";
+import { museConnectMessage, requestPairCode, type PairCode } from "./connectMuse";
+import { isHostedTown } from "./hosted";
 import { LAPSE_WARN_MS, UNREACHABLE_AFTER_FAILS, composingVisible, hostOf, visitChipLine, visitClosedLine, visitStatusLine, type VisitCloseReason, type VisitDirectorState, type VisitRoute } from "./visitStatus";
 import {
 playChime,
@@ -488,6 +490,16 @@ export function App() {
   // The visit's one-line notices: opened, picked up after a reload,
   // closed and why (fix list, Nov 7, 2026). Shown a few seconds.
   const [visitNotice, setVisitNotice] = useState<{ text: string; at: number; holdMs?: number } | null>(null);
+  // Connect my Muse (Task 29): the pairing code and the message for her.
+  const [connectMuse, setConnectMuse] = useState<{ state: "loading" } | { state: "ready"; pair: PairCode; copied: boolean } | { state: "error"; text: string } | null>(null);
+  const openConnectMuse = useCallback(() => {
+    setMenuOpen(false);
+    setConnectMuse({ state: "loading" });
+    requestPairCode().then(
+      (pair) => setConnectMuse({ state: "ready", pair, copied: false }),
+      (error: unknown) => setConnectMuse({ state: "error", text: error instanceof Error ? error.message : String(error) }),
+    );
+  }, []);
   useEffect(() => {
     if (!visitNotice) return;
     // The clock starts only once the tab is in view; a long notice
@@ -6083,6 +6095,50 @@ export function App() {
         </div>
       )}
 
+      {connectMuse && (
+        <div className="pointer-events-none absolute inset-x-0 top-[64px] z-40 flex justify-center px-4 pt-safe">
+          <section aria-label="Connect my Muse" className="mt-plate pointer-events-auto mt-3 w-[min(460px,94vw)] px-4 pt-4 pb-3.5">
+            <p className="mt-nametab"><span aria-hidden="true">🔗</span> Connect my Muse</p>
+            <div className="flex justify-end">
+              <button type="button" className="rounded-full bg-[#2b2118]/8 px-2 py-0.5 text-[12px] leading-none font-bold transition active:scale-90" aria-label="Close Connect my Muse" onClick={() => setConnectMuse(null)}>
+                ✕
+              </button>
+            </div>
+            {connectMuse.state === "loading" && <p className="text-sm">Making your code…</p>}
+            {connectMuse.state === "error" && <p className="text-sm">{connectMuse.text} Close this and try again in a moment.</p>}
+            {connectMuse.state === "ready" && (
+              <>
+                <p className="text-sm leading-relaxed">
+                  Copy this message and paste it to your Muse in your chat with her. When she says she is watching, open the menu, tap Talk to my Muse, and talk to Aelia here.
+                </p>
+                <p className="mt-2 text-center text-[22px] font-bold tracking-[0.12em]" aria-label={`Your code: ${connectMuse.pair.code}`}>
+                  {connectMuse.pair.code}
+                </p>
+                <p className="text-center text-[12px] text-[#2b2118]/60">
+                  Works once, until {new Date(connectMuse.pair.expiresAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.
+                </p>
+                <pre className="mt-2 max-h-[30vh] overflow-y-auto rounded-xl bg-[#2b2118]/6 p-2.5 text-[12px] leading-relaxed whitespace-pre-wrap" style={{ fontFamily: "inherit" }}>
+                  {museConnectMessage(connectMuse.pair.code)}
+                </pre>
+                <button
+                  type="button"
+                  className="mt-2.5 w-full rounded-full bg-[#ffd34e] px-4 py-2 text-sm font-bold text-[#4a3600] shadow transition active:scale-95"
+                  onClick={() => {
+                    const text = museConnectMessage(connectMuse.pair.code);
+                    void navigator.clipboard?.writeText(text).then(
+                      () => setConnectMuse({ ...connectMuse, copied: true }),
+                      () => setConnectMuse({ ...connectMuse, copied: false }),
+                    );
+                  }}
+                >
+                  {connectMuse.copied ? "Copied" : "Copy the message"}
+                </button>
+              </>
+            )}
+          </section>
+        </div>
+      )}
+
       {/* Keep routine actions visible and occasional controls in expandable groups. */}
       {menuOpen && <TownMenu
         onClose={() => setMenuOpen(false)}
@@ -6158,7 +6214,15 @@ export function App() {
             active: visitUi.active,
             action: () => (visitUi.active ? endVisitNow() : beginVisitNow()),
             aria: visitUi.active ? "End Muse's visit; Aelia returns to her own voice" : "Talk to my Muse: open a visit, so Muse can move Aelia and speak through her",
-          }]
+          }, ...(isHostedTown() ? [{
+            key: "connect-muse",
+            icon: "🔗",
+            label: "Connect my Muse",
+            detail: "A one-time code and a message to paste to your Muse, so she can talk to you here.",
+            active: connectMuse !== null,
+            action: openConnectMuse,
+            aria: "Connect my Muse: get a one-time pairing code and a message to paste to your Muse",
+          }] : [])]
         },
         {
           heading: "Your day", items: [{

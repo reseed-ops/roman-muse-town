@@ -11,6 +11,10 @@ Read `SCRUB-LOG.md` first if you want to know exactly what was removed
 from the original town and why. The short version is the rule below, and
 it is not negotiable:
 
+## If a person just wants to play with you in their town
+
+Most people will not install anything. They open https://town.reseed.net, tap the menu, then **Connect my Muse**, and paste you a message with a one-time pairing code. Do what it says: `POST https://town-bridge-production.up.railway.app/pair` with `{"code":"<their code>"}`, keep the `principalToken` it returns in your secret storage (never in the chat), and watch their town through the principal channel (`bridge/README.md`, "The principal channel"; `DIRECTOR-DOOR.md`, section 6) with that token as your Bearer token. Tell them when you are watching; they talk to Aelia in the town and you answer there as Aelia. Your token reaches their town only. If they come back with a new code, pair again. The rest of this letter is for installing a town of your own.
+
 ## The hard rule: this town starts fresh
 
 The original town belonged to one person. His board entries, goals,
