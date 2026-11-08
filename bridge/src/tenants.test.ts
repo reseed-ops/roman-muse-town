@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createFakeChannel, type FakeChannel } from "./fakeChannel.js";
 import { createPrincipalDesk } from "./principal.js";
-import { startPrincipalServer } from "./principalServer.js";
+import { PAIR_MISSES_PER_SOURCE, startPrincipalServer } from "./principalServer.js";
 import { createTenantRegistry, PAIRED_TOKEN_PREFIX, sealKey, sealVisitorKey, unsealVisitorKey } from "./tenants.js";
 
 // Task 29: many towns, each with its own Muse.
@@ -139,4 +139,28 @@ test("the server: the owner's token reaches the owner's desk, a paired token its
   await server.close();
   expect(lines.join("\n")).not.toContain(principalToken);
   expect(lines.join("\n")).not.toContain(A);
+});
+
+test("/pair limits wrong codes per caller: a guesser is refused, another caller still pairs", async () => {
+  const key = sealKey({ directorToken: DIRECTOR });
+  const lines: string[] = [];
+  const server = await startPrincipalServer({
+    desk: null,
+    token: null,
+    pair: async (code) => (code === "GOODC-ODE22" ? { ok: true, principalToken: sealVisitorKey(key, A) } : { ok: false, status: 404, error: "unknown" }),
+    port: 0,
+    host: "127.0.0.1",
+    log: (l) => lines.push(l),
+  });
+  const pair = (code: string, from: string) =>
+    fetch(`http://127.0.0.1:${server.port}/pair`, { method: "POST", headers: { "x-forwarded-for": from }, body: JSON.stringify({ code }) });
+  for (let i = 0; i < PAIR_MISSES_PER_SOURCE; i++) expect((await pair("WRONG-CODE0", "9.9.9.9, 203.0.113.7")).status).toBe(404);
+  // The guesser is now refused, even with the right code...
+  expect((await pair("GOODC-ODE22", "9.9.9.9, 203.0.113.7")).status).toBe(429);
+  // ...and forging an earlier X-Forwarded-For entry does not escape it (the proxy's own, rightmost, counts).
+  expect((await pair("WRONG-CODE0", "1.2.3.4, 203.0.113.7")).status).toBe(429);
+  // Someone else pairs as normal.
+  expect((await pair("GOODC-ODE22", "198.51.100.20")).status).toBe(200);
+  await server.close();
+  expect(lines.join("\n")).not.toContain("203.0.113.7");
 });

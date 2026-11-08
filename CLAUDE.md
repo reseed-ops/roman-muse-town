@@ -1,20 +1,44 @@
 # CLAUDE.md
 
 The Roman Muse Town: a 3D town (`client/`), its action server (`server/`),
-shared types (`shared/`), and the web build for Railway (`web/`). Tasks
-from Muse arrive in `CLAUDE-TASKS.md`; the binary manifest is `ASSETS.md`;
-the hosted deployment is documented in `web/README.md`.
+shared types (`shared/`), the web build for Railway (`web/`) and the
+Live Bridge (`bridge/`). This file is the current operating guide.
 
-## Deploying the town to Railway (the pending step)
+- Open work from Muse: `CLAUDE-TASKS.md` (READY / HOLD tasks, open
+  checks, recent landing notes). The full history to Nov 8, 2026 is
+  `docs/history/claude-tasks-to-2026-11-08.md`.
+- The binary manifest: `ASSETS.md`. The hosted deployment: `web/README.md`.
+  The bridge: `bridge/README.md`. Directing a visit: `DIRECTOR-DOOR.md`.
 
-Everything on Railway is set up except the first upload. The Railway
-project `Reseed` already holds the services `muse-town` and `Postgres-vORX`
-with `DATABASE_URL`, `DIRECTOR_TOKEN`, `TOWN_SECRET` and
-`RAILWAY_DOCKERFILE_PATH=web/Dockerfile` set, and the domains
-`muse-town-production.up.railway.app` and `town.reseed.net`. What remains
-is `railway up` from a checkout that holds the licensed assets. The
-Android device checkout does not hold them; a desktop that has the
-complete `client/src/assets/` folder from earlier builds does.
+## Checks (what CI runs, `.github/workflows/test.yml`)
+
+The public web line is the default and reproduces from a plain clone;
+the hosted Hatch SDK is an optional dependency, absent on GitHub runners.
+
+```bash
+bun install --frozen-lockfile
+bun run typecheck            # = typecheck:web: web + client against the SDK shims in web/shim
+bun run test                 # SQLite and Postgres (pglite) suites, bridge included
+(cd bridge && bun install --frozen-lockfile && bun run typecheck)
+CI=true bun run web/stubAssets.ts && bun run build:web && bun run smoke:web   # CI only: stand-in assets
+```
+
+`web/stubAssets.ts` writes empty stand-ins for the licensed assets and
+refuses to run outside CI: never build a deploy from a stubbed checkout.
+The Hatch artifact line keeps `typecheck:hatch` and `build:hatch`, which
+need the SDK. On a machine where Tailwind's native module cannot load
+(a noexec mount), point `MUSE_TAILWIND_PLUGIN` at a copy of
+`bun-plugin-tailwind/index.js` elsewhere.
+
+## Deploying the town to Railway
+
+The Railway project `Reseed` holds the services `muse-town`,
+`Postgres-vORX` and `town-bridge`. `muse-town` has `DATABASE_URL`,
+`DIRECTOR_TOKEN`, `TOWN_SECRET` and `RAILWAY_DOCKERFILE_PATH=web/Dockerfile`
+set, and the domains `muse-town-production.up.railway.app` and
+`town.reseed.net`. A deploy is `railway up` of a clean export from a
+checkout that holds the complete licensed assets; deploy only on the
+owner's word.
 
 The trap: the build ships whether or not the assets are present. A build
 without them deploys fine and then the scene fails to load in the
@@ -143,19 +167,46 @@ curl https://town.reseed.net/healthz                      # same, once the CNAME
 Open the town in a browser, confirm the scene loads with models and
 animations (the proof that the assets made it into the build), play,
 reload, and install it from the browser menu. Then record the deploy in
-`CLAUDE-TASKS.md` under Task 8 with the date.
+`CLAUDE-TASKS.md` beside the landing note it ships, with the date and
+the build id the upload printed.
 
-### Launch gate
+An upload that fails with "error sending request" before any build
+starts was dropped: retry it. A failed build has a build log: read it
+before any retry.
 
-The deployment may go up for the owner's own verification. The town is
-not linked, announced or posted anywhere until the asset and model
-licences are verified, because the web serves the commercial model and
-texture files to every browser as raw files. See "Launch gate" in
-`web/README.md`.
+## Deploying town-bridge
+
+`town-bridge` runs `bridge/` (its variables are set on the service; see
+the Environment table in `bridge/README.md`). Upload a clean export of
+the tracked `bridge/` and `shared/` files plus the private
+`bridge/pack.md`:
+
+```bash
+U=$(mktemp -d)/upload; mkdir -p "$U"
+git ls-files -z bridge shared | tar --null -T - -cf - | tar -xf - -C "$U"
+cp bridge/pack.md "$U/bridge/pack.md"
+(cd "$U" && railway up -c --no-gitignore -p 332e2d9a-3d77-48b8-9389-f70ebaed20dc -s town-bridge -e production)
+curl https://town-bridge-production.up.railway.app/healthz   # expect {"ok":true}
+```
+
+When a change needs both services (pairing, Task 29), deploy the town
+first: the bridge calls the town's routes.
+
+## Launch gate (cleared Nov 5, 2026)
+
+The gate was cleared by the owner's decision on Nov 5, 2026, after Task
+14 packed the web build's assets (no licensed file is addressable on its
+own) and corrected the song's provenance; Muse recorded it ("Launch
+gate: CLEARED" in the task history). The town is public at
+town.reseed.net. Any new licensed file must come from a pack listed in
+`ASSETS.md`, be listed there, and travel packed like the rest.
 
 ## Working notes
 
 - `bun run build:web` builds `web/dist`; `bun run test` runs the SQLite
   and Postgres suites. See `web/README.md` for the local run.
-- `DATABASE_URL`, `DIRECTOR_TOKEN`, `TOWN_SECRET` and any visitor token
-  never enter this repository.
+- Never in this repository, a chat, a note, a commit or a log:
+  `DATABASE_URL`, `DIRECTOR_TOKEN`, `TOWN_SECRET`, any visitor key, the
+  VAPID private key, `ANTHROPIC_API_KEY`, `PRINCIPAL_TOKEN`,
+  `PRINCIPAL_MARKER_TOKEN`, `PAIRING_SECRET`, or a paired principal token.
+- Licensed assets are never committed (`.gitignore` keeps them out).

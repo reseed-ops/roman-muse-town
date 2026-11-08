@@ -2,20 +2,23 @@
   "name": "hatch-ts-space-muse-town",
   "private": true,
   "type": "module",
-  "packageManager": "bun@1.3.10",
+  "packageManager": "bun@1.4.4",
   "scripts": {
     "test": "bun run test:sqlite && bun run test:pg",
-    "typecheck": "bun x tsc --noEmit -p client/tsconfig.json && bun x tsc --noEmit -p server/tsconfig.json",
-    "build": "bun run build:server && bun run build:client",
+    "typecheck": "bun run typecheck:web",
+    "build": "bun run build:web",
     "build:server": "cd server && bun build ./src/actions.ts --target=bun --outfile=./dist/actions.js",
     "build:client": "bun ./client/build.mjs",
     "test:sqlite": "bun test server client/src shared harness bridge/src",
     "test:pg": "TOWN_DIALECT=postgres bun test server/src/postgres.test.ts web/src",
     "build:web": "bun run web/build.ts",
-    "start:web": "bun run web/dist/server.js"
+    "start:web": "bun run web/dist/server.js",
+    "typecheck:web": "bun node_modules/typescript/lib/tsc.js --noEmit -p web/tsconfig.json && bun node_modules/typescript/lib/tsc.js --noEmit -p client/tsconfig.web.json",
+    "typecheck:hatch": "bun x tsc --noEmit -p client/tsconfig.json && bun x tsc --noEmit -p server/tsconfig.json",
+    "build:hatch": "bun run build:server && bun run build:client",
+    "smoke:web": "bun test web/smoke.test.ts"
   },
   "dependencies": {
-    "@hatch/space-sdk": "file:/opt/hatch/skills/spaces/ts-runtime/dist/space-sdk.tgz",
     "@huggingface/transformers": "4.3.0",
     "@tanstack/react-query": "5.100.10",
     "drizzle-orm": "0.45.2",
@@ -30,8 +33,12 @@
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@types/three": "^0.187.0",
+    "bun-plugin-tailwind": "0.0.15",
     "tailwindcss": "4.1.13",
     "tailwindcss-safe-area": "1.3.0",
     "typescript": "5.6.3"
+  },
+  "optionalDependencies": {
+    "@hatch/space-sdk": "file:/opt/hatch/skills/spaces/ts-runtime/dist/space-sdk.tgz"
   }
 }

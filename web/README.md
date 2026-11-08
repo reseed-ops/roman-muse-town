@@ -80,11 +80,10 @@ worker exists to cure.
 
 ## Launch gate
 
-Standing from the public edition's charter: the deployment may go up for
-the owner's own verification, but the town is not linked, announced or
-posted anywhere until the asset and model licences are verified. The web
-once served the commercial model and texture files to every browser as
-raw files, nearer redistribution than an embedded APK; since Task 14
-(Nov 5, 2026) they travel packed, no longer addressable one by one, which
-the licence gate review asked for before any public link. `CLAUDE-TASKS.md`
-records when the gate is cleared and by whom.
+Cleared on Nov 5, 2026 by the owner's decision, once Task 14 packed the
+web build's assets (the commercial model and texture files are no longer
+addressable one by one) and corrected the song's provenance line; the
+record is "Launch gate: CLEARED" in the task history
+(`docs/history/claude-tasks-to-2026-11-08.md`). The town is public at
+town.reseed.net. A new licensed file must come from a pack listed in
+`ASSETS.md`, be listed there, and travel packed.

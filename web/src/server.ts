@@ -161,9 +161,12 @@ export function createTownServer(opts: TownServerOptions): TownServer {
       }
       return json(200, { result: checked.data, invalidate });
     } catch (error) {
+      // The detail stays in the log; the browser gets a plain answer and
+      // a reference that finds the log line, never the exception itself.
       const message = error instanceof Error ? error.message : String(error);
-      log(`action ${action} failed: ${message}`);
-      return json(500, { error: message });
+      const ref = crypto.randomUUID().slice(0, 8);
+      log(`action ${action} failed [${ref}]: ${message}`);
+      return json(500, { error: `The town could not finish that. Try again in a moment (ref ${ref}).` });
     }
   }
 

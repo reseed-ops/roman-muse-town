@@ -38,6 +38,18 @@ import { bearerToken, tokenMatches } from "./bridgeServer.js";
 import type { PrincipalDesk } from "./principal.js";
 
 const MAX_BODY_BYTES = 64_000;
+/** Pairing misses one caller may make in the window before /pair refuses them (Task 29 hardening). */
+export const PAIR_MISSES_PER_SOURCE = 8;
+export const PAIR_MISS_WINDOW_MS = 10 * 60 * 1000;
+
+/** The caller's address: the rightmost X-Forwarded-For entry is the one
+ *  the platform's proxy added (earlier ones are the caller's to forge). */
+export function callerAddress(req: IncomingMessage): string {
+  const fwd = req.headers["x-forwarded-for"];
+  const raw = Array.isArray(fwd) ? fwd[fwd.length - 1] : fwd;
+  const last = raw?.split(",").map((part) => part.trim()).filter(Boolean).pop();
+  return last || req.socket.remoteAddress || "unknown";
+}
 export const WAIT_MAX_S = 25;
 const WAIT_LOOK_MS = 250;
 
@@ -81,6 +93,15 @@ export function startPrincipalServer(opts: PrincipalServerOptions): Promise<Prin
   const { desk, token } = opts;
   const markerToken = opts.markerToken || null;
   const log = opts.log ?? ((line: string) => console.log(line));
+  // Per-caller pairing misses: a guesser is refused on their own, and
+  // nobody else's pairing is held up by them.
+  const pairMisses = new Map<string, number[]>();
+  const recentMisses = (who: string, t: number): number[] => {
+    const kept = (pairMisses.get(who) ?? []).filter((at) => t - at < PAIR_MISS_WINDOW_MS);
+    if (kept.length) pairMisses.set(who, kept);
+    else pairMisses.delete(who);
+    return kept;
+  };
   const send = (res: ServerResponse, status: number, body: unknown): void => {
     res.writeHead(status, {
       "content-type": "application/json",
@@ -107,7 +128,15 @@ export function startPrincipalServer(opts: PrincipalServerOptions): Promise<Prin
         } catch {
           return send(res, 400, { error: "the body is not JSON" });
         }
+        const who = callerAddress(req);
+        const t = Date.now();
+        if (recentMisses(who, t).length >= PAIR_MISSES_PER_SOURCE) {
+          log("pair: a caller was refused after repeated misses");
+          return send(res, 429, { error: "too many wrong codes from here; wait a few minutes and make a new code in the town" });
+        }
         const out = await opts.pair((raw as { code?: unknown } | null)?.code);
+        if (!out.ok && out.status === 404) pairMisses.set(who, [...recentMisses(who, t), t]);
+        if (pairMisses.size > 10_000) pairMisses.clear();
         return out.ok ? send(res, 200, { principalToken: out.principalToken }) : send(res, out.status, { error: out.error });
       }
       if (path !== "/principal/wake" && path !== "/principal/waiting") return send(res, 404, { error: "no such route" });

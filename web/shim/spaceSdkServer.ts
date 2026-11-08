@@ -17,7 +17,11 @@ export interface Ctx {
     delete(key: string): Promise<unknown>;
   };
   invalidateQueries(): void;
-  inference: { complete(request: unknown): Promise<{ text: string }> };
+  /** As the SDK: with a schema the answer is the parsed object, without one `{ text }`. */
+  inference: {
+    complete<S extends z.ZodType>(request: unknown, options: { schema: S }): Promise<z.output<S>>;
+    complete(request: unknown): Promise<{ text: string }>;
+  };
 }
 
 export interface ActionDefinition<Req extends z.ZodType, Res extends z.ZodType> {

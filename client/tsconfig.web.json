@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./.tsbuildinfo.client-web",
+    "paths": {
+      "@space/server/*": ["../server/src/*"],
+      "@space/privileged": ["../server/.generated/privileged.contract"],
+      "@hatch/space-sdk": ["../web/shim/spaceSdkServer.ts"],
+      "@hatch/space-sdk/client": ["../web/shim/spaceSdkClient.ts"]
+    }
+  },
+  "include": ["src/**/*", "../server/src/**/*", "../web/shim/**/*"]
+}

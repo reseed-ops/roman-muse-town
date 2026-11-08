@@ -17,3 +17,6 @@ client/src/assets/*
 # Local process documents - never published (they spell the sweep patterns)
 SCRUB-LOG.md
 SWEEP-REPORT.md
+
+# TypeScript incremental state
+.tsbuildinfo*

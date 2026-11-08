@@ -55,7 +55,7 @@ her memory of his real life honest.
   without it. Her pure logic (`hearing.ts`, `heart.ts`, `player.ts`) has
   no database or SDK in it. `bun run test` also covers economy transactions,
   permanent fish progression, graphics settings, and scene resource cleanup.
-- **Schema** (`drizzle/`): 26 migrations building the whole town state
+- **Schema** (`drizzle/`): 28 migrations building the whole town state
   from an empty SQLite database.
 - **Two free binaries**: a CC0 low-poly trees pack and the companion's
   VRM body, whose licence (pixiv's VRoid sample terms) permits free
@@ -119,6 +119,20 @@ terms: the trees pack is CC0, and the companion's VRM body is under
 pixiv's VRoid sample-model terms (free use and free redistribution; it
 may never be sold as a file or relabelled CC0). Commercial asset packs
 are not part of this repository; see `ASSETS.md`.
+
+## Build and check from a clone
+
+The web line builds from a plain clone (the hosted SDK is optional):
+
+```bash
+bun install --frozen-lockfile
+bun run typecheck      # web and client, against the SDK shims in web/shim
+bun run test           # SQLite and Postgres (pglite) suites
+bun run build:web      # needs the licensed assets in client/src/assets (see ASSETS.md)
+```
+
+CI runs the same, plus the bridge's typecheck and a build smoke test on
+stand-in assets (`.github/workflows/test.yml`).
 
 ## The standalone build
 

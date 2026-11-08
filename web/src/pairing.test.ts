@@ -66,3 +66,29 @@ test("the town mints a code for its own visitor, and only the director token red
     expect(line).not.toContain(code);
   }
 });
+
+test("a failing action answers plainly with a reference; the exception stays in the log", async () => {
+  const { z } = await import("zod");
+  const logs: string[] = [];
+  const server = createTownServer({
+    db: null as never,
+    actions: { boom: { request: z.object({}), response: z.object({}), handler: async () => { throw new Error("secret internal detail at /srv/x.ts:12"); } } },
+    directorToken: null,
+    blobSecret: "blob-secret",
+    distDir: null,
+    log: (l) => logs.push(l),
+  });
+  const res = await server.fetch(new Request("http://town.test/actions", { method: "POST", headers: { authorization: `Bearer ${A}`, "content-type": "application/json" }, body: JSON.stringify({ action: "boom", args: {} }) }));
+  expect(res.status).toBe(500);
+  const body = (await res.json()) as { error: string };
+  expect(body.error).not.toContain("secret internal detail");
+  const ref = /ref ([0-9a-f]{8})/.exec(body.error)?.[1];
+  expect(ref).toBeDefined();
+  // Whatever failed (here the absent database, before the handler), the
+  // detail is in the log under the reference and nowhere in the answer.
+  const line = logs.find((l) => l.includes(`[${ref}]`));
+  expect(line).toBeDefined();
+  const detail = line!.slice(line!.indexOf("]: ") + 3);
+  expect(detail.length).toBeGreaterThan(0);
+  expect(body.error).not.toContain(detail);
+});

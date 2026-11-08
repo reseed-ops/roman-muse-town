@@ -13,15 +13,17 @@
 // Codes are single use, live 10 minutes, one live code per town (asking
 // again replaces it), and are kept in memory only: a restart forgets
 // unredeemed codes, and the visitor simply asks again. Guessing is
-// bounded twice: 10 characters from a 30-letter alphabet (about 49
-// bits), and a lockout after repeated misses that refuses every redeem
-// for a minute.
+// bounded by 10 characters from a 30-letter alphabet (about 49 bits),
+// by the bridge's per-caller limit on POST /pair (bridge/src/
+// principalServer.ts), and, here, by a high global backstop: so many
+// misses in a minute that only a guesser spread over many addresses
+// could reach it, and then redeeming pauses for that minute.
 
 import { randomInt } from "node:crypto";
 
 export const PAIR_CODE_MS = 10 * 60 * 1000;
 /** Misses within the window that lock redeeming for the window. */
-export const PAIR_MISS_LIMIT = 20;
+export const PAIR_MISS_LIMIT = 600;
 export const PAIR_MISS_WINDOW_MS = 60 * 1000;
 /** No 0/O, 1/I/L or U: easy to read aloud and to type. */
 const ALPHABET = "ABCDEFGHJKMNPQRSTVWXYZ23456789";
