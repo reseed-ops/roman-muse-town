@@ -13,7 +13,17 @@ export interface SlateKeeper {
   sweep(): number;
 }
 
-export function createSlateKeeper(opts: { now?: () => number; lapseMs?: number; idleMs?: number } = {}): SlateKeeper {
+/** Faces kept at once (Task 61); beyond it a new town's face is refused until idle ones are swept. */
+export const SLATE_MAX_FACES = 5_000;
+
+export class SlatesFull extends Error {
+  constructor() {
+    super("too many open visits");
+  }
+}
+
+export function createSlateKeeper(opts: { now?: () => number; lapseMs?: number; idleMs?: number; maxFaces?: number } = {}): SlateKeeper {
+  const maxFaces = opts.maxFaces ?? SLATE_MAX_FACES;
   const now = opts.now ?? (() => Date.now());
   const idleMs = opts.idleMs ?? 10 * 60 * 1000;
   const faces = new Map<string, SlateFace>();
@@ -35,6 +45,7 @@ export function createSlateKeeper(opts: { now?: () => number; lapseMs?: number; 
       if (++sweeps % 100 === 0) sweep();
       let face = faces.get(schemaName);
       if (!face) {
+        if (faces.size >= maxFaces && sweep() === 0 && faces.size >= maxFaces) throw new SlatesFull();
         face = createSlateFace({ now, ...(opts.lapseMs !== undefined ? { lapseMs: opts.lapseMs } : {}) });
         faces.set(schemaName, face);
       }

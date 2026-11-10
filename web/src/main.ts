@@ -5,6 +5,9 @@
 //   TOWN_SECRET     signs postcard paths; absent, a random one per
 //                   process (postcard links then change on a restart)
 //   PORT            Railway sets it (default 8080)
+//   TRUST_PROXY     1/0: read X-Real-IP as the caller's address (default:
+//                   on when running on Railway, off elsewhere)
+//   TOWN_RETENTION_DAYS  drop a town untouched this long (default 365; 0 keeps all)
 //
 // The dialect is fixed to Postgres before anything else loads, which is
 // what makes schema.ts hand the action layer the pg-core tables.
@@ -24,6 +27,8 @@ async function main(): Promise<void> {
   const { Actions } = await import("../../server/src/actions");
   const { visitActions } = await import("../../server/src/visitActions");
   const { createTownServer } = await import("./server");
+  const { trustProxyFromEnv } = await import("./limits");
+  const { DEFAULT_RETENTION_DAYS } = await import("./townKeeper");
   const { randomBytes } = await import("node:crypto");
 
   const client = new SQL(databaseUrl);
@@ -43,9 +48,11 @@ async function main(): Promise<void> {
     blobSecret,
     distDir,
     log,
+    trustProxy: trustProxyFromEnv(process.env),
+    retentionDays: process.env.TOWN_RETENTION_DAYS === undefined ? DEFAULT_RETENTION_DAYS : Math.max(0, Math.floor(Number(process.env.TOWN_RETENTION_DAYS)) || 0),
   });
   const port = Number(process.env.PORT) || 8080;
-  Bun.serve({ port, fetch: server.fetch, maxRequestBodySize: 4 * 1024 * 1024, idleTimeout: 60 });
+  Bun.serve({ port, fetch: (req, srv) => server.fetch(req, srv.requestIP(req)?.address), maxRequestBodySize: 4 * 1024 * 1024, idleTimeout: 60 });
   log(`muse town on the web: :${port}, door ${directorToken ? "open to the director token" : "shut (no DIRECTOR_TOKEN)"}, client at ${distDir}`);
 }
 

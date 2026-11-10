@@ -61,6 +61,20 @@ What never enters this repository: `DATABASE_URL`, `DIRECTOR_TOKEN`, `TOWN_SECRE
 
 Done on Nov 4, 2026 from the owner's CLI session (Claude): steps 1 to 4 and 6 in the `Reseed` project, as the services `Postgres-vORX` (Railway ignored the requested name) and `muse-town`, with `DATABASE_URL`, `DIRECTOR_TOKEN`, `TOWN_SECRET` and `RAILWAY_DOCKERFILE_PATH` set, the generated domain `muse-town-production.up.railway.app`, and `town.reseed.net` waiting on its CNAME to `pkxqml5a.up.railway.app`. Step 5 landed on Nov 5, 2026 (deployment e5ec4ea6, `/healthz` green on the Railway domain) after the assets were rebuilt from the owner's packs (`ASSETS.md`, rebuild record). Note for the next upload: `railway up` honours `.gitignore`, which excludes the assets, so upload a clean export of the tracked files plus `client/src/assets/` with `--no-gitignore` (the exact commands are in `CLAUDE.md`). `town.reseed.net` has served on its own certificate since Nov 5, 2026 (Let's Encrypt, valid to Feb 3, 2027; Railway renews it).
 
+## Public limits and retention (Task 61)
+
+The town is public, so it bounds what a caller can ask of it (`web/src/limits.ts`, defaults in `DEFAULT_LIMITS`, `web/src/server.ts`):
+
+- per minute: 240 actions per town, 900 per caller address, 12 saves/postcards per town, 240 bridge calls per town; 6 pairing codes per town per ten minutes; wrong pairing codes are limited at the bridge (below) and, as a backstop, here (600 a minute overall);
+- creation: a town the database has not seen needs a free slot first: 12 new towns per address per hour, 60 a minute overall, 50,000 towns at most (then 503); a returning town is never refused for this;
+- at once: 4 actions per town and 64 overall in flight (else 503 with Retry-After), 2 held reads per town and 300 overall (a held read over the line answers at once, as a short poll); the pairing desk holds 5,000 live codes and the slate keeper 5,000 open visits;
+- storage: 40 postcards and 48 MB of images per town (a full 32 MB save still fits);
+- `/stats` is reused for 30 seconds.
+
+The caller's address is the socket's, unless a trusted proxy is configured: `TRUST_PROXY=1` (default on when Railway's own variables are present) reads `X-Real-IP`; `X-Forwarded-For` is never read. The limits are in this process's memory (the town runs as one replica; see the review's finding 7).
+
+**Retention.** A town untouched for `TOWN_RETENTION_DAYS` (default 365; `0` keeps every town) is dropped whole, with its letters, memories and postcard images. A town is stamped when it is called (`public.town_seen`, at most hourly); a town with no stamp is stamped the first time the reaper runs, so nothing is dropped until a full period after this policy first runs. The reaper runs a minute after start and then daily, at most 200 towns a pass. A visitor keeps a copy by exporting a save from the menu.
+
 ## Run and test locally
 
 - `bun run build:web` builds `web/dist` (client under `web/dist/client`, server at `web/dist/server.js`). The Tailwind plugin carries a native module; on a machine whose checkout cannot map shared objects, set `MUSE_TAILWIND_PLUGIN` to a copy of `node_modules/bun-plugin-tailwind/index.js` elsewhere.

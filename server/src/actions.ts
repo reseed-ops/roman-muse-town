@@ -1861,6 +1861,9 @@ async function heartLines(ctx: Ctx, h: HeartRow, rank: number): Promise<string[]
   ];
 }
 
+/** Postcards one town's album holds (Task 61); a save of them still fits the 32 MB limit. */
+export const MAX_POSTCARDS = 40;
+
 export const Actions = {
   ...saveActions,
   getState: defineAction({
@@ -2413,6 +2416,8 @@ export const Actions = {
     response: stateResponse,
     async handler(ctx, args) {
       const db = ctx.db<typeof schema>();
+      const kept = await db.select({ id: schema.postcards.id }).from(schema.postcards);
+      if (kept.length >= MAX_POSTCARDS) throw new Error(`The album holds ${MAX_POSTCARDS} postcards; delete one to add another.`);
       const bytes = Uint8Array.from(atob(args.image_base64), (c) => c.charCodeAt(0));
       const key = `postcards/${Date.now()}-${Math.floor(Math.random() * 1e6)}.jpg`;
       await ctx.blobs.put(key, bytes, { contentType: "image/jpeg" });

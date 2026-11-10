@@ -121,6 +121,26 @@ export async function ensureTown(db: PgTownDb, schemaName: string): Promise<numb
   return ran;
 }
 
+/** True when this process has already brought the town up (no creation can follow). */
+export function isTownReady(schemaName: string): boolean {
+  return readyTowns.has(schemaName);
+}
+
+/** Whether the town's schema exists in the database (a returning visitor
+ *  after a restart), as opposed to a town about to be created (Task 61). */
+export async function townExists(db: PgTownDb, schemaName: string): Promise<boolean> {
+  const result = (await db.execute(sql`SELECT 1 AS found FROM information_schema.schemata WHERE schema_name = ${schemaName}`)) as unknown;
+  const rows = Array.isArray(result) ? result : ((result as { rows?: unknown[] } | null)?.rows ?? []);
+  return rows.length > 0;
+}
+
+/** Drops one town's schema with everything in it (the retention reaper only). */
+export async function dropTown(db: PgTownDb, schemaName: string): Promise<void> {
+  if (!/^town_[0-9a-f]{24}$/.test(schemaName)) throw new Error("not a town schema");
+  await db.execute(sql`DROP SCHEMA IF EXISTS ${sql.identifier(schemaName)} CASCADE`);
+  readyTowns.delete(schemaName);
+}
+
 /** Test seam: forget which towns this process has seen. */
 export function forgetReadyTowns(): void {
   readyTowns.clear();

@@ -36,20 +36,23 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { bearerToken, tokenMatches } from "./bridgeServer.js";
 import type { PrincipalDesk } from "./principal.js";
+import { createPairLimiter, type PairLimits } from "./pairLimiter.js";
 
 const MAX_BODY_BYTES = 64_000;
-/** Pairing misses one caller may make in the window before /pair refuses them (Task 29 hardening). */
-export const PAIR_MISSES_PER_SOURCE = 8;
-export const PAIR_MISS_WINDOW_MS = 10 * 60 * 1000;
+export { DEFAULT_PAIR_LIMITS } from "./pairLimiter.js";
 
-/** The caller's address: Railway's edge sets X-Real-IP to the client's
- *  address (its documented header); X-Forwarded-For is never read,
- *  since a caller can write anything there. Off Railway (tests, a local
- *  run) the socket's own address is used. */
-export function callerAddress(req: IncomingMessage): string {
-  const real = req.headers["x-real-ip"];
-  const value = (Array.isArray(real) ? real[real.length - 1] : real)?.trim();
-  return value || req.socket.remoteAddress || "unknown";
+/** The caller's address: the proxy's X-Real-IP only when a trusted proxy
+ *  is configured (TRUST_PROXY, or Railway's own environment; see
+ *  pairLimiter.ts); X-Forwarded-For is never read, since a caller can
+ *  write anything there. Otherwise the socket's own address. The overall
+ *  limits in the pair limiter bound a caller who forges the header anyway. */
+export function callerAddress(req: IncomingMessage, trustProxy = false): string {
+  if (trustProxy) {
+    const real = req.headers["x-real-ip"];
+    const value = (Array.isArray(real) ? real[real.length - 1] : real)?.trim();
+    if (value && value.length <= 64) return value;
+  }
+  return req.socket.remoteAddress || "unknown";
 }
 export const WAIT_MAX_S = 25;
 const WAIT_LOOK_MS = 250;
@@ -67,6 +70,10 @@ export type PrincipalServerOptions = {
   markerToken?: string | null;
   port?: number;
   host?: string;
+  /** Read X-Real-IP as the caller's address (a trusted proxy fronts this server). */
+  trustProxy?: boolean;
+  /** Overrides for the pairing limits (tests). */
+  pairLimits?: Partial<PairLimits>;
   log?: (line: string) => void;
 };
 
@@ -94,15 +101,8 @@ export function startPrincipalServer(opts: PrincipalServerOptions): Promise<Prin
   const { desk, token } = opts;
   const markerToken = opts.markerToken || null;
   const log = opts.log ?? ((line: string) => console.log(line));
-  // Per-caller pairing misses: a guesser is refused on their own, and
-  // nobody else's pairing is held up by them.
-  const pairMisses = new Map<string, number[]>();
-  const recentMisses = (who: string, t: number): number[] => {
-    const kept = (pairMisses.get(who) ?? []).filter((at) => t - at < PAIR_MISS_WINDOW_MS);
-    if (kept.length) pairMisses.set(who, kept);
-    else pairMisses.delete(who);
-    return kept;
-  };
+  const trustProxy = opts.trustProxy ?? false;
+  const pairLimiter = createPairLimiter(opts.pairLimits ?? {});
   const send = (res: ServerResponse, status: number, body: unknown): void => {
     res.writeHead(status, {
       "content-type": "application/json",
@@ -132,15 +132,21 @@ export function startPrincipalServer(opts: PrincipalServerOptions): Promise<Prin
         } catch {
           return send(res, 400, { error: "the body is not JSON" });
         }
-        const who = callerAddress(req);
-        const t = Date.now();
-        if (recentMisses(who, t).length >= PAIR_MISSES_PER_SOURCE) {
-          log("pair: a caller was refused after repeated misses");
-          return send(res, 429, { error: "too many wrong codes from here; wait a few minutes and make a new code in the town" });
+        const who = callerAddress(req, trustProxy);
+        // The slot is reserved here, before the upstream call, and settled after.
+        const slot = pairLimiter.reserve(who);
+        if (!slot.ok) {
+          log(`pair: a caller was refused (${slot.reason})`);
+          return send(res, 429, { error: "too many pairing attempts from here; wait a few minutes and make a new code in the town" });
         }
-        const out = await opts.pair((raw as { code?: unknown } | null)?.code);
-        if (!out.ok && out.status === 404) pairMisses.set(who, [...recentMisses(who, t), t]);
-        if (pairMisses.size > 10_000) pairMisses.clear();
+        let out: PairOutcome;
+        try {
+          out = await opts.pair((raw as { code?: unknown } | null)?.code);
+        } catch (error) {
+          slot.settle("release");
+          throw error;
+        }
+        slot.settle(out.ok ? "success" : out.status === 404 ? "miss" : "release");
         return out.ok ? send(res, 200, { principalToken: out.principalToken }) : send(res, out.status, { error: out.error });
       }
       if (path !== "/principal/wake" && path !== "/principal/waiting") return send(res, 404, { error: "no such route" });

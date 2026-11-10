@@ -49,8 +49,18 @@ export function formatPairCode(bare: string): string {
   return `${bare.slice(0, 5)}-${bare.slice(5)}`;
 }
 
-export function createPairingDesk(opts: { now?: () => number } = {}): PairingDesk {
+/** Live codes the desk will hold at once (Task 61); beyond it, minting is refused until some expire. */
+export const PAIR_MAX_CODES = 5_000;
+
+export class PairingFull extends Error {
+  constructor() {
+    super("the pairing desk is full");
+  }
+}
+
+export function createPairingDesk(opts: { now?: () => number; maxCodes?: number } = {}): PairingDesk {
   const now = opts.now ?? (() => Date.now());
+  const maxCodes = opts.maxCodes ?? PAIR_MAX_CODES;
   const codes = new Map<string, { visitorToken: string; expiresAt: number }>();
   const liveByTown = new Map<string, string>();
   let misses: number[] = [];
@@ -69,6 +79,7 @@ export function createPairingDesk(opts: { now?: () => number } = {}): PairingDes
       sweep();
       const old = liveByTown.get(visitorToken);
       if (old) codes.delete(old);
+      if (codes.size >= maxCodes) throw new PairingFull();
       let bare = "";
       do {
         bare = "";

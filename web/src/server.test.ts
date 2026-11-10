@@ -75,6 +75,7 @@ describe.skipIf(!onPostgres)("the town on the web", () => {
       blobSecret: "blob-secret",
       distDir: dist,
       log: (line) => logs.push(line),
+      statsCacheMs: 0,
     });
   });
   afterAll(async () => { await client?.close(); });

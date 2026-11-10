@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createFakeChannel, type FakeChannel } from "./fakeChannel.js";
 import { createPrincipalDesk } from "./principal.js";
-import { PAIR_MISSES_PER_SOURCE, startPrincipalServer } from "./principalServer.js";
+import { DEFAULT_PAIR_LIMITS, startPrincipalServer } from "./principalServer.js";
 import { createTenantRegistry, PAIRED_TOKEN_PREFIX, sealKey, sealVisitorKey, unsealVisitorKey } from "./tenants.js";
 
 // Task 29: many towns, each with its own Muse.
@@ -149,20 +149,21 @@ test("/pair limits wrong codes per caller: a guesser is refused, another caller 
     desk: null,
     token: null,
     pair: async (code) => (code === "GOODC-ODE22" ? { ok: true, principalToken: sealVisitorKey(key, A) } : { ok: false, status: 404, error: "unknown" }),
+    trustProxy: true,
     port: 0,
     host: "127.0.0.1",
     log: (l) => lines.push(l),
   });
   const pair = (code: string, realIp: string, forwarded = "1.2.3.4") =>
     fetch(`http://127.0.0.1:${server.port}/pair`, { method: "POST", headers: { "x-real-ip": realIp, "x-forwarded-for": forwarded }, body: JSON.stringify({ code }) });
-  for (let i = 0; i < PAIR_MISSES_PER_SOURCE; i++) expect((await pair("WRONG-CODE0", "203.0.113.7", `10.0.0.${i}`)).status).toBe(404);
+  for (let i = 0; i < DEFAULT_PAIR_LIMITS.missesPerSource; i++) expect((await pair("WRONG-CODE0", "203.0.113.7", `10.0.0.${i}`)).status).toBe(404);
   // The guesser is now refused, even with the right code...
   expect((await pair("GOODC-ODE22", "203.0.113.7")).status).toBe(429);
   // ...and no X-Forwarded-For value, however varied, escapes it: only X-Real-IP counts.
   expect((await pair("WRONG-CODE0", "203.0.113.7", "198.51.100.99, 198.51.100.20")).status).toBe(429);
   // Someone else pairs as normal, even while forging the guesser's X-Forwarded-For.
   expect((await pair("GOODC-ODE22", "198.51.100.20", "203.0.113.7")).status).toBe(200);
-  // Without X-Real-IP (off Railway) the socket address is the caller.
+  // Without X-Real-IP the socket address is the caller (a different source from the two above).
   const bare = await fetch(`http://127.0.0.1:${server.port}/pair`, { method: "POST", headers: { "x-forwarded-for": "203.0.113.7" }, body: JSON.stringify({ code: "GOODC-ODE22" }) });
   expect(bare.status).toBe(200);
   await server.close();

@@ -143,8 +143,7 @@ voice), and her lines pass the output filter at the strictest band.
 The owner pairing his own town reaches his own desk.
 
 Responses from `POST /pair`: `200 {"principalToken"}`, `404` unknown or
-expired code, `429` after repeated misses (the town locks redeeming for
-a minute), `502` the town could not be reached.
+expired code, `429` past the per-caller limits (8 wrong codes or pending attempts, 5 successful pairings, 2 in flight, per address per ten minutes; 120 misses and 16 in flight overall, so a caller forging addresses meets the overall ceiling; slots are reserved before the town is asked, `bridge/src/pairLimiter.ts`), `502` the town could not be reached.
 
 Revoking: a paired token stops working when the visitor's town key
 changes (a new browser) or when `PAIRING_SECRET` (or, unset, the
@@ -273,6 +272,7 @@ logged.
 | `PRINCIPAL_MARKER_TOKEN` | (none) | A lesser, read-only token for `GET /principal/waiting` only. Optional; the principal token reads the marker too. Never in the repo. |
 | `PRINCIPAL_CLAIM_MS` | `180000` | Her claim lapses this long after her last call, and the resident resumes. |
 | `PAIRING` | on | `off` turns pairing off (Task 29): no `POST /pair`, no paired tokens. |
+| `TRUST_PROXY` | (on Railway) | `1`/`0`: read `X-Real-IP` as the caller's address at `/pair`. Default on when Railway's own variables are present, off elsewhere; `X-Forwarded-For` is never read. |
 | `PAIRING_SECRET` | (derived) | Seals paired tokens. Unset, a key is derived from `DIRECTOR_TOKEN`. Rotate to retire every paired token. Never in the repo. |
 | `BRIDGE_ALLOW_ORIGIN` | `*` | CORS origin for the face; set it to the town's origin to narrow it (the token gates either way). |
 | `SNAPSHOT_LAPSE_MS` | `30000` | No snapshot for this long and the held visit dies; the face reads closed. |

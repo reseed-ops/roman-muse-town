@@ -5,12 +5,15 @@
 // service's secret; a path for one town never opens another's.
 
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, ne, sql } from "drizzle-orm";
 import type { BlobStore } from "../../server/src/saveService";
 import type { TownDb } from "../../server/src/storage";
 import { asPg, townBlobs } from "../../server/src/storage.pg";
 
 export const BLOB_PATH_PREFIX = "/blobs/";
+
+/** What one town's images may add up to (Task 61): a full 32 MB save fits, with room. */
+export const TOWN_BLOB_QUOTA_BYTES = 48 * 1024 * 1024;
 
 const sign = (secret: string, schemaName: string, key: string): string =>
   createHmac("sha256", secret).update(`${schemaName}\n${key}`).digest("hex").slice(0, 40);
@@ -45,13 +48,15 @@ export async function readBlob(tx: TownDb, key: string): Promise<{ bytes: Uint8A
 
 /** The store one request's actions see: bound to the request's
  *  transaction, so a put rolls back with a failed action. */
-export function createBlobStore(tx: TownDb, schemaName: string, secret: string): BlobStore {
+export function createBlobStore(tx: TownDb, schemaName: string, secret: string, quotaBytes: number = TOWN_BLOB_QUOTA_BYTES): BlobStore {
   const db = asPg(tx);
   return {
     async getUrl(key) {
       return signBlobPath(secret, schemaName, key);
     },
     async put(key, data, options) {
+      const held = await db.select({ n: sql<number>`coalesce(sum(length(${townBlobs.bytes})), 0)::float8` }).from(townBlobs).where(ne(townBlobs.key, key));
+      if ((Number(held[0]?.n) || 0) + data.byteLength > quotaBytes) throw new Error("This town's image storage is full. Delete some postcards first.");
       await db.insert(townBlobs).values({ key, contentType: options.contentType, bytes: data })
         .onConflictDoUpdate({ target: townBlobs.key, set: { contentType: options.contentType, bytes: data } });
     },

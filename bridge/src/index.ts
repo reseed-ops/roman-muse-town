@@ -16,6 +16,7 @@ import { createTownChannel } from "./townChannel.js";
 import type { DirectorChannel } from "./channel.js";
 import { createFakeChannel } from "./fakeChannel.js";
 import { createPrincipalDesk, type PrincipalDesk } from "./principal.js";
+import { trustProxyFromEnv } from "./pairLimiter.js";
 import { startPrincipalServer, type PairOutcome } from "./principalServer.js";
 import { createTenantRegistry, sealKey, sealVisitorKey, unsealVisitorKey, TENANT_POLL_MS } from "./tenants.js";
 import { DIRECTOR_TOKEN_HEADER } from "../../shared/visitProtocol.js";
@@ -150,6 +151,7 @@ async function main(): Promise<void> {
       markerToken: cfg.principalMarkerToken,
       ...(resolvePaired ? { resolve: resolvePaired } : {}),
       ...(pair ? { pair } : {}),
+      trustProxy: trustProxyFromEnv(process.env),
       port: cfg.port,
       log,
     });

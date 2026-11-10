@@ -32,12 +32,14 @@ const DIGEST_ACTIONS = new Set(["getState"]);
 
 /** How often a held read looks for news. */
 const HOLD_LOOK_MS = 250;
-import { postgresStorage, ensureTown, townSchemaName, withTown, type PgTownDb } from "../../server/src/storage.pg";
+import { postgresStorage, ensureTown, isTownReady, townExists, townSchemaName, withTown, type PgTownDb } from "../../server/src/storage.pg";
 import { isDoorAction, type DoorDefinition } from "../../server/src/visitActions";
 import { createBlobStore, readBlob, verifyBlobPath, BLOB_PATH_PREFIX } from "./blobStore";
-import { createSlateKeeper, type SlateKeeper } from "./slates";
+import { createSlateKeeper, SlatesFull, type SlateKeeper } from "./slates";
 import { readVisitorToken, tokenMatches } from "./tokens";
-import { createPairingDesk, type PairingDesk } from "./pairing";
+import { createPairingDesk, PairingFull, type PairingDesk } from "./pairing";
+import { createFlightGate, createWindowLimiter, clientAddress } from "./limits";
+import { createTownKeeper, type TownKeeper } from "./townKeeper";
 import { PG_MIGRATIONS } from "../../server/src/pgMigrations";
 import { createTallies, formatTallies, type Tallies } from "./tallies";
 
@@ -64,13 +66,71 @@ export interface TownServerOptions {
   snapshotLapseMs?: number;
   /** Request body cap; the largest action (a postcard) is about 1.2 MB. */
   maxBodyBytes?: number;
+  /** Trust X-Real-IP as the caller's address (only behind a proxy that sets it; Task 61). */
+  trustProxy?: boolean;
+  /** Overrides for the public limits (Task 61); the defaults are in DEFAULT_LIMITS. */
+  limits?: Partial<TownLimits>;
+  /** Bytes of images one town may hold (default blobStore.ts TOWN_BLOB_QUOTA_BYTES). */
+  blobQuotaBytes?: number;
+  /** How long the /stats report is reused, ms (default 30 s). */
+  statsCacheMs?: number;
+  /** Days an untouched town is kept before it is dropped; 0 keeps every town (townKeeper.ts). */
+  retentionDays?: number;
 }
 
+/** What the public town allows, per minute unless named (Task 61). */
+export interface TownLimits {
+  /** Actions per town per minute (the client's own polling is far below it). */
+  actionsPerTown: number;
+  /** Actions per caller address per minute (many towns may share one address). */
+  actionsPerAddress: number;
+  /** Heavy actions (postcards, saves) per town per minute. */
+  heavyPerTown: number;
+  /** New towns one address may make per hour, and all addresses together per minute. */
+  newTownsPerAddressPerHour: number;
+  newTownsPerMinute: number;
+  /** Towns that may exist at all; creation stops beyond it. */
+  maxTowns: number;
+  /** Actions running at once, per town and in all. */
+  actionsInFlightPerTown: number;
+  actionsInFlight: number;
+  /** Held reads open at once, per town and in all. */
+  heldPerTown: number;
+  heldTotal: number;
+  /** Bridge calls (snapshot, leaving, directions) per town per minute. */
+  bridgePerTown: number;
+  /** Pairing codes one town may ask for in ten minutes. */
+  pairMintsPerTown: number;
+}
+
+export const DEFAULT_LIMITS: TownLimits = {
+  actionsPerTown: 240,
+  actionsPerAddress: 900,
+  heavyPerTown: 12,
+  newTownsPerAddressPerHour: 12,
+  newTownsPerMinute: 60,
+  maxTowns: 50_000,
+  actionsInFlightPerTown: 4,
+  actionsInFlight: 64,
+  heldPerTown: 2,
+  heldTotal: 300,
+  bridgePerTown: 240,
+  pairMintsPerTown: 6,
+};
+
+/** Actions that move images or whole saves: limited harder. */
+const HEAVY_ACTIONS = new Set(["addPostcard", "restoreSave", "exportSave"]);
+
+const tooMany = (what: string, retryAfterS = 30): Response =>
+  json(429, { error: `${what}; wait a moment and try again` }, { "retry-after": String(retryAfterS) });
+
 export interface TownServer {
-  fetch(req: Request): Promise<Response>;
+  /** `socketAddress` is the connection's own address (Bun's requestIP); see trustProxy. */
+  fetch(req: Request, socketAddress?: string): Promise<Response>;
   slates: SlateKeeper;
   pairing: PairingDesk;
   tallies: Tallies;
+  keeper: TownKeeper;
 }
 
 const json = (status: number, body: unknown, headers: Record<string, string> = {}): Response =>
@@ -86,6 +146,26 @@ export function createTownServer(opts: TownServerOptions): TownServer {
   const door = opts.door ?? {};
   const pairing = createPairingDesk({ now });
   const tallies = createTallies(opts.db, log);
+  const keeper = createTownKeeper(opts.db, { now, log, ...(opts.retentionDays !== undefined ? { retentionDays: opts.retentionDays } : {}) });
+  const lim: TownLimits = { ...DEFAULT_LIMITS, ...opts.limits };
+  const minute = 60_000;
+  const townActions = createWindowLimiter({ max: lim.actionsPerTown, windowMs: minute, now });
+  const addressActions = createWindowLimiter({ max: lim.actionsPerAddress, windowMs: minute, now });
+  const heavyActions = createWindowLimiter({ max: lim.heavyPerTown, windowMs: minute, now });
+  const newTownsByAddress = createWindowLimiter({ max: lim.newTownsPerAddressPerHour, windowMs: 60 * minute, now });
+  const newTownsAll = createWindowLimiter({ max: lim.newTownsPerMinute, windowMs: minute, maxKeys: 1, now });
+  const bridgeCalls = createWindowLimiter({ max: lim.bridgePerTown, windowMs: minute, now });
+  const bridgeByAddress = createWindowLimiter({ max: lim.actionsPerAddress, windowMs: minute, now });
+  const pairMints = createWindowLimiter({ max: lim.pairMintsPerTown, windowMs: 10 * minute, now });
+  const actionFlight = createFlightGate({ perKey: lim.actionsInFlightPerTown, total: lim.actionsInFlight });
+  const heldFlight = createFlightGate({ perKey: lim.heldPerTown, total: lim.heldTotal });
+  const trustProxy = opts.trustProxy ?? false;
+  // The reaper: at start (after a minute, off the boot path), then daily.
+  if (opts.retentionDays !== 0 && opts.distDir !== null) {
+    const run = () => void keeper.reap().catch((error) => log(`reap failed: ${error instanceof Error ? error.message : String(error)}`));
+    setTimeout(run, minute).unref?.();
+    setInterval(run, 24 * 60 * minute).unref?.();
+  }
   const dist = opts.distDir ? resolve(opts.distDir) : null;
 
   const readJson = async (req: Request): Promise<{ ok: true; body: unknown } | { ok: false; response: Response }> => {
@@ -107,7 +187,7 @@ export function createTownServer(opts: TownServerOptions): TownServer {
 
   const unknownAction = () => json(404, { error: "unknown action" });
 
-  async function actionsRoute(req: Request): Promise<Response> {
+  async function actionsRoute(req: Request, address: string): Promise<Response> {
     if (req.method !== "POST") return json(405, { error: "method not allowed" });
     const visitorToken = readVisitorToken(req);
     if (!visitorToken) return json(401, { error: "a visitor token is required" });
@@ -118,6 +198,14 @@ export function createTownServer(opts: TownServerOptions): TownServer {
     if (!action) return json(400, { error: "an action name is required" });
     const args = body?.args ?? {};
     const schemaName = townSchemaName(visitorToken);
+
+    // Public limits (Task 61), before any database work. A door call is
+    // the director's own and is not counted against a visitor's town.
+    if (!isDoorAction(action)) {
+      if (!addressActions.take(address)) return tooMany("too many requests from here");
+      if (!townActions.take(schemaName)) return tooMany("too many requests from this town");
+      if (HEAVY_ACTIONS.has(action) && !heavyActions.take(schemaName)) return tooMany("too many saves or postcards in a short time", 60);
+    }
 
     if (isDoorAction(action)) {
       const definition = door[action];
@@ -141,16 +229,27 @@ export function createTownServer(opts: TownServerOptions): TownServer {
     if (!definition) return unknownAction();
     const request = definition.request.safeParse(args);
     if (!request.success) return json(400, { error: "invalid arguments" });
+    const release = actionFlight.enter(schemaName);
+    if (!release) return json(503, { error: "The town is busy; try again in a moment." }, { "retry-after": "5" });
     try {
+      // Admission (Task 61): a returning town is let in; a new one has to
+      // pass the creation limits first, so a flood of unique keys cannot
+      // make schemas without bound.
+      if (!isTownReady(schemaName) && !(await townExists(opts.db, schemaName))) {
+        if (!newTownsByAddress.take(address)) return tooMany("too many new towns from here", 600);
+        if (!newTownsAll.take("all")) return tooMany("many new towns are arriving; try again shortly", 60);
+        if ((await keeper.townCount()) >= lim.maxTowns) return json(503, { error: "The town is not taking new visitors just now." }, { "retry-after": "600" });
+      }
       // A town whose every migration ran just now was created just now (Task 52).
       const ran = await ensureTown(opts.db, schemaName);
       if (ran > 0 && ran === PG_MIGRATIONS.length) await tallies.bump("town-created");
+      void keeper.touch(schemaName);
       let invalidate = false;
       const result = await withTown(opts.db, schemaName, (tx) =>
         definition.handler(
           {
             db: () => tx,
-            blobs: createBlobStore(tx, schemaName, opts.blobSecret),
+            blobs: createBlobStore(tx, schemaName, opts.blobSecret, opts.blobQuotaBytes),
             invalidateQueries: () => {
               invalidate = true;
             },
@@ -189,25 +288,42 @@ export function createTownServer(opts: TownServerOptions): TownServer {
       const ref = crypto.randomUUID().slice(0, 8);
       log(`action ${action} failed [${ref}]: ${message}`);
       return json(500, { error: `The town could not finish that. Try again in a moment (ref ${ref}).` });
+    } finally {
+      release();
     }
   }
 
-  async function bridgeRoute(req: Request, url: URL): Promise<Response> {
+  async function bridgeRoute(req: Request, url: URL, address: string): Promise<Response> {
     if (req.method === "OPTIONS") return new Response(null, { status: 204 });
     const visitorToken = readVisitorToken(req);
     if (!visitorToken) {
       log(`refused ${req.method} ${url.pathname}: no visitor token`);
       return json(401, { error: "refused" });
     }
+    if (!bridgeByAddress.take(address)) return tooMany("too many requests from here");
+    if (!bridgeCalls.take(townSchemaName(visitorToken))) return tooMany("too many requests from this town");
     if (url.pathname === "/bridge/pair") {
       // Connect my Muse (Task 29): a single-use code for this town, which
       // only the hosted bridge (with the director token) can redeem.
       if (req.method !== "POST") return json(405, { error: "method not allowed" });
-      const minted = pairing.mint(visitorToken);
+      if (!pairMints.take(townSchemaName(visitorToken))) return tooMany("too many pairing codes asked for", 300);
+      let minted: ReturnType<PairingDesk["mint"]>;
+      try {
+        minted = pairing.mint(visitorToken);
+      } catch (error) {
+        if (error instanceof PairingFull) return json(503, { error: "Pairing is busy; try again in a few minutes." }, { "retry-after": "300" });
+        throw error;
+      }
       await tallies.bump("pair-minted");
       return json(200, minted);
     }
-    const face = slates.faceFor(townSchemaName(visitorToken));
+    let face: SlateFace;
+    try {
+      face = slates.faceFor(townSchemaName(visitorToken));
+    } catch (error) {
+      if (error instanceof SlatesFull) return json(503, { error: "Too many visits are open; try again shortly." }, { "retry-after": "60" });
+      throw error;
+    }
     if (url.pathname === "/bridge/snapshot") {
       if (req.method !== "POST") return json(405, { error: "method not allowed" });
       const parsed = await readJson(req);
@@ -231,9 +347,18 @@ export function createTownServer(opts: TownServerOptions): TownServer {
       const composingParam = url.searchParams.get("composing");
       const composingHeld = composingParam === null ? undefined : composingParam === "1";
       if (waitS > 0) {
-        const deadline = now() + waitS * 1000;
-        while (!face.hasNews(since, composingHeld) && now() < deadline && !req.signal.aborted) await Bun.sleep(HOLD_LOOK_MS);
-        if (req.signal.aborted) return json(499, { error: "gone" });
+        // Held reads are bounded (Task 61): a town holds a couple, the
+        // service a few hundred; a held read over the line answers now.
+        const releaseHold = heldFlight.enter(townSchemaName(visitorToken));
+        if (releaseHold) {
+          try {
+            const deadline = now() + waitS * 1000;
+            while (!face.hasNews(since, composingHeld) && now() < deadline && !req.signal.aborted) await Bun.sleep(HOLD_LOOK_MS);
+          } finally {
+            releaseHold();
+          }
+          if (req.signal.aborted) return json(499, { error: "gone" });
+        }
       }
       return json(200, face.pull(since));
     }
@@ -296,10 +421,13 @@ export function createTownServer(opts: TownServerOptions): TownServer {
   }
 
   // The anonymous counts (Task 52), plain text for the owner's browser.
+  // The report is cached for half a minute (Task 61): it counts schemas.
+  let cachedReport: { at: number; report: Awaited<ReturnType<Tallies["report"]>> } | null = null;
   async function statsRoute(req: Request): Promise<Response> {
     if (req.method !== "GET") return json(405, { error: "method not allowed" });
     try {
-      const report = await tallies.report();
+      if (!cachedReport || now() - cachedReport.at >= (opts.statsCacheMs ?? 30_000)) cachedReport = { at: now(), report: await tallies.report() };
+      const report = cachedReport.report;
       if (new URL(req.url).searchParams.get("format") === "json") return json(200, report);
       return new Response(formatTallies(report), { status: 200, headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" } });
     } catch (error) {
@@ -312,11 +440,13 @@ export function createTownServer(opts: TownServerOptions): TownServer {
     slates,
     pairing,
     tallies,
-    async fetch(req) {
+    keeper,
+    async fetch(req, socketAddress) {
       const url = new URL(req.url);
-      if (url.pathname === "/actions") return actionsRoute(req);
+      const address = clientAddress(req, socketAddress, trustProxy);
+      if (url.pathname === "/actions") return actionsRoute(req, address);
       if (url.pathname === "/director/pair-redeem") return pairRedeemRoute(req);
-      if (url.pathname.startsWith("/bridge/")) return bridgeRoute(req, url);
+      if (url.pathname.startsWith("/bridge/")) return bridgeRoute(req, url, address);
       if (url.pathname.startsWith(BLOB_PATH_PREFIX)) return blobRoute(req, url);
       if (url.pathname === "/healthz") return json(200, { ok: true });
       if (url.pathname === "/stats") return statsRoute(req);
