@@ -15,6 +15,8 @@ export type HistoryLesson = {
   text: string;
   sources: HistorySource[];
   townNote?: string;
+  /** The words cut in the stone where the lesson stands in town (Tasks 54, 55), shown first. */
+  inscription?: string;
 };
 
 const LACUS = "https://penelope.uchicago.edu/Thayer/E/Roman/Texts";
@@ -330,5 +332,45 @@ export const HISTORY_LESSONS: HistoryLesson[] = [
     ],
     townNote:
       "The town's kitchen and its recipes are the game's. Where a dish is meant to be Roman, it should be checked against Apicius before it is called authentic.",
+  },
+  {
+    id: "lucretia",
+    placeId: "lucretia",
+    title: "Lucretia, and the end of Rome's kings",
+    period: "A legend set in 509 BC, written down by Livy about five hundred years later",
+    inscription: "LVCRETIA. Her courage, as Livy tells it, ended the rule of kings in Rome.",
+    text:
+      "Lucretia was a Roman noblewoman, the wife of Collatinus, remembered in Roman tradition for her virtue and her courage. " +
+      "Livy tells how Sextus Tarquinius, son of the last king, Tarquin the Proud, assaulted her. She sent for her father and her husband, told them the truth, asked them to promise her justice, and then took her own life. " +
+      "Over her body Lucius Junius Brutus swore an oath to drive the kings from Rome. The people rose, the royal family was exiled, and Rome became a republic, ruled by two consuls elected each year. " +
+      "Historians treat the story as legend rather than record: it was written down centuries later and shaped to teach Roman values, though the end of the monarchy around 509 BC is generally accepted.",
+    sources: [
+      { cite: "Livy, History of Rome 1.57-60", url: `${PERSEUS}1999.02.0026%3Abook%3D1%3Achapter%3D57` },
+      { cite: "Ovid, Fasti 2.721-852" },
+      { cite: "T. J. Cornell, The Beginnings of Rome (London, 1995), chapter 9" },
+      { cite: "Mary Beard, SPQR: A History of Ancient Rome (London, 2015), chapter 3" },
+    ],
+    townNote:
+      "The statue is the town's own. No ancient portrait of Lucretia is known, so her figure, the rose at her feet and her place in the forum garden, facing the evening light, are invented: a tribute, not a copy.",
+  },
+  {
+    id: "minerva",
+    placeId: "athena",
+    title: "Athena, called Minerva in Rome",
+    period: "Minerva honoured on the Capitol from about 509 BC",
+    inscription: "ATHENA, called Minerva by the Romans: wisdom, craft, and the olive.",
+    text:
+      "The Greeks honoured Athena as the goddess of wisdom, of crafts and of the defence of cities. Herodotus tells the Athenian story that she won their city by giving it the olive tree, which grew on the Acropolis. " +
+      "The Romans identified her with their own goddess Minerva. Minerva shared Rome's greatest temple, on the Capitoline Hill, with Jupiter and Juno, a temple Livy says was dedicated in the first year of the Republic. " +
+      "She was the patron of craftsmen, teachers, doctors and weavers, and her festival, the Quinquatrus, was kept each March, as Ovid describes. " +
+      "The olive was everywhere in Roman life: its oil was food, lamplight and soap.",
+    sources: [
+      { cite: "Herodotus, Histories 8.55 (the olive on the Acropolis)", url: `${PERSEUS}1999.01.0126%3Abook%3D8%3Achapter%3D55` },
+      { cite: "Livy, History of Rome 2.8.6-8 (the Capitoline temple dedicated)", url: `${PERSEUS}1999.02.0026%3Abook%3D2%3Achapter%3D8` },
+      { cite: "Ovid, Fasti 3.809-848 (the Quinquatrus)" },
+      { cite: "Mary Beard, John North and Simon Price, Religions of Rome, vol. 1 (Cambridge, 1998)" },
+    ],
+    townNote:
+      "The temple is the town's own, small and invented, and it carries her Greek name, Athena, beside the Roman one; a temple in a Roman town would have been Minerva's. It faces east, toward Lucretia, though Vitruvius advised that temples face west.",
   },
 ];

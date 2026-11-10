@@ -5055,6 +5055,9 @@ export function App() {
         if (target.id === "bench-cliff") {
           return seatedBenchRef.current === target.id ? "Stand up" : "Sit together over the sea";
         }
+        if (target.id === "bench-athena") {
+          return seatedBenchRef.current === target.id ? "Stand up" : "Sit together on the temple step";
+        }
         return seatedBenchRef.current === target.id ? "Stand up" : "Sit on the bench";
       case "piscina":
         return target.id === "release" ? "Release a fish into the piscina" : "Scatter feed for the fish";
@@ -5080,6 +5083,8 @@ export function App() {
       case "inscription":
         return "Read the inscription";
       case "history":
+        if (target.id === "lucretia") return "Read Lucretia's inscription";
+        if (target.id === "athena") return "Read the temple's inscription";
         return "Read the history of this place";
       case "tree":
         return "Water the town tree";

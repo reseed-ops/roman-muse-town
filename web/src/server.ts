@@ -38,6 +38,8 @@ import { createBlobStore, readBlob, verifyBlobPath, BLOB_PATH_PREFIX } from "./b
 import { createSlateKeeper, type SlateKeeper } from "./slates";
 import { readVisitorToken, tokenMatches } from "./tokens";
 import { createPairingDesk, type PairingDesk } from "./pairing";
+import { PG_MIGRATIONS } from "../../server/src/pgMigrations";
+import { createTallies, formatTallies, type Tallies } from "./tallies";
 
 export interface TownAction {
   request: z.ZodType;
@@ -68,6 +70,7 @@ export interface TownServer {
   fetch(req: Request): Promise<Response>;
   slates: SlateKeeper;
   pairing: PairingDesk;
+  tallies: Tallies;
 }
 
 const json = (status: number, body: unknown, headers: Record<string, string> = {}): Response =>
@@ -82,6 +85,7 @@ export function createTownServer(opts: TownServerOptions): TownServer {
   const slates = createSlateKeeper({ now, ...(opts.snapshotLapseMs !== undefined ? { lapseMs: opts.snapshotLapseMs } : {}) });
   const door = opts.door ?? {};
   const pairing = createPairingDesk({ now });
+  const tallies = createTallies(opts.db, log);
   const dist = opts.distDir ? resolve(opts.distDir) : null;
 
   const readJson = async (req: Request): Promise<{ ok: true; body: unknown } | { ok: false; response: Response }> => {
@@ -138,7 +142,9 @@ export function createTownServer(opts: TownServerOptions): TownServer {
     const request = definition.request.safeParse(args);
     if (!request.success) return json(400, { error: "invalid arguments" });
     try {
-      await ensureTown(opts.db, schemaName);
+      // A town whose every migration ran just now was created just now (Task 52).
+      const ran = await ensureTown(opts.db, schemaName);
+      if (ran > 0 && ran === PG_MIGRATIONS.length) await tallies.bump("town-created");
       let invalidate = false;
       const result = await withTown(opts.db, schemaName, (tx) =>
         definition.handler(
@@ -197,7 +203,9 @@ export function createTownServer(opts: TownServerOptions): TownServer {
       // Connect my Muse (Task 29): a single-use code for this town, which
       // only the hosted bridge (with the director token) can redeem.
       if (req.method !== "POST") return json(405, { error: "method not allowed" });
-      return json(200, pairing.mint(visitorToken));
+      const minted = pairing.mint(visitorToken);
+      await tallies.bump("pair-minted");
+      return json(200, minted);
     }
     const face = slates.faceFor(townSchemaName(visitorToken));
     if (url.pathname === "/bridge/snapshot") {
@@ -245,6 +253,7 @@ export function createTownServer(opts: TownServerOptions): TownServer {
     const out = pairing.redeem(code);
     if (out.ok) {
       log("pair: a code was redeemed");
+      await tallies.bump("pair-redeemed");
       return json(200, { visitorToken: out.visitorToken });
     }
     if (out.reason === "locked") {
@@ -286,9 +295,23 @@ export function createTownServer(opts: TownServerOptions): TownServer {
     return new Response(req.method === "HEAD" ? null : file, { status: 200, headers });
   }
 
+  // The anonymous counts (Task 52), plain text for the owner's browser.
+  async function statsRoute(req: Request): Promise<Response> {
+    if (req.method !== "GET") return json(405, { error: "method not allowed" });
+    try {
+      const report = await tallies.report();
+      if (new URL(req.url).searchParams.get("format") === "json") return json(200, report);
+      return new Response(formatTallies(report), { status: 200, headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" } });
+    } catch (error) {
+      log(`stats failed: ${error instanceof Error ? error.message : String(error)}`);
+      return json(500, { error: "the counts could not be read" });
+    }
+  }
+
   return {
     slates,
     pairing,
+    tallies,
     async fetch(req) {
       const url = new URL(req.url);
       if (url.pathname === "/actions") return actionsRoute(req);
@@ -296,6 +319,7 @@ export function createTownServer(opts: TownServerOptions): TownServer {
       if (url.pathname.startsWith("/bridge/")) return bridgeRoute(req, url);
       if (url.pathname.startsWith(BLOB_PATH_PREFIX)) return blobRoute(req, url);
       if (url.pathname === "/healthz") return json(200, { ok: true });
+      if (url.pathname === "/stats") return statsRoute(req);
       return staticRoute(req, url);
     },
   };

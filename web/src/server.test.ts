@@ -251,4 +251,38 @@ describe.skipIf(!onPostgres)("the town on the web", () => {
       expect((await server.fetch(new Request(`http://town.test${path}`))).status).toBe(404);
     }
   });
+
+  test("the anonymous counts (Task 52): a new town counts once, pairing codes minted and redeemed, nothing about anyone", async () => {
+    const before = (await (await server.fetch(new Request("http://town.test/stats?format=json"))).json()) as any;
+    const C = "cccccccc-3333-4333-8333-cccccccccccc";
+    await result(await call(C, "getState"));
+    await result(await call(C, "getState"));
+    const minted = await bridge(C, "/bridge/pair", { method: "POST" });
+    expect(minted.status).toBe(200);
+    const { code } = (await minted.json()) as { code: string };
+    const redeemed = await server.fetch(new Request("http://town.test/director/pair-redeem", {
+      method: "POST",
+      headers: { "content-type": "application/json", [DIRECTOR_TOKEN_HEADER]: DIRECTOR },
+      body: JSON.stringify({ code }),
+    }));
+    expect(redeemed.status).toBe(200);
+    const after = (await (await server.fetch(new Request("http://town.test/stats?format=json"))).json()) as any;
+    expect(after.townsInAll).toBe(before.townsInAll + 1);
+    expect(after.kinds["town-created"].total).toBe(before.kinds["town-created"].total + 1);
+    expect(after.kinds["town-created"].lastDay).toBe(before.kinds["town-created"].lastDay + 1);
+    expect(after.kinds["pair-minted"].total).toBe(before.kinds["pair-minted"].total + 1);
+    expect(after.kinds["pair-redeemed"].total).toBe(before.kinds["pair-redeemed"].total + 1);
+    expect(after.countingSince).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    const page = await server.fetch(new Request("http://town.test/stats"));
+    expect(page.status).toBe(200);
+    expect(page.headers.get("content-type")).toContain("text/plain");
+    expect(page.headers.get("set-cookie")).toBeNull();
+    const text = await page.text();
+    expect(text).toContain(`Towns in all: ${after.townsInAll}`);
+    expect(text).toContain("Pairing codes minted: ");
+    expect(text).toContain("Your own towns are included");
+    // Nothing that names a person or a town: no key, no schema, no code.
+    for (const secret of [A, B, C, code, "town_"]) expect(text + JSON.stringify(after)).not.toContain(secret);
+    expect((await server.fetch(new Request("http://town.test/stats", { method: "POST" }))).status).toBe(405);
+  });
 });

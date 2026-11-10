@@ -3120,3 +3120,54 @@ export function solarAngles(now: Date): { elev: number; azim: number } {
 export function isGoldenElevation(elev: number): boolean {
   return elev > -2 && elev < 8.5;
 }
+
+// --- Lucretia and Athena (Tasks 54, 55) -------------------------------------
+// Lucretia's statue stands in the forum garden's west quarter, facing
+// west through the colonnade, so the evening light finds her face; a
+// rose lies at her feet. Just down the way, across the west lane, a
+// small temple of Athena faces back toward her, with olive trees at its
+// steps and an olive wreath in its pediment; its lower step is a seat
+// for two. Plain data, so the scene, the walking audit and the tests
+// read the same place.
+export const LUCRETIA = {
+  position: [-9.6, 5.0] as [number, number],
+  /** Facing west (rotY: a figure's front is local +z). */
+  rotY: -Math.PI / 2,
+  plinthHalf: 0.5,
+} as const;
+
+export const ATHENA_TEMPLE = {
+  /** The podium's centre; the front (east, toward Lucretia) is +x. */
+  position: [-20.6, 8.0] as [number, number],
+  /** Podium half-depth along x and half-width along z. */
+  halfX: 1.85,
+  halfZ: 1.8,
+  podiumY: 0.9,
+  /** The seat step along the front: its top, and how far it stands out. */
+  stepY: 0.45,
+  stepDepth: 0.6,
+  /** The olive trees either side of the steps. */
+  olives: [[-17.7, 5.7], [-17.7, 10.3]] as [number, number][],
+} as const;
+
+/** Where a sitter sits on the temple's step, facing east toward Lucretia. */
+export const ATHENA_SEAT = {
+  x: ATHENA_TEMPLE.position[0] + ATHENA_TEMPLE.halfX + ATHENA_TEMPLE.stepDepth / 2,
+  z: ATHENA_TEMPLE.position[1],
+  /** rotY -pi/2 faces +x (east). */
+  rotY: -Math.PI / 2,
+} as const;
+
+/** Aelia's lines when she stands with him by Lucretia. */
+export const LUCRETIA_LINES = [
+  "Lucretia. Livy tells it as the story that ended the kings. I think of her as the quiet one who would not be made smaller.",
+  "Look how the evening finds her. They gave her the west, so the last light of the day is always hers.",
+  "Someone leaves a rose at her feet. I like not knowing who.",
+];
+
+/** Aelia's lines at Athena's temple. */
+export const ATHENA_LINES = [
+  "Athena gave Athens the olive, the story goes, and they chose her for it. A tree over a spring of salt water. Sensible people.",
+  "Rome called her Minerva. Wisdom, weaving, the patience to get things right. Sit with me a while.",
+  "It's the quietest step in town. Even the bees go round it.",
+];

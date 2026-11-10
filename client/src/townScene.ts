@@ -28,7 +28,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { BATHS, BED_SPOT, BOARD_SPOT, COLOSSEUM, FOREST, FOREST_BUSHES, FLOURISH_LINES, FOREST_DEN_ROCKS, FOREST_EDGE_LINES, FOREST_SPOTS, FOREST_TRAILS, FOREST_TREES, FORAGE_SPOTS, GOALS_SPOT, LAKE, LAKE_PAVILION, LETTER_DESK_SPOT, MUSE, PISCINA, PLACES, PLAYER, QUEST_BOARD_SPOT, SECRET, SEEK_LINES, STREETS, forestNorm, groundHeightAt, isGoldenElevation, seasonForDate, solarAngles, streetDistance, terrainHeight, type Season, type WeatherId } from "./town";
+import { ATHENA_LINES, ATHENA_SEAT, ATHENA_TEMPLE, LUCRETIA, LUCRETIA_LINES, BATHS, BED_SPOT, BOARD_SPOT, COLOSSEUM, FOREST, FOREST_BUSHES, FLOURISH_LINES, FOREST_DEN_ROCKS, FOREST_EDGE_LINES, FOREST_SPOTS, FOREST_TRAILS, FOREST_TREES, FORAGE_SPOTS, GOALS_SPOT, LAKE, LAKE_PAVILION, LETTER_DESK_SPOT, MUSE, PISCINA, PLACES, PLAYER, QUEST_BOARD_SPOT, SECRET, SEEK_LINES, STREETS, forestNorm, groundHeightAt, isGoldenElevation, seasonForDate, solarAngles, streetDistance, terrainHeight, type Season, type WeatherId } from "./town";
 import { pickPooled } from "./linePools";
 import { playFootstep, playLanding, playSlide } from "./audio";
 import { ESTATE_AREAS, weedStands, type EstateArea, type EstateCare } from "./estateCare";
@@ -61,6 +61,7 @@ import { frameDimensions } from "./visitFrames";
 import { playLampIgnite, setBeeHumLevel, setCricketLevel, setLampCrackleLevel, setRainLevel, setRainShelter, setSurfLevel } from "./audio";
 import { HOME } from "./town";
 import { createCritters, type XZ } from "./townCritters";
+import { buildAthenaTemple, buildLucretia } from "./tributes";
 import { FIREFLY_PLACES_MAX, fireflyPlaceAt, fireflyPlacesBudget } from "./fireflyPlaces";
 import { FEEL } from "./feel";
 import { buildMetaSudans, META_SUDANS_LINES } from "./metaSudans";
@@ -4771,6 +4772,8 @@ export function createTownScene(
       baseX: homeHouse.bedSeat.x,
       baseZ: homeHouse.bedSeat.z,
     },
+    // Athena's temple step (Task 55): sit together facing east, toward Lucretia.
+    { id: "bench-athena", x: ATHENA_SEAT.x, z: ATHENA_SEAT.z, rotY: ATHENA_SEAT.rotY, seatTop: ATHENA_TEMPLE.stepY, baseX: ATHENA_SEAT.x, baseZ: ATHENA_SEAT.z },
     // The sea cliff's bench (Task 34), at the headland's edge, facing the sea.
     { id: CLIFF.bench.id, x: CLIFF.bench.x, z: CLIFF.bench.z, rotY: CLIFF.bench.rotY, seatTop: 0.47, baseX: CLIFF.bench.x, baseZ: CLIFF.bench.z },
   ];
@@ -5270,6 +5273,8 @@ export function createTownScene(
     [0, 0, 3.1], // the Town Tree mound
     [8.8, 4.6, 1.5], // the stone bench
     [VILLA.ionicColumn[0], VILLA.ionicColumn[1], 1], // the ionic column
+    [LUCRETIA.position[0], LUCRETIA.position[1], 1.1], // Lucretia's plinth
+    [ATHENA_TEMPLE.position[0], ATHENA_TEMPLE.position[1], 3.4], // Athena's temple
   ];
   const plantClear = (x: number, z: number) =>
     PLANT_CLEARANCE.every(([cx, cz, r]) => Math.hypot(x - cx, z - cz) > r);
@@ -5553,6 +5558,22 @@ export function createTownScene(
     pickRoots.push(stele);
   }
 
+  // Lucretia (Task 54) in the forum garden's west quarter, facing the
+  // evening, a rose at her feet; Athena's temple (Task 55) just down
+  // the way, across the west lane, facing back toward her, olive trees
+  // at its steps. Each opens its sourced page, its inscription first.
+  for (const [id, built] of [
+    ["lucretia", buildLucretia(terrainHeight(LUCRETIA.position[0], LUCRETIA.position[1]))],
+    ["athena", buildAthenaTemple(terrainHeight(ATHENA_TEMPLE.position[0], ATHENA_TEMPLE.position[1]))],
+  ] as const) {
+    built.group.traverse((o) => {
+      o.userData.pick = { kind: "history", id } satisfies { kind: PickKind; id: string };
+    });
+    world.add(built.group);
+    pickRoots.push(built.group);
+  }
+  for (const [ox, oz] of ATHENA_TEMPLE.olives) void placeWorld(oliveUrl, { x: ox, z: oz, rotY: ox * 1.7 + oz, width: 2.6 });
+
   // --- Walk-around avatar: YOU (the player) ---
   // The visitor's Centurion VRM: legs and arms swung from the model's
   // own bones while walking, and a salute when you reach Muse.
@@ -5786,6 +5807,9 @@ export function createTownScene(
     obb(8.8, -5.2, 1.05, 0.5, 0), // the table in the peristyle's east bay
     templeFootprint, // temple
     circ(VILLA.statueMars[0], VILLA.statueMars[1], 0.5), // statue of Mars (its pedestal, measured)
+    circ(LUCRETIA.position[0], LUCRETIA.position[1], LUCRETIA.plinthHalf + 0.12), // Lucretia's plinth (Task 54)
+    obb(ATHENA_TEMPLE.position[0] + ATHENA_TEMPLE.stepDepth / 2, ATHENA_TEMPLE.position[1], ATHENA_TEMPLE.halfX + ATHENA_TEMPLE.stepDepth / 2, ATHENA_TEMPLE.halfZ, 0), // Athena's temple, podium and step (Task 55)
+    ...ATHENA_TEMPLE.olives.map(([x, z]) => circ(x, z, 0.3)), // its olive trees (trunks)
     obb(VILLA.gate[0] + 2.55, VILLA.gate[1], 1.25, 1.8, 0), // triumphal arch, east pillar (the opening between the pillars stays walkable)
     obb(VILLA.gate[0] - 2.55, VILLA.gate[1], 1.25, 1.8, 0), // triumphal arch, west pillar
     circ(-36.1, 4.2, 0.85), // ballista (its ground frame, measured, offset from its placement centre)
@@ -7165,6 +7189,11 @@ export function createTownScene(
       ["rest", "home-bed-rest", homeHouse.restSpot.x, homeHouse.restSpot.z, 1.1],
       // The forum's history tablet (Task 37), by the Town Tree.
       ["history", "forum", HISTORY_TABLET_FORUM[0], HISTORY_TABLET_FORUM[1], 2.4],
+      // Lucretia's inscription (Task 54), all round her plinth; Athena's
+      // (Task 55) at the temple's front corners, the step between them a seat.
+      ["history", "lucretia", LUCRETIA.position[0], LUCRETIA.position[1], 2.6],
+      ["history", "athena", ATHENA_SEAT.x + 0.6, ATHENA_TEMPLE.position[1] - ATHENA_TEMPLE.halfZ, 1.6],
+      ["history", "athena", ATHENA_SEAT.x + 0.6, ATHENA_TEMPLE.position[1] + ATHENA_TEMPLE.halfZ, 1.6],
     ];
     for (const [kind, id, sx, sz, trigger] of promptSpots) {
       const d = Math.hypot(walkPos.x - sx, walkPos.z - sz);
@@ -7420,6 +7449,8 @@ export function createTownScene(
       return pickLine("companion:rain", COMPANION_LINES.rain!);
     }
     if (upgradeGroups.fountain?.visible && Math.hypot(mx - VILLA.metaSudans[0], mz - VILLA.metaSudans[1]) < 5) return pickLine("companion:meta-sudans", META_SUDANS_LINES);
+    if (Math.hypot(mx - LUCRETIA.position[0], mz - LUCRETIA.position[1]) < 3.5) return pickLine("companion:lucretia", LUCRETIA_LINES);
+    if (Math.hypot(mx - ATHENA_SEAT.x, mz - ATHENA_SEAT.z) < 4.5) return pickLine("companion:athena", ATHENA_LINES);
     // The town wind, noticed out loud: only when it is actually up
     // (breeze or stronger, never in calm), and only sometimes, so
     // the lake and the night keep their own moments too.

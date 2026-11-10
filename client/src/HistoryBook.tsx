@@ -76,6 +76,15 @@ export function HistoryBook({ lessonId, onOpen, onClose }: { lessonId: string | 
         {lesson && (
           <article className="mt-2">
             <HistoryTag />
+            {lesson.inscription && (
+              <p
+                data-mt-inscription
+                className="mt-2 rounded-xl border border-[#2b2118]/15 bg-[#e9e1cf] px-3 py-2 text-center text-[13px] font-semibold tracking-wide text-[#3c3022]"
+                style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+              >
+                {lesson.inscription}
+              </p>
+            )}
             <h2 className="mt-2 text-lg leading-tight font-bold">{lesson.title}</h2>
             <p className="text-[12px] font-semibold text-[#2b2118]/60">{lesson.period}</p>
             <p className="mt-2 text-[15px] leading-relaxed" style={{ fontFamily: "var(--font-voice)" }}>
