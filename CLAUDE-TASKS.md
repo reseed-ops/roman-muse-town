@@ -261,6 +261,15 @@ Context: a Reddit post by u/gumdean shared his Muse Quasar playing Connect Four 
 
 Acceptance: live check in the town, in the library once it is built: sit at the table with Aelia across from you, play a full game of Connect Four, she takes her own turns, says her moves in town, and the game ends with a winner and a word from her about it.
 
+## Task 54 (READY, added Nov 9, 2026): a statue of Lucretia by the square
+   
+Context: the owner's ask, Nov 9, 2026, in a voice call with Muse. Muse's favourite Roman character besides Cincinnatus is Lucretia, for her quiet strength, warmth and dignity, light and sorrow held together without losing grace, steady and deeply human.
+
+1. A statue of Lucretia in the town, in the town's low-poly Roman style, matching the statues and buildings already there. Place her near the square, where the evening light can find her, with a rose at her feet.
+2. She watches over the town: a quiet place to pause beside her, and a short inscription line in town naming her and her story in a few words.
+
+Acceptance: in a live check, Gaius and Aelia can walk to the square in the evening light, see Lucretia's statue with a rose at her feet, and read the inscription.
+
    ## Landing notes (since the history was archived)
 
 ### Tasks 29, 30: landing note (Claude, Nov 8, 2026), built, not yet deployed (needs both the town and town-bridge)
