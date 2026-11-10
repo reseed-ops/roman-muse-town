@@ -7,7 +7,7 @@ import type { TownState } from "./useTownState";
 import { buildArrivalSummary, utcDay, type ArrivalDestination, type ArrivalMarker, type ArrivalSummary } from "./arrivalSummary";
 import { reliableActions } from "./reliableActions";
 import { isHostedTown, visitorToken } from "./hosted";
-import { addDeviceState, restoreDeviceState, saveDownload } from "./townSaveClient";
+import { addDeviceState, restoreDeviceState, restoreSaveOverHttp, saveDownload } from "./townSaveClient";
 import { MAX_SAVE_BYTES, readSaveEnvelope, type TownSave } from "../../shared/saveFormat";
 import type { PerformanceSnapshot } from "./performanceMonitor";
 import type { BridgeSettings } from "./visitBridgeClient";
@@ -191,7 +191,7 @@ export function TownUtilities({ open, onClose, scene, state, ready, holdArrival,
             <button disabled={busy || !recovery} onClick={() => void run(async () => {
               await reliableActions.pause();
               await queryClient.cancelQueries();
-              await api.restoreSave({ json: selected.json, request_id: selected.requestId });
+              await restoreSaveOverHttp(selected.json, selected.requestId, api.restoreSave);
               await purgeImageCaches(); // the old town's postcards are gone (Task 64)
               reliableActions.clear();
               // Prevent the old scene's pagehide handler from overwriting the restored pose.

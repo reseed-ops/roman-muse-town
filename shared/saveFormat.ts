@@ -2,6 +2,8 @@ export const SAVE_FORMAT = "roman-muse-town";
 export const SAVE_VERSION = 1;
 export const SAVE_SCHEMA_VERSION = 26;
 export const MAX_SAVE_BYTES = 32 * 1024 * 1024;
+/** What an export may be: the limit less room for the device settings the client adds before it is kept, so a save the town exports can always be restored. */
+export const MAX_EXPORT_BYTES = MAX_SAVE_BYTES - 256 * 1024;
 export const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 export interface TownSave {
   format: typeof SAVE_FORMAT;

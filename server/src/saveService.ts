@@ -2,7 +2,8 @@ import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
 import { getTableColumns, getTableName } from "drizzle-orm";
 import type { AnySQLiteTable } from "drizzle-orm/sqlite-core";
-import { MAX_ATTACHMENT_BYTES, MAX_SAVE_BYTES, readSaveEnvelope, SAVE_FORMAT, SAVE_SCHEMA_VERSION, SAVE_VERSION, type TownSave } from "../../shared/saveFormat";
+import { UserFacingError } from "../../shared/userError";
+import { MAX_ATTACHMENT_BYTES, MAX_EXPORT_BYTES, readSaveEnvelope, SAVE_FORMAT, SAVE_SCHEMA_VERSION, SAVE_VERSION, type TownSave } from "../../shared/saveFormat";
 import * as schema from "./schema";
 import { runRetrySafe } from "./retrySafe";
 import { sqliteStorage, type TownDb, type TownStorage } from "./storage";
@@ -96,7 +97,10 @@ function validateAttachments(save: TownSave): Map<string, Uint8Array> {
   return attachments;
 }
 
-export async function exportTownSave(db: TownDb, blobs: BlobStore, fetchImage: typeof fetch = fetch): Promise<string> {
+const tooBig = (): UserFacingError =>
+  new UserFacingError("This town's save is too large to export: its postcards and writing add up to more than the 32 MB a save may hold. Delete some postcards and try again. Nothing was changed.");
+
+export async function exportTownSave(db: TownDb, blobs: BlobStore, fetchImage: typeof fetch = fetch, maxBytes: number = MAX_EXPORT_BYTES): Promise<string> {
   // One table after another is one consistent picture: the town runs one
   // action at a time (storage.ts), so nothing writes between these reads.
   const snapshot: Record<string, Record<string, unknown>[]> = {};
@@ -110,16 +114,16 @@ export async function exportTownSave(db: TownDb, blobs: BlobStore, fetchImage: t
     if (blobs.read) {
       const bytes = await blobs.read(key);
       if (!bytes) throw new Error("A postcard could not be read. No incomplete save was exported.");
-      if (bytes.length > MAX_ATTACHMENT_BYTES) throw new Error("A postcard is too large to export.");
+      if (bytes.length > MAX_ATTACHMENT_BYTES) throw new UserFacingError("A postcard is too large to export.");
       const base64 = Buffer.from(bytes).toString("base64");
       size += base64.length + key.length + 100;
-      if (size > MAX_SAVE_BYTES) throw new Error("The save exceeds the 32 MB limit.");
+      if (size > maxBytes) throw tooBig();
       save.attachments.push({ key, contentType: "image/jpeg", base64 });
       continue;
     }
     const response = await fetchImage(await blobs.getUrl(key), { signal: AbortSignal.timeout(30000) });
     if (!response.ok) throw new Error("A postcard could not be downloaded. No incomplete save was exported.");
-    if (Number(response.headers.get("content-length") ?? 0) > MAX_ATTACHMENT_BYTES) throw new Error("A postcard is too large to export.");
+    if (Number(response.headers.get("content-length") ?? 0) > MAX_ATTACHMENT_BYTES) throw new UserFacingError("A postcard is too large to export.");
     const reader = response.body?.getReader();
     if (!reader) throw new Error("A postcard image was empty.");
     const chunks: Uint8Array[] = [];
@@ -129,19 +133,19 @@ export async function exportTownSave(db: TownDb, blobs: BlobStore, fetchImage: t
         const chunk = await reader.read();
         if (chunk.done) break;
         bytes += chunk.value.byteLength;
-        if (bytes > MAX_ATTACHMENT_BYTES) throw new Error("A postcard is too large to export.");
+        if (bytes > MAX_ATTACHMENT_BYTES) throw new UserFacingError("A postcard is too large to export.");
         chunks.push(chunk.value);
       }
     } finally { await reader.cancel(); }
     const base64 = Buffer.concat(chunks).toString("base64");
     size += base64.length + key.length + 100;
-    if (size > MAX_SAVE_BYTES) throw new Error("The save exceeds the 32 MB limit.");
+    if (size > maxBytes) throw tooBig();
     save.attachments.push({ key, contentType: "image/jpeg", base64 });
   }
   validateRows(save);
   validateAttachments(save);
   const json = JSON.stringify(save);
-  if (Buffer.byteLength(json) > MAX_SAVE_BYTES) throw new Error("The save exceeds the 32 MB limit.");
+  if (Buffer.byteLength(json) > maxBytes) throw tooBig();
   return json;
 }
 

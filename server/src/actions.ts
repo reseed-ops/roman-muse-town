@@ -16,6 +16,7 @@ type Ctx,
 import { and, asc, desc, eq } from "drizzle-orm";
 import * as schema from "./schema";
 import { FESTIVALS_SEED } from "./festivals";
+import { UserFacingError } from "../../shared/userError";
 import {
   extractFact,
   isHeavyWeather,
@@ -1868,7 +1869,7 @@ async function heartLines(ctx: Ctx, h: HeartRow, rank: number): Promise<string[]
 }
 
 /** Postcards one town's album holds (Task 61); a save of them still fits the 32 MB limit. */
-export const MAX_POSTCARDS = 40;
+export const MAX_POSTCARDS = 30;
 
 export const Actions = {
   ...saveActions,
@@ -2423,7 +2424,7 @@ export const Actions = {
     async handler(ctx, args) {
       const db = ctx.db<typeof schema>();
       const kept = await db.select({ id: schema.postcards.id }).from(schema.postcards);
-      if (kept.length >= MAX_POSTCARDS) throw new Error(`The album holds ${MAX_POSTCARDS} postcards; delete one to add another.`);
+      if (kept.length >= MAX_POSTCARDS) throw new UserFacingError(`The album holds ${MAX_POSTCARDS} postcards; delete one to add another.`);
       const bytes = Uint8Array.from(atob(args.image_base64), (c) => c.charCodeAt(0));
       const key = `postcards/${Date.now()}-${Math.floor(Math.random() * 1e6)}.jpg`;
       await ctx.blobs.put(key, bytes, { contentType: "image/jpeg" });

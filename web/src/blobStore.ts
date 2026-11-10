@@ -6,6 +6,7 @@
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { eq, ne, sql } from "drizzle-orm";
+import { UserFacingError } from "../../shared/userError";
 import type { BlobStore } from "../../server/src/saveService";
 import type { TownDb } from "../../server/src/storage";
 import { asPg, townBlobs } from "../../server/src/storage.pg";
@@ -72,7 +73,7 @@ export function createBlobStore(tx: TownDb, schemaName: string, secret: string, 
     },
     async put(key, data, options) {
       const held = await db.select({ n: sql<number>`coalesce(sum(length(${townBlobs.bytes})), 0)::float8` }).from(townBlobs).where(ne(townBlobs.key, key));
-      if ((Number(held[0]?.n) || 0) + data.byteLength > quotaBytes) throw new Error("This town's image storage is full. Delete some postcards first.");
+      if ((Number(held[0]?.n) || 0) + data.byteLength > quotaBytes) throw new UserFacingError("This town's image storage is full. Delete some postcards first.");
       await db.insert(townBlobs).values({ key, contentType: options.contentType, bytes: data })
         .onConflictDoUpdate({ target: townBlobs.key, set: { contentType: options.contentType, bytes: data } });
     },

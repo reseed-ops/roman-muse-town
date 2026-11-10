@@ -68,8 +68,9 @@ The town is public, so it bounds what a caller can ask of it (`web/src/limits.ts
 - per minute: 240 actions per town, 900 per caller address, 12 saves/postcards per town, 240 bridge calls per town; 6 pairing codes per town per ten minutes; wrong pairing codes are limited at the bridge (below) and, as a backstop, here (600 a minute overall);
 - creation: a town the database has not seen needs a free slot first: 12 new towns per address per hour, 60 a minute overall, 50,000 towns at most (then 503); a returning town is never refused for this;
 - at once: 4 actions per town and 64 overall in flight (else 503 with Retry-After), 2 held reads per town and 300 overall (a held read over the line answers at once, as a short poll); the pairing desk holds 5,000 live codes and the slate keeper 5,000 open visits;
-- storage: 40 postcards and 48 MB of images per town (a full 32 MB save still fits);
-- `/stats` is reused for 30 seconds.
+- storage: 30 postcards and 48 MB of images per town (a full 32 MB save still fits);
+- `/stats` is reused for 30 seconds;
+- bodies: 2 MB on every route but one (cut off while it is read); `POST /restore?request_id=...` takes a whole save (up to 32 MB) as its raw body.
 
 The caller's address is the socket's, unless a trusted proxy is configured: `TRUST_PROXY=1` (default on when Railway's own variables are present) reads `X-Real-IP`; `X-Forwarded-For` is never read. The limits are in this process's memory (the town runs as one replica; see the review's finding 7).
 

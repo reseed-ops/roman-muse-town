@@ -41,6 +41,8 @@ import { createPairingDesk, PairingFull, type PairingDesk } from "./pairing";
 import { createFlightGate, createWindowLimiter, clientAddress } from "./limits";
 import { createPairingState, type PairingState } from "./pairingState";
 import { createTownKeeper, type TownKeeper } from "./townKeeper";
+import { MAX_SAVE_BYTES } from "../../shared/saveFormat";
+import { UserFacingError } from "../../shared/userError";
 import { PG_MIGRATIONS } from "../../server/src/pgMigrations";
 import { createTallies, formatTallies, type Tallies } from "./tallies";
 
@@ -122,6 +124,9 @@ export const DEFAULT_LIMITS: TownLimits = {
 };
 
 /** Actions that move images or whole saves: limited harder. */
+/** The largest save the restore route takes: the format's limit and room for nothing else (the body is the save itself). */
+const RESTORE_MAX_BYTES = MAX_SAVE_BYTES + 64 * 1024;
+
 const HEAVY_ACTIONS = new Set(["addPostcard", "restoreSave", "exportSave"]);
 
 const tooMany = (what: string, retryAfterS = 30): Response =>
@@ -172,18 +177,36 @@ export function createTownServer(opts: TownServerOptions): TownServer {
   }
   const dist = opts.distDir ? resolve(opts.distDir) : null;
 
-  const readJson = async (req: Request): Promise<{ ok: true; body: unknown } | { ok: false; response: Response }> => {
-    const length = Number(req.headers.get("content-length") ?? 0);
-    if (length > maxBody) return { ok: false, response: json(413, { error: "too large" }) };
-    let text: string;
+  /** The body as text, read as it arrives and abandoned past `limit` bytes (Bun's own cap is the largest route's, so every other route enforces its own here). */
+  const readCapped = async (req: Request, limit: number): Promise<{ ok: true; text: string } | { ok: false; response: Response }> => {
+    const declared = Number(req.headers.get("content-length") ?? 0);
+    if (declared > limit) return { ok: false, response: json(413, { error: "too large" }) };
+    if (!req.body) return { ok: true, text: "" };
+    const reader = req.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let size = 0;
     try {
-      text = await req.text();
+      for (;;) {
+        const part = await reader.read();
+        if (part.done) break;
+        size += part.value.byteLength;
+        if (size > limit) {
+          void reader.cancel().catch(() => {});
+          return { ok: false, response: json(413, { error: "too large" }) };
+        }
+        chunks.push(part.value);
+      }
     } catch {
       return { ok: false, response: json(400, { error: "unreadable body" }) };
     }
-    if (text.length > maxBody) return { ok: false, response: json(413, { error: "too large" }) };
+    return { ok: true, text: Buffer.concat(chunks).toString("utf8") };
+  };
+
+  const readJson = async (req: Request): Promise<{ ok: true; body: unknown } | { ok: false; response: Response }> => {
+    const got = await readCapped(req, maxBody);
+    if (!got.ok) return got;
     try {
-      return { ok: true, body: text ? JSON.parse(text) : null };
+      return { ok: true, body: got.text ? JSON.parse(got.text) : null };
     } catch {
       return { ok: false, response: json(400, { error: "invalid JSON" }) };
     }
@@ -215,11 +238,27 @@ export function createTownServer(opts: TownServerOptions): TownServer {
     return rank;
   }
 
-  async function actionsRoute(req: Request, address: string): Promise<Response> {
+  /** A restore's own route (Task 65): the save as the raw body, sized for the encoded envelope
+   *  (the 32 MB save limit plus a little), not wrapped in the action JSON. It runs the same
+   *  restoreSave action, under the same limits and the same town lock. */
+  async function restoreRoute(req: Request, url: URL, address: string): Promise<Response> {
     if (req.method !== "POST") return json(405, { error: "method not allowed" });
     const visitorToken = readVisitorToken(req);
     if (!visitorToken) return json(401, { error: "a visitor token is required" });
-    const parsed = await readJson(req);
+    const requestId = url.searchParams.get("request_id") ?? "";
+    if (!/^[0-9a-f-]{36}$/i.test(requestId)) return json(400, { error: "a request id is required" });
+    const got = await readCapped(req, RESTORE_MAX_BYTES);
+    if (!got.ok) return got.response;
+    return actionsRoute(req, address, { action: "restoreSave", args: { json: got.text, request_id: requestId } });
+  }
+
+  async function actionsRoute(req: Request, address: string, preset?: { action: string; args: unknown }): Promise<Response> {
+    if (req.method !== "POST") return json(405, { error: "method not allowed" });
+    const visitorToken = readVisitorToken(req);
+    if (!visitorToken) return json(401, { error: "a visitor token is required" });
+    let parsed: { ok: true; body: unknown } | { ok: false; response: Response };
+    if (preset) parsed = { ok: true, body: preset };
+    else parsed = await readJson(req);
     if (!parsed.ok) return parsed.response;
     const body = parsed.body as { action?: unknown; args?: unknown } | null;
     const action = body && typeof body === "object" && typeof body.action === "string" ? body.action : null;
@@ -310,6 +349,8 @@ export function createTownServer(opts: TownServerOptions): TownServer {
       }
       return json(200, payload);
     } catch (error) {
+      // A limit the visitor can act on is said as it is (Task 65), never logged with content.
+      if (error instanceof UserFacingError) return json(422, { error: error.message });
       // The detail stays in the log; the browser gets a plain answer and
       // a reference that finds the log line, never the exception itself.
       const message = error instanceof Error ? error.message : String(error);
@@ -492,6 +533,7 @@ export function createTownServer(opts: TownServerOptions): TownServer {
       const url = new URL(req.url);
       const address = clientAddress(req, socketAddress, trustProxy);
       if (url.pathname === "/actions") return actionsRoute(req, address);
+      if (url.pathname === "/restore") return restoreRoute(req, url, address);
       if (url.pathname === "/director/pair-redeem") return pairRedeemRoute(req);
       if (url.pathname.startsWith("/bridge/")) return bridgeRoute(req, url, address);
       if (url.pathname.startsWith(BLOB_PATH_PREFIX)) return blobRoute(req, url);

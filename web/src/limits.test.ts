@@ -129,7 +129,8 @@ describe.skipIf(!onPostgres)("the hosted town under load", () => {
     const s = make({ limits: { heavyPerTown: 1 }, retentionDays: 0, blobQuotaBytes: 1000 });
     const image = btoa("x".repeat(2000));
     const first = await call(s, key(600), "addPostcard", { image_base64: image, caption: "A", date_label: "d", weather: "w" });
-    expect(first.status).toBe(500); // the quota: 1,000 bytes cannot hold a 2,000-byte image
+    expect(first.status).toBe(422); // the quota: 1,000 bytes cannot hold a 2,000-byte image, said plainly
+    expect(((await first.json()) as { error: string }).error).toContain("image storage is full");
     const second = await call(s, key(600), "addPostcard", { image_base64: image, caption: "A", date_label: "d", weather: "w" });
     expect(second.status).toBe(429);
     const state = (await (await call(s, key(600), "getState")).json()) as any;

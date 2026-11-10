@@ -120,3 +120,14 @@ test("Task 64: a successful restore deletes the images it superseded, and a fail
   expect(photo.blobKey).not.toBe("original.jpg");
   expect([...stored.keys()]).toEqual([photo.blobKey]);
 });
+
+test("Task 65: an export over the limit is refused with a clear message and nothing is half exported", async () => {
+  const { UserFacingError } = await import("../../shared/userError");
+  stored.set("original.jpg", jpeg);
+  const error = await exportTownSave(db, blobs, fetchImage, 500).catch((e: unknown) => e);
+  expect(error).toBeInstanceOf(UserFacingError);
+  expect((error as Error).message).toContain("too large to export");
+  expect((error as Error).message).toContain("Delete some postcards");
+  // Within the limit it still exports.
+  expect(JSON.parse(await exportTownSave(db, blobs, fetchImage)).attachments).toHaveLength(1);
+});

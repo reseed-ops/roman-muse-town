@@ -27,6 +27,7 @@ async function main(): Promise<void> {
   const { Actions, readAffectionRank } = await import("../../server/src/actions");
   const { visitActions } = await import("../../server/src/visitActions");
   const { createTownServer } = await import("./server");
+  const { MAX_SAVE_BYTES } = await import("../../shared/saveFormat");
   const { trustProxyFromEnv } = await import("./limits");
   const { DEFAULT_RETENTION_DAYS } = await import("./townKeeper");
   const { randomBytes } = await import("node:crypto");
@@ -53,7 +54,8 @@ async function main(): Promise<void> {
     retentionDays: process.env.TOWN_RETENTION_DAYS === undefined ? DEFAULT_RETENTION_DAYS : Math.max(0, Math.floor(Number(process.env.TOWN_RETENTION_DAYS)) || 0),
   });
   const port = Number(process.env.PORT) || 8080;
-  Bun.serve({ port, fetch: (req, srv) => server.fetch(req, srv.requestIP(req)?.address), maxRequestBodySize: 4 * 1024 * 1024, idleTimeout: 60 });
+  // The body cap is the restore route's envelope; every other route caps itself (web/src/server.ts).
+  Bun.serve({ port, fetch: (req, srv) => server.fetch(req, srv.requestIP(req)?.address), maxRequestBodySize: MAX_SAVE_BYTES + 256 * 1024, idleTimeout: 60 });
   log(`muse town on the web: :${port}, door ${directorToken ? "open to the director token" : "shut (no DIRECTOR_TOKEN)"}, client at ${distDir}`);
 }
 
