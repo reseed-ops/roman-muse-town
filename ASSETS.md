@@ -2,7 +2,7 @@
 
 This repository is **code and text, plus two freely redistributable
 binaries** (below). Every other binary asset the town needs is excluded
-(121 files), because nearly all of them
+(123 files), because nearly all of them
 are commercial assets whose licences allow them to be *embedded in a
 shipped product* but **never redistributed as files**. This manifest lists
 everything excluded, grouped by source pack, with the exact folder path
@@ -20,7 +20,7 @@ Aelia's body, pixiv's VRoid sample model, whose terms allow it in a free
 public repo (see its row below). Everything else is purchase/download/
 supply required, and may never be committed to a public repository.
 
-Counts: 121 files excluded from `client/src/assets/` (123 in the folder,
+Counts: 123 files excluded from `client/src/assets/` (125 in the folder,
 less the two above), plus the app icon
 `icon.webp` at the space root. (Compiled copies of these assets also exist
 in the original's `client/dist/` build output, 222 binary files, which
@@ -155,6 +155,31 @@ only one whose licence was positively verified as allowing it.
 | `stars-fall-song.mp3` | `client/src/assets/` | The summit scene's song, AI generated for the scene during the town's original build (Nov 1, 2026, 00:07, the build night of the summit scene; the file carries "AI Generated" in its embedded metadata). Provenance the project's own: no owner-supplied copy ever existed (the Nov 5 rebuild record below listed it as missing from the owner's folder). The generating service and account are not recorded, so its output terms are the one residual unknown. A receiving town can substitute any quiet song file of its own. (Line corrected Nov 5, 2026, Task 14, on the launch gate review's evidence.) |
 | `icon.webp` | space root | The app icon. Regenerate for a new artifact. |
 
+## 12. Ships on the sea, by Alin Loghin (Unity Asset Store)
+
+Bought by the owner Nov 8, 2026 (Order #1376026162327) for Task 50:
+*Ancient trade ship* and *Low-poly Greek Trireme*. Standard Unity Asset
+Store EULA: may be embedded in a shipped product, never redistributed as
+files.
+
+Drop at: `client/src/assets/ships/`
+
+| File | Made from | Notes |
+| --- | --- | --- |
+| `trade_ship.glb` | `Ancient trade ship.unitypackage`: `files/low_poly/kyrenia_lowPoly.FBX` + `trade_ship.tga` | The Kyrenia merchantman, 676 polygons, one 512 px texture with alpha (the sail and rails cut out). About 0.43 MB. |
+| `trireme.glb` | `Low-poly Greek Trireme.unitypackage`: `Trireme/trireme.FBX` + `hull.tga`, `planks.tga`, `rope.tga`, `sail.tga`, `wood.tga` | 9,009 polygons, five materials; hull 1024 px, the rest 512 px or less (the pack's 2048 px maps, normal, AO and spec maps left out for phones). About 1.5 MB. |
+
+Conversion (Claude, Nov 9, 2026, Blender 5.1, scripts in `tools/ships/`):
+the trade ship's FBX is version 6100, which Blender refuses, and its RAR
+holds only a `.max`, so `tools/ships/fbx6.py` reads the binary FBX 6
+directly (positions, UVs, normals, the node transforms) and builds the
+mesh in Blender. The trireme imports as FBX; its one-bone armature is
+static and is applied away. Both are joined into one mesh, turned bow to
++X, centred, keel at y = 0, and exported GLB (Y up, no animation, JPEG
+for opaque maps, PNG where alpha matters). Without them the sea stays
+empty; the rest of the town is unaffected at runtime, but the static
+imports mean the web build needs both files present.
+
 ---
 
 ## Rebuild record (Claude, Nov 5, 2026): the folder remade from the raw packs
@@ -255,7 +280,7 @@ Not rebuilt, still missing from the owner's folder:
 - `stars-fall-song.mp3`: no candidate on the device at rebuild time; the file in use is the project's own AI-generated song (see section 11), restored to the folder the same day.
 
 `townScene.ts` and `App.tsx` import every one of these files statically,
-so the web build fails until all 123 are present (see `CLAUDE.md`).
+so the web build fails until all of them are present (125 since Task 50; see `CLAUDE.md`).
 
 ### Added Nov 8, 2026: Gaius's arms
 

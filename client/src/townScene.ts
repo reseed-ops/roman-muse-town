@@ -2,6 +2,7 @@ import { createPlaceFootprints } from "./buildingFootprints";
 import { readArrangement } from "../../shared/homeDecor";
 import { buildHomeHouse } from "./homeHouse";
 import { aimSeaPath, buildSeaCliff, CLIFF, clampToWorld, walkable as onCliffPath } from "./seaCliff";
+import { nextGap, pickShip, planVoyage, SHIPS, shipsSail, voyagePose, watchingSea, type SeaWeather, type ShipKind, type Voyage } from "./seaShips";
 import { createTrueSky, skyDirection, SKY_REFRESH_S } from "./trueSky";
 import { armsVisibility, createGaiusArms } from "./gaiusArms";
 import { createNightLights } from "./nightLights";
@@ -221,6 +222,8 @@ import rockPackUrl from "./assets/roman/rock_pack.glb";
 import grassPatchUrl from "./assets/roman/grass_patch.glb";
 import boatSmallUrl from "./assets/roman/boat_small.glb";
 import paddleUrl from "./assets/roman/paddle.glb";
+import tradeShipUrl from "./assets/ships/trade_ship.glb";
+import triremeUrl from "./assets/ships/trireme.glb";
 import waterNormalUrl from "./assets/roman/water_normal.png";
 
 export type PickKind = "place" | "collectible" | "tree" | "muse" | "board" | "secret" | "landmark" | "questboard" | "letters" | "goals" | "market" | "bench" | "dock" | "inscription" | "summit" | "piscina" | "baths" | "cat" | "phoenix" | "sky" | "stone" | "rest" | "forage" | "history" | "home";
@@ -3573,6 +3576,89 @@ export function createTownScene(
     if (kind === 0) void placeWorld(bushCUrl, { x: px, z: pz, rotY: rot, width: 1.6 });
     else void placeWorld(rockPackUrl, { x: px, z: pz, rotY: rot, width: 1.1 });
   }
+  // Ships on the sea (Task 50): one at a time passes below the headland,
+  // a trade ship most days, now and then a trireme farther out and
+  // slower (seaShips.ts plans the passes). The models load only once he
+  // is out on the peninsula, carry no shadows, and make no sound.
+  const seaShips = (() => {
+    const group = new THREE.Group();
+    group.name = "sea-ships";
+    group.visible = false;
+    scene.add(group);
+    const urls: Record<ShipKind, string> = { trade: tradeShipUrl, trireme: triremeUrl };
+    const hulls: Partial<Record<ShipKind, THREE.Group>> = {};
+    const loading: Partial<Record<ShipKind, Promise<THREE.Group | null>>> = {};
+    const load = (kind: ShipKind): Promise<THREE.Group | null> => {
+      loading[kind] ??= runtime.streaming
+        .request(() => loadModelScene(urls[kind]), () => ({ x: CLIFF.head.x, z: CLIFF.head.z }))
+        .then((src) => {
+          if (disposed) return null;
+          const hull = groundModel(src.clone(true), { width: SHIPS[kind].length });
+          hull.traverse((o) => {
+            if (o instanceof THREE.Mesh) {
+              o.castShadow = false;
+              o.receiveShadow = false;
+            }
+          });
+          hull.visible = false;
+          group.add(hull);
+          hulls[kind] = hull;
+          return hull;
+        })
+        .catch(() => null); // no ship model, the sea stays empty
+      return loading[kind]!;
+    };
+    let voyage: Voyage | null = null;
+    let waitUntil = -1;
+    let wasWatching = false;
+    let arriving = false;
+    const update = (t: number, dt: number, view: { x: number; z: number }, w: SeaWeather, morning: boolean) => {
+      const watching = watchingSea(view.z);
+      group.visible = watching;
+      if (!watching) {
+        wasWatching = false;
+        return;
+      }
+      if (!wasWatching) {
+        wasWatching = true;
+        // Arriving on the peninsula with the sea empty: a ship is soon in
+        // view, already part way along its run.
+        if (!voyage) {
+          waitUntil = t + 3;
+          arriving = true;
+        }
+      }
+      if (voyage) {
+        voyage.elapsed += dt;
+        const p = voyage.elapsed / voyage.duration;
+        const hull = hulls[voyage.kind];
+        if (p >= 1) {
+          if (hull) hull.visible = false;
+          voyage = null;
+          waitUntil = t + nextGap(w, Math.random());
+          return;
+        }
+        if (!hull) return; // still loading; the pass goes on unseen
+        const pose = voyagePose(voyage, p);
+        const swell = Math.sin(t * 0.55 + voyage.laneZ);
+        hull.position.set(pose.x, CLIFF.seaY - SHIPS[voyage.kind].sink + swell * 0.22, pose.z);
+        hull.rotation.set(Math.sin(t * 0.42) * 0.025, pose.heading, Math.sin(t * 0.37 + 1.1) * 0.035);
+        hull.visible = true;
+        return;
+      }
+      if (waitUntil < 0) waitUntil = t + nextGap(w, Math.random());
+      if (t < waitUntil) return;
+      if (!shipsSail(w)) {
+        waitUntil = t + 20;
+        return;
+      }
+      const kind = pickShip(Math.random());
+      voyage = planVoyage(kind, morning, Math.random, arriving ? 0.2 + Math.random() * 0.2 : 0);
+      arriving = false;
+      void load(kind);
+    };
+    return { update };
+  })();
   /** Moon up (0..1) and its light share (phase), refreshed with the sky. */
   let moonUp = 0;
   let moonShare = 0;
@@ -12341,6 +12427,8 @@ export function createTownScene(
           aimSeaPath(seaCliff.sunPath, vx, vz, skyAzimDeg);
           const lowSun = Math.max(0, 1 - Math.abs(skyElevDeg - 4) / 10);
           (seaCliff.sunPath.material as THREE.MeshBasicMaterial).opacity = lowSun * 0.55 * (1 - Math.min(1, wCur.rain + wCur.snow));
+          // Ships passing below the headland (Task 50): east before noon, west after.
+          seaShips.update(t, dt, { x: vx, z: vz }, { nightMix, storm: weatherId === "storm", fog: weatherId === "fog" }, skyAzimDeg < 180);
           // Their house: the door swings for whoever comes near, the lamp warms at night.
           if (homeHouse.update(dt, walking ? [walkPos, museGroup.position] : [museGroup.position], nightMix)) playLampIgnite();
           // At the headland together for the first time this visit, she says one quiet thing.
