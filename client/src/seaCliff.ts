@@ -31,6 +31,31 @@ export const CLIFF = {
   pathToZ: 117,
 } as const;
 
+/**
+ * Does a round piece of horizon dressing (a hill of radius r, a tree, a
+ * meadow edge) stay on the land north of the coast? South of the coast is
+ * the sea, 25 m down, and anything left there stands in the water or
+ * swallows the peninsula's trail.
+ */
+export function clearOfSea(z: number, r = 0): boolean {
+  return z + r <= CLIFF.coastZ;
+}
+
+/**
+ * The rolling hills on the town's horizon: [x, z, radius, height]. All
+ * on land, west, north and east; the south is the sea. (The eastern one
+ * once stood at z 70 and a western one at (-45, 105), over the coast and
+ * the peninsula's trail, and the far western one at z 15 reached the sea.)
+ */
+export const HORIZON_HILLS: readonly (readonly [number, number, number, number])[] = [
+  [-70, -80, 46, 13],
+  [55, -95, 55, 16],
+  [105, -25, 40, 11],
+  [-110, 5, 48, 12],
+  [20, -120, 60, 15],
+  [100, 12, 40, 10],
+];
+
 /** Is (x, z) on the peninsula's land (for meshes)? */
 export function onLand(x: number, z: number): boolean {
   if (z >= CLIFF.coastZ - 0.001 && z <= CLIFF.stripEndZ && Math.abs(x) <= CLIFF.landHalf) return true;

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { CLIFF, clampToWorld, landOutline, onLand, outwardFromSpine, walkable } from "./seaCliff";
+import { CLIFF, clampToWorld, clearOfSea, HORIZON_HILLS, landOutline, onLand, outwardFromSpine, walkable } from "./seaCliff";
 
 // The sea cliff's geometry (Task 34), pinned off the scene.
 
@@ -44,4 +44,24 @@ test("the outline runs from the coast round the headland and back, all on its la
     const o = outwardFromSpine(p);
     expect(onLand(p.x - o.x * 0.95, p.z - o.z * 0.95)).toBe(true);
   }
+});
+
+test("the horizon hills stay on land, clear of the sea and of the peninsula's trail", () => {
+  for (const [hx, hz, hr, hh] of HORIZON_HILLS) {
+    expect(clearOfSea(hz, hr)).toBe(true);
+    // Nowhere along the trail or on the headland is under a hill.
+    for (let z = CLIFF.walkFromZ; z <= CLIFF.head.z + CLIFF.walkHeadR; z += 2) {
+      const d = Math.hypot(0 - hx, z - hz);
+      const top = d < hr ? hh * Math.sqrt(1 - (d / hr) ** 2) : 0;
+      expect(top).toBeLessThan(0.05);
+    }
+    // And none rises inside the town's walking disc.
+    expect(Math.hypot(hx, hz) - hr).toBeGreaterThan(52);
+  }
+});
+
+test("clearOfSea: the coast is the line", () => {
+  expect(clearOfSea(CLIFF.coastZ - 1)).toBe(true);
+  expect(clearOfSea(CLIFF.coastZ + 1)).toBe(false);
+  expect(clearOfSea(40, 20)).toBe(false);
 });

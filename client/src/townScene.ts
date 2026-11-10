@@ -1,7 +1,7 @@
 import { createPlaceFootprints } from "./buildingFootprints";
 import { readArrangement } from "../../shared/homeDecor";
 import { buildHomeHouse } from "./homeHouse";
-import { aimSeaPath, buildSeaCliff, CLIFF, clampToWorld, walkable as onCliffPath } from "./seaCliff";
+import { aimSeaPath, buildSeaCliff, CLIFF, clampToWorld, clearOfSea, HORIZON_HILLS, walkable as onCliffPath } from "./seaCliff";
 import { nextGap, pickShip, planVoyage, SHIPS, shipsSail, voyagePose, watchingSea, type SeaWeather, type ShipKind, type Voyage } from "./seaShips";
 import { createTrueSky, skyDirection, SKY_REFRESH_S } from "./trueSky";
 import { armsVisibility, createGaiusArms } from "./gaiusArms";
@@ -1655,30 +1655,33 @@ export function createTownScene(
   ground.receiveShadow = true;
   ground.name = "ground";
   world.add(ground);
-  const meadow = new THREE.Mesh(new THREE.CircleGeometry(170, 40), mat(0x5d9a48, { rough: 1 }));
-  meadow.rotation.x = -Math.PI / 2;
+  // The meadow stops at the coast: south of it is the sea, 25 m down,
+  // and a meadow left over the water hid the sea from the headland.
+  const meadowGeo = new THREE.CircleGeometry(170, 40);
+  meadowGeo.rotateX(-Math.PI / 2);
+  {
+    const p = meadowGeo.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < p.count; i++) if (!clearOfSea(p.getZ(i))) p.setZ(i, CLIFF.coastZ);
+  }
+  const meadow = new THREE.Mesh(meadowGeo, mat(0x5d9a48, { rough: 1 }));
   // Below the lowest ground the town mesh reaches, the gate and the basin.
   meadow.position.y = -0.6;
   world.add(meadow);
-  // Rolling hills on the horizon.
-  for (const [hx, hz, hr, hh] of [
-    [-70, -80, 46, 13],
-    [55, -95, 55, 16],
-    [105, -25, 40, 11],
-    [-110, 15, 48, 12],
-    [20, -120, 60, 15],
-    [-45, 105, 52, 12],
-    [95, 70, 44, 10],
-  ] as [number, number, number, number][]) {
+  // Rolling hills on the horizon, all on the land north of the coast
+  // (two that stood south of it, from before the sea cliff, swallowed
+  // the peninsula's trail and sat in the sea).
+  for (const [hx, hz, hr, hh] of HORIZON_HILLS) {
+    if (!clearOfSea(hz, hr)) continue;
     const hill = new THREE.Mesh(new THREE.SphereGeometry(hr, 20, 12), mat(0x5c9450, { rough: 1 }));
     hill.scale.y = hh / hr;
     hill.position.set(hx, 0, hz);
     world.add(hill);
   }
-  // A soft distant tree line.
+  // A soft distant tree line, on land only.
   for (let i = 0; i < 26; i++) {
     const a = (i / 26) * Math.PI * 2 + (i % 3) * 0.09;
     const r = 62 + (i % 4) * 5;
+    if (!clearOfSea(Math.sin(a) * r, 3)) continue;
     const silhouette = makeTree(Math.cos(a) * r, Math.sin(a) * r, 2.1 + (i % 3) * 0.5);
     world.add(silhouette);
   }
