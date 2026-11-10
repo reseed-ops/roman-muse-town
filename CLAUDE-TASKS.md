@@ -346,6 +346,64 @@ Context: the living-town vision, Nov 10, 2026. A town that grows slowly, remembe
 
 Acceptance: in a live check across the seasons, the olives are visibly growing, the phoenix is perched and visits, and Aelia leads him somewhere unplanned.
 
+## Codex review fixes (added Nov 10, 2026)
+
+Context: Codex's initial review and security review of the town, Nov 10, 2026, checkout main 540e7eb, read-only, no code changed. Full report: codex-review-2026-11-10.md (kept with the town goal's files). No Critical finding, no confirmed unauthenticated cross-town data read, no SQL injection, no path traversal, no hard-coded live credential found. The five tasks below are Codex's prioritised fix list, in order. The other findings (paired towns stuck at rank zero, single-process dependence, aborted model streams escaping call accounting, packed-asset memory and poisoned retries, mislabelled stats windows, pairing-limiter concurrency and forged-header bypasses, non-expiring postcard URLs, malformed-signature server error, missing CSP and frame headers, unpinned Docker builds, /healthz not checking the database) are recorded in the report for a later block, not this one. Build and test as usual; nothing deploys without the owner's word.
+
+## Task 61 (READY, added Nov 10, 2026): bound public town creation, writes, storage and held reads; harden the pairing limiter
+
+Context: Codex finding 1 and S1 (High). Any syntactically valid client-chosen key can create a schema with every migration, with no admission limit, per-caller action limit, town storage quota or postcard count quota. Pairing minting also allocates memory and writes tallies without a limit. Held reads can multiply per-connection polling tasks. Locations: web/src/server.ts:110-149, 202-208, 225-238, 298-304; server/src/storage.pg.ts:96-120; server/src/actions.ts:2405-2425; bridge/src/principalServer.ts:42-52, 99-104, 135-144; web/src/pairing.ts:24-27, 82-93.
+
+1. Rate-limit creation and expensive actions at a trusted edge and in the application, cap concurrency and storage, bound caches and maps, and reclaim abandoned towns under an explicit retention policy.
+2. Harden the pairing limiter: reserve request slots atomically before the asynchronous upstream call, limit in-flight and successful attempts too, trust proxy headers only on a configured proxy path, use a bounded expiring limiter without clear-all resets, and share it if scaled. Keep atomic single-use redemption. Note the current contract is not the "429 after 20 misses" the tasks describe: the bridge permits eight 404 misses per source over ten minutes, the town 600 global misses per minute.
+3. Cache aggregate reports (/stats) briefly.
+
+Acceptance: sustained requests and unique-key floods stay bounded and the service stays usable; concurrent pairing guesses cannot pass the same empty counter; a forged X-Real-IP header does not bypass the limiter.
+
+## Task 62 (READY, added Nov 10, 2026): repair tender-only enforcement across resident, principal, intentions and the director boundary
+
+Context: Codex finding 2 and S2 (High). The claimed tender-only policy is not consistently enforced, and a local probe measured three bypasses. Explicit rejection applies only when principalRank exists, so resident devoted output accepts explicit vocabulary. Lower-rank principal text is permitted if anywhere it contains a deferral word. Intentions have neither explicit nor intimacy checks. Locations: bridge/src/outputFilter.ts:46-62, 141-147, 163-177; bridge/src/director.ts:162, 176, 238; bridge/src/principal.ts:324-347; server/src/visitActions.ts:61-67.
+
+Measured bypasses to close:
+- Resident "Let us make love tonight." is accepted at ranks 8-10 (rejected at 0-7).
+- Principal "Kiss me now. Soon we can walk." is accepted at every rank, because a whole-line deferral regex treats an unrelated "soon" as permission.
+- Intention "We will make love tonight." is accepted at every rank.
+
+1. Put one shared explicit-content gate on every displayed output path: resident, principal, intentions, and the direct-door path (visitdirect, which validates direction shape but does not run the bridge filter). Gate intimacy independently of the explicit gate.
+2. Constrain deferrals to a structured safe response or a narrowly validated sentence. Use trusted entitlements for ranks, never a client-supplied rank.
+3. Enforce the final authorisation and policy boundary in the town as well, if the guarantee is meant to cover every director. Correct the Task 45 landing note, which says explicit content is refused at every rank: that is true only for its tested principal examples, not resident output or intentions.
+4. Related, in the same work: every non-owner paired town is permanently rank zero at the bridge (bridge/src/tenants.ts:104-106; bridge/src/principal.ts:326-327), so earned tender dialogue at rank 7 and up is refused for paired towns even when earned in the game. Add a minimal trusted server-derived relationship entitlement to the director view, refreshed per visit, with no cross-town entitlement leakage.
+
+Acceptance: the three measured bypasses are rejected at every rank, in tests at all ranks 0-10 for resident, principal, intention and direct-door paths, including chunk boundaries and adversarial paraphrase. Two paired towns with different ranks show no cross-town leakage.
+
+## Task 63 (READY, added Nov 10, 2026): disconnect and revocation, plus expiring principal capabilities
+
+Context: Codex finding 3 and S3 (High). A paired token today never expires and re-pairing does not retire the old one, so a stolen token could keep reading visit mail and frames and directing the town. Locations: bridge/src/tenants.ts:42-67; bridge/src/index.ts:119-140.
+
+1. Seal a versioned payload with town, token ID, issue and expiry times, and audience. Check a per-town pairing generation and revocation record on use.
+2. Provide disconnect and rotate controls, including disconnect from the visitor's authenticated town. Idle desk cleanup is not token revocation, and changing browser does not revoke the old town's token.
+3. Document precisely which key rotation actually revokes a principal capability. When PAIRING_SECRET is set, rotating DIRECTOR_TOKEN alone does not change the seal key; the note at bridge/src/tenants.ts:26-29 overstates rotation behaviour and must be corrected. Keep the seal itself as it is: fresh 96-bit random IV, AES-256-GCM, authenticated tags, domain-separated key derivation.
+
+Acceptance: a revoked or expired principal token is refused; re-pairing retires the old token; disconnect works from the visitor's town; the documentation states exactly which rotation revokes what.
+
+## Task 64 (READY, added Nov 10, 2026): remove raw conversation and request logging; set a retention rule for logs and private images
+
+Context: Codex finding 4, S5 and S6 (Medium). Every raw wake body is logged, including rejected bodies, and directions are logged again, so private authored speech can outlive the in-memory slate in Railway logs, and a credential pasted into content could be logged too. Signed postcard URLs never expire, images linger in browser caches even after deletion, and successful restores upload new images without deleting old postcard blobs. Locations: bridge/src/principal.ts:333, 357, 361, 471; bridge/src/tenants.ts:90, 106; web/src/blobStore.ts:15-36; web/src/server.ts:266-272; web/sw.ts:46-51, 74-75; server/src/saveService.ts:155-173.
+
+1. Log event types, timing, IDs and refusal categories only. Never raw bodies or direction text. Apply retention and access controls to existing logs, and remove historical content under the owner's retention policy.
+2. Expire URL signatures for postcards, define and apply private-image retention deliberately, purge local image caches on deletion or reset, and garbage-collect superseded blobs after a successful restore. State clearly that downloaded copies cannot be revoked.
+
+Acceptance: a test proves sentinel private text and unknown request fields never reach the logs; postcard URLs expire; deleting a postcard purges its cached copies and its blob.
+
+## Task 65 (READY, added Nov 10, 2026): make save export and restore limits agree with the HTTP transport
+
+Context: Codex finding 5 (Medium). Saves up to 32 MB can be exported and accepted by the save format, but the HTTP wrapper rejects around 2 MB and Bun rejects bodies above 4 MB, so a visitor's backup may become unusable as postcards accumulate. Locations: shared/saveFormat.ts:4, 19; server/src/saveActions.ts:18; web/src/server.ts:84, 91-100; web/src/main.ts:48.
+
+1. Give restore a bounded dedicated upload path sized for the encoded envelope, or align export and import limits with the transport and clearly reject oversized exports.
+2. Test an actual export-to-HTTP-restore round trip above 2 MB, with postcards included.
+
+Acceptance: a large save with postcards round-trips through the hosted route, and an oversized export is rejected with a clear message rather than a silent failure.
+
 ## Landing notes (since the history was archived)
 
 ### Tasks 29, 30: landing note (Claude, Nov 8, 2026), built, not yet deployed (needs both the town and town-bridge)
