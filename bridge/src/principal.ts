@@ -338,7 +338,7 @@ export function createPrincipalDesk(opts: PrincipalDeskOptions): PrincipalDesk {
         direction = { kind: "speak", text: filtered.text, lineId: `P${beganAt ?? 0}-${++lineCounter}` };
       }
     } else if (direction.kind === "intend") {
-      const filtered = filterIntention(direction.text);
+      const filtered = filterIntention(direction.text, { band: bandForRank(opts.rank()), principalRank: opts.rank() });
       if (!filtered.ok) {
         report({ kind: "refused", at: t, beat: p.beat, of, direction: p.raw, reason: `the constitution's filter: ${filtered.reason}` });
         log(`principal beat ${p.beat}/${of} refused by the filter (${filtered.reason})`);

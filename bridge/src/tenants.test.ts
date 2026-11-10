@@ -169,3 +169,49 @@ test("/pair limits wrong codes per caller: a guesser is refused, another caller 
   await server.close();
   expect(lines.join("\n")).not.toContain("203.0.113.7");
 });
+
+test("Task 62: a paired town's rank is its own town's entitlement, and two towns with different ranks never share one", async () => {
+  const clock = { t: 1_000_000 };
+  const ranks: Record<string, number | undefined> = { [A]: 8, [B]: 2 };
+  const channels = new Map<string, FakeChannel>();
+  const registry = createTenantRegistry({
+    channelFor: (vk) => {
+      const fake = createFakeChannel();
+      channels.set(vk, fake);
+      return {
+        ...fake,
+        directions: undefined,
+        readState: async () => ({ ...(await fake.readState()), ...(ranks[vk] === undefined ? {} : { entitlement: { rank: ranks[vk]! } }) }),
+        readInbox: (s: number) => fake.readInbox(s),
+        readFrame: (i?: number) => fake.readFrame(i),
+        direct: (d) => fake.direct(d),
+        setComposing: (o: boolean) => fake.setComposing(o),
+        readPack: () => fake.readPack(),
+      } as never;
+    },
+    claimMs: 3 * 60 * 1000,
+    idleMs: 15 * 60 * 1000,
+    now: () => clock.t,
+  });
+  const deskA = registry.deskFor(A);
+  const deskB = registry.deskFor(B);
+  channels.get(A)!.open(clock.t);
+  channels.get(B)!.open(clock.t);
+  await registry.observeAll();
+  const line = (text: string) => ({ direction: { kind: "speak", text } });
+  const said = (c: FakeChannel) => c.directions.filter((d) => d.direction.kind === "speak").map((d) => (d.direction as { text: string }).text);
+  await deskA.wake(line("Kiss me by the lake."));
+  await deskB.wake(line("Kiss me by the lake."));
+  await deskA.wake(line("Let us make love tonight."));
+  await registry.pumpAll();
+  // Rank 8 town: the tender kiss is carried; rank 2 town: it is not; explicit in neither.
+  expect(said(channels.get(A)!)).toContain("Kiss me by the lake.");
+  expect(said(channels.get(B)!).join(" ")).not.toContain("Kiss me by the lake.");
+  expect(said(channels.get(A)!).join(" ")).not.toContain("make love");
+  // A town that gives no entitlement stays at rank 0.
+  ranks[B] = undefined;
+  await registry.observeAll();
+  await deskB.wake(line("Kiss me again."));
+  await registry.pumpAll();
+  expect(said(channels.get(B)!).join(" ")).not.toContain("Kiss me again.");
+});

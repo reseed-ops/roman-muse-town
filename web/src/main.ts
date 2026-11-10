@@ -24,7 +24,7 @@ async function main(): Promise<void> {
   }
   const { SQL } = await import("bun");
   const { drizzle } = await import("drizzle-orm/bun-sql");
-  const { Actions } = await import("../../server/src/actions");
+  const { Actions, readAffectionRank } = await import("../../server/src/actions");
   const { visitActions } = await import("../../server/src/visitActions");
   const { createTownServer } = await import("./server");
   const { trustProxyFromEnv } = await import("./limits");
@@ -45,6 +45,7 @@ async function main(): Promise<void> {
     actions: Actions as unknown as Record<string, import("./server").TownAction>,
     door: visitActions,
     directorToken,
+    readRank: readAffectionRank as unknown as (ctx: { db: () => unknown }) => Promise<number>,
     blobSecret,
     distDir,
     log,

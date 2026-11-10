@@ -20,6 +20,7 @@
  * close 6–7, devoted 8–10. The worker's prompt is not touched; this is
  * the same rulebook applied at the other end of the wire.
  */
+import { explicitIn, gateTender, tenderIntimacyIn, TENDER_RANK } from "../../shared/tenderGate.js";
 import { INTENTION_MAX_CHARS, SPEAK_MAX_CHARS, SPEAK_MAX_WORDS, countWords } from "../../shared/visitProtocol.js";
 
 export type AffectionBand = "reserved" | "warming" | "close" | "devoted";
@@ -44,17 +45,8 @@ const atLeast = (band: AffectionBand, from: AffectionBand) => BAND_ORDER.indexOf
 
 /** Intimacies below devoted refuse the line (the resident's rule). */
 const INTIMACY_RE = /\b(kiss(es|ed|ing)?|lips|in (my|your) bed|undress|naked|make love|stay (with me|together) tonight|stay the night|spend the night|(a|the) night together)\b/i;
-/** The principal's rule (Task 31): explicit content is refused at every
- *  rank, as the Nov 1, 2026 "tender only" decision says, ... */
-const EXPLICIT_RE = /\b(undress(es|ed|ing)?|naked|nude|make love|making love|made love|sex(ual|y)?|aroused|orgasm\w*|breasts?)\b/i;
-/** ... while tender intimacy (a kiss, lips, lying in bed together, a
- *  night together asked for, never described: Task 45) is the town's
- *  own earnable moment, open from the terrace kiss's rank. */
-const TENDER_INTIMACY_RE = /\b(kiss(es|ed|ing)?|lips|in (my|your|our) bed|lie (in bed )?(with|beside) (me|you)|stay (with me|together) tonight|stay the night|spend the night|(a|the) night together)\b/i;
-/** The town's first kiss, at the terrace, is earned at rank 7 (client/src/town.ts). */
-export const PRINCIPAL_KISS_RANK = 7;
-/** Below that rank she may still speak of it as something to come. */
-const DEFERRAL_RE = /\b(not yet|one day|someday|some day|soon|when the (moment|time) (is right|comes)|will come|in time|wait)\b/i;
+/** The terrace kiss's rank (client/src/town.ts): tender intimacy opens here (shared/tenderGate.ts). */
+export const PRINCIPAL_KISS_RANK = TENDER_RANK;
 /** Never, at any band: crude words, and the character breaking. */
 const CRUDE_RE = /\b(fuck\w*|shit\w*|cunt|cock|dick|pussy|whore|slut|bitch)\b/i;
 const BREAK_RE = /\b(an? (ai|a\.i\.|language model|chatbot|assistant)|large language model|my (prompt|instructions|system prompt)|as an ai|affection (rank|points?)|heart points?|rank (one|two|three|four|five|six|seven|eight|nine|ten|\d+))\b/i;
@@ -141,10 +133,11 @@ export function filterSpeak(
   if (CRUDE_RE.test(text)) return { ok: false, reason: "crude" };
   if (BREAK_RE.test(text)) return { ok: false, reason: "character break" };
   if (GLOOM_RE.test(text)) return { ok: false, reason: "not tender" };
+  // One explicit gate on every path, at every rank (Task 62); intimacy is gated apart from it.
+  if (explicitIn(text)) return { ok: false, reason: "explicit" };
   if (opts.principalRank !== undefined) {
-    if (EXPLICIT_RE.test(text)) return { ok: false, reason: "explicit" };
-    if (TENDER_INTIMACY_RE.test(text) && opts.principalRank < PRINCIPAL_KISS_RANK && !DEFERRAL_RE.test(text)) return { ok: false, reason: "beyond the band" };
-  } else if (opts.band !== "devoted" && INTIMACY_RE.test(text)) return { ok: false, reason: "beyond the band" };
+    if (gateTender(text, opts.principalRank) === "beyond the band") return { ok: false, reason: "beyond the band" };
+  } else if (opts.band !== "devoted" && (INTIMACY_RE.test(text) || tenderIntimacyIn(text))) return { ok: false, reason: "beyond the band" };
   const dashed = applyDashRule(text);
   if (dashed !== text) notes.push("dash rule");
   text = dashed;
@@ -160,10 +153,15 @@ export function filterSpeak(
 
 /** An intention is display only: one short line, the dash rule, the
  *  character and crude rules, no cap beyond its length. */
-export function filterIntention(raw: string): FilterResult {
+export function filterIntention(raw: string, opts: { band?: AffectionBand; principalRank?: number } = {}): FilterResult {
   let text = stripNarration(raw);
   if (!text) return { ok: false, reason: "nothing intended" };
   if (CRUDE_RE.test(text) || BREAK_RE.test(text)) return { ok: false, reason: "refused" };
+  // The same two gates as speech (Task 62): explicit never, intimacy by trusted rank.
+  if (explicitIn(text)) return { ok: false, reason: "explicit" };
+  if (opts.principalRank !== undefined) {
+    if (gateTender(text, opts.principalRank) === "beyond the band") return { ok: false, reason: "beyond the band" };
+  } else if ((opts.band ?? "reserved") !== "devoted" && (INTIMACY_RE.test(text) || tenderIntimacyIn(text))) return { ok: false, reason: "beyond the band" };
   const notes: string[] = [];
   const dashed = applyDashRule(text);
   if (dashed !== text) notes.push("dash rule");

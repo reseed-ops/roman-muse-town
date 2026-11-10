@@ -21,6 +21,8 @@ export type ChannelState = VisitStateView & {
   /** The visit is open but the town's tab is away (backgrounded on a
    *  phone, or reloading): directions queue and wait for it (Task 33). */
   background?: boolean;
+  /** The town's own derived facts about the visitor, from the hosted door (Task 62): a rank the bridge trusts for a paired town. */
+  entitlement?: { rank: number };
 };
 
 export type DirectResult = { ok: true; id: number } | { ok: false; error: string };

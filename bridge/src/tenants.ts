@@ -100,10 +100,21 @@ export function createTenantRegistry(opts: TenantRegistryOptions): TenantRegistr
       let town = towns.get(id);
       if (!town) {
         const label = townLabel(visitorToken);
-        const channel = opts.channelFor(visitorToken);
-        // Paired towns carry no pack: the filter takes the strictest band
-        // (rank 0), as for a bond the bridge cannot see.
-        const desk = createPrincipalDesk({ channel, rank: () => 0, claimMs: opts.claimMs, now, resident: false, log: (line) => log(`[town ${label}] ${line}`) });
+        const inner = opts.channelFor(visitorToken);
+        // A paired town carries no pack. Its rank is the town's own
+        // entitlement, read from the town's database at its door and
+        // refreshed with every read of its state (Task 62); until the first
+        // read, and for a town that gives none, rank 0: the strictest band.
+        const held = { rank: 0 };
+        const channel: DirectorChannel = {
+          ...inner,
+          async readState() {
+            const state = await inner.readState();
+            held.rank = state.entitlement?.rank ?? 0;
+            return state;
+          },
+        };
+        const desk = createPrincipalDesk({ channel, rank: () => held.rank, claimMs: opts.claimMs, now, resident: false, log: (line) => log(`[town ${label}] ${line}`) });
         town = { desk, channel, lastUse: now(), label };
         towns.set(id, town);
         log(`tenants: town ${label} awake (${towns.size} awake)`);

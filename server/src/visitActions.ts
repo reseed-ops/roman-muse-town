@@ -16,13 +16,21 @@
 
 import { z } from "zod";
 import type { SlateFace } from "../../shared/slateFace";
+import { gateTender } from "../../shared/tenderGate";
 import { DOOR_ACTIONS, type DoorAction } from "../../shared/visitProtocol";
 
 export interface DoorDefinition<Req extends z.ZodType, Res extends z.ZodType> {
   description: string;
   request: Req;
   response: Res;
-  handler(slate: SlateFace, args: z.output<Req>): Promise<z.output<Res>>;
+  /** `entitlement` is the town's own derived facts about this visitor (Task 62), never a caller's claim. */
+  handler(slate: SlateFace, args: z.output<Req>, entitlement: DoorEntitlement): Promise<z.output<Res>>;
+}
+
+/** What the town knows about the visitor's bond, derived from its own database at the door. */
+export interface DoorEntitlement {
+  /** The closeness rank, 0 to 10; 0 for a town that has none yet. */
+  rank: number;
 }
 
 const define = <Req extends z.ZodType, Res extends z.ZodType>(definition: DoorDefinition<Req, Res>) => definition;
@@ -51,18 +59,27 @@ export const visitActions = {
   visitstate: define({
     description: "The visitor's slate as a director reads it: the state view and the inbox mail since a seq.",
     request: z.object({ since: z.number().int().min(0).default(0) }),
-    response: z.object({ state: stateView, mail: z.array(mail) }),
-    async handler(slate, args) {
+    response: z.object({ state: stateView, mail: z.array(mail), entitlement: z.object({ rank: z.number().int().min(0).max(10) }) }),
+    async handler(slate, args, entitlement) {
       const state = await slate.channel.readState();
       const inbox = await slate.channel.readInbox(args.since);
-      return { state, mail: inbox };
+      // The rank rides on the view, refreshed with every read (Task 62).
+      return { state, mail: inbox, entitlement: { rank: entitlement.rank } };
     },
   }),
   visitdirect: define({
     description: "Leave one direction on the visitor's slate; validated by the seam validator, refused with a reason otherwise.",
     request: z.object({ direction: z.unknown() }),
     response: directResult,
-    async handler(slate, args) {
+    async handler(slate, args, entitlement) {
+      // The town is the last boundary (Task 62): whatever the director, a
+      // line Aelia would say or intend passes the tender-only gate at the
+      // town's own rank for this visitor, before it reaches the slate.
+      const raw = args.direction as { kind?: unknown; text?: unknown } | null;
+      if (raw && typeof raw === "object" && (raw.kind === "speak" || raw.kind === "intend") && typeof raw.text === "string") {
+        const verdict = gateTender(raw.text, entitlement.rank);
+        if (verdict) return { ok: false as const, error: `refused by the town: ${verdict}` };
+      }
       // The face validates the shape; an unknown shape is refused, never thrown.
       return slate.channel.direct(args.direction as never);
     },

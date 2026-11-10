@@ -370,6 +370,12 @@ export function affectionRank(points: number): number {
   return Math.min(10, Math.floor(Math.max(0, points) / POINTS_PER_RANK));
 }
 
+/** The town's own closeness rank for one town (Task 62): what the director
+ *  door tells a director, read from the town's affection row, never from a caller. */
+export async function readAffectionRank(ctx: Ctx): Promise<number> {
+  return affectionRank(cooledPoints(await loadAffection(ctx), new Date()));
+}
+
 export function affectionBand(rank: number): string {
   if (rank <= 2) return "reserved";
   if (rank <= 5) return "warming";

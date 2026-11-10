@@ -136,3 +136,54 @@ test("Task 45: explicit lines are refused at every rank, the night included", ()
     }
   }
 });
+
+// Task 62: one explicit gate on every displayed path, at every rank.
+const BYPASSES = {
+  resident: "Let us make love tonight.",
+  intention: "We will make love tonight.",
+  principal: "Kiss me now. Soon we can walk.",
+};
+
+test("Task 62: explicit speech is refused at every rank, resident and principal", () => {
+  const lines = ["Let us make love tonight.", "I want you naked.", "Take off your tunic for me.", "Let us become lovers tonight.", "m a k e  l o v e"];
+  for (let rank = 0; rank <= 10; rank++) {
+    for (const line of lines) {
+      expect(filterSpeak(line, { band: bandForRank(rank) })).toEqual({ ok: false, reason: "explicit" });
+      expect(filterSpeak(line, { band: bandForRank(rank), principalRank: rank, endearments: "allow" })).toEqual({ ok: false, reason: "explicit" });
+    }
+  }
+});
+
+test("Task 62: explicit intentions are refused at every rank, and tender ones follow the trusted rank", () => {
+  for (let rank = 0; rank <= 10; rank++) {
+    for (const line of [BYPASSES.intention, "She means to undress him by the lamp."]) {
+      expect(filterIntention(line, { band: bandForRank(rank) })).toEqual({ ok: false, reason: "explicit" });
+      expect(filterIntention(line, { band: bandForRank(rank), principalRank: rank })).toEqual({ ok: false, reason: "explicit" });
+    }
+    const tender = filterIntention("She means to kiss him at the terrace.", { band: bandForRank(rank), principalRank: rank });
+    expect(tender.ok).toBe(rank >= PRINCIPAL_KISS_RANK);
+    // The resident's intention keeps the resident's rule: only the devoted band.
+    expect(filterIntention("She means to kiss him at the terrace.", { band: bandForRank(rank) }).ok).toBe(rank >= 8);
+    expect(filterIntention("She means to sit by the lake a while.", { band: bandForRank(rank) }).ok).toBe(true);
+  }
+  // With no rank given, the strictest reading.
+  expect(filterIntention("She means to kiss him.").ok).toBe(false);
+});
+
+test("Task 62: the principal's whole-line deferral loophole is closed at every rank", () => {
+  for (let rank = 0; rank <= 10; rank++) {
+    const r = filterSpeak(BYPASSES.principal, { band: bandForRank(rank), principalRank: rank, endearments: "allow" });
+    expect(r.ok).toBe(rank >= PRINCIPAL_KISS_RANK);
+    if (!r.ok) expect(r.reason).toBe("beyond the band");
+  }
+});
+
+test("Task 62: the resident's streamed chunks never pass explicit text at any rank", () => {
+  const line = BYPASSES.resident;
+  for (let rank = 0; rank <= 10; rank++) {
+    for (let i = 1; i <= line.length; i++) {
+      const partial = filterSpeak(line.slice(0, i), { band: bandForRank(rank) });
+      if (partial.ok) expect(partial.text).not.toMatch(/make love/i);
+    }
+  }
+});

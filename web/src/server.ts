@@ -70,6 +70,8 @@ export interface TownServerOptions {
   trustProxy?: boolean;
   /** Overrides for the public limits (Task 61); the defaults are in DEFAULT_LIMITS. */
   limits?: Partial<TownLimits>;
+  /** Reads the town's closeness rank inside a town transaction (Task 62; actions.ts readAffectionRank); none, every town reads as rank 0. */
+  readRank?: (ctx: { db: () => unknown }) => Promise<number>;
   /** Bytes of images one town may hold (default blobStore.ts TOWN_BLOB_QUOTA_BYTES). */
   blobQuotaBytes?: number;
   /** How long the /stats report is reused, ms (default 30 s). */
@@ -187,6 +189,30 @@ export function createTownServer(opts: TownServerOptions): TownServer {
 
   const unknownAction = () => json(404, { error: "unknown action" });
 
+  // The town's own rank for a visitor, for the director door (Task 62):
+  // read from the town's database, kept 15 s so a director's 2 s reads do
+  // not each cost a query, and 0 for a town that does not exist yet (the
+  // door never creates one).
+  const ranks = new Map<string, { at: number; rank: number }>();
+  async function rankFor(schemaName: string): Promise<number> {
+    if (!opts.readRank) return 0;
+    const hit = ranks.get(schemaName);
+    if (hit && now() - hit.at < 15_000) return hit.rank;
+    let rank = 0;
+    try {
+      if (isTownReady(schemaName) || (await townExists(opts.db, schemaName))) {
+        rank = await withTown(opts.db, schemaName, (tx) => opts.readRank!({ db: () => tx }));
+        rank = Number.isInteger(rank) ? Math.max(0, Math.min(10, rank)) : 0;
+      }
+    } catch (error) {
+      log(`rank read failed: ${error instanceof Error ? error.message : String(error)}`);
+      rank = 0;
+    }
+    if (ranks.size > 2000) ranks.clear();
+    ranks.set(schemaName, { at: now(), rank });
+    return rank;
+  }
+
   async function actionsRoute(req: Request, address: string): Promise<Response> {
     if (req.method !== "POST") return json(405, { error: "method not allowed" });
     const visitorToken = readVisitorToken(req);
@@ -217,7 +243,7 @@ export function createTownServer(opts: TownServerOptions): TownServer {
       if (!request.success) return json(400, { error: "invalid arguments" });
       const face: SlateFace = slates.faceFor(schemaName);
       try {
-        const result = await definition.handler(face, request.data);
+        const result = await definition.handler(face, request.data, { rank: await rankFor(schemaName) });
         return json(200, { result: definition.response.parse(result), invalidate: false });
       } catch (error) {
         log(`door ${action} failed: ${error instanceof Error ? error.message : String(error)}`);

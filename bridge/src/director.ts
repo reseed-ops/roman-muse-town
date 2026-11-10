@@ -235,7 +235,7 @@ export function createDirector(deps: DirectorDeps): Director {
       const intent = await quiet("intend", () => mind.intend({ pack: pack.current(), thread: v.thread, telemetry: state.telemetry, intention: state.intention }));
       if (intent) {
         ledger.recordCall(now(), { outputTokens: intent.usage.outputTokens });
-        const filtered = filterIntention(intent.text);
+        const filtered = filterIntention(intent.text, { band: band() });
         if (filtered.ok) {
           await quiet("intend", () => channel.direct({ kind: "intend", text: filtered.text }));
           return { kind: "intended", detail: filtered.text, nextInMs: config.pollMs };

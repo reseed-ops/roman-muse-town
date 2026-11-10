@@ -52,8 +52,9 @@ export function createTownChannel(opts: TownChannelOptions): DirectorChannel {
   };
   return {
     async readState() {
-      const view = (await call("visitstate", { since: 0 })) as { state: ChannelState };
-      return view.state;
+      const view = (await call("visitstate", { since: 0 })) as { state: ChannelState; entitlement?: { rank?: unknown } };
+      const rank = view.entitlement?.rank;
+      return typeof rank === "number" && Number.isInteger(rank) && rank >= 0 && rank <= 10 ? { ...view.state, entitlement: { rank } } : view.state;
     },
     async readInbox(since) {
       const view = (await call("visitstate", { since })) as { mail: VisitMail[] };

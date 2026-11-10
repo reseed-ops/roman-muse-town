@@ -19,7 +19,7 @@ function doorFetch(face: ReturnType<typeof createSlateFace>, expected: { directo
       return new Response(JSON.stringify({ error: "unknown action" }), { status: 404 });
     }
     const definition = visitActions[action];
-    const result = await definition.handler(face, definition.request.parse(args) as never);
+    const result = await definition.handler(face, definition.request.parse(args) as never, { rank: 0 });
     return new Response(JSON.stringify({ result, invalidate: false }), { status: 200 });
   }) as unknown as typeof fetch;
   return { fetchImpl, seen };
