@@ -30,6 +30,21 @@ export async function requestPairCode(
   return { code: body.code, expiresAt: body.expiresAt };
 }
 
+/** Disconnect my Muse (Task 63): from this town, authenticated by its own
+ *  visitor key, every principal token made so far stops working at once,
+ *  and a code not yet used is dropped. Pairing again makes a fresh token. */
+export async function disconnectMuse(
+  origin: string = typeof location === "undefined" ? "" : location.origin,
+  token: () => string = visitorToken,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const res = await fetchImpl(`${origin}/bridge/disconnect`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token()}` },
+  });
+  if (res.status !== 200) throw new Error(`The town could not disconnect your Muse (HTTP ${res.status}).`);
+}
+
 /** The one message the visitor pastes to their Muse, word for word. */
 export function museConnectMessage(code: string): string {
   return [

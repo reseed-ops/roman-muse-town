@@ -64,7 +64,7 @@ export type PrincipalServerOptions = {
   desk: PrincipalDesk | null;
   token: string | null;
   /** A paired town's desk for a presented token, or null (Task 29). */
-  resolve?: (presented: string | null) => PrincipalDesk | null;
+  resolve?: (presented: string | null) => PrincipalDesk | null | Promise<PrincipalDesk | null>;
   /** Trade a pairing code for a paired token (Task 29); absent, POST /pair is 404. */
   pair?: (code: unknown) => Promise<PairOutcome>;
   markerToken?: string | null;
@@ -153,7 +153,7 @@ export function startPrincipalServer(opts: PrincipalServerOptions): Promise<Prin
       const presented = bearerToken(req.headers.authorization);
       const owner = token !== null && desk !== null && tokenMatches(presented, token);
       const marker = !owner && markerToken !== null && desk !== null && path === "/principal/waiting" && tokenMatches(presented, markerToken);
-      const paired = !owner && !marker && opts.resolve ? opts.resolve(presented) : null;
+      const paired = !owner && !marker && opts.resolve ? await opts.resolve(presented) : null;
       const principal = owner || paired !== null;
       const d = (paired ?? desk)!;
       if (!principal && !marker) {

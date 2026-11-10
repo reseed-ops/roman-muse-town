@@ -18,7 +18,7 @@ import { createFakeChannel } from "./fakeChannel.js";
 import { createPrincipalDesk, type PrincipalDesk } from "./principal.js";
 import { trustProxyFromEnv } from "./pairLimiter.js";
 import { startPrincipalServer, type PairOutcome } from "./principalServer.js";
-import { createTenantRegistry, sealKey, sealVisitorKey, unsealVisitorKey, TENANT_POLL_MS } from "./tenants.js";
+import { createTenantRegistry, resolvePairedToken, sealKey, sealVisitorKey, DEFAULT_PAIRED_TOKEN_DAYS, TENANT_POLL_MS } from "./tenants.js";
 import { DIRECTOR_TOKEN_HEADER } from "../../shared/visitProtocol.js";
 
 const log = (line: string) => console.log(`${new Date().toISOString()} ${line}`);
@@ -96,7 +96,7 @@ async function main(): Promise<void> {
     principalFace = ` principal=on (claim lapses after ${Math.round(cfg.principalClaimMs / 1000)} s; marker token ${cfg.principalMarkerToken ? "set" : "not set"})`;
   }
   // Many towns (Task 29): any visitor's town pairs to its own Muse.
-  let resolvePaired: ((presented: string | null) => PrincipalDesk | null) | undefined;
+  let resolvePaired: ((presented: string | null) => PrincipalDesk | null | Promise<PrincipalDesk | null>) | undefined;
   let pair: ((code: unknown) => Promise<PairOutcome>) | undefined;
   if (cfg.channel === "town" && cfg.pairing && cfg.townUrl && cfg.directorToken) {
     const townUrl = cfg.townUrl.replace(/\/+$/, "");
@@ -117,13 +117,8 @@ async function main(): Promise<void> {
       });
     }, TENANT_POLL_MS).unref();
     const owner = principal;
-    resolvePaired = (presented) => {
-      const visitorToken = unsealVisitorKey(key, presented);
-      if (!visitorToken) return null;
-      // The owner pairing his own town reaches his own desk, not a second one.
-      if (owner && visitorToken === cfg.visitorToken) return owner;
-      return tenants.deskFor(visitorToken);
-    };
+    const tokenMs = Math.max(1, Number(process.env.PAIRED_TOKEN_DAYS) || DEFAULT_PAIRED_TOKEN_DAYS) * 86_400_000;
+    resolvePaired = (presented) => resolvePairedToken({ key, registry: tenants, presented, ownerVisitorToken: cfg.visitorToken, ownerDesk: owner });
     pair = async (code) => {
       if (typeof code !== "string" || code.length > 40) return { ok: false, status: 400, error: "a pairing code is required" };
       try {
@@ -135,10 +130,12 @@ async function main(): Promise<void> {
         });
         if (res.status === 429) return { ok: false, status: 429, error: "too many attempts; wait a minute and try again" };
         if (res.status !== 200) return { ok: false, status: 404, error: "that code is unknown or has expired; make a new one in the town (menu, Connect my Muse)" };
-        const body = (await res.json()) as { visitorToken?: unknown };
+        const body = (await res.json()) as { visitorToken?: unknown; generation?: unknown };
         if (typeof body.visitorToken !== "string") return { ok: false, status: 502, error: "the town answered oddly; try again" };
+        // Sealed with the generation the town just moved to: every earlier token for this town is retired.
+        const generation = typeof body.generation === "number" && Number.isInteger(body.generation) && body.generation >= 0 ? body.generation : 0;
         log("pair: a town was paired");
-        return { ok: true, principalToken: sealVisitorKey(key, body.visitorToken) };
+        return { ok: true, principalToken: sealVisitorKey(key, body.visitorToken, { generation, ttlMs: tokenMs }) };
       } catch {
         return { ok: false, status: 502, error: "the town could not be reached; try again" };
       }

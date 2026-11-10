@@ -31,6 +31,8 @@ export interface DoorDefinition<Req extends z.ZodType, Res extends z.ZodType> {
 export interface DoorEntitlement {
   /** The closeness rank, 0 to 10; 0 for a town that has none yet. */
   rank: number;
+  /** The town's pairing generation (Task 63): a principal token sealed under an older one is refused by the bridge. */
+  pairingGeneration: number;
 }
 
 const define = <Req extends z.ZodType, Res extends z.ZodType>(definition: DoorDefinition<Req, Res>) => definition;
@@ -59,12 +61,12 @@ export const visitActions = {
   visitstate: define({
     description: "The visitor's slate as a director reads it: the state view and the inbox mail since a seq.",
     request: z.object({ since: z.number().int().min(0).default(0) }),
-    response: z.object({ state: stateView, mail: z.array(mail), entitlement: z.object({ rank: z.number().int().min(0).max(10) }) }),
+    response: z.object({ state: stateView, mail: z.array(mail), entitlement: z.object({ rank: z.number().int().min(0).max(10), pairingGeneration: z.number().int().min(0) }) }),
     async handler(slate, args, entitlement) {
       const state = await slate.channel.readState();
       const inbox = await slate.channel.readInbox(args.since);
       // The rank rides on the view, refreshed with every read (Task 62).
-      return { state, mail: inbox, entitlement: { rank: entitlement.rank } };
+      return { state, mail: inbox, entitlement: { rank: entitlement.rank, pairingGeneration: entitlement.pairingGeneration } };
     },
   }),
   visitdirect: define({

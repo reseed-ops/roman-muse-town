@@ -145,9 +145,27 @@ The owner pairing his own town reaches his own desk.
 Responses from `POST /pair`: `200 {"principalToken"}`, `404` unknown or
 expired code, `429` past the per-caller limits (8 wrong codes or pending attempts, 5 successful pairings, 2 in flight, per address per ten minutes; 120 misses and 16 in flight overall, so a caller forging addresses meets the overall ceiling; slots are reserved before the town is asked, `bridge/src/pairLimiter.ts`), `502` the town could not be reached.
 
-Revoking: a paired token stops working when the visitor's town key
-changes (a new browser) or when `PAIRING_SECRET` (or, unset, the
-`DIRECTOR_TOKEN`) is rotated, which retires every paired token at once.
+Expiry and revocation (Task 63). A paired token is a sealed, versioned
+payload (AES-256-GCM, fresh 96-bit IV): the town's key, a token id, issue
+and expiry times, the audience `town-bridge`, and the town's pairing
+generation. It is refused when it is edited or not ours, is the older
+untimed kind (re-pair once), has expired (`PAIRED_TOKEN_DAYS`, default 90:
+pair again), or its generation is older than the town's. What revokes what,
+exactly:
+
+| To retire | Do this |
+|---|---|
+| one town's tokens, all of them | the visitor taps **Disconnect my Muse** in the town (Connect my Muse panel; `POST /bridge/disconnect` on the town, authenticated by the visitor's own key), or **pairs again**: either moves the town's generation on, and every token sealed before is refused within seconds. This is the rotate control. |
+| every paired token at once | rotate `PAIRING_SECRET`, when it is set (it is the seal key). |
+| every paired token at once, `PAIRING_SECRET` unset | rotate `DIRECTOR_TOKEN` (the seal key then derives from it). |
+| (does not revoke) | rotating `DIRECTOR_TOKEN` while `PAIRING_SECRET` is set: the seal key does not change, so old tokens still unseal. The director token only opens the town's door for the bridge; set a new one on both services together. |
+| (does not revoke) | the visitor changing browser: the new browser is a new town; the old town's token still works for the old town until that town is disconnected or the token expires. Idle-desk cleanup (15 minutes) is not revocation either. |
+
+The generation lives on the town (`public.town_pairing`, beside the towns'
+schemas, untouched by saves and restores); the bridge keeps no list and
+reads the current generation with each state read (cached 3 s), refusing
+a token when the town cannot be reached. A copy of the town a Muse has
+already seen cannot be taken back.
 
 ## The principal channel (Task 22)
 
@@ -273,7 +291,8 @@ logged.
 | `PRINCIPAL_CLAIM_MS` | `180000` | Her claim lapses this long after her last call, and the resident resumes. |
 | `PAIRING` | on | `off` turns pairing off (Task 29): no `POST /pair`, no paired tokens. |
 | `TRUST_PROXY` | (on Railway) | `1`/`0`: read `X-Real-IP` as the caller's address at `/pair`. Default on when Railway's own variables are present, off elsewhere; `X-Forwarded-For` is never read. |
-| `PAIRING_SECRET` | (derived) | Seals paired tokens. Unset, a key is derived from `DIRECTOR_TOKEN`. Rotate to retire every paired token. Never in the repo. |
+| `PAIRING_SECRET` | (derived) | Seals paired tokens. Unset, a key is derived from `DIRECTOR_TOKEN`. Rotating the seal key retires every paired token; if this is set, rotating `DIRECTOR_TOKEN` alone does not. Never in the repo. |
+| `PAIRED_TOKEN_DAYS` | `90` | How long a paired token lives before the Muse must pair again. |
 | `BRIDGE_ALLOW_ORIGIN` | `*` | CORS origin for the face; set it to the town's origin to narrow it (the token gates either way). |
 | `SNAPSHOT_LAPSE_MS` | `30000` | No snapshot for this long and the held visit dies; the face reads closed. |
 | `HARNESS_URL` | `http://localhost:8787` | The seam harness (`seam` only). |

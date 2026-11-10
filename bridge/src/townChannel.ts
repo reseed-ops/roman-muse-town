@@ -52,9 +52,11 @@ export function createTownChannel(opts: TownChannelOptions): DirectorChannel {
   };
   return {
     async readState() {
-      const view = (await call("visitstate", { since: 0 })) as { state: ChannelState; entitlement?: { rank?: unknown } };
+      const view = (await call("visitstate", { since: 0 })) as { state: ChannelState; entitlement?: { rank?: unknown; pairingGeneration?: unknown } };
       const rank = view.entitlement?.rank;
-      return typeof rank === "number" && Number.isInteger(rank) && rank >= 0 && rank <= 10 ? { ...view.state, entitlement: { rank } } : view.state;
+      const gen = view.entitlement?.pairingGeneration;
+      if (typeof rank !== "number" || !Number.isInteger(rank) || rank < 0 || rank > 10) return view.state;
+      return { ...view.state, entitlement: { rank, ...(typeof gen === "number" && Number.isInteger(gen) && gen >= 0 ? { pairingGeneration: gen } : {}) } };
     },
     async readInbox(since) {
       const view = (await call("visitstate", { since })) as { mail: VisitMail[] };

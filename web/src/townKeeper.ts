@@ -95,6 +95,8 @@ export function createTownKeeper(db: PgTownDb, opts: { retentionDays?: number; n
       }
       // Stamps whose schema is gone (a restore of the database, a manual drop).
       await db.execute(sql`DELETE FROM public.town_seen WHERE schema_name NOT IN (SELECT schema_name FROM information_schema.schemata)`);
+      // A dropped town's pairing record goes with it (the table exists once any pairing happened).
+      await db.execute(sql`DO $$ BEGIN IF to_regclass('public.town_pairing') IS NOT NULL THEN DELETE FROM public.town_pairing WHERE schema_name NOT IN (SELECT schema_name FROM information_schema.schemata); END IF; END $$`);
       if (gone) log(`reaped ${gone} town(s) unseen for ${retentionDays} days`);
       count = null;
       return gone;

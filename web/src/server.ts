@@ -39,6 +39,7 @@ import { createSlateKeeper, SlatesFull, type SlateKeeper } from "./slates";
 import { readVisitorToken, tokenMatches } from "./tokens";
 import { createPairingDesk, PairingFull, type PairingDesk } from "./pairing";
 import { createFlightGate, createWindowLimiter, clientAddress } from "./limits";
+import { createPairingState, type PairingState } from "./pairingState";
 import { createTownKeeper, type TownKeeper } from "./townKeeper";
 import { PG_MIGRATIONS } from "../../server/src/pgMigrations";
 import { createTallies, formatTallies, type Tallies } from "./tallies";
@@ -148,6 +149,7 @@ export function createTownServer(opts: TownServerOptions): TownServer {
   const door = opts.door ?? {};
   const pairing = createPairingDesk({ now });
   const tallies = createTallies(opts.db, log);
+  const pairingState: PairingState = createPairingState(opts.db);
   const keeper = createTownKeeper(opts.db, { now, log, ...(opts.retentionDays !== undefined ? { retentionDays: opts.retentionDays } : {}) });
   const lim: TownLimits = { ...DEFAULT_LIMITS, ...opts.limits };
   const minute = 60_000;
@@ -243,7 +245,7 @@ export function createTownServer(opts: TownServerOptions): TownServer {
       if (!request.success) return json(400, { error: "invalid arguments" });
       const face: SlateFace = slates.faceFor(schemaName);
       try {
-        const result = await definition.handler(face, request.data, { rank: await rankFor(schemaName) });
+        const result = await definition.handler(face, request.data, { rank: await rankFor(schemaName), pairingGeneration: await pairingState.generation(schemaName) });
         return json(200, { result: definition.response.parse(result), invalidate: false });
       } catch (error) {
         log(`door ${action} failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -343,6 +345,15 @@ export function createTownServer(opts: TownServerOptions): TownServer {
       await tallies.bump("pair-minted");
       return json(200, minted);
     }
+    if (url.pathname === "/bridge/disconnect") {
+      // Disconnect my Muse (Task 63): from the visitor's own, authenticated
+      // town, every principal token made so far stops working.
+      if (req.method !== "POST") return json(405, { error: "method not allowed" });
+      const generation = await pairingState.bump(townSchemaName(visitorToken));
+      pairing.forget(visitorToken);
+      log("pair: a town disconnected its Muse");
+      return json(200, { ok: true, generation });
+    }
     let face: SlateFace;
     try {
       face = slates.faceFor(townSchemaName(visitorToken));
@@ -403,9 +414,19 @@ export function createTownServer(opts: TownServerOptions): TownServer {
     const code = (parsed.body as { code?: unknown } | null)?.code;
     const out = pairing.redeem(code);
     if (out.ok) {
+      // Pairing again retires every earlier token: the generation moves on,
+      // and the new token is sealed with it (Task 63).
+      let generation: number;
+      try {
+        generation = await pairingState.bump(townSchemaName(out.visitorToken));
+      } catch (error) {
+        // Fail closed: a token that could not retire the old ones is not handed out.
+        log(`pair: generation could not be moved: ${error instanceof Error ? error.message : String(error)}`);
+        return json(503, { error: "the town could not finish pairing; make a new code and try again" });
+      }
       log("pair: a code was redeemed");
       await tallies.bump("pair-redeemed");
-      return json(200, { visitorToken: out.visitorToken });
+      return json(200, { visitorToken: out.visitorToken, generation });
     }
     if (out.reason === "locked") {
       log("pair: redeem locked after repeated misses");

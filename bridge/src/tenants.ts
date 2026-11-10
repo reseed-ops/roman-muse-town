@@ -23,10 +23,32 @@
  * town that is never paired plays exactly as before, with Aelia's own
  * town voice. Only the owner's town (VISITOR_TOKEN) keeps its resident.
  *
- * The seal key is PAIRING_SECRET when set, otherwise derived from the
- * DIRECTOR_TOKEN. Rotating either retires every paired token at once
- * (each visitor pairs again); a town's own key changing (a new browser)
- * retires its token too.
+ * What a token is (Task 63): a versioned, authenticated payload, sealed
+ * with AES-256-GCM under a fresh 96-bit IV, holding the town's key, a token
+ * id, the issue and expiry times, the audience ("town-bridge") and the
+ * town's pairing generation at the time. It is refused when:
+ *   - it is not a v2 token, or does not unseal (wrong key, edited);
+ *   - it has expired (PAIRED_TOKEN_DAYS, default 90): pair again;
+ *   - its generation is older than the town's current one. The town holds
+ *     the generation (web/src/pairingState.ts) and moves it on when a code
+ *     is redeemed (pairing again retires every earlier token) and when the
+ *     visitor disconnects from their own town (POST /bridge/disconnect).
+ *     The bridge reads the current generation from the town with each
+ *     state read; it holds no revocation list of its own, so a restart
+ *     forgets nothing.
+ *
+ * Which rotation revokes what, exactly:
+ *   - PAIRING_SECRET, when set, is the seal key. Rotating it retires every
+ *     paired token at once. Rotating DIRECTOR_TOKEN alone does NOT: the
+ *     seal key does not derive from it, and the old tokens keep unsealing.
+ *     (The director token only opens the town's door for the bridge; a
+ *     new one must be set on both the town and the bridge.)
+ *   - PAIRING_SECRET unset: the seal key derives from DIRECTOR_TOKEN, so
+ *     rotating DIRECTOR_TOKEN retires every paired token at once.
+ *   - One town: the visitor disconnects, or pairs again (generation).
+ *   - A town's own key changing (a new browser) leaves the old town's token
+ *     valid for the old town until it is disconnected or expires; changing
+ *     browser does not revoke it.
  */
 import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes } from "node:crypto";
 import type { DirectorChannel } from "./channel.js";
@@ -45,15 +67,30 @@ export function sealKey(opts: { pairingSecret?: string | null; directorToken: st
     : createHmac("sha256", opts.directorToken).update("town-bridge pairing v1").digest();
 }
 
-export function sealVisitorKey(key: Buffer, visitorToken: string): string {
+export const PAIRED_TOKEN_AUDIENCE = "town-bridge";
+export const DEFAULT_PAIRED_TOKEN_DAYS = 90;
+
+export type PairedClaim = { visitorToken: string; tokenId: string; issuedAt: number; expiresAt: number; generation: number };
+
+export function sealVisitorKey(key: Buffer, visitorToken: string, opts: { generation?: number; ttlMs?: number; now?: number } = {}): string {
+  const issuedAt = opts.now ?? Date.now();
+  const payload = JSON.stringify({
+    v: 2,
+    vk: visitorToken,
+    tid: randomBytes(8).toString("hex"),
+    iat: issuedAt,
+    exp: issuedAt + (opts.ttlMs ?? DEFAULT_PAIRED_TOKEN_DAYS * 86_400_000),
+    aud: PAIRED_TOKEN_AUDIENCE,
+    gen: opts.generation ?? 0,
+  });
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", key, iv);
-  const body = Buffer.concat([cipher.update(visitorToken, "utf8"), cipher.final()]);
+  const body = Buffer.concat([cipher.update(payload, "utf8"), cipher.final()]);
   return PAIRED_TOKEN_PREFIX + Buffer.concat([iv, body, cipher.getAuthTag()]).toString("base64url");
 }
 
-/** The visitor key a paired token names, or null for anything else. */
-export function unsealVisitorKey(key: Buffer, token: string | null): string | null {
+/** What a paired token claims, or null for anything else: not ours, edited, another audience or version, expired. */
+export function readPairedToken(key: Buffer, token: string | null, now: number = Date.now()): PairedClaim | null {
   if (!token || !token.startsWith(PAIRED_TOKEN_PREFIX)) return null;
   try {
     const raw = Buffer.from(token.slice(PAIRED_TOKEN_PREFIX.length), "base64url");
@@ -61,10 +98,20 @@ export function unsealVisitorKey(key: Buffer, token: string | null): string | nu
     const decipher = createDecipheriv("aes-256-gcm", key, raw.subarray(0, 12));
     decipher.setAuthTag(raw.subarray(raw.length - 16));
     const out = Buffer.concat([decipher.update(raw.subarray(12, raw.length - 16)), decipher.final()]).toString("utf8");
-    return VISITOR_KEY.test(out) ? out : null;
+    const p = JSON.parse(out) as Record<string, unknown>;
+    if (p.v !== 2 || p.aud !== PAIRED_TOKEN_AUDIENCE) return null;
+    if (typeof p.vk !== "string" || !VISITOR_KEY.test(p.vk)) return null;
+    if (typeof p.tid !== "string" || typeof p.iat !== "number" || typeof p.exp !== "number" || typeof p.gen !== "number") return null;
+    if (p.exp <= now || p.iat > now + 60_000) return null;
+    return { visitorToken: p.vk, tokenId: p.tid, issuedAt: p.iat, expiresAt: p.exp, generation: p.gen };
   } catch {
     return null;
   }
+}
+
+/** The visitor key a live paired token names, or null (expiry and shape checked; the generation is the registry's check). */
+export function unsealVisitorKey(key: Buffer, token: string | null, now: number = Date.now()): string | null {
+  return readPairedToken(key, token, now)?.visitorToken ?? null;
 }
 
 export type TenantRegistryOptions = {
@@ -79,6 +126,8 @@ export type TenantRegistryOptions = {
 export type TenantRegistry = {
   /** The desk for this town, made on first use; every call keeps it awake. */
   deskFor(visitorToken: string): PrincipalDesk;
+  /** Is this generation still the town's current one? Asks the town (kept 3 s); an unreachable town reads as no. */
+  currentGeneration(visitorToken: string): Promise<number | null>;
   /** Read each awake town's slate for its desk, and drop idle ones. */
   observeAll(): Promise<void>;
   /** Perform due beats in every awake town. */
@@ -94,7 +143,24 @@ export function createTenantRegistry(opts: TenantRegistryOptions): TenantRegistr
   const idleMs = opts.idleMs ?? TENANT_IDLE_MS;
   const log = opts.log ?? (() => {});
   const towns = new Map<string, { desk: PrincipalDesk; channel: DirectorChannel; lastUse: number; label: string }>();
+  const generations = new Map<string, { at: number; generation: number | null }>();
   return {
+    async currentGeneration(visitorToken) {
+      const id = createHash("sha256").update(visitorToken).digest("hex");
+      const t = now();
+      const hit = generations.get(id);
+      if (hit && t - hit.at < 3000) return hit.generation;
+      let generation: number | null = null;
+      try {
+        const state = await (towns.get(id)?.channel ?? opts.channelFor(visitorToken)).readState();
+        generation = state.entitlement?.pairingGeneration ?? 0;
+      } catch {
+        generation = null;
+      }
+      if (generations.size > 5000) generations.clear();
+      generations.set(id, { at: t, generation });
+      return generation;
+    },
     deskFor(visitorToken) {
       const id = createHash("sha256").update(visitorToken).digest("hex");
       let town = towns.get(id);
@@ -148,4 +214,26 @@ export function createTenantRegistry(opts: TenantRegistryOptions): TenantRegistr
     },
     size: () => towns.size,
   };
+}
+
+/**
+ * The desk a presented paired token may reach, or null: unsealed and
+ * unexpired (readPairedToken), and not retired by the town's pairing
+ * generation. An unreachable town reads as null (fail closed). The
+ * owner's own town reaches the owner's desk, not a second one.
+ */
+export async function resolvePairedToken(opts: {
+  key: Buffer;
+  registry: TenantRegistry;
+  presented: string | null;
+  ownerVisitorToken?: string | null;
+  ownerDesk?: PrincipalDesk | null;
+  now?: () => number;
+}): Promise<PrincipalDesk | null> {
+  const claim = readPairedToken(opts.key, opts.presented, opts.now?.() ?? Date.now());
+  if (!claim) return null;
+  const current = await opts.registry.currentGeneration(claim.visitorToken);
+  if (current === null || claim.generation < current) return null;
+  if (opts.ownerDesk && claim.visitorToken === opts.ownerVisitorToken) return opts.ownerDesk;
+  return opts.registry.deskFor(claim.visitorToken);
 }

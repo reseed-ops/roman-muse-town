@@ -215,3 +215,101 @@ test("Task 62: a paired town's rank is its own town's entitlement, and two towns
   await registry.pumpAll();
   expect(said(channels.get(B)!).join(" ")).not.toContain("Kiss me again.");
 });
+
+// Task 63: expiring, revocable principal capabilities.
+import { createCipheriv, randomBytes } from "node:crypto";
+import { PAIRED_TOKEN_AUDIENCE, readPairedToken, resolvePairedToken } from "./tenants.js";
+
+const sealRaw = (key: Buffer, payload: unknown): string => {
+  const iv = randomBytes(12);
+  const c = createCipheriv("aes-256-gcm", key, iv);
+  const body = Buffer.concat([c.update(typeof payload === "string" ? payload : JSON.stringify(payload), "utf8"), c.final()]);
+  return PAIRED_TOKEN_PREFIX + Buffer.concat([iv, body, c.getAuthTag()]).toString("base64url");
+};
+
+test("Task 63: a token carries town, id, issue and expiry times, audience and generation; expired, legacy and foreign-audience tokens are refused", () => {
+  const key = sealKey({ directorToken: DIRECTOR });
+  const t0 = 1_000_000;
+  const token = sealVisitorKey(key, A, { generation: 4, ttlMs: 1000, now: t0 });
+  const claim = readPairedToken(key, token, t0 + 10)!;
+  expect(claim).toMatchObject({ visitorToken: A, generation: 4, issuedAt: t0, expiresAt: t0 + 1000 });
+  expect(claim.tokenId).toMatch(/^[0-9a-f]{16}$/);
+  expect(sealVisitorKey(key, A, { now: t0 })).not.toBe(sealVisitorKey(key, A, { now: t0 }));
+  // Expired.
+  expect(readPairedToken(key, token, t0 + 1000)).toBeNull();
+  expect(unsealVisitorKey(key, token, t0 + 5000)).toBeNull();
+  // The old v1 shape (the bare visitor key) is refused: it never expired.
+  expect(readPairedToken(key, sealRaw(key, A), t0)).toBeNull();
+  // Another audience, version, or a missing field.
+  const good = { v: 2, vk: A, tid: "ab", iat: t0, exp: t0 + 1000, aud: PAIRED_TOKEN_AUDIENCE, gen: 0 };
+  expect(readPairedToken(key, sealRaw(key, good), t0)).not.toBeNull();
+  expect(readPairedToken(key, sealRaw(key, { ...good, aud: "someone-else" }), t0)).toBeNull();
+  expect(readPairedToken(key, sealRaw(key, { ...good, v: 3 }), t0)).toBeNull();
+  expect(readPairedToken(key, sealRaw(key, { ...good, gen: undefined }), t0)).toBeNull();
+  expect(readPairedToken(key, sealRaw(key, { ...good, iat: t0 + 10 * 60_000 }), t0)).toBeNull();
+});
+
+test("Task 63: re-pairing retires the old token and a disconnect retires them all; an unreachable town fails closed", async () => {
+  const key = sealKey({ directorToken: DIRECTOR });
+  const clock = { t: 5_000_000 };
+  // The town holds each town's generation; the registry reads it with the state.
+  const generation: Record<string, number> = { [A]: 1, [B]: 1 };
+  let townUp = true;
+  const registry = createTenantRegistry({
+    channelFor: (vk) => {
+      const fake = createFakeChannel();
+      return { ...fake, readState: async () => { if (!townUp) throw new Error("down"); return { ...(await fake.readState()), entitlement: { rank: 0, pairingGeneration: generation[vk] ?? 0 } }; } } as never;
+    },
+    claimMs: 1000,
+    now: () => clock.t,
+  });
+  const resolve = (token: string) => resolvePairedToken({ key, registry, presented: token, now: () => clock.t });
+  const first = sealVisitorKey(key, A, { generation: 1, now: clock.t });
+  expect(await resolve(first)).not.toBeNull();
+  // Pair again: the town moves to generation 2 and seals the new token with it.
+  clock.t += 5000;
+  generation[A] = 2;
+  const second = sealVisitorKey(key, A, { generation: 2, now: clock.t });
+  expect(await resolve(first)).toBeNull();
+  expect(await resolve(second)).not.toBeNull();
+  // Another town's token is untouched by A's re-pairing.
+  expect(await resolve(sealVisitorKey(key, B, { generation: 1, now: clock.t }))).not.toBeNull();
+  // The visitor disconnects (the town moves on again): both A tokens are refused.
+  clock.t += 5000;
+  generation[A] = 3;
+  expect(await resolve(second)).toBeNull();
+  // Expiry is checked with the clock.
+  clock.t += 100 * 86_400_000;
+  expect(await resolve(sealVisitorKey(key, B, { generation: 1, now: clock.t - 100 * 86_400_000 }))).toBeNull();
+  // An unreachable town reads as refused, never as allowed.
+  townUp = false;
+  clock.t += 10_000;
+  expect(await resolve(sealVisitorKey(key, B, { generation: 1, now: clock.t }))).toBeNull();
+});
+
+test("Task 63: the server refuses a revoked principal token", async () => {
+  const key = sealKey({ directorToken: DIRECTOR });
+  const generation = { A: 1 };
+  const registry = createTenantRegistry({
+    channelFor: () => {
+      const fake = createFakeChannel();
+      return { ...fake, readState: async () => ({ ...(await fake.readState()), entitlement: { rank: 0, pairingGeneration: generation.A } }) } as never;
+    },
+    claimMs: 1000,
+  });
+  const server = await startPrincipalServer({
+    desk: null,
+    token: null,
+    resolve: (presented) => resolvePairedToken({ key, registry, presented }),
+    port: 0,
+    host: "127.0.0.1",
+    log: () => {},
+  });
+  const token = sealVisitorKey(key, A, { generation: 1 });
+  const waiting = () => fetch(`http://127.0.0.1:${server.port}/principal/waiting`, { headers: { authorization: `Bearer ${token}` } });
+  expect((await waiting()).status).toBe(200);
+  generation.A = 2; // the visitor disconnected
+  await new Promise((r) => setTimeout(r, 3100)); // the bridge's 3 s look at the town
+  expect((await waiting()).status).toBe(401);
+  await server.close();
+});

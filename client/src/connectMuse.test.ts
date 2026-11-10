@@ -32,3 +32,16 @@ test("Connect my Muse is offered only when the bridge says it pairs", async () =
   expect(await pairingAvailable(answer(200, { ok: true }))).toBe(false);
   expect(await pairingAvailable((async () => { throw new Error("offline"); }) as unknown as typeof fetch)).toBe(false);
 });
+
+test("Task 63: disconnect is a POST to the town's own origin with the visitor key as the bearer; a refusal throws", async () => {
+  const { disconnectMuse } = await import("./connectMuse");
+  const seen: { url: string; method?: string; auth: string | null }[] = [];
+  const ok = (async (url: string, init?: RequestInit) => {
+    seen.push({ url, method: init?.method, auth: new Headers(init?.headers).get("authorization") });
+    return new Response(JSON.stringify({ ok: true, generation: 3 }), { status: 200 });
+  }) as unknown as typeof fetch;
+  await disconnectMuse("https://town.test", () => "visitor-key-0000000000001", ok);
+  expect(seen).toEqual([{ url: "https://town.test/bridge/disconnect", method: "POST", auth: "Bearer visitor-key-0000000000001" }]);
+  const refused = (async () => new Response("{}", { status: 401 })) as unknown as typeof fetch;
+  await expect(disconnectMuse("https://town.test", () => "k", refused)).rejects.toThrow("HTTP 401");
+});

@@ -41,7 +41,7 @@ test("repeated misses lock redeeming for the window, even for a real code", () =
 
 test("the town mints a code for its own visitor, and only the director token redeems it", async () => {
   const logs: string[] = [];
-  const server = createTownServer({ db: null as never, actions: {}, directorToken: DIRECTOR, blobSecret: "blob-secret", distDir: null, log: (l) => logs.push(l) });
+  const server = createTownServer({ db: { execute: async () => [{ generation: 1 }] } as never, actions: {}, directorToken: DIRECTOR, blobSecret: "blob-secret", distDir: null, log: (l) => logs.push(l) });
   const minted = await server.fetch(new Request("http://town.test/bridge/pair", { method: "POST", headers: { authorization: `Bearer ${A}` } }));
   expect(minted.status).toBe(200);
   const { code } = (await minted.json()) as { code: string };
@@ -58,7 +58,7 @@ test("the town mints a code for its own visitor, and only the director token red
   expect((await redeem("wrong-director", { code })).status).toBe(404);
   const ok = await redeem(DIRECTOR, { code });
   expect(ok.status).toBe(200);
-  expect(await ok.json()).toEqual({ visitorToken: A });
+  expect(await ok.json()).toEqual({ visitorToken: A, generation: 1 });
   expect((await redeem(DIRECTOR, { code })).status).toBe(404);
   for (const line of logs) {
     expect(line).not.toContain(A);

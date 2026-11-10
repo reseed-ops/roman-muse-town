@@ -34,6 +34,8 @@ export type PairRedeem = { ok: true; visitorToken: string } | { ok: false; reaso
 export interface PairingDesk {
   mint(visitorToken: string): { code: string; expiresAt: number };
   redeem(code: unknown): PairRedeem;
+  /** Drop this town's live code (a disconnect leaves none to redeem). */
+  forget(visitorToken: string): void;
   /** Live codes, for tests and the log. */
   size(): number;
 }
@@ -89,6 +91,11 @@ export function createPairingDesk(opts: { now?: () => number; maxCodes?: number 
       codes.set(bare, { visitorToken, expiresAt });
       liveByTown.set(visitorToken, bare);
       return { code: formatPairCode(bare), expiresAt };
+    },
+    forget(visitorToken) {
+      const old = liveByTown.get(visitorToken);
+      if (old) codes.delete(old);
+      liveByTown.delete(visitorToken);
     },
     redeem(raw) {
       sweep();

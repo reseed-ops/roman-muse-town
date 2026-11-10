@@ -2,7 +2,7 @@
 // the message the visitor pastes to their Muse, with a copy button.
 // Moved out of App.tsx, which keeps the state and the code request.
 import { useCallback, useEffect, useState } from "react";
-import { museConnectMessage, pairingAvailable, requestPairCode, type PairCode } from "./connectMuse";
+import { disconnectMuse, museConnectMessage, pairingAvailable, requestPairCode, type PairCode } from "./connectMuse";
 import { isHostedTown } from "./hosted";
 
 export type ConnectMuseState = { state: "loading" } | { state: "ready"; pair: PairCode; copied: boolean } | { state: "error"; text: string };
@@ -34,6 +34,7 @@ export function useConnectMuse(closeMenu: () => void) {
 }
 
 export function ConnectMusePanel({ state, onClose, onCopied }: { state: ConnectMuseState; onClose: () => void; onCopied: (copied: boolean) => void }) {
+  const [unlink, setUnlink] = useState<"idle" | "working" | "done" | "error">("idle");
   return (
     <div className="pointer-events-none absolute inset-x-0 top-[64px] z-40 flex justify-center px-4 pt-safe">
       <section aria-label="Connect my Muse" className="mt-plate pointer-events-auto mt-3 w-[min(460px,94vw)] px-4 pt-4 pb-3.5">
@@ -74,6 +75,29 @@ export function ConnectMusePanel({ state, onClose, onCopied }: { state: ConnectM
             </button>
           </>
         )}
+        <div className="mt-3 border-t border-[#2b2118]/10 pt-2.5">
+          <button
+            type="button"
+            className="w-full rounded-full bg-[#2b2118]/8 px-4 py-1.5 text-[13px] font-bold transition active:scale-95 disabled:opacity-60"
+            disabled={unlink === "working" || unlink === "done"}
+            onClick={() => {
+              setUnlink("working");
+              disconnectMuse().then(
+                () => setUnlink("done"),
+                () => setUnlink("error"),
+              );
+            }}
+          >
+            {unlink === "working" ? "Disconnecting…" : unlink === "done" ? "Disconnected" : "Disconnect my Muse"}
+          </button>
+          <p className="mt-1 text-center text-[11px] leading-snug text-[#2b2118]/60" role="status">
+            {unlink === "done"
+              ? "Every link to a Muse made so far has stopped working. To connect again, close this and open Connect my Muse for a new code."
+              : unlink === "error"
+                ? "The town could not do that just now. Try again in a moment."
+                : "Stops every Muse linked to this town, at once. A new code makes a new link, and the old ones stay stopped. A copy of the town she has already seen cannot be taken back."}
+          </p>
+        </div>
       </section>
     </div>
   );
