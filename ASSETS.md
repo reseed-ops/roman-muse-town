@@ -181,6 +181,8 @@ for opaque maps, PNG where alpha matters); `tools/ships/livery.py` writes the se
 empty; the rest of the town is unaffected at runtime, but the static
 imports mean the web build needs both files present.
 
+Reproduced on the Optiplex build box Nov 10, 2026 (Blender 4.5.3 LTS, same scripts): `trade_ship.glb` 488,640 bytes, `trireme.glb` 1,494,636 bytes, plus `trireme_hull2.jpg` and `trireme_sail2.png`, all in `client/src/assets/ships/` on that box. Polygon counts match the Windows build (trireme 9,009; trade ship 676 in the .blend, 675 after the GLB round trip).
+
 ---
 
 ## Rebuild record (Claude, Nov 5, 2026): the folder remade from the raw packs
