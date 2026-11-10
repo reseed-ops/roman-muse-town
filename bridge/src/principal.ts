@@ -311,12 +311,18 @@ export function createPrincipalDesk(opts: PrincipalDeskOptions): PrincipalDesk {
     return true;
   };
 
-  /** One direction through the constitution and then the town's door. */
+  /** What the town's refusal was, as a fixed word, never its text (Task 64). */
+const refusalCategory = (error: string): string => {
+  const m = /^refused by the town: (explicit|beyond the band)$/.exec(error);
+  return m ? m[1]! : "refused";
+};
+
+/** One direction through the constitution and then the town's door. */
   const deliver = async (p: Pending, of: number, condition: string): Promise<void> => {
     const t = now();
     if (p.invalid || !p.direction) {
       report({ kind: "refused", at: t, beat: p.beat, of, direction: p.raw, reason: p.invalid ?? "not a direction" });
-      log(`principal beat ${p.beat}/${of} refused: ${p.invalid}`);
+      log(`principal beat ${p.beat}/${of} refused: not a valid direction`);
       return;
     }
     let direction: VisitDirection = p.direction;
@@ -330,7 +336,7 @@ export function createPrincipalDesk(opts: PrincipalDeskOptions): PrincipalDesk {
         // she says a gentle refusal in town, so he knows he was heard.
         const softened = gentleRefusal(filtered.reason);
         report({ kind: "refused", at: t, beat: p.beat, of, direction: p.raw, reason: `the constitution's filter: ${filtered.reason}; said instead: "${softened}"` });
-        log(`principal beat ${p.beat}/${of} refused by the filter (${filtered.reason}), a gentle refusal said instead: ${JSON.stringify(p.raw)}`);
+        log(`principal beat ${p.beat}/${of} refused by the filter (${filtered.reason}), a gentle refusal said instead`);
         direction = { kind: "speak", text: softened, lineId: `P${beganAt ?? 0}-${++lineCounter}` };
         altered = [`refused (${filtered.reason}); a gentle refusal said instead`];
       } else {
@@ -354,11 +360,11 @@ export function createPrincipalDesk(opts: PrincipalDeskOptions): PrincipalDesk {
     }
     if (!result.ok) {
       report({ kind: "refused", at: t, beat: p.beat, of, direction: p.raw, reason: `the town: ${result.error}` });
-      log(`principal beat ${p.beat}/${of} refused by the town (${result.error}): ${JSON.stringify(direction)}`);
+      log(`principal beat ${p.beat}/${of} refused by the town (${refusalCategory(result.error)}); kind ${direction.kind}`);
       return;
     }
     report({ kind: "performed", at: t, beat: p.beat, of, direction, condition, ...(altered ? { altered } : {}) });
-    log(`principal beat ${p.beat}/${of} performed (condition: ${condition}${altered ? `; altered by ${altered.join(", ")}` : ""}): ${JSON.stringify(direction)}`);
+    log(`principal beat ${p.beat}/${of} performed (kind ${direction.kind}; condition: ${condition}${altered ? `; altered by the filter` : ""})`);
     if (direction.kind === "speak") {
       keep({ who: "her", by: "principal", text: direction.text, at: t });
       await setComposing(false);
@@ -468,7 +474,8 @@ export function createPrincipalDesk(opts: PrincipalDeskOptions): PrincipalDesk {
     async wake(raw) {
       const t = now();
       const parsed = parsePrincipalCall(raw);
-      log(`principal call ${new Date(t).toISOString()}: ${JSON.stringify(raw ?? {})}${parsed.ok ? "" : ` (refused: ${parsed.error})`}`);
+      // Event type and counts only (Task 64): never the body, a direction's text or an unknown field.
+      log(`principal call ${new Date(t).toISOString()}: ${parsed.ok ? `${parsed.call.beats?.length ?? 0} beat(s)${parsed.call.attend === false ? ", release" : ""}` : "refused: not a valid call"}`);
       if (!parsed.ok) return parsed;
       const call = parsed.call;
       const wasLive = liveNow();

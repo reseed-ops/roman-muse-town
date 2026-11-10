@@ -161,6 +161,9 @@ export async function restoreTownSave(db: TownDb, blobs: BlobStore, json: string
       replacement.set(key, next);
     }
     for (const row of decoded.get(schema.postcards) ?? []) row.blobKey = replacement.get(String(row.blobKey));
+    // The images the town held before: once the restore lands they are
+    // superseded and are deleted (Task 64), never left behind as orphans.
+    const superseded = (await db.select({ key: schema.postcards.blobKey }).from(schema.postcards)).map((row) => row.key);
     const applied = await runRetrySafe(storage, db, { requestId, action: "restoreSave", payload: { json } }, async (tx) => {
       for (const table of tables) await tx.delete(table);
       for (const [table, rows] of decoded) {
@@ -171,6 +174,7 @@ export async function restoreTownSave(db: TownDb, blobs: BlobStore, json: string
       await storage.afterRestore(tx);
     });
     if (!applied) await Promise.allSettled(uploaded.map((key) => blobs.delete(key)));
+    else await Promise.allSettled(superseded.filter((key) => !uploaded.includes(key)).map((key) => blobs.delete(key)));
   } catch (error) {
     await Promise.allSettled(uploaded.map((key) => blobs.delete(key)));
     throw error;

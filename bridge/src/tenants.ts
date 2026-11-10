@@ -136,7 +136,7 @@ export type TenantRegistry = {
 };
 
 /** A short, stable, non-reversible label for logs: never the key. */
-export const townLabel = (visitorToken: string): string => createHash("sha256").update(visitorToken).digest("hex").slice(0, 8);
+export const townLabel = (visitorToken: string): string => createHash("sha256").update(`town-bridge log label\n${visitorToken}`).digest("hex").slice(0, 8);
 
 export function createTenantRegistry(opts: TenantRegistryOptions): TenantRegistry {
   const now = opts.now ?? (() => Date.now());

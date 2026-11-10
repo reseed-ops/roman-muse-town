@@ -287,3 +287,22 @@ describe.skipIf(!onPostgres)("the town on the web", () => {
     expect((await server.fetch(new Request("http://town.test/stats", { method: "POST" }))).status).toBe(405);
   });
 });
+
+describe("postcard links expire (Task 64)", () => {
+  const schema = "town_0123456789abcdef01234567";
+  test("a signed link is good for between one and two hours, then refused; an edited expiry or a missing one fails", () => {
+    const t0 = Date.UTC(2026, 10, 10, 12, 30);
+    const url = new URL(signBlobPath("secret", schema, "postcards/a.jpg", t0), "http://t");
+    // The same link all through a window (a stable state digest).
+    expect(signBlobPath("secret", schema, "postcards/a.jpg", t0 + 10 * 60_000)).toBe(signBlobPath("secret", schema, "postcards/a.jpg", t0));
+    expect(verifyBlobPath("secret", url, t0)).not.toBeNull();
+    expect(verifyBlobPath("secret", url, t0 + 59 * 60_000)).not.toBeNull();
+    expect(verifyBlobPath("secret", url, t0 + 2 * 3600_000)).toBeNull();
+    expect(verifyBlobPath("secret", url, t0 + 5 * 3600_000)).toBeNull();
+    // Stretching the expiry breaks the signature; dropping it refuses the link.
+    const stretched = new URL(url.href.replace(/e=\d+/, `e=${t0 + 99 * 3600_000}`));
+    expect(verifyBlobPath("secret", stretched, t0)).toBeNull();
+    const bare = new URL(`${url.origin}${url.pathname}?t=${schema}&s=${url.searchParams.get("s")}`);
+    expect(verifyBlobPath("secret", bare, t0)).toBeNull();
+  });
+});

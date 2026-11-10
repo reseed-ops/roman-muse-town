@@ -39,6 +39,8 @@ worker.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
       .then((names) => Promise.all(names.filter((name) => name !== CACHE).map((name) => caches.delete(name))))
+      // Postcards were cached here for good before Task 64; they are private and now never cached.
+      .then(() => caches.open(CACHE).then(async (cache) => { for (const request of await cache.keys()) if (new URL(request.url).pathname.startsWith("/blobs/")) await cache.delete(request); }))
       .then(() => worker.clients.claim()),
   );
 });
@@ -71,7 +73,9 @@ worker.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== worker.location.origin) return;
   if (url.pathname === "/actions" || url.pathname.startsWith("/bridge/") || url.pathname === "/healthz") return;
-  if (url.pathname.startsWith("/blobs/") || HASHED.test(url.pathname) || url.pathname.startsWith("/assets/")) {
+  // Postcards are private: the worker never caches them (the server sets a short, private lifetime).
+  if (url.pathname.startsWith("/blobs/")) return;
+  if (HASHED.test(url.pathname) || url.pathname.startsWith("/assets/")) {
     event.respondWith(cacheFirst(request));
     return;
   }

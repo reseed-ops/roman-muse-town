@@ -223,6 +223,7 @@ import { bridgeClose, bridgeConfigured, bridgeGlance, bridgeLeaving, bridgePull,
 import { BRIDGE_BEAT_MS, BRIDGE_HOLD_S, FRAME_JPEG_QUALITY, FRAME_MAX_EDGE, SNAPSHOT_HEARTBEAT_MS, VISIT_LAPSE_MS, VISIT_POLL_MS, type QueuedDirection } from "../../shared/visitProtocol";
 import { clearVisitResume, loadVisitResume, saveVisitResume, sessionStore } from "./visitResume";
 import { ConnectMusePanel, useConnectMuse } from "./ConnectMusePanel";
+import { purgeImageCaches } from "./imageCache";
 import { HistoryBook, lessonForPlace, TownStoryTag } from "./HistoryBook";
 import { HomePanel } from "./HomePanel";
 import { earnedKeepsakes } from "./homeKeepsakes";
@@ -1499,6 +1500,8 @@ export function App() {
   const deletePostcard = useMutation({
     mutationFn: (id: number) => api.deletePostcard({ id }),
     onSuccess: (data) => {
+      // Purge the deleted image from any cache (Task 64).
+      if (postcardView?.image_url) void purgeImageCaches(postcardView.image_url);
       applyState(data);
       setPostcardView(null);
     },

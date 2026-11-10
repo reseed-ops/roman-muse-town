@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
+import { purgeImageCaches } from "./imageCache";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "./api";
 import type { TownSceneHandle } from "./townScene";
@@ -191,6 +192,7 @@ export function TownUtilities({ open, onClose, scene, state, ready, holdArrival,
               await reliableActions.pause();
               await queryClient.cancelQueries();
               await api.restoreSave({ json: selected.json, request_id: selected.requestId });
+              await purgeImageCaches(); // the old town's postcards are gone (Task 64)
               reliableActions.clear();
               // Prevent the old scene's pagehide handler from overwriting the restored pose.
               scene.current?.dispose(); scene.current = null;

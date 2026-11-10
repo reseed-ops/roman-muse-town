@@ -105,3 +105,18 @@ test("limits never stop the town backing up what it already holds", async () => 
   db.insert(schema.museNotes).values({ text: "x".repeat(600) }).run();
   expect(await exportTownSave(db, blobs, fetchImage)).toContain("xxxx");
 });
+
+test("Task 64: a successful restore deletes the images it superseded, and a failed one keeps them", async () => {
+  stored.set("original.jpg", jpeg);
+  const json = await exportTownSave(db, blobs, fetchImage);
+  // A failed restore leaves the old image where it was.
+  sqlite.exec("CREATE TRIGGER fail_restore BEFORE INSERT ON journal BEGIN SELECT RAISE(ABORT, 'restore failure'); END");
+  await expect(restoreTownSave(db, blobs, json)).rejects.toThrow("restore failure");
+  expect(stored.has("original.jpg")).toBe(true);
+  sqlite.exec("DROP TRIGGER fail_restore");
+  // A successful one replaces it: the new key is held, the old blob is gone, nothing is orphaned.
+  await restoreTownSave(db, blobs, json);
+  const photo = db.select().from(schema.postcards).get()!;
+  expect(photo.blobKey).not.toBe("original.jpg");
+  expect([...stored.keys()]).toEqual([photo.blobKey]);
+});

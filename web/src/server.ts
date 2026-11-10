@@ -34,7 +34,7 @@ const DIGEST_ACTIONS = new Set(["getState"]);
 const HOLD_LOOK_MS = 250;
 import { postgresStorage, ensureTown, isTownReady, townExists, townSchemaName, withTown, type PgTownDb } from "../../server/src/storage.pg";
 import { isDoorAction, type DoorDefinition } from "../../server/src/visitActions";
-import { createBlobStore, readBlob, verifyBlobPath, BLOB_PATH_PREFIX } from "./blobStore";
+import { createBlobStore, readBlob, verifyBlobPath, BLOB_BROWSER_MAX_AGE_S, BLOB_PATH_PREFIX } from "./blobStore";
 import { createSlateKeeper, SlatesFull, type SlateKeeper } from "./slates";
 import { readVisitorToken, tokenMatches } from "./tokens";
 import { createPairingDesk, PairingFull, type PairingDesk } from "./pairing";
@@ -277,7 +277,7 @@ export function createTownServer(opts: TownServerOptions): TownServer {
         definition.handler(
           {
             db: () => tx,
-            blobs: createBlobStore(tx, schemaName, opts.blobSecret, opts.blobQuotaBytes),
+            blobs: createBlobStore(tx, schemaName, opts.blobSecret, opts.blobQuotaBytes, now),
             invalidateQueries: () => {
               invalidate = true;
             },
@@ -437,11 +437,11 @@ export function createTownServer(opts: TownServerOptions): TownServer {
 
   async function blobRoute(req: Request, url: URL): Promise<Response> {
     if (req.method !== "GET") return json(405, { error: "method not allowed" });
-    const named = verifyBlobPath(opts.blobSecret, url);
+    const named = verifyBlobPath(opts.blobSecret, url, now());
     if (!named) return json(404, { error: "not found" });
     const blob = await withTown(opts.db, named.schemaName, (tx) => readBlob(tx, named.key));
     if (!blob) return json(404, { error: "not found" });
-    return new Response(blob.bytes, { status: 200, headers: { "content-type": blob.contentType, "cache-control": "private, max-age=31536000, immutable" } });
+    return new Response(blob.bytes, { status: 200, headers: { "content-type": blob.contentType, "cache-control": `private, max-age=${BLOB_BROWSER_MAX_AGE_S}` } });
   }
 
   async function staticRoute(req: Request, url: URL): Promise<Response> {

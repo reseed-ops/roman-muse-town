@@ -176,8 +176,8 @@ test("a three-beat sequence is performed at its authored delays, and his reply d
   await desk.pump();
   expect(speaks().length).toBe(2); // the third beat was not performed
   expect(log.filter((l) => l.startsWith("principal beat"))).toEqual([
-    'principal beat 1/3 performed (condition: none): {"kind":"speak","text":"Do you hear the fountain?","lineId":"P1000000-1"}',
-    'principal beat 2/3 performed (condition: no reply since the sequence began): {"kind":"speak","text":"It keeps the same time as you.","lineId":"P1000000-2"}',
+    "principal beat 1/3 performed (kind speak; condition: none)",
+    "principal beat 2/3 performed (kind speak; condition: no reply since the sequence began)",
     "principal beat 3/3 dropped: he replied (line 1)",
   ]);
   const slate = await wake({});
@@ -376,4 +376,49 @@ test("the marker long-polls: it answers as soon as a line past `after` lands, an
   expect(Date.now() - t0).toBeGreaterThanOrEqual(900);
   expect(quiet.seq).toBe(1);
   await server.close();
+});
+
+// Task 64: no raw conversation or request text in the logs, whatever happens to a call.
+test("Task 64: sentinel private text, refused lines and unknown request fields never reach the logs", async () => {
+  const { clock, channel, director, mind, pack, log, wake } = setup();
+  await pack.check();
+  channel.open(clock.t, tel());
+  const SENTINEL = "SENTINEL-PRIVATE-7f3a";
+  const SECRET = "sk-ant-api03-SENTINEL-CREDENTIAL";
+  // A performed line, a refused (explicit) line, a deferral failure, an intention, a bad shape, an unknown field and unknown condition keys.
+  await wake({ direction: { kind: "speak", text: `Stay close, ${SENTINEL}.` }, note: SECRET, extra: { deep: SENTINEL } });
+  await wake({ direction: { kind: "speak", text: `Let us make love tonight ${SENTINEL}.` } });
+  await wake({ direction: { kind: "speak", text: `Kiss me now ${SENTINEL}. Soon.` } });
+  await wake({ direction: { kind: "intend", text: `She means to wait ${SENTINEL}.` } });
+  await wake({ beats: [{ direction: { kind: "speak", text: `Hello ${SENTINEL}.` }, when: { [SECRET]: true } }] }).catch(() => undefined);
+  await desk_wakeRaw(wake, { direction: { kind: SENTINEL, text: SECRET } });
+  await desk_wakeRaw(wake, { [SECRET]: SENTINEL, beats: "nope" });
+  channel.mail(`His private line ${SENTINEL}`, clock.t);
+  await director.tick();
+  clock.t += 5000;
+  await director.tick();
+  expect(mind.composed).toBe(0);
+  const text = log.join("\n");
+  expect(text).not.toContain(SENTINEL);
+  expect(text).not.toContain(SECRET);
+  expect(text).not.toContain("make love");
+  expect(log.length).toBeGreaterThan(0);
+});
+
+async function desk_wakeRaw(wake: (b: unknown) => Promise<unknown>, body: unknown): Promise<void> {
+  await wake(body).catch(() => undefined);
+}
+
+test("Task 64: the resident's own lines and intentions are not logged either", async () => {
+  const { clock, channel, director, pack, log } = setup();
+  await pack.check();
+  channel.open(clock.t, tel());
+  channel.mail("Tell me something.", clock.t);
+  for (let i = 0; i < 8; i++) {
+    clock.t += 11_000;
+    await director.tick();
+  }
+  const text = log.join("\n");
+  expect(text).not.toContain("The resident answers");
+  expect(text).not.toContain("She means to stay");
 });

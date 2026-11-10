@@ -75,6 +75,12 @@ The caller's address is the socket's, unless a trusted proxy is configured: `TRU
 
 **Retention.** A town untouched for `TOWN_RETENTION_DAYS` (default 365; `0` keeps every town) is dropped whole, with its letters, memories and postcard images. A town is stamped when it is called (`public.town_seen`, at most hourly); a town with no stamp is stamped the first time the reaper runs, so nothing is dropped until a full period after this policy first runs. The reaper runs a minute after start and then daily, at most 200 towns a pass. A visitor keeps a copy by exporting a save from the menu.
 
+## Logs and private images: retention (Task 64)
+
+**Logs** carry event types, timings, short labels and refusal categories, never a body, a direction's text, a visitor's words or an unknown request field (the bridge logs "principal call: 2 beat(s)", "performed (kind speak ...)", "refused by the filter (explicit)"; the town logs routes and references; no token, key or code is ever logged). A test feeds sentinel text and a pasted credential through every path and proves none reaches the log. Logs from builds before this one may hold raw conversation text and direction text: the owner removes them under his own retention rule (Railway: deployment logs of the `muse-town` and `town-bridge` services before this build; delete old deployments or let the plan's retention age them out, and keep log access to the owner). Nothing the code can do reaches into Railway's stored history.
+
+**Private images (postcards).** A postcard link is signed with an expiry and is good for one to two hours (`BLOB_LINK_WINDOW_MS`, `web/src/blobStore.ts`; the link is stable within a window so the state's digest stays stable); the server tells a browser to keep an image five minutes (`private`); the service worker never caches an image and clears any it cached before this build; deleting a postcard deletes its row and its blob, and the browser purges its cached copy (`client/src/imageCache.ts`); a restore purges every cached image and, once it lands, deletes the images it superseded. A copy someone has already downloaded or screenshotted cannot be revoked.
+
 ## Run and test locally
 
 - `bun run build:web` builds `web/dist` (client under `web/dist/client`, server at `web/dist/server.js`). The Tailwind plugin carries a native module; on a machine whose checkout cannot map shared objects, set `MUSE_TAILWIND_PLUGIN` to a copy of `node_modules/bun-plugin-tailwind/index.js` elsewhere.

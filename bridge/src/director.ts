@@ -253,7 +253,7 @@ export function createDirector(deps: DirectorDeps): Director {
       pack.start();
       while (running) {
         const report = await tick();
-        if (report.kind !== "idle" && report.kind !== "closed" && report.kind !== "off" && report.kind !== "relayed") log(`${report.kind}${report.detail ? `: ${report.detail}` : ""}`);
+        if (report.kind !== "idle" && report.kind !== "closed" && report.kind !== "off" && report.kind !== "relayed") log(report.kind);
         await sleep(report.nextInMs);
       }
       pack.stop();
