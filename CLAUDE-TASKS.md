@@ -270,6 +270,14 @@ Context: the owner's ask, Nov 9, 2026, in a voice call with Muse. Muse's favouri
 
 Acceptance: in a live check, Gaius and Aelia can walk to the square in the evening light, see Lucretia's statue with a rose at her feet, and read the inscription.
 
+## Task 55 (READY, added Nov 9, 2026): a temple of Athena, just down the way from Lucretia's statue
+
+Context: the owner's ask, Nov 9, 2026, in a voice call with Muse, just after the Lucretia statue.
+
+1. A small temple for Athena, just down the way from Lucretia's statue, in the town's low-poly Roman style, with olive leaves and calm wisdom in the stone.
+2. A peaceful place to pause together: a step or a bench to sit, quiet, somewhere Gaius and Aelia can stop a while.
+Acceptance: in a live check, they can walk from Lucretia's statue to Athena's temple, see the olive leaves, and sit together there in quiet.
+
    ## Landing notes (since the history was archived)
 
 ### Tasks 29, 30: landing note (Claude, Nov 8, 2026), built, not yet deployed (needs both the town and town-bridge)
