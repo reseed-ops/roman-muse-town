@@ -1,6 +1,7 @@
 # Converting the Loghin ships (Task 50)
 
-Makes `client/src/assets/ships/trade_ship.glb` and `trireme.glb` from the
+Makes `client/src/assets/ships/trade_ship.glb`, `trireme.glb` and the trireme's
+second livery (`trireme_hull2.jpg`, `trireme_sail2.png`) from the
 owner's two Unity packages (see ASSETS.md, section 12). The outputs are
 licensed files: they stay in the ignored assets folder and are never
 committed.
@@ -22,4 +23,10 @@ committed.
    ```bash
    blender -b --factory-startup -P tools/ships/export.py -- WORK/out/trade_raw.blend   client/src/assets/ships/trade_ship.glb
    blender -b --factory-startup -P tools/ships/export.py -- WORK/out/trireme_raw.blend client/src/assets/ships/trireme.glb
+   ```
+
+4. The trireme's second livery (copy `hull2.tga` and `sail2.tga` into `WORK/trireme` too):
+
+   ```bash
+   blender -b --factory-startup -P tools/ships/livery.py -- WORK/trireme client/src/assets/ships
    ```

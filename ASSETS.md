@@ -2,7 +2,7 @@
 
 This repository is **code and text, plus two freely redistributable
 binaries** (below). Every other binary asset the town needs is excluded
-(123 files), because nearly all of them
+(125 files), because nearly all of them
 are commercial assets whose licences allow them to be *embedded in a
 shipped product* but **never redistributed as files**. This manifest lists
 everything excluded, grouped by source pack, with the exact folder path
@@ -20,7 +20,7 @@ Aelia's body, pixiv's VRoid sample model, whose terms allow it in a free
 public repo (see its row below). Everything else is purchase/download/
 supply required, and may never be committed to a public repository.
 
-Counts: 123 files excluded from `client/src/assets/` (125 in the folder,
+Counts: 125 files excluded from `client/src/assets/` (127 in the folder,
 less the two above), plus the app icon
 `icon.webp` at the space root. (Compiled copies of these assets also exist
 in the original's `client/dist/` build output, 222 binary files, which
@@ -166,7 +166,8 @@ Drop at: `client/src/assets/ships/`
 
 | File | Made from | Notes |
 | --- | --- | --- |
-| `trade_ship.glb` | `Ancient trade ship.unitypackage`: `files/low_poly/kyrenia_lowPoly.FBX` + `trade_ship.tga` | The Kyrenia merchantman, 676 polygons, one 512 px texture with alpha (the sail and rails cut out). About 0.43 MB. |
+| `trade_ship.glb` | `Ancient trade ship.unitypackage`: `files/low_poly/kyrenia_lowPoly.FBX` + `trade_ship.tga` | The Kyrenia merchantman, 676 polygons, one 512 px texture with alpha (the sail and rails cut out). The sail's 80 faces carry their own material, `trade_sail` (same texture), so the town dyes the sail per pass. About 0.43 MB. |
+| `trireme_hull2.jpg`, `trireme_sail2.png` | the same package: `Trireme/hull2.tga` (1024 px), `Trireme/sail2.tga` (512 px) | The pack's second livery (plain linen sails, the red moved to the top strakes), swapped onto a clone of `trireme.glb` at runtime. About 0.2 and 0.5 MB. |
 | `trireme.glb` | `Low-poly Greek Trireme.unitypackage`: `Trireme/trireme.FBX` + `hull.tga`, `planks.tga`, `rope.tga`, `sail.tga`, `wood.tga` | 9,009 polygons, five materials; hull 1024 px, the rest 512 px or less (the pack's 2048 px maps, normal, AO and spec maps left out for phones). About 1.5 MB. |
 
 Conversion (Claude, Nov 9, 2026, Blender 5.1, scripts in `tools/ships/`):
@@ -176,7 +177,7 @@ directly (positions, UVs, normals, the node transforms) and builds the
 mesh in Blender. The trireme imports as FBX; its one-bone armature is
 static and is applied away. Both are joined into one mesh, turned bow to
 +X, centred, keel at y = 0, and exported GLB (Y up, no animation, JPEG
-for opaque maps, PNG where alpha matters). Without them the sea stays
+for opaque maps, PNG where alpha matters); `tools/ships/livery.py` writes the second livery's two maps. Without them the sea stays
 empty; the rest of the town is unaffected at runtime, but the static
 imports mean the web build needs both files present.
 
@@ -280,7 +281,7 @@ Not rebuilt, still missing from the owner's folder:
 - `stars-fall-song.mp3`: no candidate on the device at rebuild time; the file in use is the project's own AI-generated song (see section 11), restored to the folder the same day.
 
 `townScene.ts` and `App.tsx` import every one of these files statically,
-so the web build fails until all of them are present (125 since Task 50; see `CLAUDE.md`).
+so the web build fails until all of them are present (127 since Task 50; see `CLAUDE.md`).
 
 ### Added Nov 8, 2026: Gaius's arms
 

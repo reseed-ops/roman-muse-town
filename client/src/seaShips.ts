@@ -46,8 +46,29 @@ export function pickShip(r: number): ShipKind {
   return r < TRIREME_CHANCE ? "trireme" : "trade";
 }
 
+/**
+ * How a pass looks, beyond which hull it is. The trade ship's linen sail
+ * is dyed by chance (undyed most often, else ochre, rust or a faded
+ * madder; the colour multiplies the linen texture). The trireme sails in
+ * one of the pack's two liveries: red-and-white striped sails with red
+ * low on the hull, or plain linen sails with the red at the top strakes.
+ */
+export const SAIL_DYES = [0xffffff, 0xffffff, 0xd9a441, 0xb85a3c, 0xc98f86] as const;
+export type TriremeLivery = "striped" | "plain";
+
+export function pickSailDye(r: number): number {
+  return SAIL_DYES[Math.min(SAIL_DYES.length - 1, Math.floor(r * SAIL_DYES.length))]!;
+}
+export function pickLivery(r: number): TriremeLivery {
+  return r < 0.5 ? "striped" : "plain";
+}
+
 export interface Voyage {
   kind: ShipKind;
+  /** The trade ship's sail colour (white is undyed); the trireme ignores it. */
+  dye: number;
+  /** The trireme's livery; the trade ship ignores it. */
+  livery: TriremeLivery;
   /** +1 sails east (+X), -1 sails west. */
   dir: 1 | -1;
   /** The lane's own small offset out to sea, so no two passes are alike. */
@@ -67,7 +88,9 @@ export function planVoyage(kind: ShipKind, morning: boolean, rand: () => number,
   const spec = SHIPS[kind];
   const laneZ = CLIFF.head.z + spec.laneOut + (rand() - 0.5) * 16;
   const duration = (spec.halfRun * 2) / spec.speed;
-  return { kind, dir: morning ? 1 : -1, laneZ, duration, elapsed: Math.max(0, Math.min(1, startAt)) * duration };
+  const dye = pickSailDye(rand());
+  const livery = pickLivery(rand());
+  return { kind, dye, livery, dir: morning ? 1 : -1, laneZ, duration, elapsed: Math.max(0, Math.min(1, startAt)) * duration };
 }
 
 export interface ShipPose {
@@ -110,4 +133,33 @@ export function nextGap(w: SeaWeather, r: number): number {
 /** Is the viewer out on the peninsula, where the sea can be seen at all? */
 export function watchingSea(viewZ: number): boolean {
   return viewZ > CLIFF.walkFromZ - 4;
+}
+
+/**
+ * Fishing boats: the town's own small boat (the lake's), one or two of
+ * them riding at anchor in the water below the headland, inside the
+ * ships' lanes, by day. Each spot is [x, z]; they swing slowly about
+ * their anchors.
+ */
+export const FISHING_SPOTS: readonly (readonly [number, number])[] = [
+  [-24, 136],
+  [20, 141],
+  [33, 127],
+  [-36, 128],
+];
+/** The fishing boat's length, metres (the lake's boat is 3.6 m; a sea boat is a little longer). */
+export const FISHING_BOAT_LENGTH = 4.4;
+
+/** Fishermen are out by day and at dusk, not at night, nor in a storm or fog. */
+export function fishingOut(w: SeaWeather): boolean {
+  return shipsSail(w) && w.nightMix < 0.55;
+}
+
+/** Which spots have a boat this time he comes out: one or two, by chance. */
+export function pickFishingSpots(rand: () => number): (readonly [number, number])[] {
+  const count = rand() < 0.4 ? 1 : 2;
+  const pool = [...FISHING_SPOTS];
+  const out: (readonly [number, number])[] = [];
+  while (out.length < count && pool.length) out.push(pool.splice(Math.floor(rand() * pool.length) % pool.length, 1)[0]!);
+  return out;
 }

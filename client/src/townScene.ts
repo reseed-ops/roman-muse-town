@@ -2,7 +2,7 @@ import { createPlaceFootprints } from "./buildingFootprints";
 import { readArrangement } from "../../shared/homeDecor";
 import { buildHomeHouse } from "./homeHouse";
 import { aimSeaPath, buildSeaCliff, CLIFF, clampToWorld, clearOfSea, HORIZON_HILLS, walkable as onCliffPath } from "./seaCliff";
-import { nextGap, pickShip, planVoyage, SHIPS, shipsSail, voyagePose, watchingSea, type SeaWeather, type ShipKind, type Voyage } from "./seaShips";
+import { FISHING_BOAT_LENGTH, fishingOut, nextGap, pickFishingSpots, pickShip, planVoyage, SHIPS, shipsSail, voyagePose, watchingSea, type SeaWeather, type ShipKind, type Voyage } from "./seaShips";
 import { createTrueSky, skyDirection, SKY_REFRESH_S } from "./trueSky";
 import { armsVisibility, createGaiusArms } from "./gaiusArms";
 import { createNightLights } from "./nightLights";
@@ -225,6 +225,8 @@ import boatSmallUrl from "./assets/roman/boat_small.glb";
 import paddleUrl from "./assets/roman/paddle.glb";
 import tradeShipUrl from "./assets/ships/trade_ship.glb";
 import triremeUrl from "./assets/ships/trireme.glb";
+import triremeHull2Url from "./assets/ships/trireme_hull2.jpg";
+import triremeSail2Url from "./assets/ships/trireme_sail2.png";
 import waterNormalUrl from "./assets/roman/water_normal.png";
 
 export type PickKind = "place" | "collectible" | "tree" | "muse" | "board" | "secret" | "landmark" | "questboard" | "letters" | "goals" | "market" | "bench" | "dock" | "inscription" | "summit" | "piscina" | "baths" | "cat" | "phoenix" | "sky" | "stone" | "rest" | "forage" | "history" | "home";
@@ -3581,37 +3583,120 @@ export function createTownScene(
     else void placeWorld(rockPackUrl, { x: px, z: pz, rotY: rot, width: 1.1 });
   }
   // Ships on the sea (Task 50): one at a time passes below the headland,
-  // a trade ship most days, now and then a trireme farther out and
-  // slower (seaShips.ts plans the passes). The models load only once he
-  // is out on the peninsula, carry no shadows, and make no sound.
+  // a trade ship most days (its sail dyed by chance), now and then a
+  // trireme farther out and slower (in one of two liveries), and one or
+  // two fishing boats at anchor nearer in by day (seaShips.ts plans it
+  // all). The models load only once he is out on the peninsula, carry no
+  // shadows, and make no sound.
   const seaShips = (() => {
     const group = new THREE.Group();
     group.name = "sea-ships";
     group.visible = false;
     scene.add(group);
+    const quiet = (root: THREE.Object3D) =>
+      root.traverse((o) => {
+        if (o instanceof THREE.Mesh) {
+          o.castShadow = false;
+          o.receiveShadow = false;
+        }
+      });
+    /** Give a hull its own copies of the named materials, so a dye or a livery touches only it. */
+    const ownMaterials = (root: THREE.Object3D, names: string[], edit: (m: THREE.MeshStandardMaterial) => void) =>
+      root.traverse((o) => {
+        if (!(o instanceof THREE.Mesh)) return;
+        const swap = (m: THREE.Material) => {
+          if (!(m instanceof THREE.MeshStandardMaterial) || !names.includes(m.name)) return m;
+          const own = m.clone();
+          edit(own);
+          return own;
+        };
+        o.material = Array.isArray(o.material) ? o.material.map(swap) : swap(o.material);
+      });
     const urls: Record<ShipKind, string> = { trade: tradeShipUrl, trireme: triremeUrl };
-    const hulls: Partial<Record<ShipKind, THREE.Group>> = {};
-    const loading: Partial<Record<ShipKind, Promise<THREE.Group | null>>> = {};
-    const load = (kind: ShipKind): Promise<THREE.Group | null> => {
+    /** The hulls: the trade ship (its sail dyed per pass) and the trireme in each livery. */
+    type HullKey = "trade" | "trireme-striped" | "trireme-plain";
+    const hulls: Partial<Record<HullKey, THREE.Group>> = {};
+    let tradeSail: THREE.MeshStandardMaterial | null = null;
+    const loading: Partial<Record<ShipKind, Promise<void>>> = {};
+    const liveryMap = (url: string) => {
+      const tex = loadAssetTexture(url);
+      tex.flipY = false; // the glTF UV convention, like the maps it replaces
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    };
+    const make = (kind: ShipKind, src: THREE.Object3D): THREE.Group => {
+      const hull = groundModel(src.clone(true), { width: SHIPS[kind].length });
+      quiet(hull);
+      hull.visible = false;
+      group.add(hull);
+      return hull;
+    };
+    const load = (kind: ShipKind): Promise<void> => {
       loading[kind] ??= runtime.streaming
         .request(() => loadModelScene(urls[kind]), () => ({ x: CLIFF.head.x, z: CLIFF.head.z }))
         .then((src) => {
-          if (disposed) return null;
-          const hull = groundModel(src.clone(true), { width: SHIPS[kind].length });
-          hull.traverse((o) => {
-            if (o instanceof THREE.Mesh) {
-              o.castShadow = false;
-              o.receiveShadow = false;
-            }
+          if (disposed) return;
+          if (kind === "trade") {
+            const hull = make("trade", src);
+            ownMaterials(hull, ["trade_sail"], (m) => {
+              tradeSail = m;
+            });
+            hulls.trade = hull;
+            return;
+          }
+          hulls["trireme-striped"] = make("trireme", src);
+          // The pack's second livery: the same hull with its other two maps.
+          const plain = make("trireme", src);
+          const hullMap = liveryMap(triremeHull2Url);
+          const sailMap = liveryMap(triremeSail2Url);
+          ownMaterials(plain, ["trireme_hull", "trireme_sail"], (m) => {
+            m.map = m.name === "trireme_hull" ? hullMap : sailMap;
+            m.needsUpdate = true;
           });
-          hull.visible = false;
-          group.add(hull);
-          hulls[kind] = hull;
-          return hull;
+          hulls["trireme-plain"] = plain;
         })
-        .catch(() => null); // no ship model, the sea stays empty
+        .catch(() => {
+          /* no ship model, the sea stays empty */
+        });
       return loading[kind]!;
     };
+    const hullFor = (v: Voyage): THREE.Group | undefined =>
+      v.kind === "trade" ? hulls.trade : hulls[v.livery === "plain" ? "trireme-plain" : "trireme-striped"];
+
+    // Fishing boats: the lake's own boat, one or two at anchor below the
+    // headland by day, chosen afresh each time he comes out.
+    const fishing: { boat: THREE.Group; x: number; z: number; heading: number; phase: number; anchored: boolean }[] = [];
+    let fishingSpots: (readonly [number, number])[] = [];
+    const placeFishing = () => {
+      fishing.forEach((f, i) => {
+        const spot = fishingSpots[i];
+        f.anchored = !!spot;
+        if (!spot) return;
+        f.x = spot[0];
+        f.z = spot[1];
+        f.heading = Math.random() * Math.PI * 2;
+      });
+    };
+    let fishingLoad: Promise<void> | null = null;
+    const loadFishing = () => {
+      fishingLoad ??= runtime.streaming
+        .request(() => loadModelScene(boatSmallUrl), () => ({ x: CLIFF.head.x, z: CLIFF.head.z }))
+        .then((src) => {
+          if (disposed) return;
+          for (let i = 0; i < 2; i++) {
+            const boat = groundModel(src.clone(true), { width: FISHING_BOAT_LENGTH });
+            quiet(boat);
+            boat.visible = false;
+            group.add(boat);
+            fishing.push({ boat, x: 0, z: 0, heading: 0, phase: i * 2.1, anchored: false });
+          }
+          placeFishing();
+        })
+        .catch(() => {
+          /* no boat model, no fishermen */
+        });
+    };
+
     let voyage: Voyage | null = null;
     let waitUntil = -1;
     let wasWatching = false;
@@ -3631,11 +3716,26 @@ export function createTownScene(
           waitUntil = t + 3;
           arriving = true;
         }
+        fishingSpots = pickFishingSpots(Math.random);
+        placeFishing();
+        loadFishing();
+      }
+      // The fishing boats ride their anchors: a slow swing, the swell under them.
+      const fishers = fishingOut(w);
+      for (const f of fishing) {
+        f.boat.visible = fishers && f.anchored;
+        if (!f.boat.visible) continue;
+        f.boat.position.set(f.x, CLIFF.seaY - 0.15 + Math.sin(t * 0.8 + f.phase) * 0.12, f.z);
+        f.boat.rotation.set(
+          Math.sin(t * 0.9 + f.phase) * 0.04,
+          f.heading + Math.sin(t * 0.04 + f.phase) * 0.5,
+          Math.sin(t * 0.7 + f.phase) * 0.06,
+        );
       }
       if (voyage) {
         voyage.elapsed += dt;
         const p = voyage.elapsed / voyage.duration;
-        const hull = hulls[voyage.kind];
+        const hull = hullFor(voyage);
         if (p >= 1) {
           if (hull) hull.visible = false;
           voyage = null;
@@ -3643,6 +3743,7 @@ export function createTownScene(
           return;
         }
         if (!hull) return; // still loading; the pass goes on unseen
+        if (voyage.kind === "trade" && tradeSail) tradeSail.color.setHex(voyage.dye);
         const pose = voyagePose(voyage, p);
         const swell = Math.sin(t * 0.55 + voyage.laneZ);
         hull.position.set(pose.x, CLIFF.seaY - SHIPS[voyage.kind].sink + swell * 0.22, pose.z);

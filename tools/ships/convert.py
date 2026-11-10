@@ -50,6 +50,10 @@ def build_trade():
     top = {n[0]: n for n in tree}
     img = load_img(os.path.join(src, "trade_ship.tga"), 512, "trade_ship", 'PNG')
     mat = make_mat("trade_ship", img, alpha=True)
+    # The sail gets its own material (same texture), so the town can dye
+    # it per pass: its faces map into the linen block at the atlas's top
+    # right (u > 0.49, v > 0.6).
+    sail = make_mat("trade_sail", img, alpha=True, rough=0.95)
     root_s = 0.5317946672439575
     objs = []
     for m in top['Objects'][2]:
@@ -80,6 +84,12 @@ def build_trade():
             uvlay.data[li].uv = (uv[2*j], uv[2*j+1])
         me.normals_split_custom_set([tuple(nrm[3*li:3*li+3]) for li in range(len(me.loops))])
         me.materials.append(mat)
+        me.materials.append(sail)
+        for poly in me.polygons:
+            us = [uvlay.data[li].uv for li in poly.loop_indices]
+            cu = sum(u.x for u in us) / len(us); cv = sum(u.y for u in us) / len(us)
+            poly.material_index = 1 if (cu > 0.49 and cv > 0.6) else 0
+        print("SAIL faces", name, sum(1 for p in me.polygons if p.material_index == 1))
         ob = bpy.data.objects.new(name, me)
         bpy.context.scene.collection.objects.link(ob)
         t = props['Lcl Translation']; r = props['Lcl Rotation']; s = props['Lcl Scaling']

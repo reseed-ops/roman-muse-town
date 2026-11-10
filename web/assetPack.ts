@@ -17,13 +17,15 @@ export interface PackManifest {
 /** The packs follow the scene's own loading order: the two bodies first,
  *  the world that stands at arrival, each clip library as a unit, the
  *  wolf by itself (12 MB that only the forest asks for), the song by
- *  itself (160 KB the summit asks for). */
+ *  itself (160 KB the summit asks for), the sea's ships by themselves
+ *  (fetched only once he walks out onto the sea cliff, Task 50). */
 export function packNameFor(rel: string): string {
   if (rel.startsWith("anim/outdoor/")) return "outdoor";
   if (rel.startsWith("anim/")) return "anim";
   if (rel.startsWith("roman/")) return "roman";
   if (rel.startsWith("greek/")) return "greek";
   if (rel.startsWith("pets/")) return "pets";
+  if (rel.startsWith("ships/")) return "ships";
   if (rel === "centurion.vrm" || rel === "muse-avatar.vrm") return "bodies";
   if (rel === "wolf.glb") return "wolf";
   if (rel === "stars-fall-song.mp3") return "song";

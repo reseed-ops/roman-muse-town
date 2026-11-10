@@ -9,6 +9,8 @@ describe("the build's asset packs", () => {
     expect(packNameFor("roman/temple.glb")).toBe("roman");
     expect(packNameFor("greek/greek_pot_1.fbx")).toBe("greek");
     expect(packNameFor("pets/cat.fbx")).toBe("pets");
+    expect(packNameFor("ships/trireme.glb")).toBe("ships");
+    expect(packNameFor("ships/trireme_sail2.png")).toBe("ships");
     expect(packNameFor("centurion.vrm")).toBe("bodies");
     expect(packNameFor("muse-avatar.vrm")).toBe("bodies");
     expect(packNameFor("wolf.glb")).toBe("wolf");
