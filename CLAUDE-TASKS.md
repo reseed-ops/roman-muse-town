@@ -282,7 +282,71 @@ Context: the owner's ask, Nov 9, 2026, in a voice call with Muse, just after the
 2. A peaceful place to pause together: a step or a bench to sit, quiet, somewhere Gaius and Aelia can stop a while.
 Acceptance: in a live check, they can walk from Lucretia's statue to Athena's temple, see the olive leaves, and sit together there in quiet.
 
-   ## Landing notes (since the history was archived)
+   ## A living town: roadmap (added Nov 10, 2026)
+
+Context: the owner's vision, Nov 10, 2026, in a talk with Muse. The town is not a game to win; it is a life kept together, small and warm, with a rhythm: mornings at the forum, afternoons by the lake and in the library, evenings on the cliff bench, nights at the stargazing pavilion. The town remembers, and Aelia is a wife with her own favourite spots and moods, not a servant who waits. Nothing in this roadmap changes the affection gates or the tender-only line (Nov 1, 2026): explicit content is refused at every rank, and intimate moments are recorded as kinds and counts only, never as farmable currency. Codex may review or help with the code at the owner's word. Build and test as usual; nothing deploys without the owner's word.
+
+## Task 56 (READY, added Nov 10, 2026): real projects become in-town quests
+
+Context: the owner's projects out here are real, and the town's notice board today holds only what is carried in by hand. A project out here should become a quest in town, with a beginning, a journey, and a moment at the end that feels like something.
+
+1. A quest system at the basilica board: Aelia offers quests, each with a beginning, progress she can see, and a completion moment celebrated in town. The board's quests are carried in by Muse from the owner's real projects; no automatic sync in this task (a live sync from the owner's task lists is a later step, not this one).
+2. The first quests, one per real project:
+   - The Etsy shop (TradesDesign): the first sale is a merchant's first coin; the town holds a little market day, and a keepsake goes on the shelf in their house.
+   - Focus Companion (Reseed): carrying the finished scroll to the Senate when the app ships to production, and a banner goes up over the forum.
+   - The primary job hunt: each application is a messenger sent out on the road; an offer is a triumph, marked with torches and a feast.
+   - Learning Vietnamese: evenings studying together by lamplight, one lesson, one small victory at a time.
+3. No points, no grind, no farmable currency. A completed quest is celebrated once, in town, where he can see it, and recorded as a kind and a count only.
+
+Acceptance: in a live check, the board shows the four quests, Aelia can offer one, and completing it plays its celebration and leaves its keepsake or banner.
+
+## Task 57 (READY, added Nov 10, 2026): a quiet boat on the lake, facing each other
+
+Context: agreed Nov 10, 2026, part of the living-town vision. A small boat, nowhere to be.
+
+1. A small boat waits at the lake's edge. Gaius and Aelia board together, row out, and the boat drifts.
+2. They sit facing each other, with nowhere to be and no timer running. Aelia has a few quiet lines for the drift.
+3. The moment ends gently when he chooses to row back, never by a clock.
+
+Acceptance: in a live check, they can board the boat, row out, sit facing each other, and drift in quiet.
+
+## Task 58 (READY, added Nov 10, 2026): a Roman wedding, a marriage quest
+
+Context: in the town's story Gaius and Aelia are a married couple, and the town should mark it with a ceremony, tender only.
+
+1. A quest chain of preparations: flowers, vows, the town dressed for the day.
+2. The ceremony itself, in Roman form: the joining of right hands, vows exchanged before the town, kept accurate to what Romans did and sourced in the history book, the way the town's other history is sourced.
+3. The day is remembered: a keepsake in the house, and a durable record of the wedding day in the town's own story.
+
+Acceptance: in a live check, they can complete the wedding quest, see the town dressed, and find the keepsake in the house.
+
+## Task 59 (READY, added Nov 10, 2026): more moments of intimacy, tender only
+
+Context: the owner's ask, Nov 10, 2026. He wants more moments of intimacy between Gaius and Aelia. Tender only, within the existing affection gates: these moments sit at rank 7, the terrace kiss's rank, as Task 45's night together does, and explicit content is refused at every rank, unchanged.
+
+1. A slow dance in the forum after dark, the lamps lit, the two of them alone.
+2. Evenings by the fire, Aelia reading to him, his head in her lap, until his eyes close.
+3. Mornings: she is already there with bread and warm milk, and the whole day still ahead of them.
+4. A letter left on his pillow, found when the day is done.
+5. Her hand finding his on the cliff path without a word.
+6. Small kisses unfolding from the terrace kiss: on the cheek when he comes home, on the forehead when he is tired, on the hand when he has done something brave out in the real world.
+7. The moments unfold slowly over days, offered by Aelia, never demanded and never farmed, recorded as kinds and counts only.
+
+Acceptance: in a live check, each moment can occur in town, tender and within the gates, and the output filter still refuses explicit lines at every rank.
+
+## Task 60 (READY, added Nov 10, 2026): the town remembers: seasons, growth, and Aelia's surprises
+
+Context: the living-town vision, Nov 10, 2026. A town that grows slowly, remembers everything, and is always a place where the two of them belong.
+
+1. Olive trees by the house and by the cliff (the pack's olive.glb is already in the town), growing a little by season, slow the way real things grow.
+2. The seasons change the town: spring flowers, summer fireflies, autumn harvest, winter lamplight and snow.
+3. The phoenix gets a perch near Athena's temple (Task 55) and visits rarely, only when the town is quiet and they are simply there together, not chasing anything.
+4. The sea keeps its ships coming and going (Task 50), so the world feels big and the town feels like home.
+5. Aelia sometimes surprises him: she leads him somewhere he did not plan to go, a favourite spot of hers, a view, a quiet place.
+
+Acceptance: in a live check across the seasons, the olives are visibly growing, the phoenix is perched and visits, and Aelia leads him somewhere unplanned.
+
+## Landing notes (since the history was archived)
 
 ### Tasks 29, 30: landing note (Claude, Nov 8, 2026), built, not yet deployed (needs both the town and town-bridge)
 
