@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { CLIFF, clampToWorld, clearOfSea, HORIZON_HILLS, landOutline, onLand, outwardFromSpine, walkable } from "./seaCliff";
+import * as THREE from "three";
+import { buildSeaCliff, CLIFF, OCEAN_DAY, OCEAN_NIGHT, clampToWorld, clearOfSea, HORIZON_HILLS, landOutline, onLand, outwardFromSpine, walkable } from "./seaCliff";
 
 // The sea cliff's geometry (Task 34), pinned off the scene.
 
@@ -64,4 +65,37 @@ test("clearOfSea: the coast is the line", () => {
   expect(clearOfSea(CLIFF.coastZ - 1)).toBe(true);
   expect(clearOfSea(CLIFF.coastZ + 1)).toBe(false);
   expect(clearOfSea(40, 20)).toBe(false);
+});
+
+// Task 69: the sea reads as blue water, not as meadow.
+
+const rgb = (hex: number) => [(hex >> 16) & 255, (hex >> 8) & 255, hex & 255] as const;
+
+test("the ocean's colour is a true blue, by day and by night, and nothing like the meadow's green", () => {
+  for (const hex of [OCEAN_DAY, OCEAN_NIGHT]) {
+    const [r, g, b] = rgb(hex);
+    expect(b).toBeGreaterThan(g);
+    expect(b).toBeGreaterThan(r);
+  }
+  const [r, g, b] = rgb(OCEAN_DAY);
+  expect(b).toBeGreaterThan(g * 1.5);
+  const c = new THREE.Color(OCEAN_DAY);
+  const hsl = { h: 0, s: 0, l: 0 };
+  c.getHSL(hsl);
+  expect(hsl.h * 360).toBeGreaterThan(205);
+  expect(hsl.h * 360).toBeLessThan(235);
+  // The meadow and the hills are green (hue ~100); the sea is far from that.
+  const meadow = new THREE.Color(0x5d9a48).getHSL({ h: 0, s: 0, l: 0 });
+  expect(Math.abs(hsl.h - meadow.h) * 360).toBeGreaterThan(90);
+  // Under a low sun's warm light the sea must still be blue, not green
+  // (the old teal's green channel won there and the sea read as grass).
+  const warm = [1, 0.8, 0.5];
+  expect(b * warm[2]!).toBeGreaterThan(g * warm[1]!);
+  expect(b * warm[2]!).toBeGreaterThan(r * warm[0]!);
+});
+
+test("the built ocean material carries that blue", () => {
+  const tex = () => new THREE.Texture();
+  const sea = buildSeaCliff({ terrainHeight: () => 0, waterNormal: tex(), foamTexture: tex(), pathTexture: tex() });
+  expect(sea.oceanMat.color.getHex()).toBe(OCEAN_DAY);
 });

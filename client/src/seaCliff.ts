@@ -12,6 +12,14 @@
 // clamp) plus the meshes, built once; townScene places and animates.
 import * as THREE from "three";
 
+/**
+ * The sea's colour by day and by night. A true blue, not a teal: the old
+ * 0x1f5674 had green in it, and under the warm light of a low sun its
+ * green channel won and the sea read as meadow (Task 69).
+ */
+export const OCEAN_DAY = 0x2260ae;
+export const OCEAN_NIGHT = 0x0a1a2a;
+
 export const CLIFF = {
   /** The coast: the town ground's south edge, and the sea's level. */
   coastZ: 56,
@@ -285,7 +293,7 @@ export function buildSeaCliff(opts: { terrainHeight: (x: number, z: number) => n
   oceanTex.wrapT = THREE.RepeatWrapping;
   oceanTex.repeat.set(160, 160);
   oceanTex.needsUpdate = true;
-  const oceanMat = new THREE.MeshStandardMaterial({ color: 0x1f5674, roughness: 0.22, metalness: 0.15, normalMap: oceanTex, normalScale: new THREE.Vector2(0.9, 0.9) });
+  const oceanMat = new THREE.MeshStandardMaterial({ color: OCEAN_DAY, roughness: 0.22, metalness: 0.15, normalMap: oceanTex, normalScale: new THREE.Vector2(0.9, 0.9) });
   const ocean = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400), oceanMat);
   ocean.rotation.x = -Math.PI / 2;
   ocean.position.set(0, seaY, 300);

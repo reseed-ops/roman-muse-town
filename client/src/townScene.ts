@@ -1,7 +1,7 @@
 import { createPlaceFootprints } from "./buildingFootprints";
 import { readArrangement } from "../../shared/homeDecor";
 import { buildHomeHouse } from "./homeHouse";
-import { aimSeaPath, buildSeaCliff, CLIFF, clampToWorld, clearOfSea, HORIZON_HILLS, walkable as onCliffPath } from "./seaCliff";
+import { aimSeaPath, buildSeaCliff, CLIFF, clampToWorld, clearOfSea, HORIZON_HILLS, OCEAN_DAY, OCEAN_NIGHT, walkable as onCliffPath } from "./seaCliff";
 import { QUIET_BOAT_MIN_OUT, QUIET_BOAT_START, beginDrift, boatSeats, driftStep, nextQuietLine, rowBack as rowBackState, type Drift, type QuietBoatState } from "../../shared/quietBoat";
 import { FISHING_BOAT_LENGTH, fishingOut, nextGap, pickFishingSpots, pickShip, planVoyage, SHIPS, shipsSail, voyagePose, watchingSea, type SeaWeather, type ShipKind, type Voyage } from "./seaShips";
 import { createTrueSky, skyDirection, SKY_REFRESH_S } from "./trueSky";
@@ -12693,7 +12693,7 @@ export function createTownScene(
             sea.offset.x = t * 0.0021;
             sea.offset.y = t * 0.0013;
           }
-          seaCliff.oceanMat.color.setHex(0x1f5674).lerp(tmpColorB.setHex(0x0a1a2a), nightMix * 0.8);
+          seaCliff.oceanMat.color.setHex(OCEAN_DAY).lerp(tmpColorB.setHex(OCEAN_NIGHT), nightMix * 0.8);
           seaCliff.foamMat.opacity = 0.32 + 0.22 * Math.sin(t * 0.7) + 0.1 * Math.sin(t * 1.9 + 1.3);
           if (seaCliff.foamMat.map) seaCliff.foamMat.map.offset.x = t * 0.02;
           const vx = camera.position.x;
