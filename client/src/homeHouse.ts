@@ -364,6 +364,13 @@ export function buildKeepsake(id: HomeKeepsakeId): THREE.Group {
       add(new THREE.SphereGeometry(0.022, 8, 6), m(0xffc46b, { emissive: 0xffa040, emissiveIntensity: 1.4 }), 0.14, 0.1, 0).scale.y = 1.6;
       break;
     }
+    case "first-coin": {
+      // The merchant's first coin, standing on its edge in a small clay dish (Task 56).
+      add(new THREE.CylinderGeometry(0.11, 0.08, 0.04, 12), m(0xb5532f), 0, 0.02, 0);
+      const coin = add(new THREE.CylinderGeometry(0.07, 0.07, 0.014, 16), m(0xd4af37, { metalness: 0.6, roughness: 0.35 }), 0, 0.09, 0.02);
+      coin.rotation.x = Math.PI / 2 - 0.25;
+      break;
+    }
     case "tree-cutting": {
       add(new THREE.CylinderGeometry(0.16, 0.12, 0.24, 12), m(0xb5532f), 0, 0.12, 0);
       add(new THREE.CylinderGeometry(0.02, 0.025, 0.3, 6), m(0x6b4a2f), 0, 0.38, 0);

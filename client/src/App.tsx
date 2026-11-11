@@ -227,6 +227,8 @@ import { purgeImageCaches } from "./imageCache";
 import { HistoryBook, lessonForPlace, TownStoryTag } from "./HistoryBook";
 import { HomePanel } from "./HomePanel";
 import { earnedKeepsakes } from "./homeKeepsakes";
+import { QuestBoard } from "./QuestBoard";
+import { questDef, type QuestRecord } from "../../shared/projectQuests";
 import { readArrangement } from "../../shared/homeDecor";
 import { SceneBuildError, describeSceneError } from "./sceneBuildError";
 import {
@@ -1344,12 +1346,30 @@ export function App() {
   const followupShownRef = useRef(false);
   const appointmentMetRef = useRef(false);
   const affectionRank = state.data?.affection.rank ?? 0;
-  const purse = state.data?.purse ?? { denarii: 0, upgrades: [], ingredients: [], dishes: [], seeds: 0, home_decor: {} };
+  const purse = state.data?.purse ?? { denarii: 0, upgrades: [], ingredients: [], dishes: [], seeds: 0, home_decor: {}, quests: [] };
   // Their home's keepsakes, into the scene whenever the arrangement changes (Task 40).
   const homeDecorKey = JSON.stringify(purse.home_decor);
   useEffect(() => {
     sceneRef.current?.setHomeDecor(JSON.parse(homeDecorKey) as Record<string, string>);
   }, [homeDecorKey, sceneReady]);
+  // The real-project quests (Task 56): the scene shows what they leave and
+  // sends a messenger per new step; a finished quest's celebration plays
+  // once (the town then marks it celebrated), with her words.
+  const questsKey = JSON.stringify(purse.quests);
+  const celebratingRef = useRef(new Set<string>());
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene || !sceneReady) return;
+    for (const kind of scene.setQuests(JSON.parse(questsKey))) {
+      if (celebratingRef.current.has(kind)) continue;
+      celebratingRef.current.add(kind);
+      const def = questDef(kind);
+      scene.celebrateQuest(def.celebration);
+      setMuseBubble({ lines: paginateLines([def.celebrationLines[0]!]), index: 0, cycle: false, invite: false, choice: null });
+      celebrateQuest.mutate(kind, { onSettled: () => celebratingRef.current.delete(kind) });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [questsKey, sceneReady]);
   const gardenStage = !state.data?.garden.planted_on
     ? 0
     : state.data.garden.water_days >= 3
@@ -1585,6 +1605,14 @@ export function App() {
   const bathLinesRef = useRef({ secs: 0, idx: 0, careStage: 0 });
   const markSharedBath = useMutation({
     mutationFn: () => api.markSharedBath({}),
+    onSuccess: applyState,
+  });
+  const acceptQuest = useMutation({
+    mutationFn: (kind: QuestRecord["kind"]) => api.acceptQuest({ kind }),
+    onSuccess: applyState,
+  });
+  const celebrateQuest = useMutation({
+    mutationFn: (kind: QuestRecord["kind"]) => api.celebrateQuest({ kind }),
     onSuccess: applyState,
   });
   const arrangeHome = useMutation({
@@ -8494,6 +8522,7 @@ export function App() {
           <p className="mt-3 text-[12px] leading-relaxed text-white/50 italic">
             Muse keeps this board current from beyond the town walls, town edit by town edit.
           </p>
+          <QuestBoard quests={purse.quests} busy={acceptQuest.isPending} offerIndex={new Date().getDate()} onAccept={(kind) => acceptQuest.mutate(kind)} />
           <div className="mt-3 border-t border-white/10 pt-3">
             <h3 className="text-sm font-bold text-[#ffd34e]">🏛️ Town upgrades: spend denarii, keep forever</h3>
             <p className="mt-0.5 text-[13px] text-white/75">

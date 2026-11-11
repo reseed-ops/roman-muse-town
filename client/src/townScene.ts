@@ -62,6 +62,8 @@ import { playLampIgnite, setBeeHumLevel, setCricketLevel, setLampCrackleLevel, s
 import { HOME } from "./town";
 import { createCritters, type XZ } from "./townCritters";
 import { buildAthenaTemple, buildLucretia } from "./tributes";
+import { createQuestScene } from "./projectQuests";
+import { readQuestBook, type CelebrationKind, type QuestKind } from "../../shared/projectQuests";
 import { FIREFLY_PLACES_MAX, fireflyPlaceAt, fireflyPlacesBudget } from "./fireflyPlaces";
 import { FEEL } from "./feel";
 import { buildMetaSudans, META_SUDANS_LINES } from "./metaSudans";
@@ -286,6 +288,12 @@ export interface TownSceneHandle {
   recenterCamera: () => void;
   /** Their home's keepsakes, where he placed them (Task 40). */
   setHomeDecor: (arrangement: Record<string, string>) => void;
+  /** The real-project quests on the board (Task 56): shows what they leave
+   *  standing, sends a messenger for each new step, and returns the finished
+   *  quests whose celebration has not played yet. */
+  setQuests: (book: unknown) => QuestKind[];
+  /** Play one quest celebration in town. */
+  celebrateQuest: (kind: CelebrationKind) => void;
   /** A = jump, B = slide (or stand up from a bench), X = sit on a seat
    *  within reach, stand if seated, otherwise wave. */
   pad2Press: (button: "a" | "b" | "x", source: Pad2Source) => void;
@@ -4835,6 +4843,8 @@ export function createTownScene(
   // Their house (Task 35, homeHouse.ts): walls, door, lamp and bed,
   // on the west lawn; its walls and bed join the colliders below, and
   // the bed's edge joins the benches, a seat for two.
+  const questScene = createQuestScene();
+  world.add(questScene.group);
   const homeHouse = buildHomeHouse(terrainHeight);
   world.add(homeHouse.group);
   const terraceRot = Math.atan2(-SECRET.position[0], -SECRET.position[1]);
@@ -12565,6 +12575,7 @@ export function createTownScene(
           // Ships passing below the headland (Task 50): east before noon, west after.
           seaShips.update(t, dt, { x: vx, z: vz }, { nightMix, storm: weatherId === "storm", fog: weatherId === "fog" }, skyAzimDeg < 180);
           // Their house: the door swings for whoever comes near, the lamp warms at night.
+          questScene.update(dt, t);
           if (homeHouse.update(dt, walking ? [walkPos, museGroup.position] : [museGroup.position], nightMix)) playLampIgnite();
           // At the headland together for the first time this visit, she says one quiet thing.
           if (!cliffGreeted && walking && followMode && Math.hypot(walkPos.x - CLIFF.head.x, walkPos.z - CLIFF.head.z) < 6) {
@@ -13215,6 +13226,8 @@ export function createTownScene(
     },
     recenterCamera: () => recenterWalkCamera(),
     setHomeDecor: (arrangement) => homeHouse.setDecor(readArrangement(arrangement)),
+    setQuests: (book) => questScene.setBook(readQuestBook(book)).celebrations,
+    celebrateQuest: (kind) => questScene.celebrate(kind),
     setPad2Move: (x: number, y: number, source) => {
       // A fresh human input outranks a director's channel while it lasts.
       if (source === "director" && pad2Source !== "director" && pad2Live(pad2LastInputAt, clock.getElapsedTime())) return;

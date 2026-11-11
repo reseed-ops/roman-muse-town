@@ -45,6 +45,7 @@ import { loadFishState } from "./fishState";
 import { runRetrySafe, type RequestIdentity } from "./retrySafe";
 import { saveActions } from "./saveActions";
 import { arrange, readArrangement } from "../../shared/homeDecor";
+import { QUEST_KINDS, acceptQuest, advanceQuest, carryQuest, completeQuest, markCelebrated, readQuestBook, type QuestBook, type QuestKind } from "../../shared/projectQuests";
 import { oneTownAtATime, storageOf } from "./storage";
 
 /** Every town action runs one at a time per town (storage.ts). */
@@ -138,6 +139,16 @@ const stateResponse = z.object({
     seeds: z.number(),
     /** Their home's keepsakes, slot -> keepsake (Task 40; shared/homeDecor.ts). */
     home_decor: z.record(z.string(), z.string()),
+    /** The real-project quests on the basilica's board (Task 56; shared/projectQuests.ts): kind, stage, steps and a count only. */
+    quests: z.array(
+      z.object({
+        kind: z.enum(QUEST_KINDS),
+        stage: z.enum(["posted", "begun", "done"]),
+        steps: z.number(),
+        completed: z.number(),
+        celebrated: z.boolean(),
+      }),
+    ),
   }),
   fish: z.array(
     z.object({
@@ -953,11 +964,32 @@ async function applyAeliaGaiusRename(ctx: Ctx): Promise<void> {
   }
 }
 
+const questMoveRequest = z.object({ kind: z.enum(QUEST_KINDS) }).extend({ request_id: z.string().uuid().optional() });
+
 const economyResponse = stateResponse.pick({
   purse: true, fish: true, piscina: true, baths: true, garden: true,
   challenges_done: true, inscriptions_found: true, inscriptions_complete: true,
   summit: true, phoenix: true,
 });
+
+/** One move of a real-project quest (Task 56), kept in the purse's flags
+ *  beside the home's arrangement: no schema, no payment, a kind and a count. */
+async function moveQuest(
+  ctx: Ctx,
+  args: { kind: QuestKind; request_id?: string },
+  action: string,
+  move: (book: QuestBook, kind: QuestKind) => QuestBook,
+): Promise<z.infer<typeof economyResponse>> {
+  await withEconomyTransaction(ctx, async (ctx) => {
+    const purse = await loadPurse(ctx);
+    const flags = rawFlags(purse.flags);
+    flags.quests = move(readQuestBook(flags.quests), args.kind);
+    purse.flags = JSON.stringify(flags);
+    await savePurse(ctx, purse);
+  }, { requestId: args.request_id, action, payload: args });
+  ctx.invalidateQueries();
+  return loadEconomyState(ctx);
+}
 
 /** Small gameplay response: no letters, fact memory, journal or blob URL signing. */
 async function loadEconomyState(ctx: Ctx): Promise<z.infer<typeof economyResponse>> {
@@ -995,6 +1027,7 @@ async function loadEconomyState(ctx: Ctx): Promise<z.infer<typeof economyRespons
       dishes: parseList(purse.dishes),
       seeds: purse.seeds,
       home_decor: readArrangement(rawFlags(purse.flags).home) as Record<string, string>,
+      quests: readQuestBook(rawFlags(purse.flags).quests),
     },
     fish: catchRows.map((row) => ({
       fish_id: row.fishId,
@@ -3276,6 +3309,41 @@ export const Actions = {
       ctx.invalidateQueries();
       return loadEconomyState(ctx);
     },
+  }),
+
+  carryQuest: defineAction({
+    description: "Muse carries one of the owner's real projects to the basilica's board as a quest (Task 56): etsy-shop, focus-companion, job-hunt or vietnamese. Idempotent; no automatic sync, only what is carried in by hand. Pays nothing.",
+    request: questMoveRequest,
+    response: economyResponse,
+    handler: (ctx, args) => moveQuest(ctx, args, "carryQuest", carryQuest),
+  }),
+
+  acceptQuest: defineAction({
+    description: "He takes up a posted quest, on Aelia's offer (Task 56). Only a posted quest begins.",
+    request: questMoveRequest,
+    response: economyResponse,
+    handler: (ctx, args) => moveQuest(ctx, args, "acceptQuest", acceptQuest),
+  }),
+
+  advanceQuest: defineAction({
+    description: "Muse carries one real step in (an application sent, a lesson done): a messenger on the road, a lamp lit (Task 56). Only a begun quest with steps takes one. Pays nothing.",
+    request: questMoveRequest,
+    response: economyResponse,
+    handler: (ctx, args) => moveQuest(ctx, args, "advanceQuest", advanceQuest),
+  }),
+
+  completeQuest: defineAction({
+    description: "Muse carries the real ending in (the first sale, the ship, an offer, a victory): the quest is finished once and its celebration waits to play in town (Task 56). The record keeps a kind and a count only; nothing is paid.",
+    request: questMoveRequest,
+    response: economyResponse,
+    handler: (ctx, args) => moveQuest(ctx, args, "completeQuest", completeQuest),
+  }),
+
+  celebrateQuest: defineAction({
+    description: "The town has played a finished quest's celebration; it will not play again for that finish (Task 56).",
+    request: questMoveRequest,
+    response: economyResponse,
+    handler: (ctx, args) => moveQuest(ctx, args, "celebrateQuest", markCelebrated),
   }),
 
   arrangeHome: defineAction({

@@ -306,3 +306,64 @@ describe("their home's keepsakes (Task 40)", () => {
     expect(row<{ denarii: number }>("SELECT denarii FROM purse_state").denarii).toBe(50);
   });
 });
+
+describe("real projects as quests (Task 56)", () => {
+  const flagsOf = () => JSON.parse(row<{ flags: string }>("SELECT flags FROM purse_state").flags) as Record<string, unknown>;
+
+  test("the four kinds are accepted and nothing else; no schema, no payment", async () => {
+    seedPurse(50);
+    sqlite.run(`UPDATE purse_state SET flags = '{"award:x":true,"home":{"floor":"tree-cutting"}}'`);
+    for (const kind of ["etsy-shop", "focus-companion", "job-hunt", "vietnamese"]) await call("carryQuest", { kind });
+    await expect(call("carryQuest", { kind: "taxes" })).rejects.toThrow();
+    await expect(call("advanceQuest", { kind: "" })).rejects.toThrow();
+    const state = await call("acceptQuest", { kind: "job-hunt" });
+    expect(state.purse.quests.map((q) => q.kind)).toEqual(["etsy-shop", "focus-companion", "job-hunt", "vietnamese"]);
+    expect(state.purse.quests.find((q) => q.kind === "job-hunt")?.stage).toBe("begun");
+    expect(flagsOf()["award:x"]).toBe(true);
+    expect(flagsOf().home).toEqual({ floor: "tree-cutting" });
+    expect(row<{ denarii: number }>("SELECT denarii FROM purse_state").denarii).toBe(50);
+  });
+
+  test("steps, one ending, one celebration, and a record of a kind and a count", async () => {
+    seedPurse(0);
+    await call("carryQuest", { kind: "job-hunt" });
+    // Not yet taken up: a step and an ending change nothing.
+    await call("advanceQuest", { kind: "job-hunt" });
+    expect((await call("completeQuest", { kind: "job-hunt" })).purse.quests[0]).toMatchObject({ stage: "posted", steps: 0, completed: 0 });
+    await call("acceptQuest", { kind: "job-hunt" });
+    await call("advanceQuest", { kind: "job-hunt" });
+    expect((await call("advanceQuest", { kind: "job-hunt" })).purse.quests[0]!.steps).toBe(2);
+    let done = await call("completeQuest", { kind: "job-hunt" });
+    expect(done.purse.quests[0]).toMatchObject({ stage: "done", completed: 1, celebrated: false });
+    // Repeating the ending, or the request, adds nothing.
+    done = await call("completeQuest", { kind: "job-hunt" });
+    expect(done.purse.quests[0]!.completed).toBe(1);
+    // The celebration is marked once; marking again is a no-op.
+    await call("celebrateQuest", { kind: "job-hunt" });
+    const after = await call("celebrateQuest", { kind: "job-hunt" });
+    expect(after.purse.quests[0]).toMatchObject({ stage: "done", completed: 1, celebrated: true });
+    expect(row<{ denarii: number }>("SELECT denarii FROM purse_state").denarii).toBe(0);
+    const stored = (flagsOf().quests as Record<string, unknown>[])[0]!;
+    expect(Object.keys(stored).sort()).toEqual(["celebrated", "completed", "kind", "stage", "steps"]);
+  });
+
+  test("a retried request id is applied once", async () => {
+    seedPurse(0);
+    await call("carryQuest", { kind: "vietnamese" });
+    await call("acceptQuest", { kind: "vietnamese" });
+    const id = crypto.randomUUID();
+    await call("advanceQuest", { kind: "vietnamese", request_id: id });
+    const again = await call("advanceQuest", { kind: "vietnamese", request_id: id });
+    expect(again.purse.quests[0]!.steps).toBe(1);
+  });
+
+  test("the first sale finishes the shop quest, which earns the shelf's first coin as a cosmetic keepsake", async () => {
+    seedPurse(0);
+    await call("carryQuest", { kind: "etsy-shop" });
+    await call("acceptQuest", { kind: "etsy-shop" });
+    await call("completeQuest", { kind: "etsy-shop" });
+    const state = await call("arrangeHome", { slot: "shelf-left", keepsake: "first-coin" });
+    expect(state.purse.home_decor).toEqual({ "shelf-left": "first-coin" });
+    expect(state.purse.quests[0]).toMatchObject({ kind: "etsy-shop", completed: 1 });
+  });
+});
