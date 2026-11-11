@@ -105,6 +105,18 @@ async function main(): Promise<void> {
         return fromTown === null ? fromPack : Math.min(fromPack, fromTown);
       },
       claimMs: cfg.principalClaimMs,
+      revisionStore: cfg.revisionPath
+        ? {
+            load: () => {
+              try {
+                return Number((JSON.parse(readFileSync(cfg.revisionPath!, "utf8")) as { high?: unknown }).high) || 0;
+              } catch {
+                return 0;
+              }
+            },
+            save: (high) => writeFileSync(cfg.revisionPath!, JSON.stringify({ high })),
+          }
+        : undefined,
       log,
     });
     ownerDesk = principal;

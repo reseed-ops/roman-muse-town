@@ -20,6 +20,8 @@ export type BridgeConfig = {
   apiKey: string | null;
   model: string;
   packPath: string;
+  /** Task 68: where the marker-revision high-water mark is kept (null: clock seed only). */
+  revisionPath: string | null;
   ledgerPath: string | null;
   pollMs: number;
   intentionEveryMs: number;
@@ -60,6 +62,7 @@ export function readConfig(env: Record<string, string | undefined> = process.env
     apiKey: env.ANTHROPIC_API_KEY || null,
     model: env.DIRECTOR_MODEL || "claude-opus-5-5",
     packPath: env.PACK_PATH || "./pack.md",
+    revisionPath: env.REVISION_PATH === "" ? null : (env.REVISION_PATH ?? "./revision.json"),
     ledgerPath: env.LEDGER_PATH === "" ? null : (env.LEDGER_PATH ?? "./ledger.json"),
     pollMs: num(env.POLL_MS, 2000),
     intentionEveryMs: num(env.INTENTION_EVERY_MS, 5 * 60 * 1000),

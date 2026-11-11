@@ -121,7 +121,7 @@ export type WaitingMarker = {
 export type WakeResult = { ok: true; slate: PrincipalSlate } | { ok: false; error: string };
 
 type Pending = { beat: number; dueAt: number; direction: VisitDirection | null; raw: unknown; invalid: string | null; when: BeatCondition };
-type Sequence = { heldUntil: number | null; startedAt: number; startSeq: number; startZone: string | null; beganAt: number | null; of: number; beats: Pending[]; dropOnReply: boolean; dropOnScene: boolean };
+type Sequence = { heldUntil: number | null; startedAt: number; startSeq: number; startZone: string | null; beganAt: number | null; of: number; answers: number; beats: Pending[]; dropOnReply: boolean; dropOnScene: boolean };
 
 export type PrincipalDeskOptions = {
   channel: DirectorChannel;
@@ -131,6 +131,8 @@ export type PrincipalDeskOptions = {
   /** Task 67: how long after her last real wake call a watcher's heartbeat may keep the claim (default 10 minutes). */
   heartbeatClaimMs?: number;
   now?: () => number;
+  /** Task 68: a durable high-water mark for marker revisions, so a new desk's revisions always exceed the old one's. */
+  revisionStore?: { load(): number; save(high: number): void };
   log?: (line: string) => void;
   /** Whether a resident answers while she is away (the owner's town).
    *  Without one (a paired town, Task 29) his unclaimed lines stay
@@ -281,7 +283,30 @@ export function createPrincipalDesk(opts: PrincipalDeskOptions): PrincipalDesk {
   /** The newest `seen` her speech has already answered in this visit (the idempotence guard). */
   let spokenFor = 0;
   let lineObservedAt: number | null = null;
-  let markerRev = now();
+  // Task 68: revisions start above everything a previous desk could have issued (the stored
+  // high-water mark, reserved in blocks) and above the clock; each change then adds one.
+  const REV_BLOCK = 1000;
+  const store = opts.revisionStore;
+  let revHigh = 0;
+  const loaded = (() => {
+    try {
+      const n = store?.load() ?? 0;
+      return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+    } catch {
+      return 0;
+    }
+  })();
+  let markerRev = Math.max(now(), loaded);
+  const reserveRev = () => {
+    if (!store || markerRev < revHigh) return;
+    revHigh = markerRev + REV_BLOCK;
+    try {
+      store.save(revHigh);
+    } catch (error) {
+      log(`principal: could not save the revision mark: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+  reserveRev();
   let markerKey = "";
 
   const report = (r: DeskReport) => {
@@ -377,7 +402,7 @@ const refusalCategory = (error: string): string => {
 };
 
 /** One direction through the constitution and then the town's door. */
-  const deliver = async (p: Pending, of: number, condition: string): Promise<void> => {
+  const deliver = async (p: Pending, of: number, condition: string, answers: number): Promise<void> => {
     const t = now();
     if (p.invalid || !p.direction) {
       report({ kind: "refused", at: t, beat: p.beat, of, direction: p.raw, reason: p.invalid ?? "not a direction" });
@@ -425,6 +450,9 @@ const refusalCategory = (error: string): string => {
     report({ kind: "performed", at: t, beat: p.beat, of, direction, condition, ...(altered ? { altered } : {}) });
     log(`principal beat ${p.beat}/${of} performed (kind ${direction.kind}; condition: ${condition}${altered ? `; altered by the filter` : ""})`);
     if (direction.kind === "speak") {
+      // Task 68: the line is answered only now, once the town has accepted her words; a failed
+      // or dropped send leaves it open so a retry with the same work identity goes through.
+      spokenFor = Math.max(spokenFor, answers);
       keep({ who: "her", by: "principal", text: direction.text, at: t });
       await setComposing(false);
     }
@@ -494,7 +522,7 @@ const refusalCategory = (error: string): string => {
           report({ kind: "dropped", at: now(), beat: next.beat, of: seq.of, reason: `condition not met: his scene is ${zone ?? "unknown"}, not ${next.when.scene}` });
           log(`principal beat ${next.beat}/${seq.of} skipped: scene condition not met (${zone})`);
         } else {
-          await deliver(next, seq.of, describe(next.when));
+          await deliver(next, seq.of, describe(next.when), seq.answers);
         }
         if (sequence === seq && seq.beats.length === 0) {
           sequence = null;
@@ -590,6 +618,7 @@ const refusalCategory = (error: string): string => {
           startZone: state?.telemetry?.gaiusZone ?? null,
           beganAt,
           of: beats.length,
+          answers: beats.some((b) => b.direction?.kind === "speak") ? Math.min(call.seen ?? shownSeq, latestSeq) : 0,
           beats,
           dropOnReply: call.drop?.onReply ?? true,
           dropOnScene: call.drop?.onSceneChange ?? true,
@@ -597,7 +626,6 @@ const refusalCategory = (error: string): string => {
         if (beats.some((b) => b.direction?.kind === "speak")) {
           const answers = Math.min(call.seen ?? shownSeq, latestSeq);
           answeredSeq = Math.max(answeredSeq, answers);
-          spokenFor = Math.max(spokenFor, answers);
         }
         if (!open) {
           report({ kind: "held", at: t, of: beats.length, until: t + PRINCIPAL_HOLD_MS, reason: "held until the visit opens" });
@@ -622,6 +650,7 @@ const refusalCategory = (error: string): string => {
       if (key !== markerKey) {
         markerKey = key;
         markerRev += 1;
+        reserveRev();
       }
       return { ...body, rev: markerRev };
     },
