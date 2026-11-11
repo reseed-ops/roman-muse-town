@@ -603,7 +603,7 @@ Checks: root suite 681 pass, 21 skip, 0 fail (SQLite, bridge included); pg suite
 
 - Deploys, Nov 11, 2026: town, `railway up` of a clean export with 127 assets (build 3fcd380304ce, main-7tj6x3td.js, unchanged because Task 67 touched only `bridge/`), deployment 4a4e1d7b, SUCCESS; /healthz ok on both domains. town-bridge, re-staged export of `bridge/` + `shared/` at f7c9da3 with `pack.md` from `pack.example.md` (rank 4 placeholder), deployment 7dd8f8af, SUCCESS; /healthz ok, GET /principal/events and /principal/waiting with no auth answer 401. Not checked: a read-only or principal check (needs the owner's token) and any live stream, so the 60 s recheck, the caps and the timing log are tested but not yet seen live.
 
-## Task 68: Codex review fixes for Task 67 — failed-send dedupe, observer cap, slow-reader teardown, monotonic revisions, latency wording (READY)
+## Task 68: Codex review fixes for Task 67 — failed-send dedupe, observer cap, slow-reader teardown, monotonic revisions, latency wording (DONE)
 
 Codex reviewed the Task 67 fixes (report town-task67-review-codex.md on the box, Nov 11, 2026, ~10:00 AM; fix commit f7c9da3 at HEAD ebef6ed). 2 areas fixed (claim model, revocation re-check), 4 partly fixed, 5 new findings (1 High, 2 Medium, 2 Low). Full brief: town-build5-prompt.md on the box.
 
@@ -615,3 +615,11 @@ Codex reviewed the Task 67 fixes (report town-task67-review-codex.md on the box,
 - Regression guard: the Task 67 claim-model and revocation fixes must stay fixed (their tests keep passing); full suites and typechecks must pass (root 681+, pg 54, bridge 105+).
 - Process: freshest main, commit separately, push, full suites and typechecks, deploy the town via Railway (only if the town changes; expect bridge-only, so the bundle may be unchanged), re-stage the bridge upload dir (bridge/ + shared/, pack.md from pack.example.md) and run bridge-upload-run.sh, verify both live. Summary to town-build5-done.md.
 - NOT in scope: the event-to-agent dispatcher and box-side daemon (follow-on decision); town-to-bridge push; affection gates; the tender-only line; the tended pack (still no backup anywhere); pinned npm ci builds / .dockerignore; Dockerfile dev dependencies.
+
+### Task 68: landing note (Claude, Nov 11, 2026), built and deployed (bridge only)
+
+- Code commits beb139e, 097b02e, 0f9df60. (1) HIGH: `spokenFor` advances only once the town accepts her speech, so a failed, thrown or never-run send stays retryable with the same `(visit, seen)`; a delivered line is still refused as a repeat. (2) Observer replacement re-installs the desk's group, so the one-observer cap holds (A, B, C leaves one). (3) A cut slow reader's response is destroyed and its writer closed. (4) Revisions start above max(clock, stored high-water mark, `REVISION_PATH`, reserved in blocks); with no Railway volume the file does not survive a redeploy, so only the clock seed holds there. (5) The "written" log fires at the socket hand-off ("not client receipt"), the watcher stamps receipt before queuing and reports `callbackStartedAt`, and the Task 66 1.3 s claim above is corrected.
+- Tests: bridge/src/push68.test.ts (5), each failing on the old code. Root 686 pass / 21 skip / 0 fail, pg 54, bridge 110; typechecks clean.
+- Deploys: town unchanged (build 3fcd380304ce, deployment 4a4e1d7b). Bridge: re-staged bridge/ + shared/ with pack.md from pack.example.md (rank 4 placeholder), deployment 014d8a7e SUCCESS; /healthz ok on town.reseed.net and the bridge, /principal/events and /principal/waiting with no auth 401. Not checked live: authenticated stream (owner's token). Details in town-build5-done.md on the box.
+- Open: dispatcher/daemon decision, tended pack and its backup, owner entitlement, pinned builds, a volume for the revision file, town-side idempotency key for ambiguous outcomes.
+
