@@ -544,3 +544,20 @@ Start light on phones and step up only on headroom; cap the phone pixel ratio at
 
 - Block 1 (Tasks 61 to 65, a52960e) deployed as build 20da8bd2226f (main-g3ekwcde.js). Checked live: /healthz ok on both domains, both serve the new bundle, POST /restore without a key answers 401, /stats 200. Authenticated smoke of limits, the tender gate, expiring tokens and log behaviour was not run live (no credentials used); the suites cover them.
 - Block 2 (Tasks 56 to 60, up to a4e35cc) deployed as build 3fcd380304ce (main-7tj6x3td.js). Checked live: /healthz ok on both domains, both serve main-7tj6x3td.js, the bundle carries the wedding, boat drift, tender moments and surprise code, /restore answers 401, /stats 200. Nothing seen rendered; the live acceptance checks of Tasks 56 to 60 are the owner's. No bridge code changed in Block 2, but Block 1's bridge changes (Tasks 61 to 64) still need the owner's upload: bash /root/bridge-deploy/upload_bridge.sh.
+
+### Task 66: Push delivery, the town tells Muse the moment he speaks (READY)
+
+Background: today the bridge is pull-only. Muse's visit watcher wakes the bridge about once a minute, so a line Tuan speaks in town waits up to a minute (plus the model reply) before Aelia answers. The owner asked for the real fix: turn it around so the town pushes the moment he speaks.
+
+What to build:
+- A push channel from the town/bridge to Muse's side: when a new line arrives during an open visit, deliver it within seconds.
+- Evaluate the options and pick the simplest robust one that fits this architecture: a long-lived server-sent-events subscription the watcher opens to the bridge (the watcher initiates outbound, so it works through NAT/Tailscale and the bridge pushes events down it), a websocket, or long-polling. Hard constraint: Railway cannot open an inbound connection to the Optiplex box, so any design where the bridge dials out to the box will not work; the box must subscribe.
+- Only during an open visit, only the owner's own town, authenticated with the visitor key / expiring principal token (Task 63). No delivery when no visit is open, no delivery to the wrong town.
+- Keep the one-minute poller as fallback: if the push channel drops, polling still delivers every line; never lose a line, and never show one twice in town.
+- Latency target: a spoken line reaches Muse's side within a few seconds; measure it in a test and report the measured number.
+- No change to affection gates or the tender-only line: everything delivered still passes Task 62's shared gate. No raw conversation text in logs (Task 64).
+- Write the subscriber where it belongs, with docs: the bridge side (subscribe endpoint) in this repo, plus a small subscriber script/recipe Mariel can wire into the visit watcher on her side, with reconnect and backoff.
+- Tests: push delivery within seconds in a harness; fallback polling delivers when push is disconnected; no delivery with no visit open; wrong-town token refused; the gate still enforced on pushed lines.
+- Commit separately with a landing note, push to main. Run the full suites and typechecks, then deploy the town via Railway and verify live (/healthz, new bundle). Bridge code is committed but NOT deployed: the bridge upload is the owner's step (bash /root/bridge-deploy/upload_bridge.sh), say so plainly in the summary.
+
+Small extras in the same run: verify the Plutarch and Festus citation numbers on the wedding history page (Task 58 note: cited from memory) and correct them if wrong, or flag them if they cannot be verified. And include in your completion summary a short recipe for Muse for the five quest actions (carryQuest, acceptQuest, advanceQuest, completeQuest, celebrateQuest).
