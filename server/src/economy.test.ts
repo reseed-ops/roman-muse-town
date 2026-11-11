@@ -437,3 +437,29 @@ describe("Task 58: a Roman wedding is kept as a kind and a count, and as a durab
     expect(state.purse.home_decor).toEqual({ "shelf-left": "wedding-hands" });
   });
 });
+
+describe("Task 59: tender moments are kept as kinds and counts only, from rank 7", () => {
+  const flagsOf = () => JSON.parse(row<{ flags: string }>("SELECT flags FROM purse_state").flags) as Record<string, unknown>;
+  const rank = (r: number) => sqlite.run("INSERT OR REPLACE INTO affection_state (id, points) VALUES (1, ?)", [r * 100]);
+
+  test("below rank 7 nothing is recorded; from 7 a kind and a count, retry-safe, nothing paid", async () => {
+    seedPurse(5);
+    rank(6);
+    await call("noteTenderMoment", { kind: "cheek-kiss" });
+    expect(flagsOf().tender_moments).toBeUndefined();
+    rank(7);
+    await call("noteTenderMoment", { kind: "cheek-kiss" });
+    const id = crypto.randomUUID();
+    await call("noteTenderMoment", { kind: "slow-dance", request_id: id });
+    await call("noteTenderMoment", { kind: "slow-dance", request_id: id });
+    const state = await call("noteTenderMoment", { kind: "cheek-kiss" });
+    expect(flagsOf().tender_moments).toEqual({ kind: "tender-moments", counts: { "cheek-kiss": 2, "slow-dance": 1 } });
+    expect(state.purse.tender.counts).toEqual({ "cheek-kiss": 2, "slow-dance": 1 });
+    expect(row<{ denarii: number }>("SELECT denarii FROM purse_state").denarii).toBe(5);
+  });
+
+  test("an unknown kind is refused", async () => {
+    rank(7);
+    await expect(call("noteTenderMoment", { kind: "anything-else" } as never)).rejects.toThrow();
+  });
+});

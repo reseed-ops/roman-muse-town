@@ -412,6 +412,8 @@ export interface TownSceneHandle {
    *  the bed together; "end" (behind the veil) gives the town back its
    *  real hour and stands them up. */
   nightTogether: (stage: "hush" | "morning" | "end") => void;
+  /** A tender moment's prop in their house (Task 59): the brazier, the breakfast tray, the letter on the pillow; null puts them away. */
+  setTenderProp: (prop: "fire" | "tray" | "letter" | null) => void;
   isSeated: () => boolean;
   /** Pick up the loose stone the prompt is offering (he carries
    *  one at a time, visible in his right hand). */
@@ -525,7 +527,7 @@ export interface TownSceneHandle {
    *  Atrium of Sounds and dance one full step sequence together.
    *  False when it can't start (not walking, not together, a clip
    *  missing). Ends itself; onDanceEnd fires. */
-  startDance: () => boolean;
+  startDance: (inPlace?: boolean) => boolean;
   stopDance: () => void;
   isDancing: () => boolean;
   /** The living sky: drive it by real local time (Europe/Rome)
@@ -9526,10 +9528,28 @@ export function createTownScene(
   const DANCE_SPOT = { x: -26.2, z: 2.8 };
   let danceState: { glide: PairGlide | null; danceT: number; dur: number } | null = null;
   let festivalTonight = false;
-  function beginDance(): boolean {
+  function beginDance(inPlace = false): boolean {
     if (!walking || danceState || bathState || boatState || seatPlayer || skyWatchState) return false;
     if (!museAnim?.hasDance || !playerAnim?.hasDance) return false;
     if (Math.hypot(museGroup.position.x - walkPos.x, museGroup.position.z - walkPos.z) > 7) return false;
+    if (inPlace) {
+      // A slow dance where they stand (Task 59, the forum after dark): she steps to him, he does not move.
+      const fx = museGroup.position.x - walkPos.x;
+      const fz = museGroup.position.z - walkPos.z;
+      const fl = Math.hypot(fx, fz) || 1;
+      danceState = {
+        glide: {
+          t: 0,
+          fp: walkPos.clone(),
+          tp: walkPos.clone(),
+          fm: museGroup.position.clone(),
+          tm: new THREE.Vector3(walkPos.x + (fx / fl) * 1.15, museGroup.position.y, walkPos.z + (fz / fl) * 1.15),
+        },
+        danceT: 0,
+        dur: Math.max(museAnim.danceDuration, playerAnim.danceDuration, 12),
+      };
+      return true;
+    }
     const dl = Math.hypot(DANCE_SPOT.x, DANCE_SPOT.z) || 1;
     const ux = -DANCE_SPOT.x / dl;
     const uz = -DANCE_SPOT.z / dl;
@@ -12894,7 +12914,7 @@ export function createTownScene(
             : "dusk"
           : "day") as "night" | "dawn" | "day" | "dusk",
     }),
-    startDance: () => beginDance(),
+    startDance: (inPlace?: boolean) => beginDance(inPlace === true),
     stopDance: () => endDance(),
     isDancing: () => danceState !== null,
     nearSkyWatchSpot: () => nearestSkyWatchSpot(),
@@ -13189,6 +13209,7 @@ export function createTownScene(
       homeHouse.setHush(null);
       if (seatPlayer?.bench.id === "home-bed") standUpFromBench();
     },
+    setTenderProp: (prop) => homeHouse.setTender(prop),
     isSeated: () => seatPlayer !== null,
     boardBoat: () => boardBoat(),
     disembarkBoat: () => disembarkBoat(false),

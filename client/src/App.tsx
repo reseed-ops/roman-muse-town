@@ -228,6 +228,12 @@ import { HistoryBook, lessonForPlace, TownStoryTag } from "./HistoryBook";
 import { HomePanel } from "./HomePanel";
 import { earnedKeepsakes } from "./homeKeepsakes";
 import { QuestBoard } from "./QuestBoard";
+import {
+  CHEEK_KISS_LINES, DANCE_BEGIN_LINE, DANCE_DECLINED_LINES, SLOW_DANCE_LINES, DANCE_NO, DANCE_OFFER_LINES, DANCE_YES, EMPTY_TENDER_MEMORY,
+  FIRE_DECLINED_LINES, FIRE_NO, FIRE_OFFER_LINES, FIRE_READING_LINES, FIRE_WAKING_LINES, FIRE_YES, FOREHEAD_KISS_LINES, HAND_KISS_LINES,
+  LETTER_LINES, LETTER_PROMPT, MORNING_LINES, atForumSpot, bravesWaiting, isTired, nextTenderKind, noteTender, onCliffPathSpot,
+  readTender, readTenderMemory, rememberTender, type TenderFacts, type TenderKind, type TenderMemory, type TenderRecord,
+} from "../../shared/tenderMoments";
 import { WeddingBoard } from "./WeddingBoard";
 import { WEDDING_CELEBRATION_LINE, readWeddingBook, type WeddingStep } from "../../shared/romanWedding";
 import { QUIET_BOAT_BEGIN_LINE, QUIET_BOAT_RETURN_LINES, DRIFT_PROMPT, ROW_BACK_PROMPT, quietBoatBlocked } from "../../shared/quietBoat";
@@ -254,6 +260,8 @@ import {
 /** A night together (Task 45): the last night had (per browser), and her afterglow line still to come. */
 const NIGHT_LAST_KEY = "muse-town-night-last";
 const NIGHT_AFTERGLOW_KEY = "muse-town-night-afterglow";
+/** Tender moments (Task 59): the pacing kept per browser; the town keeps only kinds and counts. */
+const TENDER_MEMORY_KEY = "muse-town-tender-memory";
 const pickOne = <T,>(pool: readonly T[]): T => pool[Math.floor(Math.random() * pool.length)]!;
 import { useVisitNotice } from "./useVisitNotice";
 import { LAPSE_WARN_MS, UNREACHABLE_AFTER_FAILS, composingVisible, hostOf, visitChipLine, visitClosedLine, visitStatusLine, type VisitCloseReason, type VisitDirectorState, type VisitRoute } from "./visitStatus";
@@ -1353,7 +1361,7 @@ export function App() {
   const followupShownRef = useRef(false);
   const appointmentMetRef = useRef(false);
   const affectionRank = state.data?.affection.rank ?? 0;
-  const purse = state.data?.purse ?? { denarii: 0, upgrades: [], ingredients: [], dishes: [], seeds: 0, home_decor: {}, quests: [], wedding: { steps: [], weddings: 0, celebrated: true } };
+  const purse = state.data?.purse ?? { denarii: 0, upgrades: [], ingredients: [], dishes: [], seeds: 0, home_decor: {}, quests: [], wedding: { steps: [], weddings: 0, celebrated: true }, tender: { kind: "tender-moments" as const, counts: {} } };
   // Their home's keepsakes, into the scene whenever the arrangement changes (Task 40).
   const homeDecorKey = JSON.stringify(purse.home_decor);
   useEffect(() => {
@@ -3252,6 +3260,9 @@ export function App() {
   // sounds and nothing else, then a held dawn through the window, the
   // two of them waking on the bed, one soft line, and the real hour back.
   const nightRunningRef = useRef(false);
+  /** A tender moment (Task 59) holds the town: nothing else begins meanwhile. */
+  const tenderRunningRef = useRef(false);
+  const tenderKindRef = useRef<TenderKind | null>(null);
   const nightPendingRef = useRef<"accept" | "decline" | "morning" | null>(null);
   const nightInviteUiRef = useRef(false);
   const nightInviteDecidedRef = useRef<string | null>(null);
@@ -3289,7 +3300,7 @@ export function App() {
       bothHome: !!sceneRef.current?.homeTogether(),
       walking: walkingRef.current,
       troubled,
-      busy: !!dreamingRef.current || !!summitScene || rowingRef.current || nightRunningRef.current,
+      busy: !!dreamingRef.current || !!summitScene || rowingRef.current || nightRunningRef.current || tenderRunningRef.current || dancingRef.current,
       tonight: nightKey(new Date()),
       lastNight: lastNight ?? (nightRunningRef.current ? nightKey(new Date()) : null),
       visitBeganAt: v.active ? v.beganAt : null,
@@ -3315,7 +3326,9 @@ export function App() {
         !!summitScene ||
         nightRunningRef.current ||
         privateMomentRef.current ||
+        tenderRunningRef.current ||
         celebratingRef.current.size > 0 ||
+        weddingPlayingRef.current ||
         soakingRef.current ||
         fishingRef.current,
       troubled: troubledNow(),
@@ -3352,6 +3365,309 @@ export function App() {
     setDrifting(false);
     setMuseBubble({ lines: paginateLines([pickOne(QUIET_BOAT_RETURN_LINES)]), index: 0, cycle: false, invite: false, choice: null });
   };
+
+  // --- Tender moments (Task 59) ------------------------------------------
+  // Eight small moments, tender only, from the terrace kiss's rank, offered
+  // by Aelia slowly over days (shared/tenderMoments.ts holds every rule: the
+  // order, once a day per kind, the spacing, the daily cap, one new kind a
+  // day). Never demanded, never farmed; only a kind and a count are kept.
+  const tenderMemoryRef = useRef<TenderMemory>(EMPTY_TENDER_MEMORY);
+  const tenderRecordRef = useRef<TenderRecord>(readTender(null));
+  const tenderEpisodeRef = useRef<{ kind: TenderKind; since: number; roll: boolean } | null>(null);
+  const tenderOfferRef = useRef<TenderKind | null>(null);
+  const tenderPendingRef = useRef<"end" | "fire-dark" | "fire-end" | "letter-end" | null>(null);
+  const tenderPropTimerRef = useRef<number | null>(null);
+  const cameHomeUntilRef = useRef(0);
+  const wasBothHomeRef = useRef(false);
+  const sessionStartRef = useRef(Date.now());
+  const [letterReady, setLetterReady] = useState(false);
+  useEffect(() => {
+    try {
+      tenderMemoryRef.current = readTenderMemory(JSON.parse(localStorage.getItem(TENDER_MEMORY_KEY) ?? "null"));
+    } catch {
+      /* storage unavailable: the pacing holds for this load */
+    }
+  }, []);
+  // The server's record wins when it is further along than what this load has noted.
+  const tenderServerKey = JSON.stringify(state.data?.purse.tender ?? null);
+  useEffect(() => {
+    const server = readTender(JSON.parse(tenderServerKey));
+    const sum = (r: TenderRecord) => Object.values(r.counts).reduce((a, b) => a + (b ?? 0), 0);
+    if (sum(server) >= sum(tenderRecordRef.current)) tenderRecordRef.current = server;
+  }, [tenderServerKey]);
+
+  const saveTenderMemory = (m: TenderMemory) => {
+    tenderMemoryRef.current = m;
+    try {
+      localStorage.setItem(TENDER_MEMORY_KEY, JSON.stringify(m));
+    } catch {
+      /* storage unavailable */
+    }
+  };
+  const tenderFactsNow = (): TenderFacts => {
+    const s = stateRef.current;
+    const p = playerPosRef.current;
+    const v = visitRef.current;
+    const d = new Date();
+    const completed = (s?.purse.quests ?? []).reduce((a, q) => a + q.completed, 0);
+    return {
+      rank: s?.affection.rank ?? 0,
+      walking: walkingRef.current,
+      together: followingRef.current,
+      busy:
+        !!dreamingRef.current ||
+        !!summitScene ||
+        nightRunningRef.current ||
+        privateMomentRef.current ||
+        rowingRef.current ||
+        celebratingRef.current.size > 0 ||
+        weddingPlayingRef.current ||
+        soakingRef.current ||
+        fishingRef.current ||
+        dancingRef.current ||
+        gazingRef.current ||
+        tenderRunningRef.current ||
+        !!museBubbleRef.current ||
+        !!sceneRef.current?.isSeated(),
+      troubled: troubledNow(),
+      night: nightRef.current,
+      hour: d.getHours(),
+      weather: weatherRef.current?.id ?? null,
+      bothHome: !!sceneRef.current?.homeTogether(),
+      cameHome: Date.now() < cameHomeUntilRef.current,
+      atForum: atForumSpot(p.x, p.z),
+      onCliffPath: onCliffPathSpot(p.x, p.z),
+      tired: isTired(Date.now() - sessionStartRef.current, d.getHours()),
+      bravesWaiting: bravesWaiting(completed, tenderRecordRef.current),
+      today: d.toLocaleDateString("en-CA"),
+      now: d.getTime(),
+      visitBeganAt: v.active ? v.beganAt : null,
+      record: tenderRecordRef.current,
+      memory: tenderMemoryRef.current,
+    };
+  };
+  const tenderFactsNowRef = useRef(tenderFactsNow);
+  tenderFactsNowRef.current = tenderFactsNow;
+
+  /** A moment was had: the pacing remembered here, a kind and a count kept in the town. */
+  const noteTenderHad = (kind: TenderKind) => {
+    const f = tenderFactsNow();
+    const wasNew = (tenderRecordRef.current.counts[kind] ?? 0) === 0;
+    saveTenderMemory(rememberTender(tenderMemoryRef.current, kind, f.today, f.now, wasNew));
+    tenderRecordRef.current = noteTender(tenderRecordRef.current, kind);
+    void api.noteTenderMoment({ kind }).catch(() => {});
+  };
+  /** She asked and he said not now: kind, and not asked again today (nothing counted). */
+  const noteTenderDeclined = (kind: TenderKind) => {
+    const m = tenderMemoryRef.current;
+    saveTenderMemory({ ...m, lastDay: { ...m.lastDay, [kind]: new Date().toLocaleDateString("en-CA") } });
+  };
+  const tenderSay = (lines: string[], pending: typeof tenderPendingRef.current = "end") => {
+    tenderPendingRef.current = pending;
+    setMuseBubble({ lines: paginateLines(lines), index: 0, cycle: false, invite: false, choice: null });
+  };
+  const putTenderPropAway = (afterMs: number) => {
+    if (tenderPropTimerRef.current !== null) window.clearTimeout(tenderPropTimerRef.current);
+    tenderPropTimerRef.current = window.setTimeout(() => {
+      tenderPropTimerRef.current = null;
+      sceneRef.current?.setTenderProp(null);
+    }, afterMs);
+  };
+  const showTenderProp = (prop: "fire" | "tray" | "letter") => {
+    if (tenderPropTimerRef.current !== null) window.clearTimeout(tenderPropTimerRef.current);
+    tenderPropTimerRef.current = null;
+    sceneRef.current?.setTenderProp(prop);
+  };
+  /** Her offer, with a kind way out. */
+  const tenderOffer = (kind: TenderKind, lines: readonly string[], yes: string, no: string) => {
+    tenderOfferRef.current = kind;
+    setMuseBubble({
+      lines: paginateLines([pickOne(lines)]),
+      index: 0,
+      cycle: false,
+      invite: false,
+      choice: {
+        id: "tender-offer",
+        place: "generic",
+        line: "",
+        options: [
+          { label: yes, kind: "attentive", follow: "" },
+          { label: no, kind: "neutral", follow: "" },
+        ],
+      },
+    });
+  };
+
+  const runFireside = () => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    releaseHandHold();
+    showTenderProp("fire");
+    if (!scene.isSeated()) scene.toggleSit("home-bed");
+    window.setTimeout(() => tenderSay(FIRE_READING_LINES, "fire-dark"), 1800);
+  };
+  /** His eyes close: a veil as gentle as the night's, nothing shown, then her waking line. */
+  const fireDark = () => {
+    const reduced = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    beginPrivateMoment();
+    fadeVeil(true);
+    noteTenderHad("fireside");
+    window.setTimeout(() => {
+      fadeVeil(false);
+      window.setTimeout(() => tenderSay([pickOne(FIRE_WAKING_LINES)], "fire-end"), reduced ? 500 : 1500);
+    }, reduced ? 1800 : 3600);
+  };
+  const fireEnd = () => {
+    sceneRef.current?.standUp();
+    sceneRef.current?.setTenderProp(null);
+    privateMomentRef.current = false;
+    tenderRunningRef.current = false;
+  };
+
+  /** Begin one moment (the facts have already said yes). */
+  const beginTender = (kind: TenderKind) => {
+    const scene = sceneRef.current;
+    if (!scene || tenderRunningRef.current) return;
+    tenderRunningRef.current = true;
+    tenderKindRef.current = kind;
+    switch (kind) {
+      case "cheek-kiss":
+      case "forehead-kiss":
+      case "hand-kiss": {
+        releaseHandHold();
+        const lines = kind === "cheek-kiss" ? CHEEK_KISS_LINES : kind === "forehead-kiss" ? FOREHEAD_KISS_LINES : HAND_KISS_LINES;
+        tenderSay([pickOne(lines)]);
+        scene.playPairMoment("hug");
+        noteTenderHad(kind);
+        return;
+      }
+      case "morning-bread":
+        showTenderProp("tray");
+        tenderSay(MORNING_LINES);
+        putTenderPropAway(90_000);
+        noteTenderHad(kind);
+        return;
+      case "cliff-hand":
+        // Her hand finds his, without a word; it lets go when he leaves the path.
+        startHandHold();
+        noteTenderHad(kind);
+        return;
+      case "fireside":
+        tenderOffer(kind, FIRE_OFFER_LINES, FIRE_YES, FIRE_NO);
+        return;
+      case "slow-dance":
+        tenderOffer(kind, DANCE_OFFER_LINES, DANCE_YES, DANCE_NO);
+        return;
+      case "pillow-letter":
+        // Found when the day is done: it waits on the pillow for him to read.
+        showTenderProp("letter");
+        setLetterReady(true);
+        return;
+    }
+  };
+  const readLetter = () => {
+    if (!letterReady || tenderKindRef.current !== "pillow-letter") return;
+    setLetterReady(false);
+    tenderSay(LETTER_LINES, "letter-end");
+    noteTenderHad("pillow-letter");
+  };
+  /** His answer to her offer of a dance or the fire. */
+  const answerTenderOffer = (yes: boolean): void => {
+    const kind = tenderOfferRef.current;
+    tenderOfferRef.current = null;
+    if (!kind) return;
+    if (!yes) {
+      noteTenderDeclined(kind);
+      tenderSay(kind === "fireside" ? FIRE_DECLINED_LINES : DANCE_DECLINED_LINES);
+      return;
+    }
+    setMuseBubble(null);
+    if (kind === "fireside") {
+      runFireside();
+      return;
+    }
+    const scene = sceneRef.current;
+    releaseHandHold();
+    if (!scene || !scene.startDance(true)) {
+      tenderRunningRef.current = false;
+      return;
+    }
+    dancingRef.current = true;
+    setDancing(true);
+    noteTenderHad("slow-dance");
+    tenderSay([DANCE_BEGIN_LINE], null);
+    momentTimersRef.current.push(window.setTimeout(() => sceneRef.current?.showBubble("muse", SLOW_DANCE_LINES[0]!), 9000));
+  };
+  const answerTenderOfferRef = useRef(answerTenderOffer);
+  answerTenderOfferRef.current = answerTenderOffer;
+
+  // Her words act when their bubble closes.
+  useEffect(() => {
+    if (museBubble) return;
+    // An offer whose bubble was closed without an answer is a quiet not now: nothing counted, nothing held.
+    if (tenderOfferRef.current && !tenderPendingRef.current) {
+      noteTenderDeclined(tenderOfferRef.current);
+      tenderOfferRef.current = null;
+      tenderRunningRef.current = false;
+      return;
+    }
+    const pending = tenderPendingRef.current;
+    if (!pending) return;
+    tenderPendingRef.current = null;
+    if (pending === "fire-dark") fireDark();
+    else if (pending === "fire-end") fireEnd();
+    else if (pending === "letter-end") {
+      sceneRef.current?.setTenderProp(null);
+      tenderRunningRef.current = false;
+    } else if (tenderKindRef.current !== "slow-dance") tenderRunningRef.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [museBubble]);
+
+  // The watch: every second or so she looks for a quiet moment. A moment is
+  // offered only once its kind has held steady for a few seconds, and then
+  // only some of the time, so none of it is on a schedule.
+  useEffect(() => {
+    const iv = window.setInterval(() => {
+      const scene = sceneRef.current;
+      if (!scene) return;
+      const both = !!scene.homeTogether();
+      if (both && !wasBothHomeRef.current) cameHomeUntilRef.current = Date.now() + 20_000;
+      wasBothHomeRef.current = both;
+      // A hand held on the cliff path lets go when he leaves it, or when he lets go himself.
+      if (tenderRunningRef.current && tenderKindRef.current === "cliff-hand") {
+        const p = playerPosRef.current;
+        if (!handInHandWalkRef.current || !onCliffPathSpot(p.x, p.z)) {
+          releaseHandHoldRef.current();
+          tenderRunningRef.current = false;
+        }
+        return;
+      }
+      // An unread letter is put away if the two of them leave the house.
+      if (tenderRunningRef.current && tenderKindRef.current === "pillow-letter" && !tenderPendingRef.current && !museBubbleRef.current && !both) {
+        setLetterReady(false);
+        sceneRef.current?.setTenderProp(null);
+        tenderRunningRef.current = false;
+        return;
+      }
+      if (tenderRunningRef.current) return;
+      const f = tenderFactsNowRef.current();
+      const kind = nextTenderKind(f);
+      if (!kind) {
+        tenderEpisodeRef.current = null;
+        return;
+      }
+      const ep = tenderEpisodeRef.current;
+      if (!ep || ep.kind !== kind) {
+        tenderEpisodeRef.current = { kind, since: f.now, roll: Math.random() < 0.7 };
+        return;
+      }
+      if (f.now - ep.since < 6000 || !ep.roll) return;
+      tenderEpisodeRef.current = null;
+      beginTender(kind);
+    }, 1500);
+    return () => window.clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /** The director's view goes dark with the screen: one black frame, then none until the morning ends. */
   const beginPrivateMoment = () => {
@@ -3965,6 +4281,11 @@ export function App() {
    *  heart and a warmer follow-up; glib ones earn her wit, and only that. */
   const pickChoice = useCallback((option: DialogueChoiceOption) => {
     lastOpenerRef.current = null;
+    // Her offer of a dance or the fire (Task 59): either answer is kind.
+    if (tenderOfferRef.current && museBubbleRef.current?.choice?.id === "tender-offer") {
+      answerTenderOfferRef.current(option.label === DANCE_YES || option.label === FIRE_YES);
+      return;
+    }
     // Her invitation to stay the night (Task 45): either answer is kind.
     if (nightInviteUiRef.current) {
       nightInviteUiRef.current = false;
@@ -4911,6 +5232,7 @@ export function App() {
           dancingRef.current = false;
           setDancing(false);
           sceneRef.current?.showBubble("muse", DANCE_END_LINE);
+          if (tenderKindRef.current === "slow-dance") tenderRunningRef.current = false;
         },
         onSkyWatchEnd: () => {
           gazingRef.current = false;
@@ -10071,6 +10393,18 @@ export function App() {
       {/* Task 48: her walking-together status, tappable, for when she is
           out of sight; centred above the prompt, clear of the stick, the
           buttons and her bubble's band. */}
+      {letterReady && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-[176px] z-10 flex justify-center px-4" data-mt-tender-letter="1">
+          <button
+            type="button"
+            className="pointer-events-auto rounded-full bg-[#22332b]/85 px-4 py-2 text-sm font-bold text-white shadow-md backdrop-blur transition active:scale-95"
+            aria-label="Read the letter left on your pillow"
+            onClick={readLetter}
+          >
+            {LETTER_PROMPT}
+          </button>
+        </div>
+      )}
       {rowingBoat && (driftOffered || drifting) && (
         <div
           className="pointer-events-none absolute inset-x-0 bottom-[176px] z-10 flex justify-center px-4"

@@ -187,3 +187,43 @@ test("Task 62: the resident's streamed chunks never pass explicit text at any ra
     }
   }
 });
+
+// Task 59: more moments of intimacy, tender only, all at rank 7.
+import { TENDER_MOMENT_LINES, TENDER_MOMENT_RANK } from "../../shared/tenderMoments.js";
+
+test("Task 59: every tender-moment line passes the principal filter and the intention filter at ranks 7 to 10", () => {
+  expect(TENDER_MOMENT_RANK).toBe(PRINCIPAL_KISS_RANK);
+  for (const rank of [7, 8, 9, 10]) {
+    for (const line of TENDER_MOMENT_LINES) {
+      const r = filterSpeak(line, { band: bandForRank(rank), principalRank: rank, endearments: "allow" });
+      expect(r.ok ? true : `${line} -> ${r.reason}`).toBe(true);
+      const i = filterIntention(line, { band: bandForRank(rank), principalRank: rank });
+      expect(i.ok || i.reason !== "explicit" ? true : `${line} -> ${i.reason}`).toBe(true);
+    }
+  }
+});
+
+test("Task 59: the resident's devoted band (ranks 8 to 10) carries the same lines", () => {
+  for (const rank of [8, 9, 10]) {
+    for (const line of TENDER_MOMENT_LINES) {
+      const r = filterSpeak(line, { band: bandForRank(rank), endearments: "allow" });
+      expect(r.ok ? true : `${line} -> ${r.reason}`).toBe(true);
+    }
+  }
+});
+
+test("Task 59: explicit lines are refused at EVERY rank, on every path", () => {
+  for (const line of ["Let us make love tonight.", "Take off your tunic and come here.", "I want you naked.", "Lie beneath me.", "Touch me there."]) {
+    for (let rank = 0; rank <= 10; rank++) {
+      expect(filterSpeak(line, { band: bandForRank(rank), principalRank: rank, endearments: "allow" }).ok).toBe(false);
+      expect(filterSpeak(line, { band: bandForRank(rank) }).ok).toBe(false);
+      expect(filterIntention(line, { band: bandForRank(rank), principalRank: rank }).ok).toBe(false);
+    }
+  }
+});
+
+test("Task 59: the kisses are beyond the band below rank 7", () => {
+  for (const rank of [0, 3, 6]) {
+    expect(filterSpeak("A small kiss for the one who came back to me.", { band: bandForRank(rank), principalRank: rank }).ok).toBe(false);
+  }
+});

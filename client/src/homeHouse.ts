@@ -34,6 +34,10 @@ export type HomeHouse = {
    *  (0 to 1), and the dawn through the window (0 to 1); null lets the
    *  house be itself again. */
   setHush(hush: { doorShut: boolean; lampDim: number; dawn: number } | null): void;
+  /** A tender moment's small prop (Task 59): "fire" (a low brazier the house's one lamp
+   *  turns to), "tray" (bread and warm milk on a stool), "letter" (folded on the pillow);
+   *  null puts them all away. No second light, so no shader change. */
+  setTender(prop: "fire" | "tray" | "letter" | null): void;
 };
 
 const PLASTER = 0xe9dcc3;
@@ -150,6 +154,72 @@ export function buildHomeHouse(terrainHeight: (x: number, z: number) => number):
   lamp.position.set(tx + 0.1, 0.95, tz);
   group.add(lamp);
   const lampAt = lamp.position.clone();
+  // Tender props (Task 59), built once, hidden until a moment calls for them.
+  const tenderGroup = new THREE.Group();
+  group.add(tenderGroup);
+  const tbox = (parent: THREE.Object3D, w: number, h: number, d: number, mat: THREE.Material, x: number, y: number, z: number) => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    mesh.position.set(x, y, z);
+    parent.add(mesh);
+    return mesh;
+  };
+  // The brazier: a ring of stones, three logs, two small flames, in front of the bed's edge.
+  const fireGroup = new THREE.Group();
+  const fireAt = new THREE.Vector3(0.7, 0, bz + 0.25);
+  fireGroup.position.copy(fireAt);
+  const stone = m(0x8d867a, 0.95);
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    const rock = tbox(fireGroup, 0.16, 0.14, 0.16, stone, Math.cos(a) * 0.3, 0.09, Math.sin(a) * 0.3);
+    rock.rotation.y = a;
+  }
+  for (let i = 0; i < 3; i++) {
+    const log = tbox(fireGroup, 0.4, 0.07, 0.07, m(0x4a3220, 0.9), 0, 0.09 + (i % 2) * 0.06, 0);
+    log.rotation.y = (i / 3) * Math.PI;
+  }
+  const fireMat = new THREE.MeshBasicMaterial({ color: 0xffa040 });
+  const flames: THREE.Mesh[] = [];
+  for (const [fx, fz, fh] of [[0, 0, 0.34], [0.07, -0.05, 0.22]] as const) {
+    const fl = new THREE.Mesh(new THREE.ConeGeometry(0.1, fh, 6), fireMat);
+    fl.position.set(fx, 0.2 + fh / 2, fz);
+    fireGroup.add(fl);
+    flames.push(fl);
+  }
+  fireGroup.visible = false;
+  tenderGroup.add(fireGroup);
+  // The tray: a stool, a wooden tray with a round loaf and a cup of warm milk.
+  const trayGroup = new THREE.Group();
+  trayGroup.position.set(halfW - 1.15, 0, 0.55);
+  const stool = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.17, 0.38, 8), wood);
+  stool.position.y = 0.21;
+  trayGroup.add(stool);
+  tbox(trayGroup, 0.5, 0.03, 0.34, m(0x8a5e38, 0.8), 0, 0.41, 0);
+  const loaf = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), m(0xc88a4a, 0.9));
+  loaf.scale.y = 0.6;
+  loaf.position.set(-0.1, 0.48, 0);
+  trayGroup.add(loaf);
+  const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.09, 8), m(0xe9e1d0, 0.7));
+  cup.position.set(0.11, 0.48, 0.03);
+  trayGroup.add(cup);
+  const milk = new THREE.Mesh(new THREE.CircleGeometry(0.043, 8), m(0xfaf6ec, 0.6));
+  milk.rotation.x = -Math.PI / 2;
+  milk.position.set(0.11, 0.527, 0.03);
+  trayGroup.add(milk);
+  trayGroup.visible = false;
+  tenderGroup.add(trayGroup);
+  // The letter: folded paper on the right-hand pillow, a dot of red wax.
+  const letterGroup = new THREE.Group();
+  letterGroup.position.set(bx + 0.38, HOME_BED.top + 0.115, bz - bd / 2 + 0.26);
+  letterGroup.rotation.y = 0.35;
+  tbox(letterGroup, 0.22, 0.012, 0.15, m(0xf3ead2, 1), 0, 0, 0);
+  const wax = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.012, 8), m(0x8e1f1a, 0.6));
+  wax.position.set(0, 0.012, 0);
+  letterGroup.add(wax);
+  letterGroup.visible = false;
+  tenderGroup.add(letterGroup);
+  let fireOn = false;
+  let fireLevel = 0;
+
   // A rug between the bed and the door.
   const rug = box(1.9, 0.015, 1.3, m(0x6d3b2a, 1), 0.6, 0.05, 0.6);
   rug.castShadow = false;
@@ -175,6 +245,8 @@ export function buildHomeHouse(terrainHeight: (x: number, z: number) => number):
   const lampDawn = new THREE.Vector3(-halfW + 0.5, winY - 0.1, winZ);
   const lampWarm = new THREE.Color(0xffb468);
   const lampMorning = new THREE.Color(0xffe2b8);
+  const fireLamp = new THREE.Vector3(0.7, 0.9, bz + 0.25);
+  const fireWarm = new THREE.Color(0xff8a3c);
   let hush: { doorShut: boolean; lampDim: number; dawn: number } | null = null;
 
   // A shelf on the side wall, for keepsakes.
@@ -255,6 +327,12 @@ export function buildHomeHouse(terrainHeight: (x: number, z: number) => number):
     setHush(next) {
       hush = next;
     },
+    setTender(prop) {
+      fireOn = prop === "fire";
+      fireGroup.visible = fireOn;
+      trayGroup.visible = prop === "tray";
+      letterGroup.visible = prop === "letter";
+    },
     update(dt, walkers, nightMix) {
       // The door opens inward as anyone comes within 3 m of it, inside
       // or out, and closes again behind them (held shut on a night together).
@@ -275,9 +353,12 @@ export function buildHomeHouse(terrainHeight: (x: number, z: number) => number):
       // The morning together: the one light becomes the dawn through the
       // window (no second light, so no shader change), falling on the bed.
       const dawn = hush?.dawn ?? 0;
-      lamp.position.lerpVectors(lampAt, lampDawn, dawn);
-      lamp.color.copy(lampWarm).lerp(lampMorning, dawn);
-      lamp.intensity = (1.2 + nightMix * 4.3) * flicker * lampLevel * (1 - dawn) + dawn * 5.5;
+      // An evening by the fire (Task 59): the same light turns to the brazier.
+      fireLevel += ((fireOn ? 1 : 0) - fireLevel) * Math.min(1, dt * 1.5);
+      for (const [i, fl] of flames.entries()) fl.scale.set(1, 0.85 + 0.25 * Math.sin(performance.now() * (0.013 + i * 0.006)), 1);
+      lamp.position.lerpVectors(lampAt, lampDawn, dawn).lerp(fireLamp, fireLevel);
+      lamp.color.copy(lampWarm).lerp(lampMorning, dawn).lerp(fireWarm, fireLevel * 0.7);
+      lamp.intensity = (1.2 + nightMix * 4.3) * flicker * lampLevel * (1 - dawn) * (1 + fireLevel * 0.5) + dawn * 5.5;
       paneMat.emissiveIntensity = 0.12 + (1 - nightMix) * 0.55 + dawn * 1.6;
       return lit;
     },

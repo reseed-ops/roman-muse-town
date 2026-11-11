@@ -46,6 +46,7 @@ import { runRetrySafe, type RequestIdentity } from "./retrySafe";
 import { saveActions } from "./saveActions";
 import { arrange, readArrangement } from "../../shared/homeDecor";
 import { noteQuietBoat } from "../../shared/quietBoat";
+import { TENDER_KINDS, TENDER_MOMENT_RANK, noteTender, readTender } from "../../shared/tenderMoments";
 import { QUEST_KINDS, acceptQuest, advanceQuest, carryQuest, completeQuest, markCelebrated, readQuestBook, type QuestBook, type QuestKind } from "../../shared/projectQuests";
 import { WEDDING_FIRST_KEY, WEDDING_STEPS, hold as holdWedding, markWeddingCelebrated, prepare as prepareWedding, readWeddingBook, type WeddingBook, type WeddingStep } from "../../shared/romanWedding";
 import { oneTownAtATime, storageOf } from "./storage";
@@ -148,6 +149,8 @@ const stateResponse = z.object({
       weddings: z.number(),
       celebrated: z.boolean(),
     }),
+    /** The tender moments (Task 59; shared/tenderMoments.ts): kinds and counts only. */
+    tender: z.object({ kind: z.literal("tender-moments"), counts: z.record(z.string(), z.number()) }),
     quests: z.array(
       z.object({
         kind: z.enum(QUEST_KINDS),
@@ -1071,6 +1074,7 @@ async function loadEconomyState(ctx: Ctx): Promise<z.infer<typeof economyRespons
       home_decor: readArrangement(rawFlags(purse.flags).home) as Record<string, string>,
       quests: readQuestBook(rawFlags(purse.flags).quests),
       wedding: readWeddingBook(rawFlags(purse.flags).wedding),
+      tender: readTender(rawFlags(purse.flags).tender_moments),
     },
     fish: catchRows.map((row) => ({
       fish_id: row.fishId,
@@ -3425,6 +3429,26 @@ export const Actions = {
     request: z.object({}).extend({ request_id: z.string().uuid().optional() }),
     response: economyResponse,
     handler: (ctx, args) => moveWedding(ctx, args, "celebrateWedding", (book) => markWeddingCelebrated(book)),
+  }),
+
+  noteTenderMoment: defineAction({
+    description: "A tender moment was had (Task 59). Records only a kind and a count in the purse's flags, and only from the terrace kiss's rank; nothing is paid, no date or streak is kept and no schema is touched.",
+    request: z.object({ kind: z.enum(TENDER_KINDS) }).extend({ request_id: z.string().uuid().optional() }),
+    response: economyResponse,
+    async handler(ctx, args) {
+      await withEconomyTransaction(ctx, async (ctx) => {
+        const db = ctx.db<typeof schema>();
+        const rows = await db.select().from(schema.affectionState).where(eq(schema.affectionState.id, 1)).limit(1);
+        if (affectionRank(rows[0]?.points ?? 0) < TENDER_MOMENT_RANK) return;
+        const purse = await loadPurse(ctx);
+        const flags = rawFlags(purse.flags);
+        flags.tender_moments = noteTender(flags.tender_moments, args.kind);
+        purse.flags = JSON.stringify(flags);
+        await savePurse(ctx, purse);
+      }, { requestId: args.request_id, action: "noteTenderMoment", payload: args });
+      ctx.invalidateQueries();
+      return loadEconomyState(ctx);
+    },
   }),
 
   arrangeHome: defineAction({
