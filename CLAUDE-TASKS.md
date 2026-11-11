@@ -623,7 +623,7 @@ Codex reviewed the Task 67 fixes (report town-task67-review-codex.md on the box,
 - Deploys: town unchanged (build 3fcd380304ce, deployment 4a4e1d7b). Bridge: re-staged bridge/ + shared/ with pack.md from pack.example.md (rank 4 placeholder), deployment 014d8a7e SUCCESS; /healthz ok on town.reseed.net and the bridge, /principal/events and /principal/waiting with no auth 401. Not checked live: authenticated stream (owner's token). Details in town-build5-done.md on the box.
 - Open: dispatcher/daemon decision, tended pack and its backup, owner entitlement, pinned builds, a volume for the revision file, town-side idempotency key for ambiguous outcomes.
 
-## Task 69: Cliffside bench area — blue ocean, restored hill with rerouted trail, hill flicker (READY)
+## Task 69: Cliffside bench area — blue ocean, restored hill with rerouted trail, hill flicker (DONE)
 
 Tuan reported Nov 9 evening and Nov 11, 2026: the ocean water is green and looks like grass, the hill on the path to the cliffside bench is gone with ocean where it was, and a hill flickers near the bench. Full brief: town-build6-prompt.md on the box.
 
@@ -632,3 +632,11 @@ Tuan reported Nov 9 evening and Nov 11, 2026: the ocean water is green and looks
 - (3) Flicker: the hill near the bench flickers; diagnose and fix.
 - Process: freshest main, commit separately, push, full suites and typechecks, deploy the town via Railway, verify live. Summary to town-build6-done.md, landing note under Task 69.
 - NOT in scope: anything else (no new assets, no dispatcher, no affection gates, no wedding-pack integration, which is still un-tasked separately; no bridge changes).
+
+### Task 69: landing note (Claude, Nov 11, 2026), built and deployed (town only)
+
+- (1) Ocean: `OCEAN_DAY` 0x2260ae / `OCEAN_NIGHT` exported from `seaCliff.ts` and used by the material and the day/night lerp. The old 0x1f5674 teal turned green under a low sun's warm light (its green channel beat its blue); the new blue stays blue there. Commit 24eb901.
+- (2) Hill and trail: the old hill at (-45, 105) was mostly over the sea, so it is not put back there; `PENINSULA_HILL` (4.2, 84, r 4.4, h 3.4) stands on the peninsula's east half, built into the grass mesh (half-metre cells), and `trailX` bends the trail 3.4 m west round it. Walkers cannot climb it (`walkable`, `nearestWalkable`). Meadow cut (`cutAtCoast`), ships and `clearOfSea` kept; no terrain deleted. Commit 5cdb39b. This reading of "restore the hill" (a hill on the path, on land, not the old footprint) is mine: Tuan to confirm it is the hill meant.
+- (3) Flicker: not reproduced in static software-GL frames; fixed the overlapping layers found in the code: horizon hills were full spheres buried through the meadow disc and outer land (now domes, base ring at -0.3), and the surf and sun/moon paths sat 5-10 cm over the sea (now polygon-offset). Needs Tuan's eyes on a real GPU. Commit 0b8fd69.
+- Tests: root 696 pass, pg 54, typechecks clean (root, bridge). New seaCliff tests: ocean blue, hill on land, trail clear of hill and on the strip, old straight trail under the hill (fails pre-fix), clamp, meadow cut, one-surface grass, dome geometry, depth offsets.
+- Deploy: town build dc7ea2c1ae79, bundle main-aa3jq0m5.js, deployment e405339e SUCCESS (replaces 4a4e1d7b). Bridge unchanged (014d8a7e). /healthz ok on both hosts; the served bundle carries the new ocean colour. Details in town-build6-done.md on the box.
