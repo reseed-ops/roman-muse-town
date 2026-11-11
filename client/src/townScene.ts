@@ -1,7 +1,7 @@
 import { createPlaceFootprints } from "./buildingFootprints";
 import { readArrangement } from "../../shared/homeDecor";
 import { buildHomeHouse } from "./homeHouse";
-import { aimSeaPath, buildSeaCliff, CLIFF, clampToWorld, clearOfSea, HORIZON_HILLS, OCEAN_DAY, OCEAN_NIGHT, walkable as onCliffPath } from "./seaCliff";
+import { aimSeaPath, buildSeaCliff, CLIFF, clampToWorld, clearOfSea, cutAtCoast, HORIZON_HILLS, OCEAN_DAY, OCEAN_NIGHT, walkable as onCliffPath } from "./seaCliff";
 import { QUIET_BOAT_MIN_OUT, QUIET_BOAT_START, beginDrift, boatSeats, driftStep, nextQuietLine, rowBack as rowBackState, type Drift, type QuietBoatState } from "../../shared/quietBoat";
 import { FISHING_BOAT_LENGTH, fishingOut, nextGap, pickFishingSpots, pickShip, planVoyage, SHIPS, shipsSail, voyagePose, watchingSea, type SeaWeather, type ShipKind, type Voyage } from "./seaShips";
 import { createTrueSky, skyDirection, SKY_REFRESH_S } from "./trueSky";
@@ -1694,7 +1694,7 @@ export function createTownScene(
   meadowGeo.rotateX(-Math.PI / 2);
   {
     const p = meadowGeo.attributes.position as THREE.BufferAttribute;
-    for (let i = 0; i < p.count; i++) if (!clearOfSea(p.getZ(i))) p.setZ(i, CLIFF.coastZ);
+    for (let i = 0; i < p.count; i++) p.setZ(i, cutAtCoast(p.getZ(i)));
   }
   const meadow = new THREE.Mesh(meadowGeo, mat(0x5d9a48, { rough: 1 }));
   // Below the lowest ground the town mesh reaches, the gate and the basin.

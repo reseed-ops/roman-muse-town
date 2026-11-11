@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import * as THREE from "three";
-import { buildSeaCliff, CLIFF, OCEAN_DAY, OCEAN_NIGHT, clampToWorld, clearOfSea, HORIZON_HILLS, landOutline, onLand, outwardFromSpine, walkable } from "./seaCliff";
+import { buildSeaCliff, CLIFF, PENINSULA_HILL, TRAIL_HALF, cutAtCoast, hillRise, nearestWalkable, onHill, trailX, OCEAN_DAY, OCEAN_NIGHT, clampToWorld, clearOfSea, HORIZON_HILLS, landOutline, onLand, outwardFromSpine, walkable } from "./seaCliff";
 
 // The sea cliff's geometry (Task 34), pinned off the scene.
 
@@ -52,7 +52,7 @@ test("the horizon hills stay on land, clear of the sea and of the peninsula's tr
     expect(clearOfSea(hz, hr)).toBe(true);
     // Nowhere along the trail or on the headland is under a hill.
     for (let z = CLIFF.walkFromZ; z <= CLIFF.head.z + CLIFF.walkHeadR; z += 2) {
-      const d = Math.hypot(0 - hx, z - hz);
+      const d = Math.hypot(trailX(z) - hx, z - hz);
       const top = d < hr ? hh * Math.sqrt(1 - (d / hr) ** 2) : 0;
       expect(top).toBeLessThan(0.05);
     }
@@ -98,4 +98,76 @@ test("the built ocean material carries that blue", () => {
   const tex = () => new THREE.Texture();
   const sea = buildSeaCliff({ terrainHeight: () => 0, waterNormal: tex(), foamTexture: tex(), pathTexture: tex() });
   expect(sea.oceanMat.color.getHex()).toBe(OCEAN_DAY);
+});
+
+// Task 69: the hill on the way to the bench, and the trail round it.
+
+test("the peninsula's hill stands on land, well clear of the coast and the cliff's edge", () => {
+  const { x, z, r, h } = PENINSULA_HILL;
+  expect(h).toBeGreaterThan(2);
+  expect(hillRise(x, z)).toBeCloseTo(h);
+  for (let i = 0; i < 48; i++) {
+    const a = (i / 48) * Math.PI * 2;
+    // Its whole footprint is peninsula land, past the coast and inside the strip with room to spare.
+    expect(onLand(x + Math.cos(a) * r, z + Math.sin(a) * r)).toBe(true);
+    expect(z + Math.sin(a) * r).toBeGreaterThan(CLIFF.coastZ + 10);
+    expect(Math.abs(x + Math.cos(a) * r)).toBeLessThan(CLIFF.landHalf - 0.3);
+    expect(hillRise(x + Math.cos(a) * r, z + Math.sin(a) * r)).toBeCloseTo(0);
+  }
+  // It is a rise in the grass, not in the sea: nothing rises off the land.
+  for (let px = -20; px <= 20; px += 0.5) for (let pz = CLIFF.coastZ; pz <= 130; pz += 0.5) if (hillRise(px, pz) > 0) expect(onLand(px, pz)).toBe(true);
+});
+
+test("the trail runs west (left) round the hill and never under it", () => {
+  const { x, z, r } = PENINSULA_HILL;
+  expect(trailX(z)).toBeLessThan(x - r); // left of the hill's whole foot
+  for (let pz = CLIFF.pathFromZ; pz <= CLIFF.pathToZ; pz += 0.25) {
+    const c = trailX(pz);
+    for (const dx of [-TRAIL_HALF, 0, TRAIL_HALF]) {
+      expect(hillRise(c + dx, pz)).toBe(0);
+      expect(onHill(c + dx, pz)).toBe(false);
+    }
+    // Still on the walkable strip once on the peninsula, edge to edge.
+    if (pz >= CLIFF.walkFromZ) expect(Math.abs(c) + TRAIL_HALF).toBeLessThanOrEqual(CLIFF.walkHalf);
+  }
+  // It is a bend, not a jump, and it comes back to the bench.
+  for (let pz = CLIFF.pathFromZ; pz < CLIFF.pathToZ; pz += 0.5) expect(Math.abs(trailX(pz + 0.5) - trailX(pz))).toBeLessThan(0.45);
+  expect(Math.abs(trailX(CLIFF.pathToZ) - CLIFF.bench.x)).toBeLessThan(1.5);
+});
+
+test("the old straight trail ran through the hill (the regression this reroute fixes)", () => {
+  const oldX = (z: number) => Math.sin(z * 0.11) * 1.1 * Math.min(1, Math.max(0, (z - 58) / 10));
+  let under = 0;
+  for (let pz = CLIFF.pathFromZ; pz <= CLIFF.pathToZ; pz += 0.25) if (hillRise(oldX(pz), pz) > 0.05) under++;
+  expect(under).toBeGreaterThan(5);
+});
+
+test("walkers do not climb the hill, and the clamp puts nobody inside it", () => {
+  const { x, z } = PENINSULA_HILL;
+  expect(walkable(x, z)).toBe(false);
+  expect(walkable(trailX(z), z)).toBe(true);
+  for (let px = -6; px <= 8; px += 0.5) {
+    for (let pz = z - 8; pz <= z + 8; pz += 0.5) {
+      const p = nearestWalkable(px, pz);
+      expect(walkable(p.x, p.z)).toBe(true);
+    }
+  }
+});
+
+test("the meadow is still cut at the coast", () => {
+  expect(cutAtCoast(10)).toBe(10);
+  expect(cutAtCoast(CLIFF.coastZ)).toBe(CLIFF.coastZ);
+  expect(cutAtCoast(CLIFF.coastZ + 40)).toBe(CLIFF.coastZ);
+  expect(cutAtCoast(170)).toBe(CLIFF.coastZ);
+});
+
+test("the peninsula's grass is one surface: the hill is in its mesh, not a second layer", () => {
+  const tex = () => new THREE.Texture();
+  const sea = buildSeaCliff({ terrainHeight: () => 0, waterNormal: tex(), foamTexture: tex(), pathTexture: tex() });
+  const land = sea.group.children.find((c) => c instanceof THREE.Mesh && (c.material as THREE.MeshStandardMaterial) === sea.landMats[0]) as THREE.Mesh;
+  const pos = land.geometry.attributes.position as THREE.BufferAttribute;
+  let top = -Infinity;
+  for (let i = 0; i < pos.count; i++) top = Math.max(top, pos.getY(i));
+  expect(top).toBeGreaterThan(PENINSULA_HILL.h * 0.9);
+  expect(top).toBeLessThan(PENINSULA_HILL.h + 0.5);
 });

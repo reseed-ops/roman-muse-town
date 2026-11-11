@@ -49,6 +49,11 @@ export function clearOfSea(z: number, r = 0): boolean {
   return z + r <= CLIFF.coastZ;
 }
 
+/** The meadow's z, cut at the coast: the meadow never reaches over the sea. */
+export function cutAtCoast(z: number): number {
+  return clearOfSea(z) ? z : CLIFF.coastZ;
+}
+
 /**
  * The rolling hills on the town's horizon: [x, z, radius, height]. All
  * on land, west, north and east; the south is the sea. (The eastern one
@@ -64,6 +69,44 @@ export const HORIZON_HILLS: readonly (readonly [number, number, number, number])
   [100, 12, 40, 10],
 ];
 
+/**
+ * The hill on the peninsula (Task 69). Before the sea cliff, a horizon
+ * hill stood at (-45, 105) over what is now the headland's western
+ * water; fdd98ce took it out with the sea and the live town lost the
+ * hill on the way to the bench. This one is on land (the strip's east
+ * half, clear of the coast on every side) and is part of the
+ * peninsula's own grass mesh, not a separate sphere through it, so
+ * there is no second surface to fight with the ground. The trail goes
+ * left (west) around it.
+ */
+export const PENINSULA_HILL = { x: 4.2, z: 84, r: 4.4, h: 3.4 } as const;
+
+/** The hill's height above the grass at (x, z): a smooth dome, flat at its rim. */
+export function hillRise(x: number, z: number): number {
+  const t = Math.hypot(x - PENINSULA_HILL.x, z - PENINSULA_HILL.z) / PENINSULA_HILL.r;
+  return t >= 1 ? 0 : PENINSULA_HILL.h * (1 - t * t) ** 2;
+}
+
+/** Is (x, z) on the hill (within `margin` metres of its foot)? */
+export function onHill(x: number, z: number, margin = 0): boolean {
+  return Math.hypot(x - PENINSULA_HILL.x, z - PENINSULA_HILL.z) < PENINSULA_HILL.r + margin;
+}
+
+/** The trail's width: its edges are this far either side of its centre. */
+export const TRAIL_HALF = 0.75;
+
+/**
+ * The trail's centre line at z: a gentle wander, and, round the hill, a
+ * smooth bend west (left) so the hill's foot is never under it.
+ */
+export function trailX(z: number): number {
+  const wander = Math.sin(z * 0.11) * 1.1 * Math.min(1, Math.max(0, (z - 58) / 10));
+  const dz = Math.abs(z - PENINSULA_HILL.z);
+  const full = PENINSULA_HILL.r + 2;
+  const k = dz <= full ? 1 : dz >= full + 16 ? 0 : 0.5 + 0.5 * Math.cos(((dz - full) / 16) * Math.PI);
+  return wander - 3.4 * k;
+}
+
 /** Is (x, z) on the peninsula's land (for meshes)? */
 export function onLand(x: number, z: number): boolean {
   if (z >= CLIFF.coastZ - 0.001 && z <= CLIFF.stripEndZ && Math.abs(x) <= CLIFF.landHalf) return true;
@@ -72,6 +115,7 @@ export function onLand(x: number, z: number): boolean {
 
 /** Is (x, z) where one may walk on the peninsula? */
 export function walkable(x: number, z: number): boolean {
+  if (onHill(x, z, 0.3)) return false;
   if (z >= CLIFF.walkFromZ && z <= CLIFF.head.z && Math.abs(x) <= CLIFF.walkHalf) return true;
   return Math.hypot(x - CLIFF.head.x, z - CLIFF.head.z) <= CLIFF.walkHeadR;
 }
@@ -84,7 +128,20 @@ export function nearestWalkable(x: number, z: number): { x: number; z: number } 
   const dz = z - CLIFF.head.z;
   const d = Math.hypot(dx, dz) || 1;
   const head = { x: CLIFF.head.x + (dx / d) * CLIFF.walkHeadR, z: CLIFF.head.z + (dz / d) * CLIFF.walkHeadR };
-  return Math.hypot(x - strip.x, z - strip.z) <= Math.hypot(x - head.x, z - head.z) ? strip : head;
+  const pick = Math.hypot(x - strip.x, z - strip.z) <= Math.hypot(x - head.x, z - head.z) ? strip : head;
+  if (!onHill(pick.x, pick.z, 0.3)) return pick;
+  // Inside the hill's foot: go out of it by the nearer way, west (the
+  // trail's side) or north or south along the same x.
+  const R = PENINSULA_HILL.r + 0.35;
+  const H = PENINSULA_HILL;
+  const side = Math.sqrt(Math.max(0, R * R - (pick.z - H.z) ** 2));
+  const exits = [
+    { x: H.x - side, z: pick.z },
+    { x: pick.x, z: H.z - Math.sqrt(Math.max(0, R * R - (pick.x - H.x) ** 2)) },
+    { x: pick.x, z: H.z + Math.sqrt(Math.max(0, R * R - (pick.x - H.x) ** 2)) },
+  ].filter((p) => walkable(p.x, p.z));
+  if (!exits.length) return { x: H.x - R, z: H.z };
+  return exits.reduce((a, b) => (Math.hypot(pick.x - b.x, pick.z - b.z) < Math.hypot(pick.x - a.x, pick.z - a.z) ? b : a));
 }
 
 /**
@@ -227,8 +284,9 @@ export function buildSeaCliff(opts: { terrainHeight: (x: number, z: number) => n
     const minX = -CLIFF.head.r - 1;
     const maxX = CLIFF.head.r + 1;
     const maxZ = CLIFF.head.z + CLIFF.head.r + 1;
-    const nx = Math.ceil(maxX - minX);
-    const nz = Math.ceil(maxZ - coastZ);
+    // Half-metre cells, so the hill is a dome and not a pyramid.
+    const nx = Math.ceil(maxX - minX) * 2;
+    const nz = Math.ceil(maxZ - coastZ) * 2;
     const geo = new THREE.PlaneGeometry(maxX - minX, maxZ - coastZ, nx, nz);
     geo.rotateX(-Math.PI / 2);
     const pos = geo.attributes.position as THREE.BufferAttribute;
@@ -240,7 +298,7 @@ export function buildSeaCliff(opts: { terrainHeight: (x: number, z: number) => n
         x = p.x;
         z = Math.max(coastZ, p.z);
       }
-      pos.setXYZ(i, x, h(x, z) + 0.01, z);
+      pos.setXYZ(i, x, h(x, z) + 0.01 + hillRise(x, z), z);
     }
     geo.computeVertexNormals();
     const land = new THREE.Mesh(geo, grass);
@@ -250,13 +308,13 @@ export function buildSeaCliff(opts: { terrainHeight: (x: number, z: number) => n
   // The trail: a worn earth strip from the gate to the bench.
   {
     const len = CLIFF.pathToZ - CLIFF.pathFromZ;
-    const geo = new THREE.PlaneGeometry(1.5, len, 1, Math.ceil(len));
+    const geo = new THREE.PlaneGeometry(TRAIL_HALF * 2, len, 1, Math.ceil(len));
     geo.rotateX(-Math.PI / 2);
     const pos = geo.attributes.position as THREE.BufferAttribute;
     for (let i = 0; i < pos.count; i++) {
       const z = pos.getZ(i) + (CLIFF.pathFromZ + CLIFF.pathToZ) / 2;
-      // A gentle wander, so it reads as a trail, not a road.
-      const x = pos.getX(i) + Math.sin(z * 0.11) * 1.1 * Math.min(1, Math.max(0, (z - 58) / 10));
+      // A gentle wander, so it reads as a trail, not a road, and a bend west round the hill.
+      const x = pos.getX(i) + trailX(z);
       pos.setXYZ(i, x, h(x, z) + 0.035, z);
     }
     geo.computeVertexNormals();
