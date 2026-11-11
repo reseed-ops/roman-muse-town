@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import * as THREE from "three";
-import { buildSeaCliff, CLIFF, PENINSULA_HILL, TRAIL_HALF, cutAtCoast, hillRise, nearestWalkable, onHill, trailX, OCEAN_DAY, OCEAN_NIGHT, clampToWorld, clearOfSea, HORIZON_HILLS, landOutline, onLand, outwardFromSpine, walkable } from "./seaCliff";
+import { buildSeaCliff, CLIFF, HILL_BASE_Y, horizonHillGeometry, PENINSULA_HILL, TRAIL_HALF, cutAtCoast, hillRise, nearestWalkable, onHill, trailX, OCEAN_DAY, OCEAN_NIGHT, clampToWorld, clearOfSea, HORIZON_HILLS, landOutline, onLand, outwardFromSpine, walkable } from "./seaCliff";
 
 // The sea cliff's geometry (Task 34), pinned off the scene.
 
@@ -170,4 +170,36 @@ test("the peninsula's grass is one surface: the hill is in its mesh, not a secon
   for (let i = 0; i < pos.count; i++) top = Math.max(top, pos.getY(i));
   expect(top).toBeGreaterThan(PENINSULA_HILL.h * 0.9);
   expect(top).toBeLessThan(PENINSULA_HILL.h + 0.5);
+});
+
+// Task 69: the flicker. The horizon hills were full spheres whose lower halves
+// lay buried through the meadow disc (-0.6) and the outer land (-0.05), and the
+// surf and the sun's and moon's paths sat 5 to 10 cm over the sea, inside the
+// depth buffer's resolution at a few hundred metres.
+
+test("a horizon hill is a dome with nothing buried below its base", () => {
+  for (const [, , hr, hh] of HORIZON_HILLS) {
+    const g = horizonHillGeometry(hr);
+    const pos = g.attributes.position as THREE.BufferAttribute;
+    let lowest = Infinity;
+    let highest = -Infinity;
+    for (let i = 0; i < pos.count; i++) {
+      lowest = Math.min(lowest, pos.getY(i));
+      highest = Math.max(highest, pos.getY(i));
+    }
+    expect(lowest).toBeGreaterThan(-1e-6); // no lower hemisphere
+    expect(highest * (hh / hr)).toBeCloseTo(hh, 4);
+    // Its base ring is under the outer land (-0.05), so no edge shows and no layer coincides.
+    expect(HILL_BASE_Y).toBeLessThan(-0.05);
+    expect(HILL_BASE_Y).toBeGreaterThan(-0.6 + 0.1); // and above the meadow disc, not on it
+  }
+});
+
+test("the surf and the light paths are offset in depth from the sea they lie on", () => {
+  const tex = () => new THREE.Texture();
+  const sea = buildSeaCliff({ terrainHeight: () => 0, waterNormal: tex(), foamTexture: tex(), pathTexture: tex() });
+  for (const m of [sea.foamMat, sea.moonPath.material as THREE.Material, sea.sunPath.material as THREE.Material]) {
+    expect(m.polygonOffset).toBe(true);
+    expect(m.polygonOffsetFactor).toBeLessThan(0);
+  }
 });

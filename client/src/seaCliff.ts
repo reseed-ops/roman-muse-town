@@ -49,6 +49,23 @@ export function clearOfSea(z: number, r = 0): boolean {
   return z + r <= CLIFF.coastZ;
 }
 
+/**
+ * A horizon hill's base ring sits at this y, below the outer land (-0.05)
+ * and the meadow's disc is lower still (-0.6): the dome rises out of the
+ * land, and nothing of it lies buried in or coplanar with another layer.
+ */
+export const HILL_BASE_Y = -0.3;
+
+/**
+ * A horizon hill's geometry: the upper half of a sphere only, base ring
+ * at y 0 (the scene puts it at HILL_BASE_Y). The old full sphere buried
+ * its lower half through the meadow disc, the outer land and, near the
+ * coast, the cliff top: layers of surface that flickered at distance.
+ */
+export function horizonHillGeometry(r: number): THREE.SphereGeometry {
+  return new THREE.SphereGeometry(r, 20, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+}
+
 /** The meadow's z, cut at the coast: the meadow never reaches over the sea. */
 export function cutAtCoast(z: number): number {
   return clearOfSea(z) ? z : CLIFF.coastZ;
@@ -357,7 +374,7 @@ export function buildSeaCliff(opts: { terrainHeight: (x: number, z: number) => n
   ocean.position.set(0, seaY, 300);
   group.add(ocean);
   // Surf at the cliff's foot: a pale band that swells and falls.
-  const foamMat = new THREE.MeshBasicMaterial({ color: 0xf2f6f8, map: opts.foamTexture, transparent: true, opacity: 0.5, depthWrite: false });
+  const foamMat = new THREE.MeshBasicMaterial({ color: 0xf2f6f8, map: opts.foamTexture, transparent: true, opacity: 0.5, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
   {
     const band = (pts: { x: number; z: number }[], out: (p: { x: number; z: number }) => { x: number; z: number }) => {
       const positions: number[] = [];
@@ -388,13 +405,13 @@ export function buildSeaCliff(opts: { terrainHeight: (x: number, z: number) => n
   const pathTex = opts.pathTexture;
   const moonPath = new THREE.Mesh(
     new THREE.PlaneGeometry(14, 150),
-    new THREE.MeshBasicMaterial({ color: 0xdceaff, map: pathTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }),
+    new THREE.MeshBasicMaterial({ color: 0xdceaff, map: pathTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }),
   );
   moonPath.rotation.x = -Math.PI / 2;
   moonPath.position.y = seaY + 0.1;
   const sunPath = new THREE.Mesh(
     new THREE.PlaneGeometry(18, 170),
-    new THREE.MeshBasicMaterial({ color: 0xffb46a, map: pathTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }),
+    new THREE.MeshBasicMaterial({ color: 0xffb46a, map: pathTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }),
   );
   sunPath.rotation.x = -Math.PI / 2;
   sunPath.position.y = seaY + 0.09;

@@ -1,7 +1,7 @@
 import { createPlaceFootprints } from "./buildingFootprints";
 import { readArrangement } from "../../shared/homeDecor";
 import { buildHomeHouse } from "./homeHouse";
-import { aimSeaPath, buildSeaCliff, CLIFF, clampToWorld, clearOfSea, cutAtCoast, HORIZON_HILLS, OCEAN_DAY, OCEAN_NIGHT, walkable as onCliffPath } from "./seaCliff";
+import { aimSeaPath, buildSeaCliff, CLIFF, clampToWorld, clearOfSea, cutAtCoast, HILL_BASE_Y, HORIZON_HILLS, horizonHillGeometry, OCEAN_DAY, OCEAN_NIGHT, walkable as onCliffPath } from "./seaCliff";
 import { QUIET_BOAT_MIN_OUT, QUIET_BOAT_START, beginDrift, boatSeats, driftStep, nextQuietLine, rowBack as rowBackState, type Drift, type QuietBoatState } from "../../shared/quietBoat";
 import { FISHING_BOAT_LENGTH, fishingOut, nextGap, pickFishingSpots, pickShip, planVoyage, SHIPS, shipsSail, voyagePose, watchingSea, type SeaWeather, type ShipKind, type Voyage } from "./seaShips";
 import { createTrueSky, skyDirection, SKY_REFRESH_S } from "./trueSky";
@@ -1705,9 +1705,12 @@ export function createTownScene(
   // the peninsula's trail and sat in the sea).
   for (const [hx, hz, hr, hh] of HORIZON_HILLS) {
     if (!clearOfSea(hz, hr)) continue;
-    const hill = new THREE.Mesh(new THREE.SphereGeometry(hr, 20, 12), mat(0x5c9450, { rough: 1 }));
+    // A dome only (Task 69): the old full sphere buried its lower half
+    // through the meadow disc and the outer land, layers that flickered
+    // at distance. The base ring sits under the outer land, never seen.
+    const hill = new THREE.Mesh(horizonHillGeometry(hr), mat(0x5c9450, { rough: 1 }));
     hill.scale.y = hh / hr;
-    hill.position.set(hx, 0, hz);
+    hill.position.set(hx, HILL_BASE_Y, hz);
     world.add(hill);
   }
   // A soft distant tree line, on land only.
