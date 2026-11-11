@@ -120,10 +120,15 @@ export type TenantRegistryOptions = {
   claimMs: number;
   /**
    * Durable revision state for one town (Task 70), keyed by the sha256 hex of its visitor key.
-   * Without it, or when it fails, the registry still keeps each town's mark in memory, so a desk
-   * recreated after idle eviction stays above the one it replaces; only a restart needs the store.
+   * Without it, or when it fails, the registry keeps each town's mark in memory (up to 5,000 towns,
+   * least recently used desk first out; a town with an awake desk is never dropped), so a desk
+   * recreated after idle eviction stays above the one it replaces while its mark is retained. Past
+   * that bound, or after a restart, the order rests on the store: a healthy per-town file keeps it,
+   * and without one a recreated desk falls back to the clock seed alone.
    */
   revisionStoreFor?: (id: string) => { load(): number; save(high: number): void };
+  /** Towns whose marks are kept in memory (default 5000). */
+  markCap?: number;
   idleMs?: number;
   now?: () => number;
   log?: (line: string) => void;
@@ -150,8 +155,17 @@ export function createTenantRegistry(opts: TenantRegistryOptions): TenantRegistr
   const log = opts.log ?? (() => {});
   const towns = new Map<string, { desk: PrincipalDesk; channel: DirectorChannel; lastUse: number; label: string }>();
   const generations = new Map<string, { at: number; generation: number | null }>();
-  // Task 70: each town's revision mark outlives its desk's eviction (bounded; the stalest goes first).
+  // Task 72 (Task 70): each town's revision mark outlives its desk's eviction. Bounded at MARK_CAP;
+  // ordered by last desk use (deskFor refreshes it), and a town with an awake desk is never evicted.
   const marks = new Map<string, number>();
+  const MARK_CAP = opts.markCap ?? 5000;
+  const touchMark = (id: string) => {
+    const m = marks.get(id);
+    if (m !== undefined) {
+      marks.delete(id);
+      marks.set(id, m);
+    }
+  };
   const storeFor = (id: string) => {
     let durable: { load(): number; save(high: number): void } | undefined;
     try {
@@ -171,7 +185,13 @@ export function createTenantRegistry(opts: TenantRegistryOptions): TenantRegistr
       },
       save: (high: number) => {
         marks.delete(id);
-        if (marks.size >= 5000) marks.delete(marks.keys().next().value as string);
+        if (marks.size >= MARK_CAP) {
+          for (const k of marks.keys()) {
+            if (towns.has(k)) continue; // an awake desk's mark stays
+            marks.delete(k);
+            break;
+          }
+        }
         marks.set(id, high);
         durable?.save(high); // a throw is logged by the desk; the memory mark is already kept
       },
@@ -219,6 +239,7 @@ export function createTenantRegistry(opts: TenantRegistryOptions): TenantRegistr
         log(`tenants: town ${label} awake (${towns.size} awake)`);
       }
       town.lastUse = now();
+      touchMark(id);
       return town.desk;
     },
     async observeAll() {

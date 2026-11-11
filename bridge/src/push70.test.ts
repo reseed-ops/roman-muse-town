@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createFakeChannel } from "./fakeChannel.js";
 import { createPrincipalDesk } from "./principal.js";
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync as rf, writeFileSync as wf } from "node:fs";
 import { fileRevisionStore, tenantRevisionPath } from "./revisionFiles.js";
 import type { VisitTelemetry } from "../../shared/visitProtocol.js";
 import { createLineTimer, createStreamWriter } from "./streamGuard.js";
@@ -113,6 +115,72 @@ test("5. the file store writes atomically, reads back, and the tenant path holds
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("5b. a failed replacement keeps the previous valid file (temp write, then rename)", () => {
+  const dir = mkdtempSync(join(tmpdir(), "rev72-"));
+  try {
+    const path = join(dir, "m.json");
+    fileRevisionStore(path).save(100);
+    const seen: string[] = [];
+    // failure during the rename: the whole temp file was written, the target must be untouched
+    const failRename = fileRevisionStore(path, { writeFileSync: (p: any, d: any) => (seen.push(String(p)), wf(p, d)), renameSync: () => { throw new Error("EXDEV"); } } as any);
+    expect(() => failRename.save(200)).toThrow("EXDEV");
+    expect(seen).toEqual([`${path}.tmp`]); // written beside, never to the target itself
+    expect(fileRevisionStore(path).load()).toBe(100);
+    expect(existsSync(`${path}.tmp`)).toBe(false);
+    // failure mid-write: half the bytes reach the temp file; the target is untouched
+    const failWrite = fileRevisionStore(path, { writeFileSync: (p: any, d: any) => { wf(p, String(d).slice(0, 4)); throw new Error("ENOSPC"); }, renameSync: () => { throw new Error("not reached"); } } as any);
+    expect(() => failWrite.save(300)).toThrow("ENOSPC");
+    expect(rf(path, "utf8")).toBe('{"high":100}');
+    expect(existsSync(`${path}.tmp`)).toBe(false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("5c. end to end: the registry names a town's file by the sha256 of its key, and the key is nowhere on disk", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "rev72-"));
+  try {
+    const base = join(dir, "revision.json");
+    const w = world({ revisionStoreFor: (id) => fileRevisionStore(tenantRevisionPath(base, id)) });
+    await churn(w, A, 3);
+    const names = readdirSync(`${base}.towns`);
+    expect(names).toEqual([`${createHash("sha256").update(A).digest("hex")}.json`]);
+    for (const n of names) expect(rf(join(`${base}.towns`, n), "utf8").includes(A)).toBe(false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+const filler = (i: number) => `filler-${i}-`.padEnd(30, "x");
+
+test("2b. cache pressure (Codex's case): an awake or retained mark holds; an evicted one falls back to the clock", async () => {
+  const noDisk = () => { throw new Error("no disk"); };
+  // A is reserved first, then used last: with many towns about, its mark is not evicted ahead of idle ones
+  const w = world({ revisionStoreFor: noDisk, markCap: 5 }, { t: 5000 });
+  const top = await churn(w, A, 3);
+  for (let i = 0; i < 20; i++) { w.registry.deskFor(filler(i)).marker(); w.clock.t += 1; }
+  expect(w.registry.size()).toBe(21); // all awake: nothing awake is evicted, the cap yields to them
+  w.clock.t += 61_000;
+  await w.registry.observeAll(); // every desk idles out; their marks (21 > cap 5) stay until a save needs room
+  expect(w.registry.size()).toBe(0);
+  w.clock.t = 100;
+  expect(w.registry.deskFor(A).marker().rev!).toBeGreaterThan(top);
+});
+
+test("2c. past the cap, the least recently used idle town's mark is the one dropped", async () => {
+  const noDisk = () => { throw new Error("no disk"); };
+  const w = world({ revisionStoreFor: noDisk, markCap: 3 }, { t: 5000 });
+  const topA = await churn(w, A, 3);
+  w.clock.t += 61_000;
+  await w.registry.observeAll(); // A idles out
+  expect(w.registry.size()).toBe(0);
+  for (let i = 0; i < 4; i++) { w.registry.deskFor(filler(i)).marker(); w.clock.t += 1; await w.registry.observeAll(); }
+  w.clock.t += 61_000;
+  await w.registry.observeAll(); // fillers idle out; only 3 marks fit
+  w.clock.t = 100;
+  expect(w.registry.deskFor(A).marker().rev!).toBeLessThan(topA); // the stated fallback: the clock
 });
 
 // ---- timing through coalescing ----
