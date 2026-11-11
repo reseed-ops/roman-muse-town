@@ -47,6 +47,7 @@ import { saveActions } from "./saveActions";
 import { arrange, readArrangement } from "../../shared/homeDecor";
 import { noteQuietBoat } from "../../shared/quietBoat";
 import { QUEST_KINDS, acceptQuest, advanceQuest, carryQuest, completeQuest, markCelebrated, readQuestBook, type QuestBook, type QuestKind } from "../../shared/projectQuests";
+import { WEDDING_FIRST_KEY, WEDDING_STEPS, hold as holdWedding, markWeddingCelebrated, prepare as prepareWedding, readWeddingBook, type WeddingBook, type WeddingStep } from "../../shared/romanWedding";
 import { oneTownAtATime, storageOf } from "./storage";
 
 /** Every town action runs one at a time per town (storage.ts). */
@@ -141,6 +142,12 @@ const stateResponse = z.object({
     /** Their home's keepsakes, slot -> keepsake (Task 40; shared/homeDecor.ts). */
     home_decor: z.record(z.string(), z.string()),
     /** The real-project quests on the basilica's board (Task 56; shared/projectQuests.ts): kind, stage, steps and a count only. */
+    /** The Roman wedding quest (Task 58; shared/romanWedding.ts): preparations done, the day held once, its celebration played. */
+    wedding: z.object({
+      steps: z.array(z.enum(WEDDING_STEPS)),
+      weddings: z.number(),
+      celebrated: z.boolean(),
+    }),
     quests: z.array(
       z.object({
         kind: z.enum(QUEST_KINDS),
@@ -973,6 +980,40 @@ const economyResponse = stateResponse.pick({
   summit: true, phoenix: true,
 });
 
+/** One move of the Roman wedding (Task 58), kept in the purse's flags beside the quests:
+ *  no schema, no payment. Holding the day also records "wedding" among the durable firsts
+ *  (once, in the same transaction), the way the first night is recorded. */
+async function moveWedding(
+  ctx: Ctx,
+  args: { request_id?: string },
+  action: string,
+  move: (book: WeddingBook, rank: number) => WeddingBook,
+): Promise<z.infer<typeof economyResponse>> {
+  await withEconomyTransaction(ctx, async (ctx) => {
+    const db = ctx.db<typeof schema>();
+    const rows = await db.select().from(schema.affectionState).where(eq(schema.affectionState.id, 1)).limit(1);
+    const rank = affectionRank(rows[0]?.points ?? 0);
+    const purse = await loadPurse(ctx);
+    const flags = rawFlags(purse.flags);
+    const before = readWeddingBook(flags.wedding);
+    const after = move(before, rank);
+    flags.wedding = after;
+    purse.flags = JSON.stringify(flags);
+    await savePurse(ctx, purse);
+    if (after.weddings > before.weddings) {
+      const dating = await loadDating(ctx);
+      const firsts = parseStringMap(dating.firsts);
+      if (!firsts[WEDDING_FIRST_KEY]) {
+        firsts[WEDDING_FIRST_KEY] = utcDayKey(new Date());
+        dating.firsts = JSON.stringify(firsts);
+        await saveDating(ctx, dating);
+      }
+    }
+  }, { requestId: args.request_id, action, payload: args });
+  ctx.invalidateQueries();
+  return loadEconomyState(ctx);
+}
+
 /** One move of a real-project quest (Task 56), kept in the purse's flags
  *  beside the home's arrangement: no schema, no payment, a kind and a count. */
 async function moveQuest(
@@ -1029,6 +1070,7 @@ async function loadEconomyState(ctx: Ctx): Promise<z.infer<typeof economyRespons
       seeds: purse.seeds,
       home_decor: readArrangement(rawFlags(purse.flags).home) as Record<string, string>,
       quests: readQuestBook(rawFlags(purse.flags).quests),
+      wedding: readWeddingBook(rawFlags(purse.flags).wedding),
     },
     fish: catchRows.map((row) => ({
       fish_id: row.fishId,
@@ -3362,6 +3404,27 @@ export const Actions = {
       ctx.invalidateQueries();
       return loadEconomyState(ctx);
     },
+  }),
+
+  prepareWedding: defineAction({
+    description: "One preparation for the Roman wedding (Task 58): flowers, then vows, then dress, in that order only, from the terrace kiss's rank. Anything out of order, repeated or too early changes nothing. Pays nothing.",
+    request: z.object({ step: z.enum(WEDDING_STEPS) }).extend({ request_id: z.string().uuid().optional() }),
+    response: economyResponse,
+    handler: (ctx, args) => moveWedding(ctx, args, "prepareWedding", (book, rank) => prepareWedding(book, args.step as WeddingStep, rank)),
+  }),
+
+  holdWedding: defineAction({
+    description: "Hold the Roman wedding day (Task 58), once only and only after every preparation: records the day among the durable firsts (key 'wedding') and owes the celebration. A second call changes nothing. Pays nothing.",
+    request: z.object({}).extend({ request_id: z.string().uuid().optional() }),
+    response: economyResponse,
+    handler: (ctx, args) => moveWedding(ctx, args, "holdWedding", holdWedding),
+  }),
+
+  celebrateWedding: defineAction({
+    description: "The town has played the wedding's celebration; it will not play again (Task 58).",
+    request: z.object({}).extend({ request_id: z.string().uuid().optional() }),
+    response: economyResponse,
+    handler: (ctx, args) => moveWedding(ctx, args, "celebrateWedding", (book) => markWeddingCelebrated(book)),
   }),
 
   arrangeHome: defineAction({

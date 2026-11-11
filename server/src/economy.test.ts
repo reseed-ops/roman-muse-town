@@ -383,3 +383,57 @@ describe("Task 57: a quiet drift on the lake leaves a kind and a count only", ()
   });
 });
 
+
+describe("Task 58: a Roman wedding is kept as a kind and a count, and as a durable first", () => {
+  const flagsOf = () => JSON.parse(row<{ flags: string }>("SELECT flags FROM purse_state").flags) as Record<string, unknown>;
+  const firsts = () => JSON.parse(row<{ firsts: string }>("SELECT firsts FROM dating_state").firsts) as Record<string, string>;
+  const rank = (r: number) => sqlite.run("INSERT OR REPLACE INTO affection_state (id, points) VALUES (1, ?)", [r * 100]);
+  const prepareAll = async () => {
+    await call("prepareWedding", { step: "flowers" });
+    await call("prepareWedding", { step: "vows" });
+    return call("prepareWedding", { step: "dress" });
+  };
+
+  test("below the terrace kiss's rank nothing moves; at it the chain runs in order and only in order", async () => {
+    seedPurse(20);
+    rank(6);
+    expect((await call("prepareWedding", { step: "flowers" })).purse.wedding.steps).toEqual([]);
+    rank(7);
+    await expect(call("prepareWedding", { step: "feast" })).rejects.toThrow();
+    expect((await call("prepareWedding", { step: "dress" })).purse.wedding.steps).toEqual([]);
+    expect((await call("holdWedding")).purse.wedding.weddings).toBe(0);
+    expect((await prepareAll()).purse.wedding.steps).toEqual(["flowers", "vows", "dress"]);
+    expect(row<{ firsts: string } | null>("SELECT firsts FROM dating_state")?.firsts ?? "{}").toBe("{}");
+  });
+
+  test("holding the day once records it among the durable firsts, pays nothing, and a second try or a retried id changes nothing", async () => {
+    seedPurse(20);
+    rank(8);
+    sqlite.run(`UPDATE purse_state SET flags = '{"award:x":true,"home":{"floor":"tree-cutting"}}'`);
+    await prepareAll();
+    const id = crypto.randomUUID();
+    const held = await call("holdWedding", { request_id: id });
+    expect(held.purse.wedding).toMatchObject({ weddings: 1, celebrated: false });
+    expect(Object.keys(firsts())).toEqual(["wedding"]);
+    expect(firsts().wedding).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    sqlite.run(`UPDATE dating_state SET firsts = '{"wedding":"2026-01-01","night":"2026-02-02"}'`);
+    await call("holdWedding", { request_id: id });
+    const again = await call("holdWedding");
+    expect(again.purse.wedding.weddings).toBe(1);
+    expect(firsts()).toEqual({ wedding: "2026-01-01", night: "2026-02-02" });
+    expect((await call("prepareWedding", { step: "flowers" })).purse.wedding.weddings).toBe(1);
+    await call("celebrateWedding");
+    const after = await call("celebrateWedding");
+    expect(after.purse.wedding).toMatchObject({ weddings: 1, celebrated: true, steps: ["flowers", "vows", "dress"] });
+    expect(row<{ denarii: number }>("SELECT denarii FROM purse_state").denarii).toBe(20);
+    expect(flagsOf()["award:x"]).toBe(true);
+    expect(flagsOf().home).toEqual({ floor: "tree-cutting" });
+    expect(Object.keys(flagsOf().wedding as object).sort()).toEqual(["celebrated", "steps", "weddings"]);
+  });
+
+  test("the wedding-hands keepsake can be placed on the shelf", async () => {
+    seedPurse(0);
+    const state = await call("arrangeHome", { slot: "shelf-left", keepsake: "wedding-hands" });
+    expect(state.purse.home_decor).toEqual({ "shelf-left": "wedding-hands" });
+  });
+});

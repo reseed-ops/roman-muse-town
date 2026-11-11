@@ -228,6 +228,8 @@ import { HistoryBook, lessonForPlace, TownStoryTag } from "./HistoryBook";
 import { HomePanel } from "./HomePanel";
 import { earnedKeepsakes } from "./homeKeepsakes";
 import { QuestBoard } from "./QuestBoard";
+import { WeddingBoard } from "./WeddingBoard";
+import { WEDDING_CELEBRATION_LINE, readWeddingBook, type WeddingStep } from "../../shared/romanWedding";
 import { QUIET_BOAT_BEGIN_LINE, QUIET_BOAT_RETURN_LINES, DRIFT_PROMPT, ROW_BACK_PROMPT, quietBoatBlocked } from "../../shared/quietBoat";
 import { questDef, type QuestRecord } from "../../shared/projectQuests";
 import { readArrangement } from "../../shared/homeDecor";
@@ -1351,7 +1353,7 @@ export function App() {
   const followupShownRef = useRef(false);
   const appointmentMetRef = useRef(false);
   const affectionRank = state.data?.affection.rank ?? 0;
-  const purse = state.data?.purse ?? { denarii: 0, upgrades: [], ingredients: [], dishes: [], seeds: 0, home_decor: {}, quests: [] };
+  const purse = state.data?.purse ?? { denarii: 0, upgrades: [], ingredients: [], dishes: [], seeds: 0, home_decor: {}, quests: [], wedding: { steps: [], weddings: 0, celebrated: true } };
   // Their home's keepsakes, into the scene whenever the arrangement changes (Task 40).
   const homeDecorKey = JSON.stringify(purse.home_decor);
   useEffect(() => {
@@ -1377,6 +1379,21 @@ export function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [questsKey, sceneReady, drifting]);
+  // The Roman wedding (Task 58): the town is dressed from the dressing until the
+  // day is held; the celebration plays once, then the dressing comes down.
+  const weddingKey = JSON.stringify(purse.wedding);
+  const weddingPlayingRef = useRef(false);
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene || !sceneReady) return;
+    if (scene.setWedding(JSON.parse(weddingKey)) && !weddingPlayingRef.current) {
+      weddingPlayingRef.current = true;
+      scene.celebrateWedding();
+      setMuseBubble({ lines: paginateLines([WEDDING_CELEBRATION_LINE]), index: 0, cycle: false, invite: false, choice: null });
+      celebrateWedding.mutate(undefined, { onSettled: () => (weddingPlayingRef.current = false) });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weddingKey, sceneReady]);
   const gardenStage = !state.data?.garden.planted_on
     ? 0
     : state.data.garden.water_days >= 3
@@ -1620,6 +1637,22 @@ export function App() {
   });
   const celebrateQuest = useMutation({
     mutationFn: (kind: QuestRecord["kind"]) => api.celebrateQuest({ kind }),
+    onSuccess: applyState,
+  });
+  const prepareWedding = useMutation({
+    mutationFn: (step: WeddingStep) => api.prepareWedding({ step }),
+    onSuccess: applyState,
+  });
+  const holdWedding = useMutation({
+    mutationFn: () => api.holdWedding({}),
+    onSuccess: (data) => {
+      applyState(data);
+      // The day is also a durable first in the town's story: fetch the full state so the keepsake appears.
+      void api.getState({}).then(applyState).catch(() => {});
+    },
+  });
+  const celebrateWedding = useMutation({
+    mutationFn: () => api.celebrateWedding({}),
     onSuccess: applyState,
   });
   const arrangeHome = useMutation({
@@ -8592,6 +8625,15 @@ export function App() {
           <p className="mt-3 text-[12px] leading-relaxed text-white/50 italic">
             Muse keeps this board current from beyond the town walls, town edit by town edit.
           </p>
+          <WeddingBoard
+            book={readWeddingBook(purse.wedding)}
+            rank={affectionRank}
+            busy={prepareWedding.isPending || holdWedding.isPending}
+            offerIndex={new Date().getDate()}
+            onPrepare={(step) => prepareWedding.mutate(step)}
+            onHold={() => holdWedding.mutate()}
+            onHistory={() => openHistoryFor("wedding")}
+          />
           <QuestBoard quests={purse.quests} busy={acceptQuest.isPending} offerIndex={new Date().getDate()} onAccept={(kind) => acceptQuest.mutate(kind)} />
           <div className="mt-3 border-t border-white/10 pt-3">
             <h3 className="text-sm font-bold text-[#ffd34e]">🏛️ Town upgrades: spend denarii, keep forever</h3>

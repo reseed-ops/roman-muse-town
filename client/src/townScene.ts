@@ -64,6 +64,8 @@ import { HOME } from "./town";
 import { createCritters, type XZ } from "./townCritters";
 import { buildAthenaTemple, buildLucretia } from "./tributes";
 import { createQuestScene } from "./projectQuests";
+import { createWeddingScene } from "./romanWedding";
+import { readWeddingBook } from "../../shared/romanWedding";
 import { readQuestBook, type CelebrationKind, type QuestKind } from "../../shared/projectQuests";
 import { FIREFLY_PLACES_MAX, fireflyPlaceAt, fireflyPlacesBudget } from "./fireflyPlaces";
 import { FEEL } from "./feel";
@@ -295,6 +297,10 @@ export interface TownSceneHandle {
   setQuests: (book: unknown) => QuestKind[];
   /** Play one quest celebration in town. */
   celebrateQuest: (kind: CelebrationKind) => void;
+  /** The wedding day (Task 58): dress or undress the town from the book; true when the celebration is owed. */
+  setWedding: (book: unknown) => boolean;
+  /** Play the wedding's celebration (the dressing stays up for it, then comes down). */
+  celebrateWedding: () => void;
   /** A = jump, B = slide (or stand up from a bench), X = sit on a seat
    *  within reach, stand if seated, otherwise wave. */
   pad2Press: (button: "a" | "b" | "x", source: Pad2Source) => void;
@@ -4857,6 +4863,8 @@ export function createTownScene(
   // the bed's edge joins the benches, a seat for two.
   const questScene = createQuestScene();
   world.add(questScene.group);
+  const weddingScene = createWeddingScene();
+  world.add(weddingScene.group);
   const homeHouse = buildHomeHouse(terrainHeight);
   world.add(homeHouse.group);
   const terraceRot = Math.atan2(-SECRET.position[0], -SECRET.position[1]);
@@ -12625,6 +12633,7 @@ export function createTownScene(
           seaShips.update(t, dt, { x: vx, z: vz }, { nightMix, storm: weatherId === "storm", fog: weatherId === "fog" }, skyAzimDeg < 180);
           // Their house: the door swings for whoever comes near, the lamp warms at night.
           questScene.update(dt, t);
+          weddingScene.update(dt, t);
           if (homeHouse.update(dt, walking ? [walkPos, museGroup.position] : [museGroup.position], nightMix)) playLampIgnite();
           // At the headland together for the first time this visit, she says one quiet thing.
           if (!cliffGreeted && walking && followMode && Math.hypot(walkPos.x - CLIFF.head.x, walkPos.z - CLIFF.head.z) < 6) {
@@ -13296,6 +13305,8 @@ export function createTownScene(
     setHomeDecor: (arrangement) => homeHouse.setDecor(readArrangement(arrangement)),
     setQuests: (book) => questScene.setBook(readQuestBook(book)).celebrations,
     celebrateQuest: (kind) => questScene.celebrate(kind),
+    setWedding: (book) => weddingScene.setBook(readWeddingBook(book)),
+    celebrateWedding: () => weddingScene.celebrate(),
     setPad2Move: (x: number, y: number, source) => {
       // A fresh human input outranks a director's channel while it lasts.
       if (source === "director" && pad2Source !== "director" && pad2Live(pad2LastInputAt, clock.getElapsedTime())) return;

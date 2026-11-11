@@ -354,6 +354,25 @@ export const HISTORY_LESSONS: HistoryLesson[] = [
       "The statue is the town's own. No ancient portrait of Lucretia is known, so her figure, the rose at her feet and her place in the forum garden, facing the evening light, are invented: a tribute, not a copy.",
   },
   {
+    id: "roman-wedding",
+    placeId: "wedding",
+    title: "A Roman wedding",
+    period: "Customs of the late Republic and early Empire, about 100 BC to AD 200",
+    text:
+      "Roman law made a marriage by consent and the intent to live as husband and wife, not by a ceremony, so the rites were custom rather than requirement. " +
+      "The bride wore a belted tunic and a veil of flame colour, the flammeum, over a wreath; Catullus 61 sings of marjoram and the veil. " +
+      "A matron married only once, the pronuba, is shown joining the couple's right hands (the dextrarum iunctio) in Roman art. Plutarch reports the bride saying 'Ubi tu Gaius, ego Gaia', 'Where you are Gaius, I am Gaia', though how often it was spoken is uncertain. " +
+      "At evening she was led by torchlight to the groom's house, the deductio, with teasing songs; at the door she anointed the posts and, by one old custom, was lifted over the threshold.",
+    sources: [
+      { cite: "Susan Treggiari, Roman Marriage: Iusti Coniuges from the Time of Cicero to the Time of Ulpian (Oxford, 1991), chapters 4 and 5" },
+      { cite: "Plutarch, Roman Questions 2, 29, 30 and 31 (the torches, the threshold, 'Gaia', and the wedding cry), as the Questions are numbered" },
+      { cite: "Catullus, Poems 61 and 62 (the wedding hymns: the veil, marjoram, the torches, the procession)" },
+      { cite: "Festus, On the Meaning of Words (as epitomised by Paulus), entries on Roman wedding customs, for example on the pretended seizure of the bride" },
+    ],
+    townNote:
+      "Gaius and Aelia are already married in the town's story, so the wedding is a renewal of vows in Roman form. The town shortens the day: a real wedding began at the bride's family home, took place in the evening, and needed no priest. Which rites were common and which only literary or local is not always certain, and the town's pronuba and procession are invented.",
+  },
+  {
     id: "minerva",
     placeId: "athena",
     title: "Athena, called Minerva in Rome",

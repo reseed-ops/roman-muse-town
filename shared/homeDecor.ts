@@ -31,6 +31,7 @@ export const HOME_KEEPSAKES = [
   { id: "harvest-basket", label: "A basket from the garden", mount: "floor", earnedBy: "a harvest from the garden" },
   { id: "tree-cutting", label: "A cutting of the Town Tree, potted", mount: "floor", earnedBy: "watering the Town Tree seven times" },
   { id: "first-coin", label: "The first coin, from the shop", mount: "shelf", earnedBy: "the first sale at the Etsy shop quest" },
+  { id: "wedding-hands", label: "The clasped hands, from their wedding day", mount: "shelf", earnedBy: "the day the town marked their marriage in Roman form" },
   { id: "night-lamp", label: "The lamp they kept lit", mount: "shelf", earnedBy: "their first night together" },
 ] as const satisfies readonly { id: string; label: string; mount: HomeMount; earnedBy: string }[];
 

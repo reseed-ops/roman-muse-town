@@ -364,6 +364,17 @@ export function buildKeepsake(id: HomeKeepsakeId): THREE.Group {
       add(new THREE.SphereGeometry(0.022, 8, 6), m(0xffc46b, { emissive: 0xffa040, emissiveIntensity: 1.4 }), 0.14, 0.1, 0).scale.y = 1.6;
       break;
     }
+    case "wedding-hands": {
+      // Two clasped bronze hands on a small stone base: the dextrarum iunctio of
+      // Roman wedding art (Task 58). No garland: the town takes those down.
+      add(new THREE.CylinderGeometry(0.1, 0.12, 0.04, 12), m(0x8d8576), 0, 0.02, 0);
+      const bronze = m(0xb08d57, { metalness: 0.55, roughness: 0.4 });
+      add(new THREE.BoxGeometry(0.16, 0.06, 0.07), bronze, 0, 0.09, 0).rotation.y = 0.2;
+      add(new THREE.BoxGeometry(0.16, 0.05, 0.06), bronze, 0.01, 0.12, 0.01).rotation.y = -0.2;
+      add(new THREE.CylinderGeometry(0.03, 0.04, 0.05, 8), bronze, -0.1, 0.1, 0).rotation.z = Math.PI / 2;
+      add(new THREE.CylinderGeometry(0.03, 0.04, 0.05, 8), bronze, 0.1, 0.1, 0).rotation.z = Math.PI / 2;
+      break;
+    }
     case "first-coin": {
       // The merchant's first coin, standing on its edge in a small clay dish (Task 56).
       add(new THREE.CylinderGeometry(0.11, 0.08, 0.04, 12), m(0xb5532f), 0, 0.02, 0);
