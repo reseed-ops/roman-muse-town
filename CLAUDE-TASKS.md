@@ -623,3 +623,12 @@ Codex reviewed the Task 67 fixes (report town-task67-review-codex.md on the box,
 - Deploys: town unchanged (build 3fcd380304ce, deployment 4a4e1d7b). Bridge: re-staged bridge/ + shared/ with pack.md from pack.example.md (rank 4 placeholder), deployment 014d8a7e SUCCESS; /healthz ok on town.reseed.net and the bridge, /principal/events and /principal/waiting with no auth 401. Not checked live: authenticated stream (owner's token). Details in town-build5-done.md on the box.
 - Open: dispatcher/daemon decision, tended pack and its backup, owner entitlement, pinned builds, a volume for the revision file, town-side idempotency key for ambiguous outcomes.
 
+## Task 69: Cliffside bench area — blue ocean, restored hill with rerouted trail, hill flicker (READY)
+
+Tuan reported Nov 9 evening and Nov 11, 2026: the ocean water is green and looks like grass, the hill on the path to the cliffside bench is gone with ocean where it was, and a hill flickers near the bench. Full brief: town-build6-prompt.md on the box.
+
+- (1) Ocean blue: the water reads as green grass; make it blue, clearly distinct from the meadow green, from the headland and bench viewpoints; keep the ships visible from the headland.
+- (2) Hill and trail: commit fdd98ce (Nov 9) moved the hills into seaCliff.ts HORIZON_HILLS and cut the meadow at the coast, but live the hill is gone and ocean sits where it was. Look at the terrain before fdd98ce, restore a hill there on land, and reroute the trail to the left around the hill so it no longer runs through it. Do NOT delete terrain to fix a path. Keep fdd98ce's good parts (meadow cut at the coast, ships visible from the headland, clearOfSea guards).
+- (3) Flicker: the hill near the bench flickers; diagnose and fix.
+- Process: freshest main, commit separately, push, full suites and typechecks, deploy the town via Railway, verify live. Summary to town-build6-done.md, landing note under Task 69.
+- NOT in scope: anything else (no new assets, no dispatcher, no affection gates, no wedding-pack integration, which is still un-tasked separately; no bridge changes).
