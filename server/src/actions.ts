@@ -45,6 +45,7 @@ import { loadFishState } from "./fishState";
 import { runRetrySafe, type RequestIdentity } from "./retrySafe";
 import { saveActions } from "./saveActions";
 import { arrange, readArrangement } from "../../shared/homeDecor";
+import { noteQuietBoat } from "../../shared/quietBoat";
 import { QUEST_KINDS, acceptQuest, advanceQuest, carryQuest, completeQuest, markCelebrated, readQuestBook, type QuestBook, type QuestKind } from "../../shared/projectQuests";
 import { oneTownAtATime, storageOf } from "./storage";
 
@@ -3344,6 +3345,23 @@ export const Actions = {
     request: questMoveRequest,
     response: economyResponse,
     handler: (ctx, args) => moveQuest(ctx, args, "celebrateQuest", markCelebrated),
+  }),
+
+  noteQuietBoat: defineAction({
+    description: "A quiet drift on the lake was had (Task 57). Records only a kind and a count in the purse's flags; nothing is paid and no schema is touched.",
+    request: z.object({}).extend({ request_id: z.string().uuid().optional() }),
+    response: economyResponse,
+    async handler(ctx, args) {
+      await withEconomyTransaction(ctx, async (ctx) => {
+        const purse = await loadPurse(ctx);
+        const flags = rawFlags(purse.flags);
+        flags.quiet_boat = noteQuietBoat(flags.quiet_boat);
+        purse.flags = JSON.stringify(flags);
+        await savePurse(ctx, purse);
+      }, { requestId: args.request_id, action: "noteQuietBoat", payload: args });
+      ctx.invalidateQueries();
+      return loadEconomyState(ctx);
+    },
   }),
 
   arrangeHome: defineAction({

@@ -367,3 +367,19 @@ describe("real projects as quests (Task 56)", () => {
     expect(state.purse.quests[0]).toMatchObject({ kind: "etsy-shop", completed: 1 });
   });
 });
+
+describe("Task 57: a quiet drift on the lake leaves a kind and a count only", () => {
+  const flagsOf = () => JSON.parse(row<{ flags: string }>("SELECT flags FROM purse_state").flags) as Record<string, unknown>;
+  test("each drift adds one to the count, nothing is paid, other flags stay, a retried id counts once", async () => {
+    seedPurse(5);
+    await call("arrangeHome", { slot: "floor", keepsake: "tree-cutting" });
+    await call("noteQuietBoat", {});
+    const id = crypto.randomUUID();
+    await call("noteQuietBoat", { request_id: id });
+    await call("noteQuietBoat", { request_id: id });
+    expect(flagsOf().quiet_boat).toEqual({ kind: "quiet-boat", count: 2 });
+    expect(flagsOf().home).toEqual({ floor: "tree-cutting" });
+    expect(row<{ denarii: number }>("SELECT denarii FROM purse_state").denarii).toBe(5);
+  });
+});
+

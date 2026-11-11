@@ -2,6 +2,7 @@ import { createPlaceFootprints } from "./buildingFootprints";
 import { readArrangement } from "../../shared/homeDecor";
 import { buildHomeHouse } from "./homeHouse";
 import { aimSeaPath, buildSeaCliff, CLIFF, clampToWorld, clearOfSea, HORIZON_HILLS, walkable as onCliffPath } from "./seaCliff";
+import { QUIET_BOAT_MIN_OUT, QUIET_BOAT_START, beginDrift, boatSeats, driftStep, nextQuietLine, rowBack as rowBackState, type Drift, type QuietBoatState } from "../../shared/quietBoat";
 import { FISHING_BOAT_LENGTH, fishingOut, nextGap, pickFishingSpots, pickShip, planVoyage, SHIPS, shipsSail, voyagePose, watchingSea, type SeaWeather, type ShipKind, type Voyage } from "./seaShips";
 import { createTrueSky, skyDirection, SKY_REFRESH_S } from "./trueSky";
 import { armsVisibility, createGaiusArms } from "./gaiusArms";
@@ -439,6 +440,13 @@ export interface TownSceneHandle {
    *  near its mooring; returns whether they disembarked. */
   disembarkBoat: () => boolean;
   isRowing: () => boolean;
+  /** Quiet drift (Task 57): ship the oars and let the boat drift (false if blocked or not far enough out). */
+  driftBoat: () => boolean;
+  /** He takes the oars again: the only way the drift ends. */
+  rowBack: () => void;
+  isDrifting: () => boolean;
+  /** Metres from the mooring while afloat (0 ashore). */
+  boatDistanceFromMooring: () => number;
   /** Secret place only: start the hold-her-hand moment / the kiss.
    *  Returns false when the moment can't start (not in walk mode, the
    *  pair not together on the terrace, or a moment already playing). */
@@ -3822,6 +3830,10 @@ export function createTownScene(
   const boatGroup = new THREE.Group();
   const boatPos = { x: LAKE.mooring[0], z: LAKE.mooring[1] };
   let boatState: { heading: number; museAboard: boolean } | null = null;
+  // The quiet drift (Task 57): null while rowing; the boat's slow body once he lets it drift.
+  let boatDrift: Drift | null = null;
+  let quietBoat: QuietBoatState = QUIET_BOAT_START;
+  let driftLineAt = -1;
   let boatVel = 0;
   let boatStroke = 0;
   let rowLineAt = -1;
@@ -4994,6 +5006,8 @@ export function createTownScene(
     boatVel = 0;
     boatStroke = 0;
     rowLineAt = -1;
+    boatDrift = null;
+    quietBoat = QUIET_BOAT_START;
     walkPos.x = boatPos.x;
     walkPos.z = boatPos.z;
     walkHeading = boatState.heading;
@@ -5003,6 +5017,10 @@ export function createTownScene(
     if (!boatState) return false;
     const d = Math.hypot(boatPos.x - LAKE.mooring[0], boatPos.z - LAKE.mooring[1]);
     if (!force && d > 3.4) return false;
+    // Adrift, only his choice to row back ends it; never a step ashore.
+    if (!force && boatDrift) return false;
+    boatDrift = null;
+    quietBoat = QUIET_BOAT_START;
     const wasAboard = boatState.museAboard;
     boatState = null;
     boatVel = 0;
@@ -6682,7 +6700,37 @@ export function createTownScene(
     // leg, the one obstacle standing in the water, pushes the
     // hull off like a piling. walkPos tracks the boat so the follow
     // camera, the prompt scan, and Muse's talk range all follow.
-    if (boatState) {
+    if (boatState && boatDrift) {
+      // Adrift (Task 57): the oars are shipped. The stick does nothing,
+      // the boat creeps and sways on its own, and no clock ends it.
+      const bs = boatState;
+      boatDrift = driftStep(boatDrift, dt, t, { cx: LAKE_CX, cz: LAKE_CZ, rx: LAKE.rx, rz: LAKE.rz });
+      boatPos.x = boatDrift.x;
+      boatPos.z = boatDrift.z;
+      bs.heading = boatDrift.heading;
+      boatVel = 0;
+      boatStroke += dt * 0.35;
+      {
+        const out = pushOutOf(circ(-19.2, -28.1, 0.85), boatPos.x, boatPos.z, 0.95);
+        boatPos.x = out.x;
+        boatPos.z = out.z;
+        boatDrift.x = out.x;
+        boatDrift.z = out.z;
+      }
+      walkPos.x = boatPos.x;
+      walkPos.z = boatPos.z;
+      walkHeading = bs.heading;
+      isMoving = false;
+      if (bs.museAboard) {
+        if (driftLineAt < 0) driftLineAt = t + 6;
+        if (t >= driftLineAt) {
+          const next = nextQuietLine(quietBoat);
+          quietBoat = next.state;
+          if (next.line) showMuseBubbleInternal(next.line, t);
+          driftLineAt = t + 26 + (quietBoat.linesSaid % 3) * 7;
+        }
+      }
+    } else if (boatState) {
       const bs = boatState;
       if (mag > 0.12) {
         const nx2 = ix / (mag > 1 ? mag : 1);
@@ -6960,8 +7008,9 @@ export function createTownScene(
       const fx = Math.sin(boatState.heading);
       const fz = Math.cos(boatState.heading);
       const bob = Math.sin(t * 1.25) * 0.03;
-      avatar.position.set(boatPos.x - fx * 0.62, LAKE_Y + 0.3 + bob, boatPos.z - fz * 0.62);
-      avatar.rotation.y = boatState.heading;
+      const seats = boatSeats(boatState.heading);
+      avatar.position.set(boatPos.x + fx * seats.him.along, LAKE_Y + 0.3 + bob, boatPos.z + fz * seats.him.along);
+      avatar.rotation.y = seats.him.yaw;
       boatGroup.position.set(boatPos.x, LAKE_Y - 0.1 + bob, boatPos.z);
       boatGroup.rotation.set(
         Math.sin(boatStroke * Math.PI) * 0.022 * Math.min(1, boatVel),
@@ -6969,8 +7018,8 @@ export function createTownScene(
         Math.sin(t * 0.9) * 0.018,
       );
       if (boatState.museAboard) {
-        museGroup.position.set(boatPos.x + fx * 0.78, LAKE_Y + 0.3 + bob, boatPos.z + fz * 0.78);
-        museGroup.rotation.y = boatState.heading + Math.PI;
+        museGroup.position.set(boatPos.x + fx * seats.her.along, LAKE_Y + 0.3 + bob, boatPos.z + fz * seats.her.along);
+        museGroup.rotation.y = seats.her.yaw;
       }
       // Wake rings trail from the stern while the boat moves.
       if (boatVel > 0.5 && t >= wakeSpawnAt) {
@@ -13135,6 +13184,25 @@ export function createTownScene(
     boardBoat: () => boardBoat(),
     disembarkBoat: () => disembarkBoat(false),
     isRowing: () => boatState !== null,
+    driftBoat: () => {
+      if (!boatState || boatDrift || !boatState.museAboard) return false;
+      const out = Math.hypot(boatPos.x - LAKE.mooring[0], boatPos.z - LAKE.mooring[1]);
+      if (out < QUIET_BOAT_MIN_OUT) return false;
+      boatDrift = beginDrift(boatPos.x, boatPos.z, boatState.heading);
+      quietBoat = { phase: "drifting", linesSaid: 0 };
+      driftLineAt = -1;
+      boatVel = 0;
+      return true;
+    },
+    rowBack: () => {
+      if (!boatDrift) return;
+      quietBoat = rowBackState(quietBoat);
+      boatDrift = null;
+      driftLineAt = -1;
+      rowLineAt = -1;
+    },
+    isDrifting: () => boatDrift !== null,
+    boatDistanceFromMooring: () => (boatState ? Math.hypot(boatPos.x - LAKE.mooring[0], boatPos.z - LAKE.mooring[1]) : 0),
     setTalking: (on: boolean) => {
       talkAnimOpen = on;
     },

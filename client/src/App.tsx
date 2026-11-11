@@ -228,6 +228,7 @@ import { HistoryBook, lessonForPlace, TownStoryTag } from "./HistoryBook";
 import { HomePanel } from "./HomePanel";
 import { earnedKeepsakes } from "./homeKeepsakes";
 import { QuestBoard } from "./QuestBoard";
+import { QUIET_BOAT_BEGIN_LINE, QUIET_BOAT_RETURN_LINES, DRIFT_PROMPT, ROW_BACK_PROMPT, quietBoatBlocked } from "../../shared/quietBoat";
 import { questDef, type QuestRecord } from "../../shared/projectQuests";
 import { readArrangement } from "../../shared/homeDecor";
 import { SceneBuildError, describeSceneError } from "./sceneBuildError";
@@ -841,6 +842,10 @@ export function App() {
   // hiding the follow chip while they're on the water.
   const [rowingBoat, setRowingBoat] = useState(false);
   const rowingRef = useRef(false);
+  // The quiet drift (Task 57): the oars shipped, the boat adrift, ended only by his choice.
+  const driftingRef = useRef(false);
+  const [drifting, setDrifting] = useState(false);
+  const [driftOffered, setDriftOffered] = useState(false);
   const [achievementToast, setAchievementToast] = useState<string | null>(null);
   const [lettersOpen, setLettersOpen] = useState(false);
   const [openLetterId, setOpenLetterId] = useState<number | null>(null);
@@ -1360,6 +1365,8 @@ export function App() {
   useEffect(() => {
     const scene = sceneRef.current;
     if (!scene || !sceneReady) return;
+    // A quiet drift on the lake is never interrupted: the celebration waits for the shore.
+    if (driftingRef.current) return;
     for (const kind of scene.setQuests(JSON.parse(questsKey))) {
       if (celebratingRef.current.has(kind)) continue;
       celebratingRef.current.add(kind);
@@ -1369,7 +1376,7 @@ export function App() {
       celebrateQuest.mutate(kind, { onSettled: () => celebratingRef.current.delete(kind) });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [questsKey, sceneReady]);
+  }, [questsKey, sceneReady, drifting]);
   const gardenStage = !state.data?.garden.planted_on
     ? 0
     : state.data.garden.water_days >= 3
@@ -3220,17 +3227,22 @@ export function App() {
   const privateMomentRef = useRef(false);
   const nightSkipRef = useRef<(() => void) | null>(null);
   const [nightDark, setNightDark] = useState(false);
-  const nightBlockedNow = (): string | null => {
+  /** A quarrel open, or one mended today, or a heavy day she was told of today. */
+  const troubledNow = (): boolean => {
     const s = stateRef.current;
     const todayLocal = new Date().toLocaleDateString("en-CA");
     const todayUtc = new Date().toISOString().slice(0, 10);
     const dating = s?.dating;
-    const troubled =
+    return (
       !!dating?.friction ||
       frictionLocalRef.current != null ||
       dating?.last_friction_day === todayLocal ||
       dating?.last_friction_day === todayUtc ||
-      (s?.facts ?? []).some((f) => f.source === "weather" && f.learned_on === todayLocal);
+      (s?.facts ?? []).some((f) => f.source === "weather" && f.learned_on === todayLocal)
+    );
+  };
+  const nightBlockedNow = (): string | null => {
+    const troubled = troubledNow();
     let lastNight: string | null = null;
     try {
       lastNight = localStorage.getItem(NIGHT_LAST_KEY);
@@ -3253,6 +3265,60 @@ export function App() {
   };
   const nightBlockedNowRef = useRef(nightBlockedNow);
   nightBlockedNowRef.current = nightBlockedNow;
+
+  /** Why the quiet drift is not offered now (Task 57), or null when it is. */
+  const quietBoatBlockedNow = (): string | null => {
+    const scene = sceneRef.current;
+    const v = visitRef.current;
+    return quietBoatBlocked({
+      rowing: rowingRef.current,
+      museAboard: !!scene && followingRef.current,
+      walking: walkingRef.current,
+      outFromMooring: scene?.boatDistanceFromMooring() ?? 0,
+      drifting: driftingRef.current,
+      weather: weatherRef.current?.id ?? null,
+      busy:
+        !!dreamingRef.current ||
+        !!summitScene ||
+        nightRunningRef.current ||
+        privateMomentRef.current ||
+        celebratingRef.current.size > 0 ||
+        soakingRef.current ||
+        fishingRef.current,
+      troubled: troubledNow(),
+      visitBeganAt: v.active ? v.beganAt : null,
+      now: Date.now(),
+    });
+  };
+  const quietBoatBlockedNowRef = useRef(quietBoatBlockedNow);
+  quietBoatBlockedNowRef.current = quietBoatBlockedNow;
+  // The offer follows the boat: checked a couple of times a second while afloat.
+  useEffect(() => {
+    if (!rowingBoat) {
+      setDriftOffered(false);
+      return;
+    }
+    const iv = window.setInterval(() => setDriftOffered(quietBoatBlockedNowRef.current() === null), 500);
+    return () => window.clearInterval(iv);
+  }, [rowingBoat]);
+  const letBoatDrift = () => {
+    if (quietBoatBlockedNowRef.current() !== null) return;
+    const scene = sceneRef.current;
+    if (!scene?.driftBoat()) return;
+    driftingRef.current = true;
+    setDrifting(true);
+    setDriftOffered(false);
+    setMuseBubble({ lines: paginateLines([QUIET_BOAT_BEGIN_LINE]), index: 0, cycle: false, invite: false, choice: null });
+    // Only a kind and a count are kept.
+    void api.noteQuietBoat({}).catch(() => {});
+  };
+  const rowBackHome = () => {
+    if (!driftingRef.current) return;
+    sceneRef.current?.rowBack();
+    driftingRef.current = false;
+    setDrifting(false);
+    setMuseBubble({ lines: paginateLines([pickOne(QUIET_BOAT_RETURN_LINES)]), index: 0, cycle: false, invite: false, choice: null });
+  };
 
   /** The director's view goes dark with the screen: one black frame, then none until the morning ends. */
   const beginPrivateMoment = () => {
@@ -4763,6 +4829,10 @@ export function App() {
         onRowChange: (rowing) => {
           rowingRef.current = rowing;
           setRowingBoat(rowing);
+          if (!rowing) {
+            driftingRef.current = false;
+            setDrifting(false);
+          }
           // Boarding parts joined hands, oars need both of his.
           if (rowing) releaseHandHoldRef.current();
         },
@@ -6753,7 +6823,7 @@ export function App() {
             active: false,
             action: restInTown,
             aria: "Rest at the basilica's bed nook, end the town day",
-          }] : []), ...(rowingBoat ? [{
+          }] : []), ...(rowingBoat && !drifting ? [{
             key: "fishboat",
             icon: "🎣",
             label: "Fish from the boat",
@@ -9959,6 +10029,21 @@ export function App() {
       {/* Task 48: her walking-together status, tappable, for when she is
           out of sight; centred above the prompt, clear of the stick, the
           buttons and her bubble's band. */}
+      {rowingBoat && (driftOffered || drifting) && (
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-[176px] z-10 flex justify-center px-4"
+          data-mt-quiet-boat="1"
+        >
+          <button
+            type="button"
+            className="pointer-events-auto rounded-full bg-[#22332b]/85 px-4 py-2 text-sm font-bold text-white shadow-md backdrop-blur transition active:scale-95"
+            aria-label={drifting ? "Take the oars and row back" : "Ship the oars and let the boat drift, together"}
+            onClick={drifting ? rowBackHome : letBoatDrift}
+          >
+            {drifting ? ROW_BACK_PROMPT : DRIFT_PROMPT}
+          </button>
+        </div>
+      )}
       {walking && sceneReady && !rowingBoat && !dreaming && (
         <div
           className={
