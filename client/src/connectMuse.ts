@@ -68,16 +68,18 @@ export async function probePairing(fetchImpl: typeof fetch = fetch, timeoutMs = 
     const res = await fetchImpl(`${HOSTED_BRIDGE_URL}/pair`, { method: "GET", signal: AbortSignal.timeout(timeoutMs) });
     if (res.status === 404) return "no";
     if (res.status !== 200) return "error";
-    const body = (await res.json()) as { pairing?: unknown };
-    return body.pairing === true ? "yes" : "no";
+    const body: unknown = await res.json();
+    // A 200 that parsed but is not an object (null, false, a number) does not say pairing:true: a definite no.
+    if (body === null || typeof body !== "object") return "no";
+    return (body as { pairing?: unknown }).pairing === true ? "yes" : "no";
   } catch {
     return "error";
   }
 }
 
 /** Does the hosted bridge pair towns yet? Retries a failed ask a bounded
- *  number of times with growing pauses (at most `attempts` requests, about
- *  a minute in all), so a slow browser or a passing blip does not hide the
+ *  number of times with growing pauses (at most `attempts` requests, nominal worst case 57 s, not a strict
+ *  wall-clock deadline), so a slow browser or a passing blip does not hide the
  *  row for the whole page load. "unavailable" means we could not tell. */
 export async function checkPairing(opts: {
   fetchImpl?: typeof fetch;
@@ -106,8 +108,50 @@ export function pairingRow(state: "off" | "checking" | "live" | "unavailable"): 
     case "checking":
       return { detail: "Checking whether pairing is ready…", busy: true };
     case "unavailable":
-      return { detail: "Could not reach the pairing service. Tap to try again.", busy: false };
+      return { detail: "Could not check whether pairing is ready. Tap to try again.", busy: false };
     case "live":
       return { detail: "A one-time code and a message to paste to your Muse, so she can talk to you here.", busy: false };
   }
+}
+
+export type PairingState = "off" | "checking" | "live" | "unavailable";
+
+/** The hook's effect, as a plain function so a test can drive it: not
+ *  hosted means "off" and no ask; otherwise "checking", then the result.
+ *  The returned cleanup cancels, and a cancelled check never sets state. */
+export function startPairingCheck(hosted: boolean, setPairing: (s: PairingState) => void, check: typeof checkPairing = checkPairing): () => void {
+  if (!hosted) return () => {};
+  let live = true;
+  setPairing("checking");
+  void check({ cancelled: () => !live }).then((r) => {
+    if (live) setPairing(r === "live" ? "live" : r === "absent" ? "off" : "unavailable");
+  });
+  return () => {
+    live = false;
+  };
+}
+
+/** The "Connect my Muse" menu item for a state, or null for no row.
+ *  Live opens the panel, unavailable retries, checking does nothing. */
+export function connectMuseMenuItem(
+  pairing: PairingState,
+  handlers: { openConnectMuse: () => void; retryPairing: () => void },
+  panelOpen: boolean,
+) {
+  const row = pairingRow(pairing);
+  if (!row) return null;
+  const live = pairing === "live";
+  return {
+    key: "connect-muse",
+    icon: "🔗",
+    label: "Connect my Muse",
+    detail: row.detail,
+    active: live && panelOpen,
+    action: live ? handlers.openConnectMuse : pairing === "unavailable" ? handlers.retryPairing : () => {},
+    aria: live
+      ? "Connect my Muse: get a one-time pairing code and a message to paste to your Muse"
+      : pairing === "checking"
+        ? "Connect my Muse: checking whether pairing is ready"
+        : "Connect my Muse: could not check whether pairing is ready; try again",
+  };
 }

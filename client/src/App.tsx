@@ -224,7 +224,7 @@ import { bridgeClose, bridgeConfigured, bridgeGlance, bridgeLeaving, bridgePull,
 import { BRIDGE_BEAT_MS, BRIDGE_HOLD_S, FRAME_JPEG_QUALITY, FRAME_MAX_EDGE, SNAPSHOT_HEARTBEAT_MS, VISIT_LAPSE_MS, VISIT_POLL_MS, type QueuedDirection } from "../../shared/visitProtocol";
 import { clearVisitResume, loadVisitResume, saveVisitResume, sessionStore } from "./visitResume";
 import { ConnectMusePanel, useConnectMuse } from "./ConnectMusePanel";
-import { pairingRow } from "./connectMuse";
+import { connectMuseMenuItem } from "./connectMuse";
 import { purgeImageCaches } from "./imageCache";
 import { HistoryBook, lessonForPlace, TownStoryTag } from "./HistoryBook";
 import { HomePanel } from "./HomePanel";
@@ -576,7 +576,8 @@ export function App() {
   // closed and why (fix list, Nov 7, 2026). Shown a few seconds.
   const [visitNotice, setVisitNotice] = useVisitNotice();
   // Connect my Muse (Task 29): offered only once the hosted bridge pairs.
-  const { connectMuse, setConnectMuse, pairing, pairingLive, retryPairing, openConnectMuse } = useConnectMuse(() => setMenuOpen(false));
+  const { connectMuse, setConnectMuse, pairing, retryPairing, openConnectMuse } = useConnectMuse(() => setMenuOpen(false));
+  const connectMuseItem = connectMuseMenuItem(pairing, { openConnectMuse, retryPairing }, connectMuse !== null);
   const directorSeenAtRef = useRef<number | null>(null);
   // Bridge beats that failed in a row: "unreachable" only after a few.
   const bridgeFailsRef = useRef(0);
@@ -7335,15 +7336,7 @@ export function App() {
             active: visitUi.active,
             action: () => (visitUi.active ? endVisitNow() : beginVisitNow()),
             aria: visitUi.active ? "End Muse's visit; Aelia returns to her own voice" : "Talk to my Muse: open a visit, so Muse can move Aelia and speak through her",
-          }, ...(pairingRow(pairing) ? [{
-            key: "connect-muse",
-            icon: "🔗",
-            label: "Connect my Muse",
-            detail: pairingRow(pairing)!.detail,
-            active: pairingLive && connectMuse !== null,
-            action: pairingLive ? openConnectMuse : pairing === "unavailable" ? retryPairing : () => {},
-            aria: pairingLive ? "Connect my Muse: get a one-time pairing code and a message to paste to your Muse" : pairing === "checking" ? "Connect my Muse: checking whether pairing is ready" : "Connect my Muse: pairing could not be reached; try again",
-          }] : [])]
+          }, ...(connectMuseItem ? [connectMuseItem] : [])]
         },
         {
           heading: "Your day", items: [{
