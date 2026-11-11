@@ -641,7 +641,7 @@ Tuan reported Nov 9 evening and Nov 11, 2026: the ocean water is green and looks
 - Tests: root 696 pass, pg 54, typechecks clean (root, bridge). New seaCliff tests: ocean blue, hill on land, trail clear of hill and on the strip, old straight trail under the hill (fails pre-fix), clamp, meadow cut, one-surface grass, dome geometry, depth offsets.
 - Deploy: town build dc7ea2c1ae79, bundle main-aa3jq0m5.js, deployment e405339e SUCCESS (replaces 4a4e1d7b). Bridge unchanged (014d8a7e). /healthz ok on both hosts; the served bundle carries the new ocean colour. Details in town-build6-done.md on the box.
 
-## Task 70: Codex review follow-up for Task 68 — paired-desk revisions, timing callback on coalescing (READY)
+## Task 70: Codex review follow-up for Task 68 — paired-desk revisions, timing callback on coalescing (DONE)
 
 Codex reviewed the Task 68 fixes (report town-task68-review-codex.md on the box, Nov 11, 2026, ~12:21 PM). Verdict: safe to keep live at bridge deployment 014d8a7e, qualified approval, no rollback. Two new Low findings remain. Full brief: town-build7-prompt.md on the box.
 
@@ -650,3 +650,10 @@ Codex reviewed the Task 68 fixes (report town-task68-review-codex.md on the box,
 - Regression guard: the Task 68 High and Medium fixes stay fixed (failed-send retry, observer cap, slow-reader destroy); the Task 67 claim-model and revocation fixes stay fixed; full suites and typechecks must pass (root 696+, pg 54, bridge 110+).
 - Process: freshest main, commit separately, push, full suites and typechecks, deploy the town via Railway (only if the town changes; expect bridge-only), re-stage the bridge upload dir (bridge/ + shared/, pack.md from pack.example.md) and run bridge-upload-run.sh, verify both live. Summary to town-build7-done.md.
 - NOT in scope: the event-to-agent dispatcher and box-side daemon (follow-on decision); town-to-bridge push; affection gates; the tender-only line; the tended pack (still no backup anywhere); pinned npm ci builds / .dockerignore; Dockerfile dev dependencies; the town-side idempotency key for ambiguous send outcomes (open, separate).
+
+### Task 70: landing note (Claude, Nov 11, 2026), built and deployed (bridge only)
+
+- Code commits e7f595e (Low 1) and fbc4bd5 (Low 2). Bridge deployment 90546975 (was 014d8a7e). The town is unchanged: build dc7ea2c1ae79 / deployment e405339e stay live; no town deploy.
+- Low 1: every paired desk now gets its own revision store (file `REVISION_PATH.towns/<sha256 of the visitor key>.json`, written atomically, never the key) and the tenant registry keeps each town's mark in memory, so a desk recreated after idle eviction stays above its predecessor even with no disk. Across restart/redeploy the order holds only if a volume keeps the files. README qualified by desk and storage. Still open: the production bridge has no volume (see town-build7-done.md for the exact commands; not run).
+- Low 2: timing is now deduped at write time by visit plus line (`createLineTimer`), so a same-line replacement of a queued marker still logs. README states that timing is sampled: the snapshot is not timed, a line superseded by a newer line never logs.
+- Tests: bridge/src/push70.test.ts (7), bridge 117, root 703 (21 skipped), pg 54; typechecks pass. Live: /healthz ok on town.reseed.net and the bridge; /principal/events and /principal/waiting return 401 with no auth. Owner-token checks not done.
