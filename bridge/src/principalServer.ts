@@ -39,7 +39,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { bearerToken, tokenMatches } from "./bridgeServer.js";
 import type { PrincipalDesk } from "./principal.js";
 import { createPairLimiter, type PairLimits } from "./pairLimiter.js";
-import { createAttemptWindow, createSampledLog, createStreamWriter, credentialKey } from "./streamGuard.js";
+import { createAttemptWindow, createLineTimer, createSampledLog, createStreamWriter, credentialKey } from "./streamGuard.js";
 
 const MAX_BODY_BYTES = 64_000;
 export { DEFAULT_PAIR_LIMITS } from "./pairLimiter.js";
@@ -293,22 +293,14 @@ export function startPrincipalServer(opts: PrincipalServerOptions): Promise<Prin
         req.on("close", () => stop());
         res.write("retry: 3000\n\n");
         if (claim) d.keepClaim();
-        let first = true;
-        let timedSeq = 0;
+        const timer = createLineTimer(log);
         unsubscribe = d.subscribe((m) => {
           if (closed) return;
-          // Metadata-only timing: logged when the marker is actually handed to the socket (a marker
-          // held back by a full socket logs when it drains; one coalesced away never logs). This is
-          // not client receipt.
-          let onWrite: (() => void) | undefined;
-          if (!first && m.latestSeq > 0 && m.latestSeq !== timedSeq && m.lastLineAt !== null) {
-            timedSeq = m.latestSeq;
-            const seq = m.latestSeq;
-            const sawAt = m.lastLineAt;
-            onWrite = () => log(`principal events: line ${seq} handed to the socket ${Math.max(0, Date.now() - sawAt)} ms after the bridge first observed it (not client receipt)`);
-          }
-          first = false;
-          writer?.marker(`event: marker\ndata: ${JSON.stringify(m)}\n\n`, onWrite);
+          // Metadata-only timing (Task 70): every marker naming a line carries a write callback, deduped
+          // at write time by visit plus line, so a same-line replacement of a queued marker still times
+          // the line. A line whose markers are all superseded by a newer line is not timed (sampled).
+          // This is the handoff to the socket, not client receipt.
+          writer?.marker(`event: marker\ndata: ${JSON.stringify(m)}\n\n`, timer(m));
         });
         beat = setInterval(() => {
           if (closed) return;

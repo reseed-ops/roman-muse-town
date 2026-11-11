@@ -6,6 +6,7 @@ import { createFakeChannel } from "./fakeChannel.js";
 import { createPrincipalDesk } from "./principal.js";
 import { fileRevisionStore, tenantRevisionPath } from "./revisionFiles.js";
 import type { VisitTelemetry } from "../../shared/visitProtocol.js";
+import { createLineTimer, createStreamWriter } from "./streamGuard.js";
 import { createTenantRegistry } from "./tenants.js";
 
 // Task 70: paired-desk revision persistence, and timing through same-line coalescing.
@@ -114,3 +115,57 @@ test("5. the file store writes atomically, reads back, and the tenant path holds
   }
 });
 
+// ---- timing through coalescing ----
+
+function blockedWriter() {
+  const writes: string[] = [];
+  let full = false;
+  let drainFn = () => {};
+  const res = { write: (c: string) => (writes.push(c), !full), writableLength: 0, on: (_e: "drain", f: () => void) => void (drainFn = f) };
+  const w = createStreamWriter(res, { maxBuffer: 1e9, stallMs: 1e9, abandon: () => {} });
+  return { w, writes, block: () => (full = true), drain: () => { full = false; drainFn(); } };
+}
+
+const mk = (visit: number | null, latestSeq: number, lastLineAt: number | null) => ({ visit, latestSeq, lastLineAt });
+
+test("6. Codex's case: a queued line-1 marker replaced by a same-line marker still yields one timing entry", () => {
+  const logs: string[] = [];
+  const timer = createLineTimer((l) => logs.push(l), () => 1500);
+  const { w, writes, block, drain } = blockedWriter();
+  w.marker("initial", timer(mk(7, 0, null))); // the snapshot
+  block();
+  w.marker("a", undefined);
+  drain();
+  block();
+  w.marker("blocking", undefined); // fills the socket
+  w.marker("line1", timer(mk(7, 1, 1000))); // queued, with a callback
+  w.marker("line1-composing", timer(mk(7, 1, 1000))); // replaces it
+  drain();
+  expect(writes.slice(-1)).toEqual(["line1-composing"]);
+  expect(logs.length).toBe(1);
+  expect(logs[0]).toContain("line 1 handed to the socket 500 ms");
+  // a later same-line marker, written at once, does not time the line twice
+  w.marker("line1-again", timer(mk(7, 1, 1000)));
+  expect(logs.length).toBe(1);
+  // the next line, and the same number in a new visit, are each timed
+  w.marker("line2", timer(mk(7, 2, 1200)));
+  w.marker("v8l2", timer(mk(8, 2, 1300)));
+  expect(logs.length).toBe(3);
+  expect(logs.join("\n")).not.toMatch(/line1|text|token/);
+});
+
+test("7. the snapshot line is never timed, and a marker coalesced away by a newer LINE is not (sampled)", () => {
+  const logs: string[] = [];
+  const timer = createLineTimer((l) => logs.push(l));
+  const { w, block, drain } = blockedWriter();
+  w.marker("snap", timer(mk(7, 3, 1000))); // first marker already names line 3
+  w.marker("snap-compose", timer(mk(7, 3, 1000)));
+  expect(logs.length).toBe(0);
+  block();
+  w.marker("full", undefined);
+  w.marker("l4", timer(mk(7, 4, 1100)));
+  w.marker("l5", timer(mk(7, 5, 1200)));
+  drain();
+  expect(logs.length).toBe(1);
+  expect(logs[0]).toContain("line 5");
+});

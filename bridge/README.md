@@ -362,9 +362,12 @@ only figure measured is local and from a fake channel (one sample of about
 measured, and the agent run that composes her reply (seconds to tens of
 seconds) dominates anyway. Metadata-only timing is in place: the bridge logs
 `line N handed to the socket X ms after the bridge first observed it (not
-client receipt)` per line per stream (when the marker is actually written to
-the socket, not when it was queued; a marker coalesced away never logs), and
-the watcher prints `bridgeFirstObservedAt`, `receivedAt` (this process took
+client receipt)`, once per visit and line per stream, when a marker for that
+line is actually written to the socket (not when it was queued; a same-line
+replacement of a queued marker carries the timing, so it still logs). Timing
+is sampled, not complete: the first marker of a stream is a snapshot and is
+not timed, and a line whose queued marker is coalesced away by a newer line
+never logs. The watcher prints `bridgeFirstObservedAt`, `receivedAt` (this process took
 the marker) and `callbackStartedAt` (the command began, later if another was
 running) per line (compare them after checking clock sync on the box). Not yet instrumented, an open item: the
 town's own acceptance time to the bridge's read, and the browser's

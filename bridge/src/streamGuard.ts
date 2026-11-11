@@ -97,3 +97,32 @@ export function createStreamWriter(res: WritableLike, opts: { maxBuffer: number;
     blocked: () => blockedSince !== null,
   };
 }
+
+/**
+ * Per-line timing for one stream (Task 70). Every marker that names a line carries a write callback,
+ * so whichever marker is actually written (a same-line replacement of a queued one included) can
+ * report; the report is deduped at write time by visit plus line, so a line is timed once however
+ * many markers carry it. The first marker of a stream is only a snapshot: it seeds the key and never logs.
+ */
+export function createLineTimer(log: (line: string) => void, now: () => number = () => Date.now()) {
+  let timed: string | null = null;
+  let first = true;
+  const keyOf = (m: { visit: number | null; latestSeq: number }) => `${m.visit ?? "none"}:${m.latestSeq}`;
+  return (m: { visit: number | null; latestSeq: number; lastLineAt: number | null }): (() => void) | undefined => {
+    const wasFirst = first;
+    first = false;
+    if (m.latestSeq <= 0 || m.lastLineAt === null) return undefined;
+    const key = keyOf(m);
+    if (wasFirst) {
+      timed = key;
+      return undefined;
+    }
+    const seq = m.latestSeq;
+    const sawAt = m.lastLineAt;
+    return () => {
+      if (timed === key) return;
+      timed = key;
+      log(`principal events: line ${seq} handed to the socket ${Math.max(0, now() - sawAt)} ms after the bridge first observed it (not client receipt)`);
+    };
+  };
+}
