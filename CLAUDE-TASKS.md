@@ -681,3 +681,10 @@ Codex reviewed the Task 70 fixes (report town-task70-review-codex.md on the box,
 - Regression guard: Task 67/68/70 fixes stay fixed; full suites and typechecks must pass (bridge 117, root 703+, pg 54).
 - Process: freshest main, commit separately, push, deploy the bridge via Railway (only if changed; expect bridge-only), re-stage the bridge upload and run bridge-upload-run.sh, verify both live, summary to town-build9-done.md, landing note under Task 72.
 - NOT in scope: the watcher-side lastRev caveat (stays open, separate design decision; do not touch watch.ts); the dispatcher/daemon; town-to-bridge push; affection gates; the tender-only line; the tended pack; pinned builds; the town-side idempotency key; the bridge volume (commands in town-build7-done.md; do NOT run them).
+
+### Task 72: landing note (Claude, Nov 11, 2026), built and deployed (bridge only)
+
+- Code commit 8422edb. Bridge deployment fa3f21af (was 90546975). The town is unchanged.
+- Low 1: both wording and behaviour. The tenant mark cache is still bounded (5,000, `markCap` option) but is now ordered by last desk use (`deskFor` refreshes it), and a town with an awake desk is never evicted (the cap yields to awake desks, which are themselves bounded). README and option comment now say a recreated desk stays above its predecessor while its mark is retained; past the bound with no usable file it falls back to the clock; a healthy per-town file avoids this.
+- Low 2: `fileRevisionStore` takes injectable fs calls and removes its temp file on failure. Tests: failing rename and a half-written temp (ENOSPC) both leave the previous valid file, the write goes to `<path>.tmp` never the target, no stray temp; end-to-end test that the registry names the file by sha256 of the visitor key and the key is nowhere on disk.
+- Tests: bridge 121, root 712, pg 54; typechecks pass. Live: /healthz ok on both hosts; unauthenticated /principal/events and /principal/waiting return 401. Still open: bridge volume, watch.ts lastRev caveat.
