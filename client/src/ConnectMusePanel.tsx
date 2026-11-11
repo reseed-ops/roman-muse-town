@@ -2,7 +2,7 @@
 // the message the visitor pastes to their Muse, with a copy button.
 // Moved out of App.tsx, which keeps the state and the code request.
 import { useCallback, useEffect, useState } from "react";
-import { disconnectMuse, museConnectMessage, pairingAvailable, requestPairCode, type PairCode } from "./connectMuse";
+import { disconnectMuse, museConnectMessage, checkPairing, requestPairCode, type PairCode } from "./connectMuse";
 import { isHostedTown } from "./hosted";
 
 export type ConnectMuseState = { state: "loading" } | { state: "ready"; pair: PairCode; copied: boolean } | { state: "error"; text: string };
@@ -11,17 +11,20 @@ export type ConnectMuseState = { state: "loading" } | { state: "ready"; pair: Pa
  *  load, on the hosted web only), and the opener the menu row calls. */
 export function useConnectMuse(closeMenu: () => void) {
   const [connectMuse, setConnectMuse] = useState<ConnectMuseState | null>(null);
-  const [pairingLive, setPairingLive] = useState(false);
+  const [pairing, setPairing] = useState<"off" | "checking" | "live" | "unavailable">(() => (isHostedTown() ? "checking" : "off"));
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     if (!isHostedTown()) return;
     let live = true;
-    void pairingAvailable().then((ok) => {
-      if (live) setPairingLive(ok);
+    setPairing("checking");
+    void checkPairing({ cancelled: () => !live }).then((r) => {
+      if (live) setPairing(r === "live" ? "live" : r === "absent" ? "off" : "unavailable");
     });
     return () => {
       live = false;
     };
-  }, []);
+  }, [attempt]);
+  const retryPairing = useCallback(() => setAttempt((n) => n + 1), []);
   const openConnectMuse = useCallback(() => {
     closeMenu();
     setConnectMuse({ state: "loading" });
@@ -30,7 +33,7 @@ export function useConnectMuse(closeMenu: () => void) {
       (error: unknown) => setConnectMuse({ state: "error", text: error instanceof Error ? error.message : String(error) }),
     );
   }, [closeMenu]);
-  return { connectMuse, setConnectMuse, pairingLive, openConnectMuse };
+  return { connectMuse, setConnectMuse, pairing, pairingLive: pairing === "live", retryPairing, openConnectMuse };
 }
 
 export function ConnectMusePanel({ state, onClose, onCopied }: { state: ConnectMuseState; onClose: () => void; onCopied: (copied: boolean) => void }) {

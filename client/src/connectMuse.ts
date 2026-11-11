@@ -56,16 +56,58 @@ export function museConnectMessage(code: string): string {
   ].join("\n");
 }
 
-/** Does the hosted bridge pair towns yet? The town offers Connect my
- *  Muse only on a yes, so it never shows a step that cannot complete
- *  (an older bridge answers 404 here). Any failure reads as no. */
-export async function pairingAvailable(fetchImpl: typeof fetch = fetch, timeoutMs = 6000): Promise<boolean> {
+export type PairingProbe = "yes" | "no" | "error";
+export type PairingCheck = "live" | "absent" | "unavailable";
+
+/** One ask of the bridge. "no" is a definite answer (an older bridge's
+ *  404, or a 200 that does not say pairing:true); anything else (a
+ *  timeout, a network failure, a 5xx, an unreadable body) is "error",
+ *  which is worth another try and never reads as a no. */
+export async function probePairing(fetchImpl: typeof fetch = fetch, timeoutMs = 10000): Promise<PairingProbe> {
   try {
     const res = await fetchImpl(`${HOSTED_BRIDGE_URL}/pair`, { method: "GET", signal: AbortSignal.timeout(timeoutMs) });
-    if (res.status !== 200) return false;
+    if (res.status === 404) return "no";
+    if (res.status !== 200) return "error";
     const body = (await res.json()) as { pairing?: unknown };
-    return body.pairing === true;
+    return body.pairing === true ? "yes" : "no";
   } catch {
-    return false;
+    return "error";
+  }
+}
+
+/** Does the hosted bridge pair towns yet? Retries a failed ask a bounded
+ *  number of times with growing pauses (at most `attempts` requests, about
+ *  a minute in all), so a slow browser or a passing blip does not hide the
+ *  row for the whole page load. "unavailable" means we could not tell. */
+export async function checkPairing(opts: {
+  fetchImpl?: typeof fetch;
+  sleep?: (ms: number) => Promise<void>;
+  attempts?: number;
+  timeoutMs?: number;
+  backoffMs?: number[];
+  cancelled?: () => boolean;
+} = {}): Promise<PairingCheck> {
+  const { fetchImpl = fetch, sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms)), attempts = 4, timeoutMs = 10000, backoffMs = [2000, 5000, 10000], cancelled = () => false } = opts;
+  for (let n = 0; n < attempts; n++) {
+    if (n > 0) await sleep(backoffMs[Math.min(n - 1, backoffMs.length - 1)] ?? 0);
+    if (cancelled()) return "unavailable";
+    const probe = await probePairing(fetchImpl, timeoutMs);
+    if (probe === "yes") return "live";
+    if (probe === "no") return "absent";
+  }
+  return "unavailable";
+}
+
+/** The menu row for each pairing state; null when there is no row. */
+export function pairingRow(state: "off" | "checking" | "live" | "unavailable"): { detail: string; busy: boolean } | null {
+  switch (state) {
+    case "off":
+      return null;
+    case "checking":
+      return { detail: "Checking whether pairing is ready…", busy: true };
+    case "unavailable":
+      return { detail: "Could not reach the pairing service. Tap to try again.", busy: false };
+    case "live":
+      return { detail: "A one-time code and a message to paste to your Muse, so she can talk to you here.", busy: false };
   }
 }
