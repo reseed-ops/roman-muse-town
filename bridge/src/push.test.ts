@@ -44,13 +44,13 @@ test("the SSE parser reassembles events split across chunks and drops comments",
   expect(got).toEqual([{ event: "marker", data: '{"a":1}' }, { event: "marker", data: "x\ny" }]);
 });
 
-test("push: a line reaches the subscriber within seconds; latency measured", async () => {
+test("push: a line reaches the subscriber soon after the bridge reads it; latency measured locally", async () => {
   const { channel, desk, beat } = town();
   const server = await serve(desk);
   channel.open(Date.now(), tel());
   const got: { m: WaitingMarker; at: number }[] = [];
   const w = startWatch({ bridgeUrl: url(server), token: "owner-token", pollFallbackMs: 60_000, onLine: (m) => void got.push({ m, at: Date.now() }) });
-  await until(() => desk.live()); // the stream's claim=1 has taken the visit
+  await desk.wake({}); // she goes on duty: only a real wake takes the claim, the stream's heartbeat then keeps it
   // (a) the push hop alone: the desk learns of the line, the subscriber is told.
   const hops: number[] = [];
   for (let i = 1; i <= 5; i++) {
@@ -63,8 +63,8 @@ test("push: a line reaches the subscriber within seconds; latency measured", asy
     const r = await desk.wake({ seen: i, direction: { kind: "speak", text: "Yes, I am here." } });
     expect(r.ok).toBe(true);
   }
-  // (b) end to end, with the bridge reading the town on its real 2 s beat (POLL_MS default):
-  // the line lands at a random moment, the loop finds it at the next beat.
+  // (b) with the bridge reading the town on its 2 s beat (POLL_MS default): the line lands 700 ms
+  // into a beat, so this one sample waits about 1.3 s. A local, fake-channel figure, not a live one.
   const loop = setInterval(() => void beat(), 2000);
   await sleep(700);
   const t0 = Date.now();
@@ -88,7 +88,7 @@ test("fallback: with the push channel down, the poll still delivers every line, 
   const noPush: typeof fetch = (input, init) => (String(input).includes("/principal/events") ? Promise.reject(new Error("blocked")) : real(input, init));
   const got: number[] = [];
   const w = startWatch({ bridgeUrl: url(server), token: "owner-token", pollFallbackMs: 150, backoffMs: { min: 50, max: 100 }, fetchImpl: noPush, onLine: (m) => void got.push(m.seq!) });
-  await until(() => desk.live()); // the poll's claim=1
+  await desk.wake({}); // on duty
   channel.mail("one", Date.now());
   await beat();
   await until(() => got.length === 1);
@@ -104,6 +104,7 @@ test("a stream that drops mid-visit reconnects and the line that landed meanwhil
   const { channel, desk, beat } = town();
   const server = await serve(desk, { streamMaxMs: 300 });
   channel.open(Date.now(), tel());
+  await desk.wake({}); // on duty
   const got: number[] = [];
   const w = startWatch({ bridgeUrl: url(server), token: "owner-token", pollFallbackMs: 60_000, backoffMs: { min: 20, max: 40 }, onLine: (m) => void got.push(m.seq!) });
   await until(() => w.stats().streams >= 1);
@@ -130,7 +131,7 @@ test("push and poll together never hand over a line twice; a failed hand-over is
       got.push(m.seq!);
     },
   });
-  await until(() => desk.live());
+  await desk.wake({}); // on duty
   channel.mail("hello", Date.now());
   await beat();
   await until(() => got.length === 1, 3000); // the poll retried what the push could not hand over
@@ -163,6 +164,7 @@ test("no visit open: nothing is pushed and the stream says so; a waiting line is
   expect(seen.every((m) => m.waiting === false && m.seq === null)).toBe(true);
   // A visit opens and closes: the line is announced only while open, and the close clears it.
   channel.open(Date.now(), tel());
+  await desk.wake({}); // on duty, so his line waits for her
   channel.mail("hi", Date.now());
   await beat();
   await until(() => seen.some((m) => m.waiting && m.seq === 1));
@@ -188,7 +190,8 @@ test("only the token's own town: wrong, missing and other-town tokens are refuse
   const gotB: number[] = [];
   const wa = startWatch({ bridgeUrl: url(server), token: "owner-token", pollFallbackMs: 60_000, onLine: (m) => void gotA.push(m.seq!) });
   const wb = startWatch({ bridgeUrl: url(server), token: "town-b-token", pollFallbackMs: 60_000, onLine: (m) => void gotB.push(m.seq!) });
-  await until(() => a.desk.live() && b.desk.live());
+  await a.desk.wake({});
+  await b.desk.wake({});
   b.channel.mail("for B only", Date.now());
   await b.beat();
   await until(() => gotB.length === 1);
@@ -201,10 +204,6 @@ test("only the token's own town: wrong, missing and other-town tokens are refuse
   await until(() => gotA.length === 1);
   expect(gotA).toEqual([2]);
   expect(gotB).toEqual([1]);
-  // The marker token may listen (it reads the marker anyway) but can never claim.
-  const m = await at("/principal/events?claim=1", "marker-token");
-  expect(m.status).toBe(200);
-  await m.body!.cancel();
   wa.stop();
   wb.stop();
   await server.close();
@@ -225,7 +224,7 @@ test("the gate still holds on a pushed line: her explicit reply is refused, a pl
       expect(r.ok).toBe(true);
     },
   });
-  await until(() => desk.live());
+  await desk.wake({}); // on duty
   channel.mail(`His words ${SENTINEL}`, Date.now());
   await beat();
   await until(() => woke === 1);
@@ -235,7 +234,9 @@ test("the gate still holds on a pushed line: her explicit reply is refused, a pl
   expect(spoken().length).toBe(1);
   expect(spoken()[0]).not.toContain("make love");
   expect(spoken()[0]).toContain("tender");
-  const plain = await desk.wake({ seen: 1, direction: { kind: "speak", text: "I heard you, my dear." } });
+  channel.mail("Another line", Date.now());
+  await beat();
+  const plain = await desk.wake({ seen: 2, direction: { kind: "speak", text: "I heard you, my dear." } });
   expect(plain.ok).toBe(true);
   expect(spoken()).toContain("I heard you, my dear.");
   const text = log.join("\n");

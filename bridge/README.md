@@ -224,25 +224,101 @@ One call per waking. The body of `POST /principal/wake`, every field optional:
   and an `unheld` report says so. Past 60 s the beats are reported
   `dropped` ("no visit opened within 60 s") on her next slate.
 
-### Push delivery (Task 66): the box subscribes, the town tells her at once
+### Push delivery (Task 66, reworked in Task 67): the box subscribes and is told
 
 `GET /principal/events` is a server-sent-events stream (the principal
 token, a paired token for its own town, or the read-only marker token).
 Railway cannot dial the box, so the box dials out and holds the stream;
-the bridge pushes `event: marker` with the waiting marker (`{waiting, seq,
-at, composing, claimLive}`, never text) on connect and on every change,
-plus a `: keepalive` comment every 15 s. With the principal token,
-`?claim=1` keeps her claim for as long as the stream is open (also on each
-keepalive), like the long-poll. A stream ends after 10 minutes so the token
-is re-checked (expiry, rotation, pairing generation); at most 3 per desk and
-64 in all. The marker is state, not a queue, so a line that landed while the
-stream was down is the first event after it returns, and a line waits only
-during an open visit.
+the bridge pushes `event: marker` with the waiting marker on connect and on
+every change, plus a `: keepalive` comment every 15 s. A line that landed
+while the stream was down is the first event after it returns, because the
+marker is state, not a queue.
+
+**The marker** (never text):
+`{waiting, seq, at, composing, claimLive, visit, rev, latestSeq, lastLineAt}`.
+- `visit`: the open visit's id (its beginning, ms), null when none.
+- `rev`: rises by one whenever anything in the marker changes, and starts
+  from the desk's creation time in ms, so it also rises across a bridge
+  restart. A watcher discards a marker older than one it has applied.
+- `latestSeq`, `lastLineAt`: the newest line number of the open visit and
+  when the bridge first saw it (the bridge's clock). They say a line exists
+  even when the resident is answering it, so a watcher that does not claim
+  can learn of it and decide whether to claim. No text.
+
+**The claim model (decided, Task 67): she is told only by claiming first, or
+she watches the line signal and decides.** There are two ways to listen and
+one way to hold the visit:
+1. *Holding the visit* is done by a real `POST /principal/wake`, and only
+   that. A heartbeat (`claim=1` on the stream or the long-poll) never takes
+   a claim, never undoes a release, and never starts one.
+2. *Keeping it between wakes*: with the principal token, `claim=1` renews a
+   claim she already holds, on open and every 15 s, but only while her last
+   real wake call is less than 10 minutes old (`PRINCIPAL_HEARTBEAT_CLAIM_MS`
+   in code). After that the heartbeat is ignored and the claim lapses 180 s
+   later (`PRINCIPAL_CLAIM_MS`) and the resident resumes. A responder that
+   is alive makes a wake call at least that often.
+3. *Release* (`{"attend": false}`) hands the visit back at once; no heartbeat
+   re-takes it, and a new claim needs a new real wake.
+4. *Listening without holding*: the marker token (or the principal token
+   with `claim` off) sees the marker, including `latestSeq` and
+   `lastLineAt`, and can never claim, however it is asked. With the resident
+   present and no claim, `waiting` stays false (the line is the resident's);
+   a watcher with `work: "lines"` / `WATCH_WORK=lines` treats any new line
+   in an open visit as work.
+`watch.ts` also stops asking for the claim (it reconnects without
+`claim=1`) after 3 command failures in a row or a command stuck for 60 s, so
+a claiming watcher never holds the visit for a composer that is not working.
+Do not run a claiming watcher without a responder behind it.
+
+**Eviction and who may open streams.** At most 3 claim-holder streams per
+desk (the principal token, a paired token), and separately at most 1
+read-only observer stream (the marker token). A new stream past its own
+class's cap closes the oldest of that class; an observer never evicts a
+claim holder. 64 streams in all, counted after the eviction a new stream
+would make, so a desk's own reconnect is never refused because the server is
+full. Empty per-desk entries are deleted when the last stream closes.
+
+**Rate limits.** Failed authentication on the principal routes (and every
+lookup of a paired token) goes through the pairing limiter: 8 misses per
+source address per 10 minutes, 2 lookups in flight per address, 16 overall;
+past them the answer is 429. Stream connection attempts are limited to 30
+per minute per source address and 20 per minute per credential (a digest
+used only as a counter key). Refusals are logged once per kind per 10
+seconds with a count of those held back, never a token.
+
+**Revocation window.** A stream's credential is checked again every 60 s
+(`STREAM_RECHECK_MS`): the owner's and marker tokens by comparison, a paired
+token by the same resolve a new request makes (HMAC, expiry, pairing
+generation, which has its own 3 s cache). Unpair or expire a paired token
+and its stream ends, with its claim renewals, within about 65 s; the
+stream's own life is 10 minutes (`STREAM_MAX_MS`), and rotating
+`PRINCIPAL_TOKEN` restarts the service, which ends every stream. A credential
+that cannot be checked ends the stream (the poll fallback carries on).
+
+**Slow readers.** Markers are state, so while a socket is full only the
+latest marker is kept and written when it drains. A stream with more than
+64 KB unsent, or one that stays full for 30 s, is cut; the watcher
+reconnects.
+
+**Delivery is best-effort notification with retries, not exactly-once.** A
+burst can reach a watcher as only its newest state; the watcher dedupes by
+work identity, the pair (visit, line number), discards a marker whose `rev`
+is older than one it has applied, and keeps the last acknowledged work in a
+small state file (`WATCH_STATE`, default `~/.muse-watch-state.json`: a visit
+number and a line number, no text). A line can still reach the command
+twice (a restart before the state was written, a command that posted and
+then failed), so the answer side is idempotent: the wake call carries
+`seen` and `visit`; a repeat `speak` for a line already answered sends
+nothing (the slate says so in `note`), and a call for a visit that is not
+the open one is refused. The command fetches a fresh slate and wakes with
+`{"seen": $MUSE_LINE_SEQ, "visit": $MUSE_VISIT, ...}`. The command runs one
+at a time under a deadline (`WATCH_CMD_TIMEOUT_S`, default 120 s) and is
+aborted when it passes it or the watcher stops; a stuck command never
+blocks the newest line.
 
 SSE was chosen over a websocket (needs an upgrade path and framing the
 proxy and the box do not need) and over the existing long-poll (which
-already answers within the bridge's 2 s read of the town, but needs a
-reconnect per answer and a waking loop on her side). It is one plain
+needs a reconnect per answer and a waking loop on her side). It is one plain
 GET, works through NAT, needs no dependency and degrades to the poll.
 
 The subscriber is `bridge/src/watch.ts`, the recipe for the owner's side:
@@ -252,21 +328,31 @@ BRIDGE_URL=https://town-bridge-production.up.railway.app \
 PRINCIPAL_TOKEN=... WATCH_CMD='/path/to/wake-muse.sh' bun run bridge/src/watch.ts
 ```
 
-It prints one JSON line per new line (the number and time) and runs
-`WATCH_CMD` with `MUSE_LINE_SEQ` set (the command makes the usual
-`POST /principal/wake {"seen": $MUSE_LINE_SEQ, ...}`; her words still pass
-the shared gate there). It reconnects with backoff (1 s doubling to 30 s,
-jittered) and keeps the once-a-minute poll of `/principal/waiting` running
-beside the stream as the fallback (`WATCH_POLL_S`). Push and poll feed one
-hand-over, so a line is handed over once; a failed hand-over is retried.
-Latency: the bridge reads the town every 2 s (`POLL_MS`), so a spoken line
-reaches the subscriber within about 2 s (measured about 1.3 s in the
-test with a random phase), the push hop itself in a few milliseconds.
+It prints one JSON line per work item (`line`, `visit`, `bridgeSawAt`,
+`receivedAt`; no text) and runs `WATCH_CMD` with `MUSE_LINE_SEQ` and
+`MUSE_VISIT` set. A stream with no bytes for 45 s (the bridge beats every
+15 s) is dropped and reconnected, with backoff 1 s doubling to 30 s,
+jittered; the once-a-minute poll of `/principal/waiting` runs beside it as
+the fallback (`WATCH_POLL_S`).
+
+**Latency, honestly.** The bridge reads the town on a two-second polling
+cadence (`POLL_MS`, plus the read's own time and the pause between reads) and
+the push hop after that is a few milliseconds in the tests. So a line
+reaches a subscriber after up to about two seconds of polling cadence plus
+processing and network time: not a floor, and not a guaranteed ceiling. The
+only figure measured is local and from a fake channel (one sample of about
+1.3 s with a fixed phase in `push.test.ts`); no live figure has been
+measured, and the agent run that composes her reply (seconds to tens of
+seconds) dominates anyway. Metadata-only timing is in place: the bridge logs
+`line N written X ms after the bridge saw it` per line per stream, and the
+watcher prints `bridgeSawAt` and `receivedAt` per line (compare them after
+checking clock sync on the box). Not yet instrumented, an open item: the
+town's own acceptance time to the bridge's read, and the browser's
+enactment of her reply.
 
 ### The watcher contract (long-poll, still supported)
 
-There is no push to her; a watcher long-polls the marker instead, so a
-line reaches her within a second of landing:
+A watcher can long-poll the marker instead of holding a stream:
 
 ```
 seen = 0
@@ -275,15 +361,15 @@ loop:
     -> answers at once when a line past <seen> waits or composing turns over,
        else after 25 s with the marker unchanged
   if marker.waiting and marker.seq > seen:
-    POST /principal/wake {"seen": <marker.seq>, ...her words...}   -> the slate
+    POST /principal/wake {"seen": <marker.seq>, "visit": <marker.visit>, ...her words...}   -> the slate
     seen = slate.latestSeq
 ```
 
 `wait` is capped at 25 s (under Railway's idle timeout). With `claim=1`
-each long-poll keeps her claim alive at its start and at its answer, so a
-looping watcher never lets the 180 s claim lapse; drop `claim=1` (or use
-the marker token, which can never claim) to watch without holding the
-visit. `after` defaults to "any waiting line".
+each long-poll renews a claim she already holds, at its start and at its
+answer, under the same 10-minute bound as the stream; it never takes one.
+Drop `claim=1` (or use the marker token, which can never claim) to watch
+without holding the visit. `after` defaults to "any waiting line".
 
 The slate: `claim` (live, since, lastCallAt, expiresAt), `visit`,
 `scene` (the town's telemetry: her zone and position, his, distance,
@@ -328,7 +414,8 @@ logged.
 | `PORT` | `8790` | The face's port (`bridge`, and `town` with a principal token; Railway sets it). |
 | `PRINCIPAL_TOKEN` | (none) | The principal channel (Task 22, `town` only): the one token the owner's chat Muse presents. Unset, the channel does not serve. Rotate it to revoke. Never in the repo. |
 | `PRINCIPAL_MARKER_TOKEN` | (none) | A lesser, read-only token for `GET /principal/waiting` only. Optional; the principal token reads the marker too. Never in the repo. |
-| `PRINCIPAL_CLAIM_MS` | `180000` | Her claim lapses this long after her last call, and the resident resumes. |
+| `PRINCIPAL_CLAIM_MS` | `180000` | Her claim lapses this long after her last call, and the resident resumes. A watcher's heartbeat counts as a call only within 10 minutes of her last real wake (fixed in code, Task 67). |
+| `WATCH_STATE`, `WATCH_WORK`, `WATCH_CMD`, `WATCH_CMD_TIMEOUT_S`, `WATCH_POLL_S` | see `watch.ts` | The box-side watcher's own settings (not the bridge's): the acknowledged-work file, `lines` to count any new line as work, the wake command and its deadline, the fallback poll. |
 | `PAIRING` | on | `off` turns pairing off (Task 29): no `POST /pair`, no paired tokens. |
 | `TRUST_PROXY` | (on Railway) | `1`/`0`: read `X-Real-IP` as the caller's address at `/pair`. Default on when Railway's own variables are present, off elsewhere; `X-Forwarded-For` is never read. |
 | `PAIRING_SECRET` | (derived) | Seals paired tokens. Unset, a key is derived from `DIRECTOR_TOKEN`. Rotating the seal key retires every paired token; if this is set, rotating `DIRECTOR_TOKEN` alone does not. Never in the repo. |
@@ -349,28 +436,48 @@ logged.
 
 ## Deploy to Railway
 
-The owner runs this from a local checkout; the chat side cannot deploy.
+The owner (or the Claude box, on the owner's word) runs this from a local
+checkout; the chat side cannot deploy.
 
-1. In the Railway project that holds the Reseed Agent Bridge relay, add a
-   new service from this repository and set its **root directory** to
-   `bridge/`. `railway.toml` carries the build (`npm install && npm run
-   build`) and start (`npm start`) commands.
-   The build compiles `../shared/visitProtocol.ts` alongside `src/`, so
-   the build context must include the repository's `shared/` directory:
-   if the service's root-directory isolation hides it, set the root
-   directory to the repository root instead, with the build command
-   `cd bridge && npm install && npm run build` and the start command
-   `cd bridge && npm start`.
+**The working path is the Docker one**, as the live `town-bridge` service
+runs it (reconciled in Task 67; `railway.toml` here now says the same):
+
+- The service's **root directory is `/`** (the upload root), with
+  `RAILWAY_DOCKERFILE_PATH=bridge/Dockerfile`. `bridge/` and `shared/` sit
+  side by side in the upload, because the bridge's tsconfig compiles
+  `../shared/visitProtocol.ts` alongside `src/` and the Dockerfile copies
+  both.
+- The upload is a clean export, not a git push: the tracked files of
+  `bridge/` and `shared/` plus the private `bridge/pack.md`, with
+  `node_modules` and `dist` left out, sent with
+  `railway up -c --no-gitignore -p <project> -s town-bridge -e production`
+  from inside the export.
+- The earlier instructions (root directory `bridge/`, the Nixpacks builder,
+  `npm install && npm run build` as the build command) no longer describe
+  the live service; setting the root to `bridge/` would hide `shared/` and
+  fail the build. The live service's settings are changed only by the owner.
+
+Then:
+
 2. Set the variables above in the service, at least `DIRECTOR_ENABLED=true`,
-   `ANTHROPIC_API_KEY`, `DIRECTOR_CHANNEL=bridge` and a long random
-   `BRIDGE_TOKEN`. Secrets live in Railway's variables, never in the repo.
+   `ANTHROPIC_API_KEY`, `DIRECTOR_CHANNEL=town` (or `bridge`) and the tokens.
+   Secrets live in Railway's variables, never in the repo.
 3. The channel: with `bridge`, the town calls the service's public HTTPS
-   URL (Railway's generated domain, or your own); enter that URL and the
-   same token in the town's Settings, Muse Visits. The seam line is for
-   local work: a Railway service cannot reach a harness on your laptop.
-4. The pack: mount or commit a `pack.md` the chat side can refresh (a
-   Railway volume at the `PACK_PATH`, or a small sync job). The loader
-   polls its mtime every five seconds.
+   URL; enter that URL and the same token in the town's Settings, Muse
+   Visits. The seam line is for local work.
+4. **The pack is baked into the image.** The Dockerfile copies
+   `bridge/pack.md` into the image, and the loader's five-second mtime poll
+   watches that file, which only changes when the image does. So **a pack
+   refresh needs a redeploy** of the bridge with the new `pack.md` in the
+   export. Refreshing it without a redeploy would need a Railway volume
+   mounted at `PACK_PATH` plus a sync job; as of Nov 11, 2026 no volume is
+   attached to `town-bridge` (the project's volumes belong to other
+   services), and none has been created. Keep the tended pack's canonical
+   copy outside the repo and outside the disposable upload directory.
+   Until a tended pack is uploaded, the live pack is `pack.example.md` with
+   its rank 4 placeholder; the owner desk's rank is `min(pack rank, the
+   town's entitlement rank)` once the town sends the owner's entitlement
+   (it does not yet), so the placeholder is today's live state.
 5. Watch the logs: `greeted`, `answered: …`, `intended: …`, `channel
    unreachable … folding quietly`, and `refused POST /bridge/snapshot: no
    token` (never the value) are the whole vocabulary.

@@ -1,9 +1,15 @@
-# Railway service config for the Live Bridge (Task 6). Set the service's
-# root directory to `bridge/` in the Railway dashboard; secrets live in
-# the service's variables, never here. See README.md.
+# Railway config for the Live Bridge. The LIVE service does not use the old
+# "root directory bridge/ + Nixpacks" setup: it builds with Docker from the
+# upload root (/), with RAILWAY_DOCKERFILE_PATH=bridge/Dockerfile, so that
+# bridge/ and shared/ sit side by side (the tsconfig compiles ../shared).
+# A service rooted at bridge/ cannot see shared/ and fails. Railway reads
+# this file only when it sits at the service's root, so this copy documents
+# the working build and does not change the live service's settings (the
+# owner does). Secrets live in the service's variables, never here.
+# See README.md, "Deploy to Railway".
 [build]
-builder = "NIXPACKS"
-buildCommand = "npm install && npm run build"
+builder = "DOCKERFILE"
+dockerfilePath = "bridge/Dockerfile"
 
 [deploy]
 startCommand = "npm start"

@@ -32,6 +32,8 @@ import type { ChannelState, DirectorChannel } from "./channel.js";
 import { bandForRank, filterIntention, filterSpeak, gentleRefusal } from "./outputFilter.js";
 
 export const PRINCIPAL_CLAIM_MS = 3 * 60 * 1000;
+/** Task 67: a watcher's heartbeat may keep a claim only this long after her last real wake call. */
+export const PRINCIPAL_HEARTBEAT_CLAIM_MS = 10 * 60 * 1000;
 export const PRINCIPAL_MAX_BEATS = 6;
 export const PRINCIPAL_MAX_DELAY_S = 120;
 export const TRANSCRIPT_KEEP = 30;
@@ -60,6 +62,8 @@ export type PrincipalCall = {
   drop?: { onReply?: boolean; onSceneChange?: boolean };
   /** Include the latest frame (an image data URL) in the slate. */
   frame?: boolean;
+  /** Task 67: the visit these words are for (the marker's `visit`); a different open visit refuses the call. */
+  visit?: number;
 };
 
 export type TranscriptLine = { who: "him" | "her"; by?: "principal" | "resident"; text: string; at: number; seq?: number };
@@ -90,8 +94,29 @@ export type PrincipalSlate = {
   /** What happened since the last slate she saw: beats, drops, refusals, acknowledgments. */
   reports: DeskReport[];
   frame?: VisitFrame | null;
+  /** Task 67: set when the call was a repeat or stale and nothing was sent. */
+  note?: string;
 };
-export type WaitingMarker = { waiting: boolean; seq: number | null; at: number | null; composing: boolean; claimLive: boolean };
+/**
+ * The marker: state, never text. Task 67 adds the identity a watcher needs to
+ * dedupe honestly: `visit` (the open visit's beginning, null when none), `rev`
+ * (rises by one whenever anything in the marker changes, and starts from the
+ * desk's creation time in ms, so it also rises across a bridge restart), and a
+ * text-free line signal so a watcher that does not claim can learn a line
+ * exists: `latestSeq` (the newest line number of the open visit, 0 if none) and
+ * `lastLineAt` (when the bridge first saw that line, bridge clock).
+ */
+export type WaitingMarker = {
+  waiting: boolean;
+  seq: number | null;
+  at: number | null;
+  composing: boolean;
+  claimLive: boolean;
+  visit: number | null;
+  rev: number;
+  latestSeq: number;
+  lastLineAt: number | null;
+};
 
 export type WakeResult = { ok: true; slate: PrincipalSlate } | { ok: false; error: string };
 
@@ -103,6 +128,8 @@ export type PrincipalDeskOptions = {
   /** The pack's current rank, for the filter's band. */
   rank: () => number;
   claimMs?: number;
+  /** Task 67: how long after her last real wake call a watcher's heartbeat may keep the claim (default 10 minutes). */
+  heartbeatClaimMs?: number;
   now?: () => number;
   log?: (line: string) => void;
   /** Whether a resident answers while she is away (the owner's town).
@@ -122,8 +149,17 @@ export type PrincipalDesk = {
   pump(): Promise<void>;
   /** The resident's own spoken lines, for the transcript she reads. */
   noteResidentLine(text: string): void;
-  /** A watcher's long-poll keeps (or takes) the claim without a wake. */
-  keepClaim(): void;
+  /**
+   * A watcher's heartbeat renews the claim, but only while she has made a real
+   * wake call within `heartbeatClaimMs` (Task 67): it never takes a claim
+   * nobody made, never undoes a release, and lets the claim lapse once the
+   * responder has gone quiet. Returns whether it renewed.
+   */
+  keepClaim(): boolean;
+  /** Tell the subscribers if the marker changed (for example a claim that lapsed by time). */
+  refresh(): void;
+  /** The town's own entitlement rank from the last read of state, or null while it gives none (Task 67). */
+  entitlementRank(): number | null;
   /**
    * Task 66: be told whenever the waiting marker changes (the push channel's
    * source). The listener gets the marker now and on every change; it never
@@ -194,6 +230,10 @@ export function parsePrincipalCall(raw: unknown): { ok: true; call: PrincipalCal
     if (typeof raw.frame !== "boolean") return { ok: false, error: "frame is true or false" };
     call.frame = raw.frame;
   }
+  if (raw.visit !== undefined) {
+    if (typeof raw.visit !== "number" || !Number.isFinite(raw.visit)) return { ok: false, error: "visit is the marker's visit number" };
+    call.visit = raw.visit;
+  }
   return { ok: true, call };
 }
 
@@ -216,6 +256,7 @@ export function createPrincipalDesk(opts: PrincipalDeskOptions): PrincipalDesk {
   const now = opts.now ?? (() => Date.now());
   const log = opts.log ?? ((line: string) => console.log(line));
   const hasResident = opts.resident ?? true;
+  const heartbeatClaimMs = opts.heartbeatClaimMs ?? PRINCIPAL_HEARTBEAT_CLAIM_MS;
 
   let claimSince: number | null = null;
   let lastCallAt: number | null = null;
@@ -234,8 +275,14 @@ export function createPrincipalDesk(opts: PrincipalDeskOptions): PrincipalDesk {
   let lineCounter = 0;
   let pumping = false;
   let heldLookAt = 0;
-  const listeners = new Set<(m: WaitingMarker) => void>();
-  let lastSent = "";
+  const listeners = new Map<(m: WaitingMarker) => void, number>();
+  /** Task 67: the last REAL wake call (not a heartbeat); null after a release. */
+  let lastWakeAt: number | null = null;
+  /** The newest `seen` her speech has already answered in this visit (the idempotence guard). */
+  let spokenFor = 0;
+  let lineObservedAt: number | null = null;
+  let markerRev = now();
+  let markerKey = "";
 
   const report = (r: DeskReport) => {
     reports.push(r);
@@ -266,11 +313,15 @@ export function createPrincipalDesk(opts: PrincipalDeskOptions): PrincipalDesk {
     if (visitBegan !== beganAt) {
       beganAt = visitBegan;
       transcript = [];
-      transcriptSeq = answeredSeq = ackedSeq = shownSeq = 0;
+      transcriptSeq = answeredSeq = ackedSeq = shownSeq = spokenFor = 0;
       latestAt = null;
+      lineObservedAt = null;
       if (sequence && sequence.heldUntil === null) dropSequence(state.active ? "a new visit began" : "the visit closed");
     }
-    latestSeq = state.active ? state.latestSeq : 0;
+    const newest = state.active ? state.latestSeq : 0;
+    if (newest > latestSeq || (newest > 0 && lineObservedAt === null)) lineObservedAt = now();
+    if (newest === 0) lineObservedAt = null;
+    latestSeq = newest;
     // Unclaimed, his lines are the resident's to answer: none of them is
     // waiting for her, and none is acknowledged on her behalf later.
     if (claimSince === null && hasResident) answeredSeq = ackedSeq = latestSeq;
@@ -496,6 +547,7 @@ const refusalCategory = (error: string): string => {
         return { ok: true, slate: await slate(!!call.frame) };
       }
       lastCallAt = t;
+      lastWakeAt = t;
       if (!wasLive) {
         claimSince = t;
         report({ kind: "claim", at: t, event: "claimed" });
@@ -504,7 +556,23 @@ const refusalCategory = (error: string): string => {
       const state = await quiet("readState", () => channel.readState());
       if (state) followVisit(state);
       await readMail();
-      const items: PrincipalBeat[] | null = call.beats ?? (call.direction !== undefined ? [{ direction: call.direction }] : null);
+      // Task 67: validated against a fresh read of the town before anything is sent.
+      if (call.visit !== undefined && call.visit !== (state?.active ? state.beganAt : null)) {
+        log("principal call refused: stale, the visit it was for is not the open one");
+        return { ok: false, error: "stale: that visit is not the open one" };
+      }
+      let items: PrincipalBeat[] | null = call.beats ?? (call.direction !== undefined ? [{ direction: call.direction }] : null);
+      let note: string | undefined;
+      const speaksNow = !!items?.some((b) => {
+        const v = validateDirection(b.direction);
+        return v.ok && v.direction.kind === "speak";
+      });
+      if (speaksNow && call.seen !== undefined && call.seen > 0 && call.seen <= spokenFor) {
+        // A repeat (a retry after a command failed, a restart): her words for that line already went.
+        items = null;
+        note = `line ${call.seen} was already answered; nothing sent`;
+        log(`principal call: a repeat for line ${call.seen} (already answered), nothing sent`);
+      }
       if (items) {
         if (sequence) dropSequence("superseded by her next call");
         let due = t;
@@ -526,7 +594,11 @@ const refusalCategory = (error: string): string => {
           dropOnReply: call.drop?.onReply ?? true,
           dropOnScene: call.drop?.onSceneChange ?? true,
         };
-        if (beats.some((b) => b.direction?.kind === "speak")) answeredSeq = Math.max(answeredSeq, Math.min(call.seen ?? shownSeq, latestSeq));
+        if (beats.some((b) => b.direction?.kind === "speak")) {
+          const answers = Math.min(call.seen ?? shownSeq, latestSeq);
+          answeredSeq = Math.max(answeredSeq, answers);
+          spokenFor = Math.max(spokenFor, answers);
+        }
         if (!open) {
           report({ kind: "held", at: t, of: beats.length, until: t + PRINCIPAL_HOLD_MS, reason: "held until the visit opens" });
           log(`principal sequence (${beats.length} beat${beats.length === 1 ? "" : "s"}) held: no visit is open; held up to ${Math.round(PRINCIPAL_HOLD_MS / 1000)} s`);
@@ -534,12 +606,24 @@ const refusalCategory = (error: string): string => {
         }
         await pump();
       }
-      return { ok: true, slate: await slate(!!call.frame) };
+      const out = await slate(!!call.frame);
+      if (note) out.note = note;
+      return { ok: true, slate: out };
     },
     marker() {
       const live = liveNow();
-      const waiting = latestSeq > answeredSeq && !!lastState?.active;
-      return { waiting, seq: waiting ? latestSeq : null, at: waiting ? latestAt : null, composing, claimLive: live };
+      const open = !!lastState?.active;
+      const waiting = latestSeq > answeredSeq && open;
+      const body = {
+        waiting, seq: waiting ? latestSeq : null, at: waiting ? latestAt : null, composing, claimLive: live,
+        visit: open ? beganAt : null, latestSeq: open ? latestSeq : 0, lastLineAt: open && latestSeq > 0 ? lineObservedAt : null,
+      };
+      const key = JSON.stringify(body);
+      if (key !== markerKey) {
+        markerKey = key;
+        markerRev += 1;
+      }
+      return { ...body, rev: markerRev };
     },
     live: liveNow,
     async observe(state) {
@@ -574,26 +658,29 @@ const refusalCategory = (error: string): string => {
     pump,
     keepClaim() {
       const t = now();
-      if (!liveNow()) {
-        claimSince = t;
-        report({ kind: "claim", at: t, event: "claimed" });
-        log("principal claims the visit (watcher); the resident only relays");
-      }
+      // Only a claim she made, only while her last real call is recent: a heartbeat
+      // never takes a claim, never undoes a release, and lapses with the responder.
+      if (!liveNow() || lastWakeAt === null || t - lastWakeAt >= heartbeatClaimMs) return false;
       lastCallAt = t;
+      return true;
+    },
+    refresh() {},
+    entitlementRank() {
+      const r = lastState?.entitlement?.rank;
+      return typeof r === "number" ? r : null;
     },
     noteResidentLine(text) {
       keep({ who: "her", by: "resident", text, at: now() });
     },
   };
 
-  /** Task 66: tell every subscriber the marker, when it has changed since the last telling. */
+  /** Task 66: tell every subscriber the marker, when it has changed since that subscriber last heard. */
   const notify = () => {
     if (listeners.size === 0) return;
     const m = inner.marker();
-    const key = JSON.stringify(m);
-    if (key === lastSent) return;
-    lastSent = key;
-    for (const l of [...listeners]) {
+    for (const [l, heard] of [...listeners]) {
+      if (heard === m.rev) continue;
+      listeners.set(l, m.rev);
       try {
         l(m);
       } catch {
@@ -614,10 +701,12 @@ const refusalCategory = (error: string): string => {
     observe: then(inner.observe),
     pump: then(inner.pump),
     keepClaim: then(inner.keepClaim),
+    refresh: then(inner.refresh),
     subscribe(listener) {
-      listeners.add(listener);
+      const first = inner.marker();
+      listeners.set(listener, first.rev);
       try {
-        listener(inner.marker());
+        listener(first);
       } catch {
         /* see notify */
       }

@@ -270,10 +270,10 @@ test("the waiting marker says only that a line waits, its number and time, and t
   await pack.check();
   channel.open(clock.t, tel());
   await wake({});
-  expect(desk.marker()).toEqual({ waiting: false, seq: null, at: null, composing: false, claimLive: true });
+  expect(desk.marker()).toMatchObject({ waiting: false, seq: null, at: null, composing: false, claimLive: true, latestSeq: 0, lastLineAt: null });
   channel.mail("Still thinking?", clock.t + 500);
   await director.tick();
-  expect(desk.marker()).toEqual({ waiting: true, seq: 1, at: clock.t + 500, composing: true, claimLive: true });
+  expect(desk.marker()).toMatchObject({ waiting: true, seq: 1, at: clock.t + 500, composing: true, claimLive: true, latestSeq: 1 });
   expect(JSON.stringify(desk.marker())).not.toContain("thinking");
 });
 
@@ -361,10 +361,15 @@ test("the marker long-polls: it answers as soon as a line past `after` lands, an
   // The marker token cannot claim.
   await fetch(at("/principal/waiting?claim=1"), { headers: bearer("watch-marker-token") });
   expect(desk.live()).toBe(false);
+  // Task 67: a heartbeat never TAKES a claim; she goes on duty with a real wake, the poll then keeps it.
+  await fetch(at("/principal/waiting?claim=1"), { headers: bearer("watch-principal-token") });
+  expect(desk.live()).toBe(false);
+  await fetch(at("/principal/wake"), { method: "POST", headers: bearer("watch-principal-token"), body: "{}" });
+  expect(desk.live()).toBe(true);
   const started = Date.now();
   const pending = fetch(at("/principal/waiting?after=0&wait=5&claim=1"), { headers: bearer("watch-principal-token") });
   await new Promise((r) => setTimeout(r, 400));
-  expect(desk.live()).toBe(true); // claimed at the start of the poll
+  expect(desk.live()).toBe(true);
   channel.mail("Are you there?", 1_000_500);
   await director.tick();
   const marker = await (await pending).json();

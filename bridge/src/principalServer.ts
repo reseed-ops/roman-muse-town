@@ -13,9 +13,9 @@
  * `GET /principal/waiting?after=<seq>&wait=<s>` holds the answer until a
  * line past `after` waits, the composing flag turns over, or `wait`
  * seconds pass (capped at WAIT_MAX_S), then answers the marker as ever.
- * With the principal token, `claim=1` also keeps (or takes) her claim at
- * the start and at the answer, so a watcher looping on it holds the
- * visit without a wake; the marker token can never claim.
+ * With the principal token, `claim=1` renews a claim she already holds at
+ * the start and at the answer, while her last real wake is under 10 minutes
+ * old (Task 67); it never takes one, and the marker token can never claim.
  *
  * Many towns (Task 29): besides the owner's token, a paired token
  * (tenants.ts) opens the same two routes for its own town's desk only,
@@ -29,8 +29,9 @@
  * PRINCIPAL_TOKEN variable restarts the service with the new value; the
  * old one is refused from then on, and nothing else changes.
  *
- * The waiting marker carries only a line's sequence number, its time
- * and the composing flag, never text. It is still a sign of when the
+ * The waiting marker carries only numbers, times and flags (a line's sequence
+ * number and time, the composing flag, the visit id, a revision, the newest
+ * line number and when the bridge saw it), never text. It is still a sign of when the
  * owner is in his town, so it is not public: it answers to either
  * token, and the lesser one can read nothing else.
  */
@@ -38,6 +39,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { bearerToken, tokenMatches } from "./bridgeServer.js";
 import type { PrincipalDesk } from "./principal.js";
 import { createPairLimiter, type PairLimits } from "./pairLimiter.js";
+import { createAttemptWindow, createSampledLog, createStreamWriter, credentialKey } from "./streamGuard.js";
 
 const MAX_BODY_BYTES = 64_000;
 export { DEFAULT_PAIR_LIMITS } from "./pairLimiter.js";
@@ -57,13 +59,24 @@ export function callerAddress(req: IncomingMessage, trustProxy = false): string 
 }
 export const WAIT_MAX_S = 25;
 /** Task 66: the push channel. A comment line every STREAM_HEARTBEAT_MS keeps proxies
- *  from idling it out (and keeps the claim, with claim=1); a stream ends after
- *  STREAM_MAX_MS so the token is re-checked, and the watcher reconnects. */
+ *  from idling it out (and renews a claim she holds, with claim=1, within the desk's
+ *  heartbeat bound); a stream ends after STREAM_MAX_MS, and its credential is looked
+ *  at again every STREAM_RECHECK_MS (Task 67); the watcher reconnects. */
 export const STREAM_HEARTBEAT_MS = 15_000;
 export const STREAM_MAX_MS = 10 * 60 * 1000;
-/** Open streams per desk and in all; the oldest of a desk's is closed past its cap. */
+/** Open streams per desk and in all. The oldest of a desk's own class is closed past its cap:
+ *  claim holders (the principal token, a paired token) and read-only observers (the marker
+ *  token) are counted and evicted separately, so an observer can never push a holder off. */
 export const STREAMS_PER_DESK = 3;
+export const MARKER_STREAMS_PER_DESK = 1;
 export const STREAMS_TOTAL = 64;
+/** A stream's credential is checked again this often, so a revoked or expired one ends within it. */
+export const STREAM_RECHECK_MS = 60_000;
+/** A stream with more than this unsent is cut; one that stays full this long is cut too. */
+export const STREAM_MAX_BUFFER = 64 * 1024;
+export const STREAM_STALL_MS = 30_000;
+/** Stream connection attempts per source address and per credential, per minute. */
+export const EVENT_ATTEMPTS = { perSource: 30, perCredential: 20, windowMs: 60_000 };
 const WAIT_LOOK_MS = 250;
 
 export type PairOutcome = { ok: true; principalToken: string } | { ok: false; status: number; error: string };
@@ -86,10 +99,18 @@ export type PrincipalServerOptions = {
   /** Overrides for the push channel's timings (tests). */
   streamHeartbeatMs?: number;
   streamMaxMs?: number;
+  streamRecheckMs?: number;
+  streamsTotal?: number;
+  streamStallMs?: number;
+  streamMaxBuffer?: number;
+  /** Overrides for the stream-attempt limits (tests). */
+  eventAttempts?: Partial<typeof EVENT_ATTEMPTS>;
+  /** Overrides for the failed-auth limits on the principal routes (tests). */
+  authLimits?: Partial<PairLimits>;
   log?: (line: string) => void;
 };
 
-export type PrincipalServerHandle = { port: number; close: () => Promise<void> };
+export type PrincipalServerHandle = { port: number; close: () => Promise<void>; /** Open streams, and the desks that hold any (an empty desk entry is deleted). */ streams: () => { open: number; desks: number } };
 
 function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -115,6 +136,12 @@ export function startPrincipalServer(opts: PrincipalServerOptions): Promise<Prin
   const log = opts.log ?? ((line: string) => console.log(line));
   const trustProxy = opts.trustProxy ?? false;
   const pairLimiter = createPairLimiter(opts.pairLimits ?? {});
+  // Task 67: the same limiter, for failed auth (and bounded upstream lookups) on the principal routes.
+  const authLimiter = createPairLimiter(opts.authLimits ?? {});
+  const attempts = { ...EVENT_ATTEMPTS, ...opts.eventAttempts };
+  const bySource = createAttemptWindow(attempts.perSource, attempts.windowMs);
+  const byCredential = createAttemptWindow(attempts.perCredential, attempts.windowMs);
+  const sampled = createSampledLog(log);
   const send = (res: ServerResponse, status: number, body: unknown): void => {
     res.writeHead(status, {
       "content-type": "application/json",
@@ -128,7 +155,20 @@ export function startPrincipalServer(opts: PrincipalServerOptions): Promise<Prin
   };
   const heartbeatMs = opts.streamHeartbeatMs ?? STREAM_HEARTBEAT_MS;
   const streamMaxMs = opts.streamMaxMs ?? STREAM_MAX_MS;
-  const streams = new Map<PrincipalDesk, Set<() => void>>();
+  const recheckMs = opts.streamRecheckMs ?? STREAM_RECHECK_MS;
+  const streams = new Map<PrincipalDesk, { holders: Set<() => void>; observers: Set<() => void> }>();
+  type Auth = { principal: boolean; d: PrincipalDesk };
+  /** Who this token is for this route: the owner, the read-only marker token, or a paired town. */
+  const staticAuth = (presented: string | null, path: string): Auth | null => {
+    if (token !== null && desk !== null && tokenMatches(presented, token)) return { principal: true, d: desk };
+    const readsMarker = path === "/principal/waiting" || path === "/principal/events";
+    if (readsMarker && markerToken !== null && desk !== null && tokenMatches(presented, markerToken)) return { principal: false, d: desk };
+    return null;
+  };
+  const pairedAuth = async (presented: string | null): Promise<Auth | null> => {
+    const d = opts.resolve ? await opts.resolve(presented) : null;
+    return d ? { principal: true, d } : null;
+  };
   let streamCount = 0;
   const server = createServer(async (req, res) => {
     try {
@@ -167,25 +207,49 @@ export function startPrincipalServer(opts: PrincipalServerOptions): Promise<Prin
       }
       if (path !== "/principal/wake" && path !== "/principal/waiting" && path !== "/principal/events") return send(res, 404, { error: "no such route" });
       const presented = bearerToken(req.headers.authorization);
-      const owner = token !== null && desk !== null && tokenMatches(presented, token);
-      const marker = !owner && markerToken !== null && desk !== null && (path === "/principal/waiting" || path === "/principal/events") && tokenMatches(presented, markerToken);
-      const paired = !owner && !marker && opts.resolve ? await opts.resolve(presented) : null;
-      const principal = owner || paired !== null;
-      const d = (paired ?? desk)!;
-      if (!principal && !marker) {
-        log(`principal: refused ${method} ${path}: ${presented === null ? "no token" : "wrong token"}`);
+      let auth = staticAuth(presented, path);
+      if (!auth) {
+        // Not a static token: the lookup (a paired token's HMAC and generation check) and every
+        // failure are bounded per address and overall by the pairing limiter (Task 67).
+        const slot = authLimiter.reserve(callerAddress(req, trustProxy));
+        if (!slot.ok) {
+          sampled("auth-limit", `principal: a caller was refused (${slot.reason})`);
+          return send(res, 429, { error: "too many refused attempts from here; wait a few minutes" });
+        }
+        try {
+          auth = await pairedAuth(presented);
+        } catch (error) {
+          slot.settle("release");
+          throw error;
+        }
+        slot.settle(auth ? "release" : "miss");
+      }
+      if (!auth) {
+        sampled("refused", `principal: refused ${method} ${path}: ${presented === null ? "no token" : "wrong token"}`);
         return send(res, 401, { error: "refused" });
       }
+      const { principal, d } = auth;
       if (path === "/principal/events") {
         // Task 66: the box subscribes (outbound), the bridge pushes the marker down
-        // the open response. The marker only: a line's number, time and the
-        // composing flag, never text; the watcher then makes the usual wake call.
+        // the open response. The marker only: numbers, times and flags, never text;
+        // the watcher then makes the usual wake call.
         if (method !== "GET") return send(res, 405, { error: "method not allowed" });
-        if (streamCount >= STREAMS_TOTAL) return send(res, 503, { error: "too many open streams" });
+        if (!bySource.hit(callerAddress(req, trustProxy)) || !byCredential.hit(credentialKey(presented ?? ""))) {
+          sampled("events-rate", "principal events: a stream attempt was refused (too many attempts)");
+          return send(res, 429, { error: "too many stream attempts; slow down" });
+        }
         const claim = principal && url.searchParams.get("claim") === "1";
-        let mine = streams.get(d);
-        if (!mine) streams.set(d, (mine = new Set()));
-        while (mine.size >= STREAMS_PER_DESK) [...mine][0]!();
+        let group = streams.get(d);
+        if (!group) streams.set(d, (group = { holders: new Set(), observers: new Set() }));
+        const mine = principal ? group.holders : group.observers;
+        const cap = principal ? STREAMS_PER_DESK : MARKER_STREAMS_PER_DESK;
+        // The total cap counts what eviction frees: a desk's own reconnect replaces its oldest.
+        if (streamCount - (mine.size >= cap ? mine.size - cap + 1 : 0) >= (opts.streamsTotal ?? STREAMS_TOTAL)) {
+          if (!group.holders.size && !group.observers.size) streams.delete(d);
+          sampled("events-full", "principal events: a stream was refused (all slots taken)");
+          return send(res, 503, { error: "too many open streams" });
+        }
+        while (mine.size >= cap) [...mine][0]!();
         res.writeHead(200, {
           "content-type": "text/event-stream",
           "cache-control": "no-store",
@@ -197,32 +261,68 @@ export function startPrincipalServer(opts: PrincipalServerOptions): Promise<Prin
         let unsubscribe = () => {};
         let beat: ReturnType<typeof setInterval> | null = null;
         let ttl: ReturnType<typeof setTimeout> | null = null;
-        const stop = () => {
+        let recheck: ReturnType<typeof setInterval> | null = null;
+        const stop = (why = "closed") => {
           if (closed) return;
           closed = true;
           unsubscribe();
           if (beat) clearInterval(beat);
           if (ttl) clearTimeout(ttl);
-          mine!.delete(stop);
+          if (recheck) clearInterval(recheck);
+          mine.delete(stop);
+          if (!group!.holders.size && !group!.observers.size && streams.get(d) === group) streams.delete(d);
           streamCount -= 1;
           res.end();
-          log(`principal events: a stream closed (${streamCount} open)`);
+          log(`principal events: a stream ${why} (${streamCount} open)`);
         };
+        const writer = createStreamWriter(res, {
+          maxBuffer: opts.streamMaxBuffer ?? STREAM_MAX_BUFFER,
+          stallMs: opts.streamStallMs ?? STREAM_STALL_MS,
+          abandon: (reason) => stop(reason === "buffer" ? "was cut: its reader fell behind" : "was cut: its reader stalled"),
+        });
         streamCount += 1;
         mine.add(stop);
-        req.on("close", stop);
+        req.on("close", () => stop());
         res.write("retry: 3000\n\n");
         if (claim) d.keepClaim();
+        let first = true;
+        let timedSeq = 0;
         unsubscribe = d.subscribe((m) => {
-          if (!closed) res.write(`event: marker\ndata: ${JSON.stringify(m)}\n\n`);
+          if (closed) return;
+          writer.marker(`event: marker\ndata: ${JSON.stringify(m)}\n\n`);
+          // Metadata-only timing (Task 67): how long after the bridge saw a line it was written here.
+          if (!first && m.latestSeq > 0 && m.latestSeq !== timedSeq && m.lastLineAt !== null) {
+            timedSeq = m.latestSeq;
+            log(`principal events: line ${m.latestSeq} written ${Math.max(0, Date.now() - m.lastLineAt)} ms after the bridge saw it`);
+          }
+          first = false;
         });
         beat = setInterval(() => {
           if (closed) return;
           if (claim) d.keepClaim();
-          res.write(": keepalive\n\n");
+          d.refresh();
+          writer.comment(": keepalive\n\n");
+          writer.check();
         }, heartbeatMs);
-        ttl = setTimeout(stop, streamMaxMs);
-        log(`principal events: a stream opened${claim ? " (keeps the claim)" : ""} (${streamCount} open)`);
+        // Revocation (Task 67): the credential is looked at again each recheck; a revoked,
+        // expired or rotated one ends the stream (and so its claim renewals) within that.
+        let checking = false;
+        recheck = setInterval(() => {
+          if (closed || checking) return;
+          checking = true;
+          void (async () => {
+            try {
+              const now = staticAuth(presented, path) ?? (await pairedAuth(presented));
+              if (!now || now.d !== d || now.principal !== principal) stop("ended: its credential no longer holds");
+            } catch {
+              stop("ended: its credential could not be checked");
+            } finally {
+              checking = false;
+            }
+          })();
+        }, recheckMs);
+        ttl = setTimeout(() => stop("ended (time is up; the watcher reconnects)"), streamMaxMs);
+        log(`principal events: a stream opened${claim ? " (keeps her claim while she is on duty)" : ""} (${streamCount} open)`);
         return;
       }
       if (path === "/principal/waiting") {
@@ -270,7 +370,7 @@ export function startPrincipalServer(opts: PrincipalServerOptions): Promise<Prin
     server.listen(opts.port ?? 8790, opts.host ?? "0.0.0.0", () => {
       const address = server.address();
       const port = typeof address === "object" && address ? address.port : (opts.port ?? 8790);
-      resolve({ port, close: () => new Promise((done) => server.close(() => done())) });
+      resolve({ port, close: () => new Promise((done) => { server.closeAllConnections?.(); server.close(() => done()); }), streams: () => ({ open: streamCount, desks: streams.size }) });
     });
   });
 }

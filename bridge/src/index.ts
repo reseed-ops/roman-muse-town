@@ -90,7 +90,24 @@ async function main(): Promise<void> {
   const pack = createPackLoader(filePackSource(cfg.packPath), { log });
   if (cfg.channel === "town" && cfg.principalToken && cfg.townUrl && cfg.directorToken && cfg.visitorToken) {
     // The principal channel (Task 22): her own door on this bridge.
-    principal = createPrincipalDesk({ channel, rank: () => pack.current().rank ?? 0, claimMs: cfg.principalClaimMs, log });
+    // The owner desk's rank (Task 67): min(pack rank, the town's entitlement rank).
+    // The pack's rank is chat-side input, not a trusted value; the entitlement is the
+    // town's own. TODAY the town does not send the owner's entitlement on this
+    // channel, so entitlementRank() is null and the live rank is the pack's: the
+    // rank 4 placeholder from bridge/pack.example.md (no tended pack exists on the
+    // box). The moment the town sends it, the lower of the two governs.
+    let ownerDesk: PrincipalDesk | null = null;
+    principal = createPrincipalDesk({
+      channel,
+      rank: () => {
+        const fromPack = pack.current().rank ?? 0;
+        const fromTown = ownerDesk?.entitlementRank() ?? null;
+        return fromTown === null ? fromPack : Math.min(fromPack, fromTown);
+      },
+      claimMs: cfg.principalClaimMs,
+      log,
+    });
+    ownerDesk = principal;
     const desk = principal;
     setInterval(() => void desk.pump(), 250).unref();
     principalFace = ` principal=on (claim lapses after ${Math.round(cfg.principalClaimMs / 1000)} s; marker token ${cfg.principalMarkerToken ? "set" : "not set"})`;
