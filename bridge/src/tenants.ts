@@ -118,6 +118,12 @@ export type TenantRegistryOptions = {
   /** A director channel for one visitor's town (createTownChannel in production). */
   channelFor: (visitorToken: string) => DirectorChannel;
   claimMs: number;
+  /**
+   * Durable revision state for one town (Task 70), keyed by the sha256 hex of its visitor key.
+   * Without it, or when it fails, the registry still keeps each town's mark in memory, so a desk
+   * recreated after idle eviction stays above the one it replaces; only a restart needs the store.
+   */
+  revisionStoreFor?: (id: string) => { load(): number; save(high: number): void };
   idleMs?: number;
   now?: () => number;
   log?: (line: string) => void;
@@ -144,6 +150,33 @@ export function createTenantRegistry(opts: TenantRegistryOptions): TenantRegistr
   const log = opts.log ?? (() => {});
   const towns = new Map<string, { desk: PrincipalDesk; channel: DirectorChannel; lastUse: number; label: string }>();
   const generations = new Map<string, { at: number; generation: number | null }>();
+  // Task 70: each town's revision mark outlives its desk's eviction (bounded; the stalest goes first).
+  const marks = new Map<string, number>();
+  const storeFor = (id: string) => {
+    let durable: { load(): number; save(high: number): void } | undefined;
+    try {
+      durable = opts.revisionStoreFor?.(id);
+    } catch {
+      durable = undefined;
+    }
+    return {
+      load: () => {
+        let stored = 0;
+        try {
+          stored = durable?.load() ?? 0;
+        } catch {
+          stored = 0;
+        }
+        return Math.max(marks.get(id) ?? 0, stored);
+      },
+      save: (high: number) => {
+        marks.delete(id);
+        if (marks.size >= 5000) marks.delete(marks.keys().next().value as string);
+        marks.set(id, high);
+        durable?.save(high); // a throw is logged by the desk; the memory mark is already kept
+      },
+    };
+  };
   return {
     async currentGeneration(visitorToken) {
       const id = createHash("sha256").update(visitorToken).digest("hex");
@@ -180,7 +213,7 @@ export function createTenantRegistry(opts: TenantRegistryOptions): TenantRegistr
             return state;
           },
         };
-        const desk = createPrincipalDesk({ channel, rank: () => held.rank, claimMs: opts.claimMs, now, resident: false, log: (line) => log(`[town ${label}] ${line}`) });
+        const desk = createPrincipalDesk({ channel, rank: () => held.rank, claimMs: opts.claimMs, now, resident: false, revisionStore: storeFor(id), log: (line) => log(`[town ${label}] ${line}`) });
         town = { desk, channel, lastUse: now(), label };
         towns.set(id, town);
         log(`tenants: town ${label} awake (${towns.size} awake)`);

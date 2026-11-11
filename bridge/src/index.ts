@@ -4,6 +4,7 @@
  * director loop from the environment, and runs until stopped.
  */
 import { readFileSync, writeFileSync } from "node:fs";
+import { fileRevisionStore, tenantRevisionPath } from "./revisionFiles.js";
 import { createAnthropicMind } from "./anthropicMind.js";
 import { readConfig } from "./config.js";
 import { createCostLedger, type LedgerDay } from "./costCaps.js";
@@ -105,18 +106,7 @@ async function main(): Promise<void> {
         return fromTown === null ? fromPack : Math.min(fromPack, fromTown);
       },
       claimMs: cfg.principalClaimMs,
-      revisionStore: cfg.revisionPath
-        ? {
-            load: () => {
-              try {
-                return Number((JSON.parse(readFileSync(cfg.revisionPath!, "utf8")) as { high?: unknown }).high) || 0;
-              } catch {
-                return 0;
-              }
-            },
-            save: (high) => writeFileSync(cfg.revisionPath!, JSON.stringify({ high })),
-          }
-        : undefined,
+      revisionStore: cfg.revisionPath ? fileRevisionStore(cfg.revisionPath) : undefined,
       log,
     });
     ownerDesk = principal;
@@ -134,6 +124,7 @@ async function main(): Promise<void> {
     const tenants = createTenantRegistry({
       channelFor: (visitorToken) => createTownChannel({ townUrl, directorToken, visitorToken }),
       claimMs: cfg.principalClaimMs,
+      revisionStoreFor: cfg.revisionPath ? (id) => fileRevisionStore(tenantRevisionPath(cfg.revisionPath!, id)) : undefined,
       log,
     });
     setInterval(() => void tenants.pumpAll(), 250).unref();

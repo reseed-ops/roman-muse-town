@@ -238,13 +238,25 @@ marker is state, not a queue.
 `{waiting, seq, at, composing, claimLive, visit, rev, latestSeq, lastLineAt}`.
 - `visit`: the open visit's id (its beginning, ms), null when none.
 - `rev`: rises by one whenever anything in the marker changes. A new desk
-  starts above both the clock (ms) and a stored high-water mark
-  (`REVISION_PATH`, reserved in blocks of 1000), so it exceeds everything the
-  previous desk issued, also if the clock went back. The file lives in the
-  container's disk: on a host without a volume it is lost on redeploy and
-  only the clock seed holds (a fresh deploy takes far longer than the
-  changes it could have issued). A watcher discards a marker older than one
-  it has applied.
+  starts above both the clock (ms) and a stored high-water mark (reserved in
+  blocks of 1000), so it exceeds everything the previous desk issued, also if
+  the clock went back. What that covers, by desk and by storage:
+  - Owner desk: the mark is `REVISION_PATH` (default `./revision.json`).
+  - Paired towns (Task 70): each town has its own mark, in a file named by
+    the digest of its visitor key under `REVISION_PATH` + `.towns/` (never
+    the key itself), and also kept in memory while the process runs, so a desk
+    recreated after idle eviction stays above the one it replaced even with no
+    disk at all.
+  - Across a restart or redeploy the order holds only if the file survives it
+    (a volume mounted at the directory holding `REVISION_PATH`) and the save
+    succeeded; files are written whole and renamed into place. Where the disk
+    is ephemeral (Railway without a volume) a restart falls back to the clock
+    seed alone, which is a practical expectation, not a bound: a fresh start is
+    normally later than the changes the old process could have issued, but a
+    clock that went back, or a lost or unwritable file, breaks it. A failed save
+    is logged and tolerated. A watcher that applied a higher `rev` discards
+    lower ones, so after such a break it could miss work until its own
+    process restarts. Not exactly-once, not a guarantee.
 - `latestSeq`, `lastLineAt`: the newest line number of the open visit and
   when the bridge first saw it (the bridge's clock). They say a line exists
   even when the resident is answering it, so a watcher that does not claim
