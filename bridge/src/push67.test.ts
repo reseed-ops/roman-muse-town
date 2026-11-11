@@ -301,7 +301,7 @@ test("marker: rev rises on every change and across a restart; the visit id and t
   expect(b.desk.marker().rev).toBeGreaterThan(m2.rev);
 });
 
-test("timing: the bridge logs how long after it saw a line the marker was written, with no text", async () => {
+test("timing: the bridge logs how long after it first observed a line the marker reached the socket, with no text", async () => {
   const log: string[] = [];
   const { channel, desk, beat } = town();
   const server = await serve(desk, {}, (l) => log.push(l));
@@ -311,7 +311,7 @@ test("timing: the bridge logs how long after it saw a line the marker was writte
   await until(() => s.markers.length >= 1);
   channel.mail("SENTINEL-timing", Date.now());
   await beat();
-  await until(() => log.some((l) => /line 1 written \d+ ms after the bridge saw it/.test(l)));
+  await until(() => log.some((l) => /line 1 handed to the socket \d+ ms after the bridge first observed it \(not client receipt\)/.test(l)));
   expect(log.join("\n")).not.toContain("SENTINEL-timing");
   await s.cancel();
   await server.close();

@@ -72,7 +72,7 @@ test("push: a line reaches the subscriber soon after the bridge reads it; latenc
   await until(() => got.length === 6, 6000);
   const e2e = got[5]!.at - t0;
   clearInterval(loop);
-  console.log(`PUSH LATENCY: hop (desk learns -> subscriber told) ms: ${hops.join(", ")} (max ${Math.max(...hops)}); end to end with the 2 s beat: ${e2e} ms`);
+  console.log(`PUSH LATENCY: hop (desk learns -> subscriber told) ms: ${hops.join(", ")} (max ${Math.max(...hops)}); fixed-phase sample, fake channel, with the 2 s beat (mail written to subscriber told): ${e2e} ms`);
   expect(Math.max(...hops)).toBeLessThan(250);
   expect(e2e).toBeLessThan(2600);
   expect(got.map((g) => g.m.seq)).toEqual([1, 2, 3, 4, 5, 6]);

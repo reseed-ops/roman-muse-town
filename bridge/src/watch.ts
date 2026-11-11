@@ -84,7 +84,9 @@ export function createSseParser(onEvent: (e: SseEvent) => void): (chunk: string)
 export type Ack = { visit: number | null; seq: number };
 export type WatchStore = { load(): Ack | null; save(ack: Ack): void };
 
-export type LineContext = { visit: number | null; seq: number; receivedAt: number; signal: AbortSignal };
+/** `receivedAt`: when this process took the marker off the stream or poll (before it waited its turn);
+ *  `startedAt`: when the callback began, which can be later while another command was running. */
+export type LineContext = { visit: number | null; seq: number; receivedAt: number; startedAt: number; signal: AbortSignal };
 
 export type WatchOptions = {
   bridgeUrl: string;
@@ -134,7 +136,7 @@ export function startWatch(opts: WatchOptions): Watcher {
   let stopped = false;
   let ack: Ack | null = opts.persist?.load() ?? null;
   let lastRev = -Infinity;
-  let pending: { m: WaitingMarker; via: "pushed" | "polled" } | null = null;
+  let pending: { m: WaitingMarker; via: "pushed" | "polled"; at: number } | null = null;
   let draining: Promise<void> | null = null;
   let current: AbortController | null = null;
   let failureStreak = 0;
@@ -155,7 +157,7 @@ export function startWatch(opts: WatchOptions): Watcher {
   };
   const isNew = (m: WaitingMarker, seq: number) => ack === null || ack.visit !== m.visit || seq > ack.seq;
 
-  const handle = async (m: WaitingMarker, via: "pushed" | "polled") => {
+  const handle = async (m: WaitingMarker, via: "pushed" | "polled", receivedAt: number) => {
     const seq = workOf(m);
     if (seq === null || !isNew(m, seq)) return;
     const ctl = new AbortController();
@@ -170,7 +172,7 @@ export function startWatch(opts: WatchOptions): Watcher {
     }, claimStuckMs);
     try {
       const gone = new Promise<never>((_, reject) => ctl.signal.addEventListener("abort", () => reject(new Error("deadline or stop"))));
-      await Promise.race([Promise.resolve().then(() => opts.onLine(m, { visit: m.visit, seq, receivedAt: Date.now(), signal: ctl.signal })), gone]);
+      await Promise.race([Promise.resolve().then(() => opts.onLine(m, { visit: m.visit, seq, receivedAt, startedAt: Date.now(), signal: ctl.signal })), gone]);
       ack = { visit: m.visit, seq };
       try {
         opts.persist?.save(ack);
@@ -197,9 +199,9 @@ export function startWatch(opts: WatchOptions): Watcher {
 
   const drain = async () => {
     while (pending && !stopped) {
-      const { m, via } = pending;
+      const { m, via, at } = pending;
       pending = null;
-      await handle(m, via);
+      await handle(m, via, at);
     }
     draining = null;
   };
@@ -214,7 +216,7 @@ export function startWatch(opts: WatchOptions): Watcher {
       lastRev = m.rev;
     }
     if (pending) stats.coalesced += 1; // state, not a queue: only the newest waits its turn
-    pending = { m, via };
+    pending = { m, via, at: pending && pending.m.seq === m.seq && pending.m.visit === m.visit ? pending.at : Date.now() };
     if (!draining) draining = drain();
     return draining;
   };
@@ -336,8 +338,8 @@ if (import.meta.main) {
     commandTimeoutMs: Number(process.env.WATCH_CMD_TIMEOUT_S) > 0 ? Number(process.env.WATCH_CMD_TIMEOUT_S) * 1000 : 120_000,
     log: (l) => console.error(l),
     onLine: (m, ctx) => {
-      // Metadata only: the line's number, its visit, when the bridge saw it, when this box did.
-      console.log(JSON.stringify({ line: ctx.seq, visit: ctx.visit, bridgeSawAt: m.lastLineAt, receivedAt: ctx.receivedAt }));
+      // Metadata only: the line's number, its visit, when the bridge first observed it, when this box took the marker, when the callback began.
+      console.log(JSON.stringify({ line: ctx.seq, visit: ctx.visit, bridgeFirstObservedAt: m.lastLineAt, receivedAt: ctx.receivedAt, callbackStartedAt: ctx.startedAt }));
       if (!cmd) return;
       return new Promise<void>((resolve, reject) => {
         const env: Record<string, string | undefined> = { ...process.env, MUSE_LINE_SEQ: String(ctx.seq), MUSE_VISIT: ctx.visit === null ? "" : String(ctx.visit) };

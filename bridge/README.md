@@ -237,9 +237,14 @@ marker is state, not a queue.
 **The marker** (never text):
 `{waiting, seq, at, composing, claimLive, visit, rev, latestSeq, lastLineAt}`.
 - `visit`: the open visit's id (its beginning, ms), null when none.
-- `rev`: rises by one whenever anything in the marker changes, and starts
-  from the desk's creation time in ms, so it also rises across a bridge
-  restart. A watcher discards a marker older than one it has applied.
+- `rev`: rises by one whenever anything in the marker changes. A new desk
+  starts above both the clock (ms) and a stored high-water mark
+  (`REVISION_PATH`, reserved in blocks of 1000), so it exceeds everything the
+  previous desk issued, also if the clock went back. The file lives in the
+  container's disk: on a host without a volume it is lost on redeploy and
+  only the clock seed holds (a fresh deploy takes far longer than the
+  changes it could have issued). A watcher discards a marker older than one
+  it has applied.
 - `latestSeq`, `lastLineAt`: the newest line number of the open visit and
   when the bridge first saw it (the bridge's clock). They say a line exists
   even when the resident is answering it, so a watcher that does not claim
@@ -328,8 +333,8 @@ BRIDGE_URL=https://town-bridge-production.up.railway.app \
 PRINCIPAL_TOKEN=... WATCH_CMD='/path/to/wake-muse.sh' bun run bridge/src/watch.ts
 ```
 
-It prints one JSON line per work item (`line`, `visit`, `bridgeSawAt`,
-`receivedAt`; no text) and runs `WATCH_CMD` with `MUSE_LINE_SEQ` and
+It prints one JSON line per work item (`line`, `visit`,
+`bridgeFirstObservedAt`, `receivedAt`, `callbackStartedAt`; no text) and runs `WATCH_CMD` with `MUSE_LINE_SEQ` and
 `MUSE_VISIT` set. A stream with no bytes for 45 s (the bridge beats every
 15 s) is dropped and reconnected, with backoff 1 s doubling to 30 s,
 jittered; the once-a-minute poll of `/principal/waiting` runs beside it as
@@ -344,9 +349,12 @@ only figure measured is local and from a fake channel (one sample of about
 1.3 s with a fixed phase in `push.test.ts`); no live figure has been
 measured, and the agent run that composes her reply (seconds to tens of
 seconds) dominates anyway. Metadata-only timing is in place: the bridge logs
-`line N written X ms after the bridge saw it` per line per stream, and the
-watcher prints `bridgeSawAt` and `receivedAt` per line (compare them after
-checking clock sync on the box). Not yet instrumented, an open item: the
+`line N handed to the socket X ms after the bridge first observed it (not
+client receipt)` per line per stream (when the marker is actually written to
+the socket, not when it was queued; a marker coalesced away never logs), and
+the watcher prints `bridgeFirstObservedAt`, `receivedAt` (this process took
+the marker) and `callbackStartedAt` (the command began, later if another was
+running) per line (compare them after checking clock sync on the box). Not yet instrumented, an open item: the
 town's own acceptance time to the bridge's read, and the browser's
 enactment of her reply.
 
@@ -425,6 +433,7 @@ logged.
 | `HARNESS_URL` | `http://localhost:8787` | The seam harness (`seam` only). |
 | `DIRECTOR_MODEL` | `claude-opus-5-5` | The model. |
 | `PACK_PATH` | `./pack.md` | The context pack file. |
+| `REVISION_PATH` | `./revision.json` | High-water mark for marker revisions across restarts; empty string disables. |
 | `LEDGER_PATH` | `./ledger.json` | The cost ledger; empty string disables persistence. |
 | `POLL_MS` | `2000` | The poll beat. |
 | `INTENTION_EVERY_MS` | `300000` | Presence intentions, at most one per. |
