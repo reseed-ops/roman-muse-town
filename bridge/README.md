@@ -179,6 +179,7 @@ Routes (Bearer token, constant-time compare, bare 401 on a miss):
 | Route | Token | Answer |
 | --- | --- | --- |
 | `POST /principal/wake` | principal | Her call: claims (or keeps) the visit, carries her direction, returns the slate whole. |
+| `GET /principal/events` | principal, paired or marker | Server-sent events (Task 66): the marker on connect and on every change; `claim=1` (principal) keeps the claim while open. |
 | `GET /principal/waiting` | principal or marker | `{waiting, seq, at, composing, claimLive}`: that a line waits, its number and time. Never its text. Long-polls with `?after=<seq>&wait=<s>`; `claim=1` (principal token only) keeps the claim. |
 | `GET /healthz` | none | `{"ok":true}` and nothing else. |
 
@@ -223,7 +224,46 @@ One call per waking. The body of `POST /principal/wake`, every field optional:
   and an `unheld` report says so. Past 60 s the beats are reported
   `dropped` ("no visit opened within 60 s") on her next slate.
 
-### The watcher contract (no push needed)
+### Push delivery (Task 66): the box subscribes, the town tells her at once
+
+`GET /principal/events` is a server-sent-events stream (the principal
+token, a paired token for its own town, or the read-only marker token).
+Railway cannot dial the box, so the box dials out and holds the stream;
+the bridge pushes `event: marker` with the waiting marker (`{waiting, seq,
+at, composing, claimLive}`, never text) on connect and on every change,
+plus a `: keepalive` comment every 15 s. With the principal token,
+`?claim=1` keeps her claim for as long as the stream is open (also on each
+keepalive), like the long-poll. A stream ends after 10 minutes so the token
+is re-checked (expiry, rotation, pairing generation); at most 3 per desk and
+64 in all. The marker is state, not a queue, so a line that landed while the
+stream was down is the first event after it returns, and a line waits only
+during an open visit.
+
+SSE was chosen over a websocket (needs an upgrade path and framing the
+proxy and the box do not need) and over the existing long-poll (which
+already answers within the bridge's 2 s read of the town, but needs a
+reconnect per answer and a waking loop on her side). It is one plain
+GET, works through NAT, needs no dependency and degrades to the poll.
+
+The subscriber is `bridge/src/watch.ts`, the recipe for the owner's side:
+
+```
+BRIDGE_URL=https://town-bridge-production.up.railway.app \
+PRINCIPAL_TOKEN=... WATCH_CMD='/path/to/wake-muse.sh' bun run bridge/src/watch.ts
+```
+
+It prints one JSON line per new line (the number and time) and runs
+`WATCH_CMD` with `MUSE_LINE_SEQ` set (the command makes the usual
+`POST /principal/wake {"seen": $MUSE_LINE_SEQ, ...}`; her words still pass
+the shared gate there). It reconnects with backoff (1 s doubling to 30 s,
+jittered) and keeps the once-a-minute poll of `/principal/waiting` running
+beside the stream as the fallback (`WATCH_POLL_S`). Push and poll feed one
+hand-over, so a line is handed over once; a failed hand-over is retried.
+Latency: the bridge reads the town every 2 s (`POLL_MS`), so a spoken line
+reaches the subscriber within about 2 s (measured about 1.3 s in the
+test with a random phase), the push hop itself in a few milliseconds.
+
+### The watcher contract (long-poll, still supported)
 
 There is no push to her; a watcher long-polls the marker instead, so a
 line reaches her within a second of landing:

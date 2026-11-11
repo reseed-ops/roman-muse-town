@@ -124,6 +124,12 @@ export type PrincipalDesk = {
   noteResidentLine(text: string): void;
   /** A watcher's long-poll keeps (or takes) the claim without a wake. */
   keepClaim(): void;
+  /**
+   * Task 66: be told whenever the waiting marker changes (the push channel's
+   * source). The listener gets the marker now and on every change; it never
+   * sees text. Returns the unsubscribe.
+   */
+  subscribe(listener: (marker: WaitingMarker) => void): () => void;
 };
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -228,6 +234,8 @@ export function createPrincipalDesk(opts: PrincipalDeskOptions): PrincipalDesk {
   let lineCounter = 0;
   let pumping = false;
   let heldLookAt = 0;
+  const listeners = new Set<(m: WaitingMarker) => void>();
+  let lastSent = "";
 
   const report = (r: DeskReport) => {
     reports.push(r);
@@ -470,7 +478,7 @@ const refusalCategory = (error: string): string => {
     return out;
   };
 
-  return {
+  const inner: Omit<PrincipalDesk, "subscribe"> = {
     async wake(raw) {
       const t = now();
       const parsed = parsePrincipalCall(raw);
@@ -575,6 +583,47 @@ const refusalCategory = (error: string): string => {
     },
     noteResidentLine(text) {
       keep({ who: "her", by: "resident", text, at: now() });
+    },
+  };
+
+  /** Task 66: tell every subscriber the marker, when it has changed since the last telling. */
+  const notify = () => {
+    if (listeners.size === 0) return;
+    const m = inner.marker();
+    const key = JSON.stringify(m);
+    if (key === lastSent) return;
+    lastSent = key;
+    for (const l of [...listeners]) {
+      try {
+        l(m);
+      } catch {
+        /* a dead subscriber must not hurt the desk */
+      }
+    }
+  };
+  /** Every call that can turn the marker over tells the subscribers afterwards. */
+  const then = <A extends unknown[], R>(fn: (...a: A) => R) => (...a: A): R => {
+    const out = fn(...a);
+    if (out instanceof Promise) return out.finally(notify) as R;
+    notify();
+    return out;
+  };
+  return {
+    ...inner,
+    wake: then(inner.wake),
+    observe: then(inner.observe),
+    pump: then(inner.pump),
+    keepClaim: then(inner.keepClaim),
+    subscribe(listener) {
+      listeners.add(listener);
+      try {
+        listener(inner.marker());
+      } catch {
+        /* see notify */
+      }
+      return () => {
+        listeners.delete(listener);
+      };
     },
   };
 }

@@ -6,6 +6,7 @@
  *   POST /principal/wake     PrincipalCall -> PrincipalSlate   (PRINCIPAL_TOKEN)
  *   GET  /principal/waiting                -> WaitingMarker    (PRINCIPAL_TOKEN, or the
  *                                                               read-only PRINCIPAL_MARKER_TOKEN)
+ *   GET  /principal/events                 -> text/event-stream (Task 66; same tokens as /waiting)
  *   GET  /healthz                          -> {"ok":true}      (no token; says nothing else)
  *
  * The waiting marker also long-polls (the watcher contract, Nov 7):
@@ -55,6 +56,14 @@ export function callerAddress(req: IncomingMessage, trustProxy = false): string 
   return req.socket.remoteAddress || "unknown";
 }
 export const WAIT_MAX_S = 25;
+/** Task 66: the push channel. A comment line every STREAM_HEARTBEAT_MS keeps proxies
+ *  from idling it out (and keeps the claim, with claim=1); a stream ends after
+ *  STREAM_MAX_MS so the token is re-checked, and the watcher reconnects. */
+export const STREAM_HEARTBEAT_MS = 15_000;
+export const STREAM_MAX_MS = 10 * 60 * 1000;
+/** Open streams per desk and in all; the oldest of a desk's is closed past its cap. */
+export const STREAMS_PER_DESK = 3;
+export const STREAMS_TOTAL = 64;
 const WAIT_LOOK_MS = 250;
 
 export type PairOutcome = { ok: true; principalToken: string } | { ok: false; status: number; error: string };
@@ -74,6 +83,9 @@ export type PrincipalServerOptions = {
   trustProxy?: boolean;
   /** Overrides for the pairing limits (tests). */
   pairLimits?: Partial<PairLimits>;
+  /** Overrides for the push channel's timings (tests). */
+  streamHeartbeatMs?: number;
+  streamMaxMs?: number;
   log?: (line: string) => void;
 };
 
@@ -114,6 +126,10 @@ export function startPrincipalServer(opts: PrincipalServerOptions): Promise<Prin
     });
     res.end(JSON.stringify(body));
   };
+  const heartbeatMs = opts.streamHeartbeatMs ?? STREAM_HEARTBEAT_MS;
+  const streamMaxMs = opts.streamMaxMs ?? STREAM_MAX_MS;
+  const streams = new Map<PrincipalDesk, Set<() => void>>();
+  let streamCount = 0;
   const server = createServer(async (req, res) => {
     try {
       const url = new URL(req.url ?? "/", "http://localhost");
@@ -149,16 +165,65 @@ export function startPrincipalServer(opts: PrincipalServerOptions): Promise<Prin
         slot.settle(out.ok ? "success" : out.status === 404 ? "miss" : "release");
         return out.ok ? send(res, 200, { principalToken: out.principalToken }) : send(res, out.status, { error: out.error });
       }
-      if (path !== "/principal/wake" && path !== "/principal/waiting") return send(res, 404, { error: "no such route" });
+      if (path !== "/principal/wake" && path !== "/principal/waiting" && path !== "/principal/events") return send(res, 404, { error: "no such route" });
       const presented = bearerToken(req.headers.authorization);
       const owner = token !== null && desk !== null && tokenMatches(presented, token);
-      const marker = !owner && markerToken !== null && desk !== null && path === "/principal/waiting" && tokenMatches(presented, markerToken);
+      const marker = !owner && markerToken !== null && desk !== null && (path === "/principal/waiting" || path === "/principal/events") && tokenMatches(presented, markerToken);
       const paired = !owner && !marker && opts.resolve ? await opts.resolve(presented) : null;
       const principal = owner || paired !== null;
       const d = (paired ?? desk)!;
       if (!principal && !marker) {
         log(`principal: refused ${method} ${path}: ${presented === null ? "no token" : "wrong token"}`);
         return send(res, 401, { error: "refused" });
+      }
+      if (path === "/principal/events") {
+        // Task 66: the box subscribes (outbound), the bridge pushes the marker down
+        // the open response. The marker only: a line's number, time and the
+        // composing flag, never text; the watcher then makes the usual wake call.
+        if (method !== "GET") return send(res, 405, { error: "method not allowed" });
+        if (streamCount >= STREAMS_TOTAL) return send(res, 503, { error: "too many open streams" });
+        const claim = principal && url.searchParams.get("claim") === "1";
+        let mine = streams.get(d);
+        if (!mine) streams.set(d, (mine = new Set()));
+        while (mine.size >= STREAMS_PER_DESK) [...mine][0]!();
+        res.writeHead(200, {
+          "content-type": "text/event-stream",
+          "cache-control": "no-store",
+          connection: "keep-alive",
+          "x-accel-buffering": "no",
+          "access-control-allow-origin": "*",
+        });
+        let closed = false;
+        let unsubscribe = () => {};
+        let beat: ReturnType<typeof setInterval> | null = null;
+        let ttl: ReturnType<typeof setTimeout> | null = null;
+        const stop = () => {
+          if (closed) return;
+          closed = true;
+          unsubscribe();
+          if (beat) clearInterval(beat);
+          if (ttl) clearTimeout(ttl);
+          mine!.delete(stop);
+          streamCount -= 1;
+          res.end();
+          log(`principal events: a stream closed (${streamCount} open)`);
+        };
+        streamCount += 1;
+        mine.add(stop);
+        req.on("close", stop);
+        res.write("retry: 3000\n\n");
+        if (claim) d.keepClaim();
+        unsubscribe = d.subscribe((m) => {
+          if (!closed) res.write(`event: marker\ndata: ${JSON.stringify(m)}\n\n`);
+        });
+        beat = setInterval(() => {
+          if (closed) return;
+          if (claim) d.keepClaim();
+          res.write(": keepalive\n\n");
+        }, heartbeatMs);
+        ttl = setTimeout(stop, streamMaxMs);
+        log(`principal events: a stream opened${claim ? " (keeps the claim)" : ""} (${streamCount} open)`);
+        return;
       }
       if (path === "/principal/waiting") {
         if (method !== "GET") return send(res, 405, { error: "method not allowed" });
