@@ -19,6 +19,7 @@ import {
 ACHIEVEMENTS,
 CLOSE_LINES,
 COLLECTIBLES,
+ATHENA_TEMPLE,
 COLOSSEUM,
 DEVOTED_LINES,
 DIALOGUE_CHOICES,
@@ -234,6 +235,11 @@ import {
   LETTER_LINES, LETTER_PROMPT, MORNING_LINES, atForumSpot, bravesWaiting, isTired, nextTenderKind, noteTender, onCliffPathSpot,
   readTender, readTenderMemory, rememberTender, type TenderFacts, type TenderKind, type TenderMemory, type TenderRecord,
 } from "../../shared/tenderMoments";
+import {
+  EMPTY_SURPRISE_MEMORY, SURPRISE_DECLINED_LINES, SURPRISE_INFO, SURPRISE_SETOFF_LINE, nextSurpriseSpot, readSurpriseMemory, rememberSurprise,
+  type SurpriseFacts, type SurpriseMemory, type SurpriseSpot,
+} from "../../shared/aeliaSurprise";
+import { PHOENIX_NEAR, PHOENIX_QUIET_MS, PHOENIX_STAY_MS, PHOENIX_VISIT_LINE, phoenixVisitBlocked } from "../../shared/phoenixVisit";
 import { WeddingBoard } from "./WeddingBoard";
 import { WEDDING_CELEBRATION_LINE, readWeddingBook, type WeddingStep } from "../../shared/romanWedding";
 import { QUIET_BOAT_BEGIN_LINE, QUIET_BOAT_RETURN_LINES, DRIFT_PROMPT, ROW_BACK_PROMPT, quietBoatBlocked } from "../../shared/quietBoat";
@@ -2242,6 +2248,14 @@ export function App() {
   const declineFollowOffer = useCallback(() => {
     const offer = followOfferRef.current;
     if (offer) declinedOffersRef.current.add(offer.id);
+    if (offer?.id.startsWith("surprise-")) {
+      // Her surprise, kindly declined: nothing counted, nothing held against him.
+      surpriseRunningRef.current = false;
+      followOfferRef.current = null;
+      setFollowOfferState(null);
+      sceneRef.current?.showBubble("muse", pickOne(SURPRISE_DECLINED_LINES));
+      return;
+    }
     if (offer?.guide) {
       rememberInvite((memory) => ({ ...memory, declined: true }));
       followOfferRef.current = null;
@@ -3263,6 +3277,15 @@ export function App() {
   /** A tender moment (Task 59) holds the town: nothing else begins meanwhile. */
   const tenderRunningRef = useRef(false);
   const tenderKindRef = useRef<TenderKind | null>(null);
+  /** Task 60: Aelia's surprise walk (offered, led, arrived) and the phoenix's visit hold the town too: no moment begins inside either, and neither begins inside a moment. */
+  const surpriseRunningRef = useRef(false);
+  const surpriseHoldUntilRef = useRef(0);
+  const surpriseEpisodeRef = useRef<{ spot: SurpriseSpot; since: number; roll: boolean } | null>(null);
+  const surpriseMemoryRef = useRef<SurpriseMemory>(EMPTY_SURPRISE_MEMORY);
+  const phoenixVisitingRef = useRef(false);
+  const phoenixQuietSinceRef = useRef<number | null>(null);
+  const phoenixBegunAtRef = useRef(0);
+  const phoenixSaidRef = useRef(false);
   const nightPendingRef = useRef<"accept" | "decline" | "morning" | null>(null);
   const nightInviteUiRef = useRef(false);
   const nightInviteDecidedRef = useRef<string | null>(null);
@@ -3300,7 +3323,7 @@ export function App() {
       bothHome: !!sceneRef.current?.homeTogether(),
       walking: walkingRef.current,
       troubled,
-      busy: !!dreamingRef.current || !!summitScene || rowingRef.current || nightRunningRef.current || tenderRunningRef.current || dancingRef.current,
+      busy: !!dreamingRef.current || !!summitScene || rowingRef.current || nightRunningRef.current || tenderRunningRef.current || dancingRef.current || townMomentNow(),
       tonight: nightKey(new Date()),
       lastNight: lastNight ?? (nightRunningRef.current ? nightKey(new Date()) : null),
       visitBeganAt: v.active ? v.beganAt : null,
@@ -3309,6 +3332,10 @@ export function App() {
   };
   const nightBlockedNowRef = useRef(nightBlockedNow);
   nightBlockedNowRef.current = nightBlockedNow;
+
+  /** Task 60: Aelia's surprise (offered, led, or just arrived) or the phoenix's visit is under way. */
+  const townMomentNow = (): boolean =>
+    surpriseRunningRef.current || Date.now() < surpriseHoldUntilRef.current || phoenixVisitingRef.current;
 
   /** Why the quiet drift is not offered now (Task 57), or null when it is. */
   const quietBoatBlockedNow = (): string | null => {
@@ -3330,7 +3357,8 @@ export function App() {
         celebratingRef.current.size > 0 ||
         weddingPlayingRef.current ||
         soakingRef.current ||
-        fishingRef.current,
+        fishingRef.current ||
+        townMomentNow(),
       troubled: troubledNow(),
       visitBeganAt: v.active ? v.beganAt : null,
       now: Date.now(),
@@ -3427,6 +3455,7 @@ export function App() {
         dancingRef.current ||
         gazingRef.current ||
         tenderRunningRef.current ||
+        townMomentNow() ||
         !!museBubbleRef.current ||
         !!sceneRef.current?.isSeated(),
       troubled: troubledNow(),
@@ -3664,6 +3693,195 @@ export function App() {
       if (f.now - ep.since < 6000 || !ep.roll) return;
       tenderEpisodeRef.current = null;
       beginTender(kind);
+    }, 1500);
+    return () => window.clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // --- The town remembers (Task 60) -------------------------------------
+  // Aelia's surprises (shared/aeliaSurprise.ts) and the phoenix's rare visit
+  // (shared/phoenixVisit.ts). Every rule is pure and tested; here they are
+  // fed the facts. Both are exclusive with every moment: each is "busy" to
+  // the tender moments, the quiet boat and the night, and each waits for them.
+  const SURPRISE_MEMORY_KEY = "muse-town-surprise-memory";
+  const PHOENIX_VISIT_KEY = "muse-town-phoenix-visit";
+  useEffect(() => {
+    try {
+      surpriseMemoryRef.current = readSurpriseMemory(JSON.parse(localStorage.getItem(SURPRISE_MEMORY_KEY) ?? "null"));
+    } catch {
+      /* storage unavailable: the pacing holds for this load */
+    }
+  }, []);
+  /** Any moment (or a panel, a conversation, an offer) holds the town. */
+  const momentHoldsTownNow = (): boolean =>
+    !!dreamingRef.current ||
+    !!summitScene ||
+    rowingRef.current ||
+    nightRunningRef.current ||
+    privateMomentRef.current ||
+    tenderRunningRef.current ||
+    celebratingRef.current.size > 0 ||
+    weddingPlayingRef.current ||
+    soakingRef.current ||
+    fishingRef.current ||
+    dancingRef.current ||
+    gazingRef.current ||
+    !!museBubbleRef.current ||
+    !!sceneRef.current?.isSeated() ||
+    panelOpenRef.current ||
+    !!guidingRef.current ||
+    !!followOfferRef.current;
+  const surpriseFactsNow = (): SurpriseFacts => {
+    const s = stateRef.current;
+    const p = playerPosRef.current;
+    const v = visitRef.current;
+    const d = new Date();
+    return {
+      rank: s?.affection.rank ?? 0,
+      walking: walkingRef.current,
+      together: followingRef.current,
+      busy: momentHoldsTownNow() || townMomentNow(),
+      troubled: troubledNow(),
+      weather: weatherRef.current?.id ?? null,
+      hour: d.getHours(),
+      night: nightRef.current,
+      at: [p.x, p.z],
+      today: d.toLocaleDateString("en-CA"),
+      now: d.getTime(),
+      visitBeganAt: v.active ? v.beganAt : null,
+      lastTenderAt: tenderMemoryRef.current.lastAt,
+      memory: surpriseMemoryRef.current,
+    };
+  };
+  const surpriseFactsNowRef = useRef(surpriseFactsNow);
+  surpriseFactsNowRef.current = surpriseFactsNow;
+  /** She asks; he can follow her ("Show me") or decline kindly ("Not now"). A no counts toward the cooldown. */
+  const beginSurprise = (spot: SurpriseSpot) => {
+    const info = SURPRISE_INFO[spot];
+    const today = new Date().toLocaleDateString("en-CA");
+    surpriseMemoryRef.current = rememberSurprise(spot, today);
+    try {
+      localStorage.setItem(SURPRISE_MEMORY_KEY, JSON.stringify(surpriseMemoryRef.current));
+    } catch {
+      /* storage unavailable */
+    }
+    const invite: Invite = { id: `surprise-${spot}`, text: pickOne(info.offers), arrival: pickOne(info.arrivals), spot: [info.at[0], info.at[1]] };
+    surpriseRunningRef.current = true;
+    followOfferRef.current = { id: invite.id, text: invite.text, guide: invite };
+    setFollowOfferState(followOfferRef.current);
+    // An unanswered question lapses quietly; nothing is held against him.
+    window.setTimeout(() => {
+      if (followOfferRef.current?.guide !== invite) return;
+      followOfferRef.current = null;
+      setFollowOfferState(null);
+      surpriseRunningRef.current = false;
+    }, 30000);
+  };
+  useEffect(() => {
+    const iv = window.setInterval(() => {
+      const scene = sceneRef.current;
+      if (!scene) return;
+      // An offer cleared by something else leaves nothing held.
+      if (surpriseRunningRef.current && !followOfferRef.current && !guidingRef.current) surpriseRunningRef.current = false;
+      if (surpriseRunningRef.current) return;
+      if (momentHoldsTownNow() || townMomentNow() || !scene.canInvite()) {
+        surpriseEpisodeRef.current = null;
+        return;
+      }
+      const f = surpriseFactsNowRef.current();
+      const spot = nextSurpriseSpot(f);
+      if (!spot) {
+        surpriseEpisodeRef.current = null;
+        return;
+      }
+      const ep = surpriseEpisodeRef.current;
+      if (!ep || ep.spot !== spot) {
+        surpriseEpisodeRef.current = { spot, since: f.now, roll: Math.random() < 0.5 };
+        return;
+      }
+      if (f.now - ep.since < 6000 || !ep.roll) return;
+      surpriseEpisodeRef.current = null;
+      beginSurprise(spot);
+    }, 1500);
+    return () => window.clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The phoenix's visit: a deterministic rare day, a cooldown of days kept in
+  // the browser, quiet held a few seconds, and then she simply perches near
+  // Athena's temple for a while. No line but one, nothing to collect or earn.
+  useEffect(() => {
+    const iv = window.setInterval(() => {
+      const scene = sceneRef.current;
+      if (!scene) return;
+      const now = Date.now();
+      const p = playerPosRef.current;
+      const nearPerch = Math.hypot(p.x - ATHENA_TEMPLE.position[0], p.z - ATHENA_TEMPLE.position[1]) < PHOENIX_NEAR;
+      if (phoenixVisitingRef.current) {
+        if (scene.phoenixPerched() && !phoenixSaidRef.current) {
+          phoenixSaidRef.current = true;
+          scene.showBubble("muse", PHOENIX_VISIT_LINE);
+        }
+        const gone =
+          now - phoenixBegunAtRef.current > PHOENIX_STAY_MS ||
+          !walkingRef.current ||
+          !followingRef.current ||
+          !nearPerch ||
+          !scene.phoenixPresent() ||
+          !!dreamingRef.current ||
+          !!summitScene ||
+          nightRunningRef.current ||
+          tenderRunningRef.current ||
+          surpriseRunningRef.current ||
+          celebratingRef.current.size > 0 ||
+          weddingPlayingRef.current;
+        if (gone) {
+          phoenixVisitingRef.current = false;
+          scene.setPhoenixVisit(false);
+        }
+        return;
+      }
+      const sky = scene.skyState();
+      let lastVisitDay: string | null = null;
+      try {
+        lastVisitDay = localStorage.getItem(PHOENIX_VISIT_KEY);
+      } catch {
+        /* storage unavailable: no cooldown memory this load */
+      }
+      const v = visitRef.current;
+      const blocked = phoenixVisitBlocked({
+        arrived: !!stateRef.current?.phoenix.arrived && scene.phoenixPresent(),
+        daylight: sky.elev > 8 && sky.phase === "day",
+        weather: weatherRef.current?.id ?? null,
+        walking: walkingRef.current,
+        together: followingRef.current,
+        nearPerch,
+        busy: momentHoldsTownNow() || surpriseRunningRef.current || now < surpriseHoldUntilRef.current,
+        troubled: troubledNow(),
+        visitBeganAt: v.active ? v.beganAt : null,
+        now,
+        today: new Date(now).toLocaleDateString("en-CA"),
+        lastVisitDay: lastVisitDay && /^\d{4}-\d{2}-\d{2}$/.test(lastVisitDay) ? lastVisitDay : null,
+      });
+      if (blocked) {
+        phoenixQuietSinceRef.current = null;
+        return;
+      }
+      if (phoenixQuietSinceRef.current === null) {
+        phoenixQuietSinceRef.current = now;
+        return;
+      }
+      if (now - phoenixQuietSinceRef.current < PHOENIX_QUIET_MS) return;
+      phoenixQuietSinceRef.current = null;
+      phoenixVisitingRef.current = true;
+      phoenixBegunAtRef.current = now;
+      phoenixSaidRef.current = false;
+      try {
+        localStorage.setItem(PHOENIX_VISIT_KEY, new Date(now).toLocaleDateString("en-CA"));
+      } catch {
+        /* the day's pacing holds for this load only */
+      }
+      scene.setPhoenixVisit(true);
     }, 1500);
     return () => window.clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -5683,7 +5901,7 @@ export function App() {
       const data = stateRef.current;
       if (!scene || !hour || !data || !walkingRef.current || holdArrivalRef.current || arrivalOpenRef.current) return;
       if (performance.now() - lastAskAt < 90000) return;
-      if (panelOpenRef.current || museBubbleRef.current || followOfferRef.current || summitRef.current || guidingRef.current || !scene.canInvite()) return;
+      if (panelOpenRef.current || museBubbleRef.current || followOfferRef.current || summitRef.current || guidingRef.current || !scene.canInvite() || townMomentNow()) return;
       const invite = chooseInvite(
         hour,
         { unreadLetters: data.letters.filter((l) => !l.read).length, gardenReady: !!data.garden.planted_on && data.garden.water_days >= 3, treeWatered: data.tree.watered_today },
@@ -5713,16 +5931,26 @@ export function App() {
     scene.setFollowMode(false);
     if (!scene.startGuide(invite.spot[0], invite.spot[1])) {
       if (followingRef.current) scene.setFollowMode(true);
+      surpriseRunningRef.current = false;
       return;
     }
     guidingRef.current = invite;
-    scene.showBubble("muse", "Come on, then. This way.");
+    scene.showBubble("muse", SURPRISE_SETOFF_LINE);
   };
   guideEndRef.current = (arrived) => {
     const invite = guidingRef.current;
     guidingRef.current = null;
     if (followingRef.current) sceneRef.current?.setFollowMode(true);
     if (arrived && invite) sceneRef.current?.showBubble("muse", invite.arrival);
+    // Aelia's surprise (Task 60): only the place and a count are kept, on arrival; the town stays held a little after.
+    if (invite?.id.startsWith("surprise-")) {
+      const spot = invite.id.slice("surprise-".length);
+      surpriseRunningRef.current = false;
+      if (arrived) {
+        surpriseHoldUntilRef.current = Date.now() + 12000;
+        if (spot in SURPRISE_INFO) void api.noteAeliaSurprise({ spot: spot as SurpriseSpot }).catch(() => {});
+      }
+    }
   };
 
   // --- Virtual Xbox controller (walk mode, touch) ---

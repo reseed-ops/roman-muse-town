@@ -301,7 +301,8 @@ export const TOUR_STOPS: { label: string; target: [number, number, number]; pos:
 // the town tree in a certain village life game, it grows in stages over
 // time and dresses differently for every season.
 
-export type Season = "spring" | "summer" | "autumn" | "winter";
+export type { Season } from "../../shared/seasons";
+import { seasonAt, type Season } from "../../shared/seasons";
 
 export const SEASONS: { id: Season; label: string; blurb: string }[] = [
   {
@@ -328,11 +329,7 @@ export const SEASONS: { id: Season; label: string; blurb: string }[] = [
 
 /** The real-world season for a date, northern hemisphere (the town sits in Texas). */
 export function seasonForDate(date: Date): Season {
-  const month = date.getMonth(); // 0 = January
-  if (month >= 2 && month <= 4) return "spring";
-  if (month >= 5 && month <= 7) return "summer";
-  if (month >= 8 && month <= 10) return "autumn";
-  return "winter";
+  return seasonAt(date); // the pure, tested rule, shared/seasons.ts
 }
 
 export interface TreeStage {
@@ -3149,6 +3146,14 @@ export const ATHENA_TEMPLE = {
   /** The olive trees either side of the steps. */
   olives: [[-17.7, 5.7], [-17.7, 10.3]] as [number, number][],
 } as const;
+
+/** The young olives (Task 60): two by their house, two by the cliff path. They grow with the real seasons (shared/seasons.ts). */
+export const YOUNG_OLIVES: readonly (readonly [number, number])[] = [
+  [-38.2, 31.8],
+  [-44.2, 21.0],
+  [-7.6, 92.0],
+  [7.8, 104.0],
+];
 
 /** Where a sitter sits on the temple's step, facing east toward Lucretia. */
 export const ATHENA_SEAT = {

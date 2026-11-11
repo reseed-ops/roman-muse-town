@@ -463,3 +463,22 @@ describe("Task 59: tender moments are kept as kinds and counts only, from rank 7
     await expect(call("noteTenderMoment", { kind: "anything-else" } as never)).rejects.toThrow();
   });
 });
+
+describe("Task 60: Aelia's surprises are kept as a place and a count only", () => {
+  const flagsOf = () => JSON.parse(row<{ flags: string }>("SELECT flags FROM purse_state").flags) as Record<string, unknown>;
+  test("each arrival adds one to its place, retry-safe, nothing paid, other flags stay", async () => {
+    seedPurse(5);
+    await call("arrangeHome", { slot: "floor", keepsake: "tree-cutting" });
+    await call("noteAeliaSurprise", { spot: "cliff-bench" });
+    const id = crypto.randomUUID();
+    await call("noteAeliaSurprise", { spot: "lake-dock", request_id: id });
+    await call("noteAeliaSurprise", { spot: "lake-dock", request_id: id });
+    await call("noteAeliaSurprise", { spot: "cliff-bench" });
+    expect(flagsOf().aelia_surprises).toEqual({ kind: "aelia-surprises", counts: { "cliff-bench": 2, "lake-dock": 1 } });
+    expect(flagsOf().home).toEqual({ floor: "tree-cutting" });
+    expect(row<{ denarii: number }>("SELECT denarii FROM purse_state").denarii).toBe(5);
+  });
+  test("an unknown place is refused", async () => {
+    await expect(call("noteAeliaSurprise", { spot: "somewhere-else" } as never)).rejects.toThrow();
+  });
+});

@@ -29,7 +29,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { ATHENA_LINES, ATHENA_SEAT, ATHENA_TEMPLE, LUCRETIA, LUCRETIA_LINES, BATHS, BED_SPOT, BOARD_SPOT, COLOSSEUM, FOREST, FOREST_BUSHES, FLOURISH_LINES, FOREST_DEN_ROCKS, FOREST_EDGE_LINES, FOREST_SPOTS, FOREST_TRAILS, FOREST_TREES, FORAGE_SPOTS, GOALS_SPOT, LAKE, LAKE_PAVILION, LETTER_DESK_SPOT, MUSE, PISCINA, PLACES, PLAYER, QUEST_BOARD_SPOT, SECRET, SEEK_LINES, STREETS, forestNorm, groundHeightAt, isGoldenElevation, seasonForDate, solarAngles, streetDistance, terrainHeight, type Season, type WeatherId } from "./town";
+import { ATHENA_LINES, ATHENA_SEAT, ATHENA_TEMPLE, LUCRETIA, LUCRETIA_LINES, BATHS, BED_SPOT, BOARD_SPOT, COLOSSEUM, FOREST, FOREST_BUSHES, FLOURISH_LINES, FOREST_DEN_ROCKS, FOREST_EDGE_LINES, FOREST_SPOTS, FOREST_TRAILS, FOREST_TREES, FORAGE_SPOTS, GOALS_SPOT, LAKE, LAKE_PAVILION, LETTER_DESK_SPOT, MUSE, PISCINA, PLACES, PLAYER, QUEST_BOARD_SPOT, SECRET, SEEK_LINES, STREETS, YOUNG_OLIVES, forestNorm, groundHeightAt, isGoldenElevation, seasonForDate, solarAngles, streetDistance, terrainHeight, type Season, type WeatherId } from "./town";
 import { pickPooled } from "./linePools";
 import { playFootstep, playLanding, playSlide } from "./audio";
 import { ESTATE_AREAS, weedStands, type EstateArea, type EstateCare } from "./estateCare";
@@ -67,6 +67,8 @@ import { createQuestScene } from "./projectQuests";
 import { createWeddingScene } from "./romanWedding";
 import { readWeddingBook } from "../../shared/romanWedding";
 import { readQuestBook, type CelebrationKind, type QuestKind } from "../../shared/projectQuests";
+import { createSeasonalTown } from "./seasonalTown";
+import { fireflyShare, oliveScale, oliveStage } from "../../shared/seasons";
 import { FIREFLY_PLACES_MAX, fireflyPlaceAt, fireflyPlacesBudget } from "./fireflyPlaces";
 import { FEEL } from "./feel";
 import { buildMetaSudans, META_SUDANS_LINES } from "./metaSudans";
@@ -552,6 +554,11 @@ export interface TownSceneHandle {
    *  circuit, gone by night. */
   setPhoenixArrived: (arrived: boolean, summitDone: boolean) => void;
   phoenixPresent: () => boolean;
+  /** Task 60: the phoenix's rare visit. On, she leaves her usual hours and
+   *  perches on the ridge of Athena's temple; off, she returns to them.
+   *  `phoenixPerched` is true once she has settled there. */
+  setPhoenixVisit: (visiting: boolean) => void;
+  phoenixPerched: () => boolean;
   /** A feather lies below her perch this week (saved state decides). */
   setPhoenixFeather: (lying: boolean) => void;
   performanceSnapshot: () => PerformanceSnapshot;
@@ -5716,6 +5723,30 @@ export function createTownScene(
   }
   for (const [ox, oz] of ATHENA_TEMPLE.olives) void placeWorld(oliveUrl, { x: ox, z: oz, rotY: ox * 1.7 + oz, width: 2.6 });
 
+  // --- The town remembers (Task 60): young olives by their house and by the
+  // sea cliff, which grow one visible step a real season (shared/seasons.ts:
+  // a fixed planting day, no stored state), and the year's dressing
+  // (seasonalTown.ts), read from the real calendar.
+  const youngOlives: { group: THREE.Group; base: number }[] = [];
+  let oliveStageShown = -1;
+  const showOliveGrowth = () => {
+    const stage = oliveStage(new Date());
+    if (stage === oliveStageShown) return;
+    oliveStageShown = stage;
+    for (const o of youngOlives) o.group.scale.setScalar(o.base * oliveScale(stage));
+  };
+  for (const [ox, oz] of YOUNG_OLIVES) {
+    void placeWorld(oliveUrl, { x: ox, z: oz, rotY: ox * 2.3 + oz, width: 3.2 }).then((g) => {
+      if (!g || disposed) return;
+      youngOlives.push({ group: g, base: g.scale.x });
+      oliveStageShown = -1;
+      showOliveGrowth();
+    });
+  }
+  const seasonalTown = createSeasonalTown({ world, terrainHeight });
+  seasonalTown.setSeason(currentTreeSeason);
+  let nextOliveCheckAt = 0;
+
   // --- Walk-around avatar: YOU (the player) ---
   // The visitor's Centurion VRM: legs and arms swung from the model's
   // own bones while walking, and a salute when you reach Muse.
@@ -5952,6 +5983,7 @@ export function createTownScene(
     circ(LUCRETIA.position[0], LUCRETIA.position[1], LUCRETIA.plinthHalf + 0.12), // Lucretia's plinth (Task 54)
     obb(ATHENA_TEMPLE.position[0] + ATHENA_TEMPLE.stepDepth / 2, ATHENA_TEMPLE.position[1], ATHENA_TEMPLE.halfX + ATHENA_TEMPLE.stepDepth / 2, ATHENA_TEMPLE.halfZ, 0), // Athena's temple, podium and step (Task 55)
     ...ATHENA_TEMPLE.olives.map(([x, z]) => circ(x, z, 0.3)), // its olive trees (trunks)
+    ...YOUNG_OLIVES.map(([x, z]) => treePlacement.bindCollider(circ(x, z, 0.3), x, z)), // the young olives by their house and the cliff (Task 60)
     obb(VILLA.gate[0] + 2.55, VILLA.gate[1], 1.25, 1.8, 0), // triumphal arch, east pillar (the opening between the pillars stays walkable)
     obb(VILLA.gate[0] - 2.55, VILLA.gate[1], 1.25, 1.8, 0), // triumphal arch, west pillar
     circ(-36.1, 4.2, 0.85), // ballista (its ground frame, measured, offset from its placement centre)
@@ -9682,6 +9714,16 @@ export function createTownScene(
   let phoenixArrivedFlag = false;
   let phoenixSummitFlag = false;
   let phoenixFeatherLying = false;
+  // Task 60: the rare visit. The perch is the ridge of Athena's temple's
+  // roof (podium 0.9 + cella 2.3 + entablature 0.32 + gable 0.75 above the
+  // ground, less the bird's own 0.35 as at the Colosseum), at its front.
+  let phoenixVisitFlag = false;
+  let phoenixSettled = false;
+  const athenaPerch = new THREE.Vector3(
+    ATHENA_TEMPLE.position[0] + 0.9,
+    terrainHeight(ATHENA_TEMPLE.position[0], ATHENA_TEMPLE.position[1]) + 0.9 + 2.3 + 0.32 + 0.75 - 0.35,
+    ATHENA_TEMPLE.position[1],
+  );
   let phoenixObj: {
     group: THREE.Group;
     mixer: THREE.AnimationMixer;
@@ -9866,6 +9908,16 @@ export function createTownScene(
       ph.group.rotation.y = -ang + Math.PI / 2;
       flapAmp = 0.5;
       if (k >= 1 && pos.distanceTo(phoenixPerch) < 0.6) ph.arrivedVisual = true;
+    } else if (phoenixVisitFlag) {
+      // The visit (Task 60): she settles on the ridge of Athena's temple, facing the
+      // lane, and simply stays, nothing to chase and nothing to give.
+      const toPerch = pos.distanceTo(athenaPerch);
+      pos.lerp(athenaPerch, 1 - Math.exp(-dt * 0.7));
+      const face = toPerch > 1.5 ? Math.atan2(athenaPerch.x - pos.x, athenaPerch.z - pos.z) : Math.PI / 2;
+      ph.group.rotation.y = angleLerp(ph.group.rotation.y, face, Math.min(1, dt * 1.5));
+      ph.group.rotation.z *= 0.9;
+      phoenixSettled = toPerch < 0.5;
+      flapAmp = toPerch > 1.5 ? 0.5 : Math.sin(t * 0.6) > 0.97 ? 0.22 : 0.04;
     } else if (skyElevDeg >= 25) {
       // Midday: one full lazy circuit of the town.
       ph.angle += dt * ((Math.PI * 2) / 80);
@@ -11223,8 +11275,12 @@ export function createTownScene(
     trueSky.setOpacity(nightMix * 0.95 * (1 - Math.min(1, wCur.rain + wCur.snow)) * (weatherId === "fog" ? 0.25 : 1));
     // Fireflies belong to warm-season nights, and they keep to the
     // lake and its willows.
-    fireflyMat.opacity =
-      nightMix * 0.9 * (1 - Math.min(1, wCur.rain)) * (currentTreeSeason === "spring" || currentTreeSeason === "summer" ? 1 : 0);
+    fireflyMat.opacity = nightMix * 0.9 * (1 - Math.min(1, wCur.rain)) * fireflyShare(currentTreeSeason);
+    seasonalTown.update(nightMix);
+    if (clockTime > nextOliveCheckAt) {
+      nextOliveCheckAt = clockTime + 600;
+      showOliveGrowth();
+    }
     // In a true dream the fireflies are out at noon-brightness,
     // out of season, hanging in the stillness over the lake.
     if (dreamMode === "true") fireflyMat.opacity = 0.95;
@@ -12932,6 +12988,11 @@ export function createTownScene(
       phoenixSummitFlag = summitDone;
     },
     phoenixPresent: () => phoenixArrivedFlag && skyElevDeg > -4,
+    setPhoenixVisit: (visiting: boolean) => {
+      phoenixVisitFlag = visiting;
+      if (!visiting) phoenixSettled = false;
+    },
+    phoenixPerched: () => phoenixVisitFlag && phoenixSettled,
     setPhoenixFeather: (lying: boolean) => {
       phoenixFeatherLying = lying;
     },
@@ -12956,6 +13017,7 @@ export function createTownScene(
     setTreeSeason: (season: Season) => {
       if (season === currentTreeSeason) return;
       currentTreeSeason = season;
+      seasonalTown.setSeason(season);
       buildTreeBody();
       applyDriftStyle();
       townTree.traverse((o) => {

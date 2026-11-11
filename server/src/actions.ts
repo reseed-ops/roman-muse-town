@@ -46,6 +46,7 @@ import { runRetrySafe, type RequestIdentity } from "./retrySafe";
 import { saveActions } from "./saveActions";
 import { arrange, readArrangement } from "../../shared/homeDecor";
 import { noteQuietBoat } from "../../shared/quietBoat";
+import { SURPRISE_SPOTS, noteSurprise } from "../../shared/aeliaSurprise";
 import { TENDER_KINDS, TENDER_MOMENT_RANK, noteTender, readTender } from "../../shared/tenderMoments";
 import { QUEST_KINDS, acceptQuest, advanceQuest, carryQuest, completeQuest, markCelebrated, readQuestBook, type QuestBook, type QuestKind } from "../../shared/projectQuests";
 import { WEDDING_FIRST_KEY, WEDDING_STEPS, hold as holdWedding, markWeddingCelebrated, prepare as prepareWedding, readWeddingBook, type WeddingBook, type WeddingStep } from "../../shared/romanWedding";
@@ -3405,6 +3406,23 @@ export const Actions = {
         purse.flags = JSON.stringify(flags);
         await savePurse(ctx, purse);
       }, { requestId: args.request_id, action: "noteQuietBoat", payload: args });
+      ctx.invalidateQueries();
+      return loadEconomyState(ctx);
+    },
+  }),
+
+  noteAeliaSurprise: defineAction({
+    description: "Aelia led him to one of her favourite places unprompted (Task 60). Records only the place (one of four fixed kinds) and a count in the purse's flags; nothing is paid, no date or streak is kept and no schema is touched.",
+    request: z.object({ spot: z.enum(SURPRISE_SPOTS) }).extend({ request_id: z.string().uuid().optional() }),
+    response: economyResponse,
+    async handler(ctx, args) {
+      await withEconomyTransaction(ctx, async (ctx) => {
+        const purse = await loadPurse(ctx);
+        const flags = rawFlags(purse.flags);
+        flags.aelia_surprises = noteSurprise(flags.aelia_surprises, args.spot);
+        purse.flags = JSON.stringify(flags);
+        await savePurse(ctx, purse);
+      }, { requestId: args.request_id, action: "noteAeliaSurprise", payload: args });
       ctx.invalidateQueries();
       return loadEconomyState(ctx);
     },
