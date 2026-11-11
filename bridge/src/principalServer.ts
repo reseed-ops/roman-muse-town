@@ -250,6 +250,9 @@ export function startPrincipalServer(opts: PrincipalServerOptions): Promise<Prin
           return send(res, 503, { error: "too many open streams" });
         }
         while (mine.size >= cap) [...mine][0]!();
+        // Task 68: evicting the lone stream empties the group and deletes its map entry; put it
+        // back, so the cap keeps counting the replacement and no further stream can coexist.
+        if (streams.get(d) !== group) streams.set(d, group);
         res.writeHead(200, {
           "content-type": "text/event-stream",
           "cache-control": "no-store",
@@ -262,9 +265,11 @@ export function startPrincipalServer(opts: PrincipalServerOptions): Promise<Prin
         let beat: ReturnType<typeof setInterval> | null = null;
         let ttl: ReturnType<typeof setTimeout> | null = null;
         let recheck: ReturnType<typeof setInterval> | null = null;
-        const stop = (why = "closed") => {
+        let writer: ReturnType<typeof createStreamWriter> | null = null;
+        const stop = (why = "closed", destroy = false) => {
           if (closed) return;
           closed = true;
+          writer?.close();
           unsubscribe();
           if (beat) clearInterval(beat);
           if (ttl) clearTimeout(ttl);
@@ -272,13 +277,16 @@ export function startPrincipalServer(opts: PrincipalServerOptions): Promise<Prin
           mine.delete(stop);
           if (!group!.holders.size && !group!.observers.size && streams.get(d) === group) streams.delete(d);
           streamCount -= 1;
-          res.end();
+          // A cut reader is destroyed, not politely ended: ending flushes queued bytes into a
+          // socket that cannot drain and would keep the transport after its slot is freed.
+          if (destroy) res.destroy();
+          else res.end();
           log(`principal events: a stream ${why} (${streamCount} open)`);
         };
-        const writer = createStreamWriter(res, {
+        writer = createStreamWriter(res, {
           maxBuffer: opts.streamMaxBuffer ?? STREAM_MAX_BUFFER,
           stallMs: opts.streamStallMs ?? STREAM_STALL_MS,
-          abandon: (reason) => stop(reason === "buffer" ? "was cut: its reader fell behind" : "was cut: its reader stalled"),
+          abandon: (reason) => stop(reason === "buffer" ? "was cut: its reader fell behind" : "was cut: its reader stalled", true),
         });
         streamCount += 1;
         mine.add(stop);
@@ -289,20 +297,25 @@ export function startPrincipalServer(opts: PrincipalServerOptions): Promise<Prin
         let timedSeq = 0;
         unsubscribe = d.subscribe((m) => {
           if (closed) return;
-          writer.marker(`event: marker\ndata: ${JSON.stringify(m)}\n\n`);
-          // Metadata-only timing (Task 67): how long after the bridge saw a line it was written here.
+          // Metadata-only timing: logged when the marker is actually handed to the socket (a marker
+          // held back by a full socket logs when it drains; one coalesced away never logs). This is
+          // not client receipt.
+          let onWrite: (() => void) | undefined;
           if (!first && m.latestSeq > 0 && m.latestSeq !== timedSeq && m.lastLineAt !== null) {
             timedSeq = m.latestSeq;
-            log(`principal events: line ${m.latestSeq} written ${Math.max(0, Date.now() - m.lastLineAt)} ms after the bridge saw it`);
+            const seq = m.latestSeq;
+            const sawAt = m.lastLineAt;
+            onWrite = () => log(`principal events: line ${seq} handed to the socket ${Math.max(0, Date.now() - sawAt)} ms after the bridge first observed it (not client receipt)`);
           }
           first = false;
+          writer?.marker(`event: marker\ndata: ${JSON.stringify(m)}\n\n`, onWrite);
         });
         beat = setInterval(() => {
           if (closed) return;
           if (claim) d.keepClaim();
           d.refresh();
-          writer.comment(": keepalive\n\n");
-          writer.check();
+          writer?.comment(": keepalive\n\n");
+          writer?.check();
         }, heartbeatMs);
         // Revocation (Task 67): the credential is looked at again each recheck; a revoked,
         // expired or rotated one ends the stream (and so its claim renewals) within that.

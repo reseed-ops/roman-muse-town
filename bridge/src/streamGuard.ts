@@ -58,29 +58,41 @@ export type WritableLike = {
 export function createStreamWriter(res: WritableLike, opts: { maxBuffer: number; stallMs: number; abandon: (why: "buffer" | "stalled") => void; now?: () => number }) {
   const now = opts.now ?? (() => Date.now());
   let blockedSince: number | null = null;
-  let latest: string | null = null;
-  const send = (chunk: string) => {
-    if (res.write(chunk) === false && blockedSince === null) blockedSince = now();
+  let latest: { chunk: string; onWrite?: () => void } | null = null;
+  let dead = false;
+  const send = (chunk: string, onWrite?: () => void) => {
+    if (dead) return;
+    const ok = res.write(chunk);
+    if (ok === false && blockedSince === null) blockedSince = now();
+    onWrite?.(); // the chunk has been handed to the socket (not: received by the client)
     if (res.writableLength > opts.maxBuffer) opts.abandon("buffer");
   };
   res.on("drain", () => {
+    if (dead) return;
     blockedSince = null;
     if (latest !== null) {
-      const chunk = latest;
+      const { chunk, onWrite } = latest;
       latest = null;
-      send(chunk);
+      send(chunk, onWrite);
     }
   });
   return {
-    marker(chunk: string) {
-      if (blockedSince !== null) latest = chunk;
-      else send(chunk);
+    /** `onWrite` runs when this marker is actually handed to the socket; a coalesced-away marker never calls it. */
+    marker(chunk: string, onWrite?: () => void) {
+      if (dead) return;
+      if (blockedSince !== null) latest = { chunk, onWrite };
+      else send(chunk, onWrite);
     },
     comment(chunk: string) {
       if (blockedSince === null) send(chunk);
     },
+    /** After this nothing more is written, and a pending marker is forgotten. */
+    close() {
+      dead = true;
+      latest = null;
+    },
     check() {
-      if (blockedSince !== null && now() - blockedSince >= opts.stallMs) opts.abandon("stalled");
+      if (!dead && blockedSince !== null && now() - blockedSince >= opts.stallMs) opts.abandon("stalled");
     },
     blocked: () => blockedSince !== null,
   };
