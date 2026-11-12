@@ -49,6 +49,8 @@ export type HomeHouse = {
    *  porch; but not the compluvium (over the impluvium) and not the garden court,
    *  which stands open to the sky as every peristyle does. */
   sheltered(x: number, z: number): boolean;
+  /** The impluvium's built water surface (world y) when (x, z) lies over the water sheet, else null. */
+  waterSurfaceAt(x: number, z: number): number | null;
   /** The bed's edge as a seat: where, which way a sitter faces, and the seat's world height. */
   bedSeat: { x: number; z: number; rotY: number; y: number };
   /** A night together (Task 45): the door held shut, the lamp dimmed
@@ -119,11 +121,24 @@ class Batch {
   }
 }
 
+/** Height of the impluvium's water sheet above the court floor (local y). */
+export const IMPLUVIUM_WATER_Y = 0.1;
+/** A splash ring floats this far above the surface it lands on (water or floor). */
+export const SPLASH_RING_LIFT = 0.06;
+
 /** Where a ground splash ring may land: null under any roof of the house (no rain falls
- *  there), else the ground's height (the floor, in the open court). The impluvium's water
- *  surface is not modelled here: a ring over the basin lies at the floor's height. */
-export function splashLanding(house: Pick<HomeHouse, "sheltered">, x: number, z: number, ground: (x: number, z: number) => number): number | null {
-  return house.sheltered(x, z) ? null : ground(x, z);
+ *  there), else the surface's height: the built water of the impluvium where the ring is
+ *  over the basin, otherwise the ground (the floor, in the open court). The garden pool
+ *  has no dedicated water landing surface here. */
+export function splashLanding(house: Pick<HomeHouse, "sheltered" | "waterSurfaceAt">, x: number, z: number, ground: (x: number, z: number) => number): number | null {
+  if (house.sheltered(x, z)) return null;
+  return house.waterSurfaceAt(x, z) ?? ground(x, z);
+}
+
+/** The ring's y: the landing surface plus the explicit visual offset; null when sheltered. */
+export function splashRingY(house: Pick<HomeHouse, "sheltered" | "waterSurfaceAt">, x: number, z: number, ground: (x: number, z: number) => number): number | null {
+  const y = splashLanding(house, x, z, ground);
+  return y === null ? null : y + SPLASH_RING_LIFT;
 }
 
 export function buildHomeHouse(terrainHeight: (x: number, z: number) => number): HomeHouse {
@@ -471,7 +486,7 @@ export function buildHomeHouse(terrainHeight: (x: number, z: number) => number):
     b.box(w - 0.28, 0.02, d - 0.28, S(0x5f6f6c, 0.9), x, 0.01, z);
     const sheet = new THREE.Mesh(new THREE.PlaneGeometry(w - 0.28, d - 0.28), water);
     sheet.rotation.x = -Math.PI / 2;
-    sheet.position.set(x, 0.1, z);
+    sheet.position.set(x, IMPLUVIUM_WATER_Y, z);
     sheet.receiveShadow = true;
     group.add(sheet);
     colliders.push(ob(x, z, w / 2, d / 2, 0.15));
@@ -778,6 +793,11 @@ export function buildHomeHouse(terrainHeight: (x: number, z: number) => number):
     },
     inside: insideAt,
     sheltered: shelterOf,
+    waterSurfaceAt(x, z) {
+      const { lx, lz } = toLocal(x, z);
+      const r = IMPLUVIUM;
+      return lx >= r.x0 + 0.14 && lx <= r.x1 - 0.14 && lz >= r.z0 + 0.14 && lz <= r.z1 - 0.14 ? HOME_FLOOR_Y + IMPLUVIUM_WATER_Y : null;
+    },
     setHush(next) {
       hush = next;
     },

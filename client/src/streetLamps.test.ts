@@ -365,7 +365,7 @@ describe("geometry", () => {
     expect(source).not.toContain("a[0], 2.95");
   });
 
-  test("the footprint stays inside the old 0.3 collider and all matrices are finite", () => {
+  test("the octagonal foot stays within the 0.3 collider (square corners reach 0.311) and all matrices are finite", () => {
     const h = setup();
     const post = h.place(0, 3, { variant: 0 });
     const q = h.place(4, 3, { variant: 1 });
@@ -379,10 +379,21 @@ describe("geometry", () => {
         const b = geo.boundingBox!.clone().applyMatrix4(child.matrixWorld);
         box.union(b);
       }
-      // Only the arm and chain reach inward; the standing part is the post's own foot.
-      const foot = (p.children[0] as THREE.Mesh).geometry;
+      // Radial extent of every foot vertex from the post axis, after transforms.
+      const footMesh = p.children[0] as THREE.Mesh;
+      footMesh.updateMatrix();
+      const pos = footMesh.geometry.getAttribute("position");
+      let radial = 0;
+      const v = new THREE.Vector3();
+      for (let i = 0; i < pos.count; i++) {
+        v.fromBufferAttribute(pos, i).applyMatrix4(footMesh.matrix);
+        radial = Math.max(radial, Math.hypot(v.x, v.z));
+      }
+      if (p === post) expect(radial).toBeCloseTo(0.3, 6); // octagon: inside 0.3
+      else expect(radial).toBeCloseTo(Math.hypot(0.22, 0.22), 6); // square corners 0.3111, ~11 mm past 0.3
+      expect(p === post ? radial <= 0.3 + 1e-6 : radial > 0.3).toBe(true);
+      const foot = footMesh.geometry;
       foot.computeBoundingBox();
-      expect(Math.max(Math.abs(foot.boundingBox!.min.x), foot.boundingBox!.max.x)).toBeLessThanOrEqual(0.3 + 1e-6);
       expect(foot.boundingBox!.max.y - foot.boundingBox!.min.y).toBeCloseTo(0.5, 5);
       expect(Number.isFinite(box.min.y) && Number.isFinite(box.max.y)).toBe(true);
     }

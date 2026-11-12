@@ -130,7 +130,12 @@ export function createStreetLampSystem(scene: THREE.Scene, world: THREE.Group): 
   });
 
   // Shared geometries: no post allocates its own cylinders, bars or panes.
-  // The masonry foot is taller than before but stays inside the old 0.3 collider radius.
+  // The masonry foot is taller than before (0.3 to 0.5). The octagonal foot stays within
+  // the 0.3 m collider radius. The square foot is 0.44 x 0.44, so its corners reach
+  // sqrt(0.22^2 + 0.22^2) = 0.311 m, about 11 mm past it (rotating by PI/4 keeps that
+  // radius). That is unchanged from before and harmless: the collider radius is a
+  // gameplay approximation. Strict containment would need a square width of at most
+  // 0.6 / sqrt(2); that is a design change, not made here.
   const octagonalBaseGeo = new THREE.CylinderGeometry(0.22, 0.3, 0.5, 8);
   const squareBaseGeo = new THREE.BoxGeometry(0.44, 0.5, 0.44);
   const plinthGeo = new THREE.CylinderGeometry(0.13, 0.18, 0.13, 8);
@@ -484,9 +489,11 @@ export function createStreetLampSystem(scene: THREE.Scene, world: THREE.Group): 
     candidates.sort((a, b) => a.distance - b.distance);
     // Unused slots are made invisible, so the renderer's light setup (and the
     // shader's point-light loop) really holds only as many lights as are lit.
-    // Three caches one program per count, so at most five variants ever compile
-    // (0..4), and the count changes only when the tier or the set of lit
-    // candidates near the camera changes.
+    // Three keys its programs on the point-light count (among other lighting,
+    // material and render parameters), so this gives five possible count states
+    // (0..4) per otherwise unchanged program configuration. The count changes
+    // only when the tier or the set of lit candidates near the camera changes.
+    // Program compilation itself is not measured here.
     const active = Math.min(lampLightBudget(opts.tier), candidates.length);
     for (let i = 0; i < localLights.length; i++) {
       const light = localLights[i]!;

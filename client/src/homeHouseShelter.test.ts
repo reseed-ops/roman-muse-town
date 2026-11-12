@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import * as THREE from "three";
-import { buildHomeHouse, splashLanding } from "./homeHouse";
+import { buildHomeHouse, splashLanding, splashRingY, SPLASH_RING_LIFT } from "./homeHouse";
 import { groundHeightAt, HOME_FLOOR_Y, homeToWorld, terrainHeight } from "./town";
 import { COMPLUVIUM, inRect, ROOMS, WALLS } from "./homePlan";
 
@@ -200,16 +200,30 @@ describe("splash rings", () => {
     }
     const g = world(1.2, -4.0);
     expect(splashLanding(house, g.x, g.z, groundHeightAt)).toBeCloseTo(HOME_FLOOR_Y);
+    expect(splashRingY(house, g.x, g.z, groundHeightAt)).toBeCloseTo(HOME_FLOOR_Y + SPLASH_RING_LIFT); // court-floor control
     const c = world(0, 0.5);
-    expect(splashLanding(house, c.x, c.z, groundHeightAt)).toBeCloseTo(HOME_FLOOR_Y);
     expect(inRect(COMPLUVIUM, 0, 0.5)).toBe(true);
+    // The built water surface at the basin centre: the first hit of a ray from above.
+    house.group.updateMatrixWorld(true);
+    const ray = new THREE.Raycaster(new THREE.Vector3(c.x, HOME_FLOOR_Y + 5, c.z), new THREE.Vector3(0, -1, 0));
+    const hit = ray.intersectObject(house.group, true).find((h) => {
+      const m = (h.object as THREE.Mesh).material as THREE.MeshStandardMaterial;
+      return m.transparent && m.opacity > 0.8;
+    });
+    expect(hit).toBeDefined();
+    const water = hit!.point.y;
+    expect(water).toBeGreaterThan(HOME_FLOOR_Y + 0.05); // above the floor
+    expect(splashLanding(house, c.x, c.z, groundHeightAt)).toBeCloseTo(water, 6);
+    expect(splashRingY(house, c.x, c.z, groundHeightAt)).toBeCloseTo(water + SPLASH_RING_LIFT, 6);
+    // Returning the floor's height would put the ring below the water.
+    expect(splashRingY(house, c.x, c.z, groundHeightAt)!).toBeGreaterThan(water);
   });
 
   test("the scene parks sheltered rings below the ground, and says the garden is open too", async () => {
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const scene = readFileSync(join(import.meta.dir, "townScene.ts"), "utf8");
-    expect(scene).toContain("splashLanding(homeHouse, nsx, nsz, groundHeightAt)");
+    expect(scene).toContain("splashRingY(homeHouse, nsx, nsz, groundHeightAt)");
     expect(scene).toContain("peristyle's garden court");
   });
 });

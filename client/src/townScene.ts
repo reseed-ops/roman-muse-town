@@ -1,6 +1,6 @@
 import { createPlaceFootprints } from "./buildingFootprints";
 import { readArrangement } from "../../shared/homeDecor";
-import { buildHomeHouse, splashLanding } from "./homeHouse";
+import { buildHomeHouse, splashRingY } from "./homeHouse";
 import { aimSeaPath, buildSeaCliff, CLIFF, clampToWorld, clearOfSea, cutAtCoast, HILL_BASE_Y, HORIZON_HILLS, horizonHillGeometry, OCEAN_DAY, OCEAN_NIGHT, walkable as onCliffPath } from "./seaCliff";
 import { QUIET_BOAT_MIN_OUT, QUIET_BOAT_START, beginDrift, boatSeats, driftStep, nextQuietLine, rowBack as rowBackState, type Drift, type QuietBoatState } from "../../shared/quietBoat";
 import { FISHING_BOAT_LENGTH, fishingOut, nextGap, pickFishingSpots, pickShip, planVoyage, SHIPS, shipsSail, voyagePose, watchingSea, type SeaWeather, type ShipKind, type Voyage } from "./seaShips";
@@ -12231,8 +12231,8 @@ export function createTownScene(
                 const nsx = camera.position.x + rainFacing.x * 12 + (Math.random() - 0.5) * 34;
                 const nsz = camera.position.z + rainFacing.z * 12 + (Math.random() - 0.5) * 34;
                 // No ring on a floor under the house's roofs (Task 79): it is parked below the ground, unseen.
-                const ly = splashLanding(homeHouse, nsx, nsz, groundHeightAt);
-                s.mesh.position.set(nsx, ly === null ? -50 : ly + 0.06, nsz);
+                const ly = splashRingY(homeHouse, nsx, nsz, groundHeightAt);
+                s.mesh.position.set(nsx, ly === null ? -50 : ly, nsz);
               }
             }
             s.mesh.scale.setScalar(onLake ? 1.2 + s.phase * 5 : 0.6 + s.phase * 2);
