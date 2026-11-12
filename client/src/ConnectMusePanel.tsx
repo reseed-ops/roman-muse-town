@@ -1,6 +1,7 @@
 // Connect my Muse (Task 29), the panel: the one-time pairing code and
 // the message the visitor pastes to their Muse, with a copy button.
-// Moved out of App.tsx, which keeps the state and the code request.
+// Also holds ConnectMuseMenu, which owns the state, the pairing check and the
+// code request; App just renders it.
 import { useCallback, useEffect, useState, type ComponentProps } from "react";
 import { TownMenu } from "./TownMenu";
 import { connectMuseMenuItem } from "./connectMuse";
@@ -100,11 +101,9 @@ export function ConnectMusePanel({ state, onClose, onCopied }: { state: ConnectM
   );
 }
 
-/** Task 75: the production boundary for Connect my Muse. It owns the hook,
- *  draws the panel, and draws the town menu with the row appended to the
- *  group named by `rowGroup`. App renders this in place of TownMenu, so the
- *  wiring (hook, item, group insertion, handlers) is mounted in the test
- *  with the real TownMenu, not searched for in App's source. */
+/** The town menu with Connect my Muse: owns the pairing check and the panel,
+ *  and appends the row to the group named by `rowGroup`. App renders this
+ *  in place of TownMenu. */
 export function ConnectMuseMenu({ menuOpen, closeMenu, rowGroup, groups, ...menu }: Omit<ComponentProps<typeof TownMenu>, "onClose"> & {
   menuOpen: boolean;
   closeMenu: () => void;

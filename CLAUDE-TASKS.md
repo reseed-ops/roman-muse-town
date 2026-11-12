@@ -776,3 +776,7 @@ The Codex review of the Task 75 fixes (town-task75-review-codex.md, Nov 11, 2026
 - Process: freshest main, commit separately, push, summary to town-build14-done.md, landing note under Task 77.
 - Deploy ONLY if production code changes; if the diff is test-only (plus the optional comment/export cleanup), commit and push WITHOUT deploying, and say so plainly in the summary (the Task 74 review's lesson). If runtime behaviour does change, deploy the town via Railway and verify both live.
 - NOT in scope: mounting App itself (the remaining residual gap; bigger step, do not attempt here), the Task 72 follow-up (separate open offer), the domus (Task 76), the bridge, the pairing protocol, any production behaviour change, the tender-only line, affection gates, the tended pack.
+
+### Task 77 landing note (Nov 11, 2026)
+
+The second mounted test now supplies a real "Muse's visit" group with a visit row, asserts the checking Connect row exists before the answer, answers 200 pairing:false, and asserts the row is gone while the visit row remains. Mutating `startPairingCheck`'s absent mapping from "off" to "live" now fails it (verified, reverted). Also fixed the stale ConnectMusePanel header and shortened the ConnectMuseMenu doc; `MenuGroup` stays exported (TownMenu uses it for its own props). Test and comment only: not deployed. Root 738 pass, pg 54 pass, typecheck clean. Still open: mounting App itself.

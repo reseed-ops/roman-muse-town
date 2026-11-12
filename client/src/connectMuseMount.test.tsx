@@ -110,9 +110,14 @@ test("a closed menu draws no row but the hook still runs; an unpaired town draws
   await answer(503);
   freshHost();
   const root2 = createRoot(host);
-  await act(async () => root2.render(createElement(ConnectMuseMenu, { menuOpen: true, closeMenu: noop, rowGroup: "x", className: "m", onSettings: noop, groups: [] })));
+  const groups = [{ heading: "Muse's visit", items: [{ key: "visit", icon: "✦", label: "Talk to my Muse", active: false, action: noop, aria: "visit" }] }];
+  await act(async () => root2.render(createElement(ConnectMuseMenu, { menuOpen: true, closeMenu: noop, rowGroup: "Muse's visit", className: "m", onSettings: noop, groups })));
+  const section = () => host.querySelector('section[aria-label="Muse\'s visit"]');
+  const connect = () => section()?.querySelector('button[aria-label^="Connect my Muse"]');
+  expect(connect()?.getAttribute("aria-label")).toContain("checking"); // the row exists before the answer
   await answer(200, { pairing: false });
-  expect(host.querySelector('button[aria-label^="Connect my Muse"]')).toBeNull();
+  expect(connect()).toBeNull(); // pairing:false removes it
+  expect(section()?.querySelector('button[aria-label="visit"]')).not.toBeNull(); // the neighbouring row stays
   await act(async () => root2.unmount());
 });
 
