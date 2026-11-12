@@ -75,3 +75,31 @@ test("both are wired: solid, readable, the step a seat for two, her words when s
     expect(line.length).toBeLessThan(170);
   }
 });
+
+test("Athena's cella is a hollow room with a real doorway, lit from inside (Task 87)", () => {
+  const { group } = buildAthenaTemple(0);
+  group.updateMatrixWorld(true);
+  const C = ATHENA_TEMPLE.cella;
+  const meshes: THREE.Object3D[] = [];
+  group.traverse((o) => { if ((o as THREE.Mesh).isMesh) meshes.push(o); });
+  const shoot = (x: number, y: number, z: number) => {
+    const ray = new THREE.Raycaster(new THREE.Vector3(x, y, z).add(group.position), new THREE.Vector3(-1, 0, 0));
+    return ray.intersectObjects(meshes, false)[0];
+  };
+  const eyeX = ATHENA_TEMPLE.halfX + ATHENA_TEMPLE.stepDepth / 2;
+  // from the bench, level, down the axis at chest height: nothing until the inner face of the back wall
+  const hit = shoot(eyeX, ATHENA_TEMPLE.podiumY + 1.3, 0)!;
+  expect(eyeX - hit.distance).toBeCloseTo(C.x0 + C.wall, 2);
+  // the same ray beside the door hits the front wall: the door is an opening, not the wall painted dark
+  expect(eyeX - shoot(eyeX, ATHENA_TEMPLE.podiumY + 1.3, C.doorHalf + 0.3)!.distance).toBeGreaterThan(C.x1 - 0.1);
+  // and above the lintel's underside, under the door's height, is open; at the lintel it is wall
+  expect(eyeX - shoot(eyeX, ATHENA_TEMPLE.podiumY + C.doorH + 0.15, 0)!.distance).toBeGreaterThan(C.x1 - 0.1);
+  // the room is lit: a point light inside the cella
+  const lights: THREE.PointLight[] = [];
+  group.traverse((o) => { if ((o as THREE.PointLight).isPointLight) lights.push(o as THREE.PointLight); });
+  expect(lights).toHaveLength(1);
+  expect(lights[0]!.position.x).toBeGreaterThan(C.x0);
+  expect(lights[0]!.position.x).toBeLessThan(C.x1);
+  expect(Math.abs(lights[0]!.position.z)).toBeLessThan(C.halfZ);
+  expect(lights[0]!.position.y).toBeLessThan(ATHENA_TEMPLE.podiumY + C.height);
+});

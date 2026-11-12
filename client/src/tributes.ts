@@ -148,7 +148,7 @@ export function buildLucretia(ground: number): Tribute {
 
 /**
  * Athena's temple: a small prostyle temple on a podium, four columns
- * before a plastered cella with a dark doorway, a terracotta gable
+ * before a hollow plastered cella (a real doorway, Athena within, a lamp), a terracotta gable
  * roof, an olive wreath in the pediment and her name on the frieze, a
  * deep front step to sit on. Local frame: the front is +x.
  */
@@ -163,16 +163,41 @@ export function buildAthenaTemple(ground: number): Tribute {
   step.position.set(halfX + stepDepth / 2, stepY / 2, 0);
   group.add(podium, step);
 
-  // The cella, the back two-thirds of the podium.
-  const cellaH = 2.3;
-  const cellaX0 = -halfX + 0.15;
-  const cellaX1 = halfX - 1.25;
-  const cella = new THREE.Mesh(new THREE.BoxGeometry(cellaX1 - cellaX0, cellaH, halfZ * 2 - 0.5), m(PLASTER, 0.95));
-  cella.position.set((cellaX0 + cellaX1) / 2, podiumY + cellaH / 2, 0);
-  const door = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 1.6), m(0x3b2c22, 0.95));
-  door.rotation.y = Math.PI / 2;
-  door.position.set(cellaX1 + 0.005, podiumY + 0.8, 0);
-  group.add(cella, door);
+  // The cella (Task 87): a hollow room on the back two-thirds of the podium, its floor at the
+  // podium's top, walls a hand thick, and a real doorway in the front wall.
+  const C = ATHENA_TEMPLE.cella;
+  const cellaH = C.height;
+  const plaster = m(PLASTER, 0.95);
+  const wallBox = (x0: number, x1: number, z0: number, z1: number, y0: number, y1: number, mat: THREE.Material = plaster) => {
+    const w = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), mat);
+    w.position.set((x0 + x1) / 2, podiumY + (y0 + y1) / 2, (z0 + z1) / 2);
+    group.add(w);
+  };
+  wallBox(C.x0, C.x0 + C.wall, -C.halfZ, C.halfZ, 0, cellaH); // back wall
+  wallBox(C.x0 + C.wall, C.x1, -C.halfZ, -C.halfZ + C.wall, 0, cellaH); // north wall
+  wallBox(C.x0 + C.wall, C.x1, C.halfZ - C.wall, C.halfZ, 0, cellaH); // south wall
+  for (const side of [1, -1]) { // the front wall either side of the door
+    const z0 = C.doorHalf, z1 = C.halfZ - C.wall;
+    wallBox(C.x1 - C.wall, C.x1, side > 0 ? z0 : -z1, side > 0 ? z1 : -z0, 0, cellaH);
+  }
+  wallBox(C.x1 - C.wall, C.x1, -C.doorHalf, C.doorHalf, C.doorH, cellaH); // the lintel
+  // the door's marble frame and sill, and a marble floor inside
+  for (const side of [1, -1]) wallBox(C.x1 - C.wall - 0.02, C.x1 + 0.03, side > 0 ? C.doorHalf - 0.08 : -C.doorHalf, side > 0 ? C.doorHalf : -C.doorHalf + 0.08, 0, C.doorH, marble);
+  wallBox(C.x1 - C.wall - 0.02, C.x1 + 0.03, -C.doorHalf, C.doorHalf, C.doorH - 0.08, C.doorH, marble);
+  wallBox(C.x0 + C.wall, C.x1 + 0.05, -C.doorHalf, C.doorHalf, 0, 0.03, marble); // sill, running in as the floor's runner
+  wallBox(C.x0 + C.wall, C.x1 - C.wall, -C.halfZ + C.wall, C.halfZ - C.wall, 0, 0.02, m(0xd9d2c0, 0.6)); // the floor
+  // A bronze lamp on a stand in the corner and the warm light it throws, so her marble reads inside.
+  const bronze = m(0x8a6a3a, 0.45);
+  const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.05, 0.9, 8), bronze);
+  stand.position.set(-0.45, podiumY + 0.45, 0.95);
+  const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.05, 0.07, 10), bronze);
+  bowl.position.set(-0.45, podiumY + 0.93, 0.95);
+  const flame = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffc46b }));
+  flame.scale.y = 1.6;
+  flame.position.set(-0.45, podiumY + 1.0, 0.95);
+  const lamp = new THREE.PointLight(0xffd29a, 3, 5, 1.4);
+  lamp.position.set(-0.3, podiumY + 1.9, 0.2);
+  group.add(stand, bowl, flame, lamp);
 
   // Four columns across the front.
   const colH = cellaH;

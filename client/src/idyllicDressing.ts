@@ -73,13 +73,13 @@ export interface DressingPiece {
 const toWorldRot = (x: number, z: number): number => Math.atan2(-x, -z);
 
 // --- Athena, in her temple ---------------------------------------------------
-// On the podium between the cella's door and the four columns, on the axis,
-// looking east down the front step toward Lucretia. The podium already
-// blocks the ground; the seat is on the lower step, out in front of her.
+// Inside the cella (Task 87), against the back wall on the axis, looking east
+// out of the doorway, down the front step toward Lucretia and the bench. The
+// podium already blocks the ground; the seat is on the lower step, out in front.
 const T = ATHENA_TEMPLE;
 export const ATHENA_STATUE = {
-  /** Metres from the podium's centre toward the front (local +x). The cella's front face is at halfX - 1.25 = 0.6, the columns at halfX - 0.3 = 1.55. */
-  localX: 1.05,
+  /** Metres from the podium's centre (local +x). The cella's inner back face is at x0 + wall = -1.5; she is about 0.62 m deep, so her back is a hand from it. */
+  localX: -1.05,
   height: 1.8,
 } as const;
 

@@ -3151,6 +3151,13 @@ export const ATHENA_TEMPLE = {
   /** The seat step along the front: its top, and how far it stands out. */
   stepY: 0.45,
   stepDepth: 0.6,
+  /** The cella (Task 87), in the temple's local frame (front +x): a hollow room with its floor at the podium's top. */
+  cella: {
+    /** Outer back face and outer front face along x, outer half-width along z, wall thickness, and the height of the room (floor to the entablature's underside). */
+    x0: -1.7, x1: 0.6, halfZ: 1.55, wall: 0.2, height: 2.3,
+    /** The doorway in the front wall: half-width and height, a real opening. */
+    doorHalf: 0.65, doorH: 1.95,
+  },
   /** The olive trees either side of the steps. */
   olives: [[-17.7, 5.7], [-17.7, 10.3]] as [number, number][],
 } as const;

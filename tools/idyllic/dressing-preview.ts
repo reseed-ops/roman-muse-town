@@ -85,6 +85,9 @@ const toWorld = (x: number, y: number, z: number) => home.group.localToWorld(new
 const V: Record<string, [THREE.Vector3, THREE.Vector3]> = {
   temple: [new THREE.Vector3(T[0] + 6.5, th + 1.7, T[1] + 1.2), new THREE.Vector3(T[0], th + 1.9, T[1])],
   templeClose: [new THREE.Vector3(T[0] + 4.2, th + 1.6, T[1] - 0.6), new THREE.Vector3(T[0] + 0.5, th + 1.9, T[1])],
+  templeBench: [new THREE.Vector3(T[0] + 2.45, th + 1.35, T[1]), new THREE.Vector3(T[0] - 1.1, th + 1.9, T[1])],
+  templeDoor: [new THREE.Vector3(T[0] + 4.6, th + 1.9, T[1] + 1.4), new THREE.Vector3(T[0] - 0.5, th + 1.7, T[1])],
+  templeInside: [new THREE.Vector3(T[0] + 0.3, th + 1.9, T[1] + 1.1), new THREE.Vector3(T[0] - 1.1, th + 1.6, T[1])],
   templeSide: [new THREE.Vector3(T[0] + 3, th + 2.2, T[1] + 7), new THREE.Vector3(T[0], th + 1.8, T[1])],
   templeRoof: [new THREE.Vector3(T[0] + 8, th + 6, T[1] + 5), new THREE.Vector3(T[0], th + 2.4, T[1])],
   forum: [new THREE.Vector3(1.5, 2.0, 14), new THREE.Vector3(6.5, 2.0, 7.6)],

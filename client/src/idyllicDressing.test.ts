@@ -71,17 +71,19 @@ describe("Idyllic Rome statues and market dressing (Task 86)", () => {
     const [tx, tz] = ATHENA_TEMPLE.position;
     const local = a.x - tx;
 
-    test("she stands on the podium in the portico, on the axis, between the cella's door and the columns", () => {
-      const cellaFront = ATHENA_TEMPLE.halfX - 1.25;
-      const columns = ATHENA_TEMPLE.halfX - 0.3;
-      expect(local).toBeGreaterThan(cellaFront + 0.3); // clear of the door
-      expect(local).toBeLessThan(columns - 0.3); // clear of the colonnade
+    const C = ATHENA_TEMPLE.cella;
+    const DEPTH = 0.62; // her natural depth (z -0.09..0.56 native, scaled 1.8/1.896)
+
+    test("she stands inside the cella, on the axis, against the back wall, on the podium's floor", () => {
+      expect(local - DEPTH / 2).toBeGreaterThan(C.x0 + C.wall); // her back is clear of the wall's inner face
+      expect(local - DEPTH / 2).toBeLessThan(C.x0 + C.wall + 0.3); // and within a hand or two of it: against the back wall
+      expect(local + DEPTH / 2).toBeLessThan(C.x1 - C.wall - 0.8); // well back from the door
       expect(a.z).toBe(tz);
       expect(a.lift).toBe(ATHENA_TEMPLE.podiumY);
       expect(a.groundAt).toEqual([tx, tz]); // the temple's own ground, as the temple is built
     });
 
-    test("she looks east, down the steps toward Lucretia", () => {
+    test("she looks east, out of the doorway, down the steps toward Lucretia", () => {
       expect(Math.sin(a.rotY)).toBeCloseTo(1); // the model's front is local +z
       expect(LUCRETIA.position[0]).toBeGreaterThan(tx);
     });
@@ -92,22 +94,54 @@ describe("Idyllic Rome statues and market dressing (Task 86)", () => {
       expect(dressingFootprints().some((f) => f.id === "athena")).toBe(false);
     });
 
-    test("she does not take the seat on the lower step, and the sitter's view of the step is unchanged", () => {
-      expect(ATHENA_SEAT.x - a.x).toBeGreaterThan(1); // the seat is out on the step, beyond the columns
+    test("the seat on the step is unchanged and she is on its axis, through the doorway", () => {
+      expect(ATHENA_SEAT.x - (tx + local)).toBeGreaterThan(3); // out on the step, a room and a portico away
       expect(ATHENA_SEAT.x).toBeGreaterThan(tx + ATHENA_TEMPLE.halfX); // the step, not the podium
-      expect(Math.abs(ATHENA_SEAT.z - a.z)).toBeLessThan(0.01); // she is on the seat's axis, but a podium and a colonnade away
+      expect(Math.abs(ATHENA_SEAT.z - a.z)).toBeLessThan(0.01);
     });
 
-    test("the roofline stays clear: she is under the entablature and well under the phoenix's perch", () => {
+    test("the doorway is a real opening the statue shows through, from the bench", () => {
+      expect(C.doorHalf * 2).toBeGreaterThanOrEqual(1.2); // wide enough for her (0.76 across) and a walker's eye
+      expect(C.doorH).toBeGreaterThan(1.9);
+      expect(C.doorH).toBeLessThan(C.height); // a lintel above it
+      // the sightline from a sitter's eye (bench z axis) to her head passes the door's plane inside the opening, under the lintel
+      const eyeX = ATHENA_SEAT.x - tx, eyeY = ATHENA_TEMPLE.stepY + 1.0; // above the step, in local y
+      const headY = a.lift! + a.height!, headX = local;
+      const doorX = C.x1;
+      const yAtDoor = eyeY + ((headY - eyeY) * (eyeX - doorX)) / (eyeX - headX);
+      expect(yAtDoor).toBeGreaterThan(ATHENA_TEMPLE.podiumY); // over the sill
+      expect(yAtDoor).toBeLessThan(ATHENA_TEMPLE.podiumY + C.doorH); // under the lintel
+      // the middle two columns (z +-0.45, capital 0.36) leave a clear slot on the axis
+      expect(0.45 - 0.18).toBeGreaterThan(0.25);
+    });
+
+    test("she clears the ceiling by well over a hand's breadth, and the walls hold her", () => {
       const top = a.lift! + a.height!;
-      const entablature = ATHENA_TEMPLE.podiumY + 2.3; // townScene/tributes: cellaH 2.3
-      const perch = ATHENA_TEMPLE.podiumY + 2.3 + 0.32 + 0.75 - 0.35; // townScene's perch, above the terrain
-      expect(top).toBeLessThan(entablature - 0.3);
-      expect(perch - top).toBeGreaterThan(1.2);
-      expect(a.x - tx).toBeLessThan(0.9 + 0.3); // the perch is at +0.9 on the ridge, she is beneath the gable, not on it
+      const ceiling = ATHENA_TEMPLE.podiumY + C.height; // the entablature's underside
+      expect(ceiling - top).toBeGreaterThanOrEqual(0.15);
+      expect(C.height).toBe(2.3); // the cella and so the ridge are as built in Task 55
+      expect(C.halfZ - C.wall).toBeGreaterThan(0.76 / 2 + 0.3); // she is narrower than the room
     });
 
-    test("her height suits the portico and the town", () => {
+    test("the roofline and the phoenix's perch are where they were, above her", () => {
+      const top = a.lift! + a.height!;
+      const perch = ATHENA_TEMPLE.podiumY + 2.3 + 0.32 + 0.75 - 0.35; // townScene's perch, above the terrain
+      expect(perch - top).toBeGreaterThan(1.2);
+      const scene = readFileSync(new URL("./townScene.ts", import.meta.url), "utf8");
+      expect(scene).toContain("terrainHeight(ATHENA_TEMPLE.position[0], ATHENA_TEMPLE.position[1]) + 0.9 + 2.3 + 0.32 + 0.75 - 0.35");
+    });
+
+    test("a walker cannot enter: the podium and step stay one solid collider, so no one clips into the cella", () => {
+      const scene = readFileSync(new URL("./townScene.ts", import.meta.url), "utf8");
+      expect(scene).toContain("ATHENA_TEMPLE.halfX + ATHENA_TEMPLE.stepDepth / 2, ATHENA_TEMPLE.halfZ, 0), // Athena's temple, podium and step");
+      // the collider's footprint covers every wall and the whole floor
+      expect(C.x0).toBeGreaterThanOrEqual(-ATHENA_TEMPLE.halfX);
+      expect(C.x1).toBeLessThanOrEqual(ATHENA_TEMPLE.halfX);
+      expect(C.halfZ).toBeLessThanOrEqual(ATHENA_TEMPLE.halfZ);
+      expect(ATHENA_TEMPLE.podiumY).toBeGreaterThan(0.6); // a floor a metre up, with no stair: a threshold to look over, not to walk
+    });
+
+    test("her height suits the cella and the town", () => {
       expect(ATHENA_STATUE.height).toBeGreaterThan(1.6);
       expect(ATHENA_STATUE.height).toBeLessThan(2.1);
     });
