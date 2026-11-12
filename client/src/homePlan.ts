@@ -158,7 +158,7 @@ export function slabAt(s: Slab, x: number, z: number): number {
   return s.y0 + ((s.y1 - s.y0) * (u - s.u0)) / (s.u1 - s.u0);
 }
 
-/** Columns: the atrium's (two beside the basin, two on the piers), the peristyle's, the porch's. */
+/** Columns: the atrium's four (two beside the basin, two on the piers; the lararium's pair is shrine furniture), the peristyle's, the porch's. */
 export const ATRIUM_COLUMNS: [number, number][] = [[-1.3, 0.5], [1.3, 0.5], [-2.35, 0.5], [2.35, 0.5]];
 export const PERISTYLE_COLUMNS: [number, number][] = [-0.5, 0.5, 1.5, 2.5].map((x) => [x, -3.15] as [number, number]);
 export const PORTICO_COLUMNS: [number, number][] = [[-1.4, 4.65], [1.4, 4.65]];
@@ -174,14 +174,36 @@ export const LAMP_TABLE = { x: BED.lx - BED.halfW - 0.45, z: -1.75, half: 0.25 }
 export const ROOFED: RoomId[] = ["fauces", "cellS", "cellN", "atrium", "closet", "tablinum", "passage", "triclinium", "cubiculum", "gallery"];
 export const OPEN_SKY: Rect[] = [COMPLUVIUM, ROOMS.garden];
 
+/** The atrium's four-sloped roof, from the walls' top in to the compluvium (its outer rim). */
+export const ATRIUM_ROOF: Rect = { x0: -2.76, x1: 2.76, z0: -0.95, z1: 1.95 };
+
 export const inRect = (r: Rect, x: number, z: number): boolean => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
 
-/** Inside the walls: every room and the garden court. */
-export const insideRooms = (x: number, z: number): boolean => (Object.values(ROOMS) as Rect[]).some((r) => inRect(r, x, z));
+/** A wall's openings as rectangles: the doorway through the wall's whole thickness. */
+export const openingRects = (): Rect[] =>
+  WALLS.flatMap((w) =>
+    w.open.map((o) =>
+      w.axis === "x"
+        ? { x0: o.from, x1: o.to, z0: w.c - w.t / 2, z1: w.c + w.t / 2 }
+        : { x0: w.c - w.t / 2, x1: w.c + w.t / 2, z0: o.from, z1: o.to },
+    ),
+  );
+const OPENINGS = openingRects();
 
-/** Under a roof: a roofed room, but not beneath the compluvium. */
+/** Inside the walls: every room, the garden court, and the doorways between them
+ *  (a walker crossing a threshold stays inside). */
+export const insideRooms = (x: number, z: number): boolean =>
+  (Object.values(ROOMS) as Rect[]).some((r) => inRect(r, x, z)) || OPENINGS.some((r) => inRect(r, x, z));
+
+/** The roof's footprint: every slab (eaves and the gallery's overhang over the garden
+ *  included) and the atrium's four slopes. Rain stops wherever one of them lies above. */
+export const ROOF_RECTS: Rect[] = [...SLABS.map((s) => s.rect), ATRIUM_ROOF];
+
+/** Under a roof: beneath any roof's footprint (thresholds and eaves included), but not
+ *  under a sky opening: the compluvium. The garden court has no roof of its own, so it
+ *  stays open except under the gallery's overhang. */
 export const shelteredAt = (x: number, z: number): boolean =>
-  ROOFED.some((id) => inRect(ROOMS[id], x, z)) && !inRect(COMPLUVIUM, x, z);
+  ROOF_RECTS.some((r) => inRect(r, x, z)) && !inRect(COMPLUVIUM, x, z);
 
 /** Where the floor lies, as rectangles to the walls' outer faces: the main body, the gallery, the garden court. */
 export const FLOOR_RECTS: Rect[] = [

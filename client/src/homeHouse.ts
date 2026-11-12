@@ -21,7 +21,7 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { circ, obb, type Obstacle } from "./collision";
 import { HOME, HOME_BED, HOME_FLOOR_Y, HOME_STEPS, homeToWorld } from "./town";
 import {
-  ATRIUM_COLUMNS, COLUMN_H, COLUMN_R, COMPLUVIUM, H_ATRIUM, H_COMPLUVIUM, IMPLUVIUM, LAMP_TABLE, PERISTYLE_COLUMNS, PERISTYLE_POOL,
+  ATRIUM_COLUMNS, ATRIUM_ROOF, COLUMN_H, COLUMN_R, COMPLUVIUM, H_ATRIUM, H_COMPLUVIUM, IMPLUVIUM, LAMP_TABLE, PERISTYLE_COLUMNS, PERISTYLE_POOL,
   PORTICO, PORTICO_COLUMNS, ROOMS, SLABS, SPOTS, WALLS, inRect, insideRooms, shelteredAt, slabAt,
   type Fresco, type Rect, type Slab, type Wall,
 } from "./homePlan";
@@ -44,9 +44,10 @@ export type HomeHouse = {
   waitSpot: { x: number; z: number; face: number };
   /** Is (x, z) inside the walls (any room, and the peristyle's garden court)? */
   inside(x: number, z: number): boolean;
-  /** Is (x, z) under a roof, so that no rain falls on it? Every roofed room, and the
-   *  porch; but not the compluvium (the one deliberate opening, over the impluvium)
-   *  and not the garden court, which stands open to the sky as every peristyle does. */
+  /** Is (x, z) under a roof, so that no rain falls on it? Wherever a roof lies above:
+   *  the roofed rooms, their thresholds, the eaves, the gallery's overhang and the
+   *  porch; but not the compluvium (over the impluvium) and not the garden court,
+   *  which stands open to the sky as every peristyle does. */
   sheltered(x: number, z: number): boolean;
   /** The bed's edge as a seat: where, which way a sitter faces, and the seat's world height. */
   bedSeat: { x: number; z: number; rotY: number; y: number };
@@ -116,6 +117,13 @@ class Batch {
     }
     this.map.clear();
   }
+}
+
+/** Where a ground splash ring may land: null under any roof of the house (no rain falls
+ *  there), else the ground's height (the floor, in the open court). The impluvium's water
+ *  surface is not modelled here: a ring over the basin lies at the floor's height. */
+export function splashLanding(house: Pick<HomeHouse, "sheltered">, x: number, z: number, ground: (x: number, z: number) => number): number | null {
+  return house.sheltered(x, z) ? null : ground(x, z);
 }
 
 export function buildHomeHouse(terrainHeight: (x: number, z: number) => number): HomeHouse {
@@ -411,7 +419,7 @@ export function buildHomeHouse(terrainHeight: (x: number, z: number) => number):
   for (const s of SLABS) slabMesh(s);
   {
     // The atrium's roof: outer rim at the walls' top, inner rim at the compluvium.
-    const o = { x0: -2.76, x1: 2.76, z0: -0.95, z1: 1.95 };
+    const o = ATRIUM_ROOF;
     const i = COMPLUVIUM;
     const P = (x: number, y: number, z: number) => [x, y, z];
     const yo = H_ATRIUM;

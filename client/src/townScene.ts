@@ -1,6 +1,6 @@
 import { createPlaceFootprints } from "./buildingFootprints";
 import { readArrangement } from "../../shared/homeDecor";
-import { buildHomeHouse } from "./homeHouse";
+import { buildHomeHouse, splashLanding } from "./homeHouse";
 import { aimSeaPath, buildSeaCliff, CLIFF, clampToWorld, clearOfSea, cutAtCoast, HILL_BASE_Y, HORIZON_HILLS, horizonHillGeometry, OCEAN_DAY, OCEAN_NIGHT, walkable as onCliffPath } from "./seaCliff";
 import { QUIET_BOAT_MIN_OUT, QUIET_BOAT_START, beginDrift, boatSeats, driftStep, nextQuietLine, rowBack as rowBackState, type Drift, type QuietBoatState } from "../../shared/quietBoat";
 import { FISHING_BOAT_LENGTH, fishingOut, nextGap, pickFishingSpots, pickShip, planVoyage, SHIPS, shipsSail, voyagePose, watchingSea, type SeaWeather, type ShipKind, type Voyage } from "./seaShips";
@@ -12201,8 +12201,9 @@ export function createTownScene(
             rainPos[i * 6 + 5] = d.z;
             // Under their roof it does not rain: a streak over a roofed room
             // is folded away below the floor (seen through the door, the
-            // rain outside still falls). The compluvium is the one deliberate
-            // opening: rain falls through it into the impluvium (Task 76).
+            // rain outside still falls). The sky stays open over the compluvium
+            // (into the impluvium) and over the peristyle's garden court, the
+            // house's two deliberate openings (Tasks 76, 79).
             if (d.y < HOME_RAIN_ROOF && homeHouse.sheltered(d.x, d.z)) {
               rainPos[i * 6 + 1] = -50;
               rainPos[i * 6 + 4] = -50;
@@ -12229,7 +12230,9 @@ export function createTownScene(
               } else {
                 const nsx = camera.position.x + rainFacing.x * 12 + (Math.random() - 0.5) * 34;
                 const nsz = camera.position.z + rainFacing.z * 12 + (Math.random() - 0.5) * 34;
-                s.mesh.position.set(nsx, terrainHeight(nsx, nsz) + 0.06, nsz);
+                // No ring on a floor under the house's roofs (Task 79): it is parked below the ground, unseen.
+                const ly = splashLanding(homeHouse, nsx, nsz, groundHeightAt);
+                s.mesh.position.set(nsx, ly === null ? -50 : ly + 0.06, nsz);
               }
             }
             s.mesh.scale.setScalar(onLake ? 1.2 + s.phase * 5 : 0.6 + s.phase * 2);
