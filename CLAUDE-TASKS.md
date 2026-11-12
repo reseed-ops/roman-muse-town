@@ -838,3 +838,27 @@ Tuan directed, via Archer in the team mailbox (/home/team, Nov 11, 2026): remode
 - Tests: existing character tests must keep passing. Add discriminating tests for the new MUSE_TINTS values (hair and skin changed, face and cloth unchanged) and, if textures were repacked, a test that the VRM still loads and the face, iris, and body materials still carry image maps of the same sizes. Verify by mutation that the new tests fail on the old tints.
 - Process: freshest main (verified 0a0fb13, Task 80 landing note), check the repo is free before starting, commit separately, push, deploy the town via Railway (production code changes), verify both live, summary to town-build18-done.md, landing note under Task 81.
 - NOT in scope: the colosseum / Idyllic Rome swap (separate work in progress), the dress, a second mole (never), the Task 72 follow-up, the bridge, pairing, dispatcher/daemon, watcher, affection gates, tender-only line, tended pack, mounting App itself.
+## Task 82 (READY, added Nov 11, 2026): Garden pool water landing + Task 72 cache follow-up (town + bridge)
+
+Two small Codex-review leftovers, one town, one bridge. Full brief: town-build18-prompt.md on the box.
+
+- Garden pool (Task 79 review leftover): the splash helper still has no dedicated water landing surface for the peristyle garden pool, so rings there sit at floor height instead of on the water. Follow the Task 80 impluvium fix (commit ad961ff): select the built water surface at the garden pool and set ring y to that surface plus an explicit visual offset; retain the court-floor and impluvium controls.
+- Task 72 follow-up (Codex Task 72 review, Lows 1-2): the mark cache cap does not recover after awake-desk overflow (a save deletes at most one eligible idle mark then inserts one; idle desk removal does not trim), and the cache tests do not test last-use reordering. Define the intended bound explicitly and trim enough eligible idle entries on save and/or idle removal to reach it while preserving protected marks; add discriminating cache tests (explicit A/B/use-A sequence followed by idle eviction and pressure, asserting B loses its mark while A retains it; overflow-recovery assertion). If historical-peak retention is intentional instead, document it and stop asserting a current 5,000-mark cap.
+- Process: freshest main, commit separately, push, deploy town and bridge as production code changes dictate, verify both live, summary to town-build18-done.md, landing note under Task 82.
+- NOT in scope: the domus night look in a real browser, the domus noble-scale replan, pairing, dispatcher/daemon, watcher, affection gates, tender-only line, tended pack, mounting App itself, the bridge volume decision.
+## Task 83 (READY, added Nov 11, 2026): Remove the three stray walk decorations (town only)
+
+The Nov 11, 2026 town walk QA (browser, fresh test town, 1:21-1:35 PM) found three decorations that read as out of place against the Roman setting. Full brief: town-build19-prompt.md on the box.
+
+- (1) A purple cone "wizard hat" with a yellow band on a dark column capital in the forum garden. (2) A yellow smiley-face ball on the basilica terrace parapet. (3) A small purple-blue kawaii blob with a face on the Stargazing Pavilion steps.
+- Fix: locate each in the code and remove it if it is a stray/unintentional decoration. If any is an intentional named feature (part of a quest, a named prop, or a deliberate joke the owner placed), leave it and report why instead of deleting it. Remove nothing else.
+- Tests: assert the removed objects are gone; full suites pass; deploy the town if production code changes. Summary to town-build19-done.md, landing note under Task 83.
+- NOT in scope: the pale bowl planters (separate QA observation, still open), the cliffside bench check, the bridge, pairing, dispatcher, watcher, affection gates, tender-only line.
+## Task 84 (READY, added Nov 11, 2026): Wedding Banquet pack inspection and fold-in (town only)
+
+The RenderHub Wedding Banquet pack (Order 423445, $19.99) is on the box at ~/work/wedding-pack.zip (122,538,568 bytes, sha256 verified, 508 GLBs). Full brief: town-build20-prompt.md on the box.
+
+- Extract the pack on the box, inventory the 508 GLBs (241 props HD + 241 Mobile + 13 characters HD + 13 Mobile), and use Blender MCP (headless transport) to inspect the key pieces: flower arch, banquet tables, cakes, veils, ring box, guests.
+- Fold the chosen pieces into the Task 58 wedding quest (three preparations, ceremony, keepsake): pick HD variants, recolour to the Roman palette where needed, place them in the town where the ceremony happens, wire them in code with tests. GLBs go in client/src/assets/ (git-ignored, never commit GLBs).
+- If the fold-in is larger than one run, do the inspection plus the highest-value slice (flower arch, banquet tables, cakes, ring box) and report what remains. Deploy the town if production code changes. Summary to town-build20-done.md, landing note under Task 84.
+- NOT in scope: buying anything else, the bridge, pairing, dispatcher, watcher, affection gates, tender-only line.
