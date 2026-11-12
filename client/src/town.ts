@@ -1,5 +1,6 @@
 import { distanceToPaths, samplePath } from "./pathGeometry";
 import { villaGround } from "./layout";
+import { BED as HOME_PLAN_BED, FLOOR_RECTS as HOME_FLOOR_RECTS } from "./homePlan";
 // Muse Town content: the five places around the town-tree plaza, their
 // residents, the hidden collectibles, and the great tree in the middle of
 // town, which grows over time and changes with the seasons. Authored for
@@ -866,12 +867,16 @@ export const FOREST_WILDLIFE_PLAN = {
 } as const;
 
 // --- Their house (Task 35) ------------------------------------------------------
-// A small Roman house of their own on the west lawn, between the
-// ballista's knoll and the town's rim: plastered walls on a travertine
-// plinth under a terracotta roof, a door that opens toward the town,
-// and inside, a lamp and a bed made for two. Local frame (the same as
-// every house: rotation `facing`, local +z is the door side): the room
-// runs x -halfW..halfW, z -halfD..halfD.
+// A Roman house of their own on the west lawn, between the ballista's
+// knoll and the town's rim: since Task 76 a noble's domus (the plan is
+// homePlan.ts, the building homeHouse.ts), plastered walls on a travertine
+// podium under a terracotta roof, a door that opens toward the town, a
+// lamp and a bed made for two in its bedroom. Local frame (the same as
+// every house: rotation `facing`, local +z is the door side). halfW, halfD,
+// wall and doorWidth are the entrance block's: the door, the front wall and
+// the floor's height are fixed by them (the cottage's rectangle x -halfW..halfW,
+// z -halfD..halfD, which the floor height is taken over); the domus
+// grows back and to the side from there, inside its plot.
 export const HOME = {
   position: [-40, 26] as [number, number],
   /** The door faces east, toward the town. */
@@ -920,8 +925,8 @@ export const HOME_STEPS: { lz: number; top: number }[] = (() => {
   return out;
 })();
 
-/** The bed, in the house's frame: its head against the back wall. */
-export const HOME_BED = { lx: -1.2, lz: -2.05, halfW: 0.8, halfD: 1.05, top: 0.58 } as const;
+/** The bed, in the house's frame: in the bedroom of the domus (homePlan.ts), its head against the back wall. */
+export const HOME_BED = HOME_PLAN_BED;
 
 // --- Walkable raised surfaces ----------------------------------------------
 // Terrain alone is NOT the ground everywhere: houses stand on two-tier
@@ -983,8 +988,11 @@ export const WALK_SURFACES: WalkSurface[] = (() => {
   }
   // Their house (Task 35): the floor, and two steps up to the door.
   {
-    const [hx, hz] = HOME.position;
-    out.push({ cx: hx, cz: hz, rotY: HOME.facing, halfW: HOME.halfW + HOME.wall, halfD: HOME.halfD + HOME.wall, top: HOME_FLOOR_Y, label: "home floor" });
+    // The domus's floor: the main body, the gallery and the garden court (homePlan.ts), one surface each.
+    HOME_FLOOR_RECTS.forEach((r, i) => {
+      const c = homeToWorld((r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2);
+      out.push({ cx: c.x, cz: c.z, rotY: HOME.facing, halfW: (r.x1 - r.x0) / 2, halfD: (r.z1 - r.z0) / 2, top: HOME_FLOOR_Y, label: ["home floor", "home gallery floor", "home peristyle floor"][i] ?? "home floor" });
+    });
     HOME_STEPS.forEach((step, i) => {
       const p = homeToWorld(0, step.lz);
       out.push({ cx: p.x, cz: p.z, rotY: HOME.facing, halfW: 0.95, halfD: 0.32, top: step.top, label: `home step ${i + 1}` });

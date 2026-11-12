@@ -2403,12 +2403,13 @@ export function createTownScene(
     ...MARKET_BOOTHS.map(([x, z]) => [x, z, 1.9] as Shelter),
   ];
   let lastRainLevelAt = -10;
-  /** Above the house's roof ridge, rain may fall over it; below, never inside. */
+  /** Above the tall atrium's walls, rain may fall over the house; below, never under its roofs. */
   const HOME_RAIN_ROOF = 6;
   /** How sheltered a spot is from the rain: the roofs above, and their
-   *  house, whose inside is fully covered (its own rectangle, not a radius). */
+   *  house, whose roofed rooms are fully covered (its own rooms, not a radius);
+   *  the compluvium and the peristyle's garden stand open to the sky (Task 76). */
   const shelterAt = (x: number, z: number): number =>
-    Math.max(shelterAmount(x, z, RAIN_SHELTERS), homeHouse.inside(x, z) ? 1 : 0);
+    Math.max(shelterAmount(x, z, RAIN_SHELTERS), homeHouse.sheltered(x, z) ? 1 : 0);
   const rainLines = new THREE.LineSegments(rainGeo, rainMat);
   rainLines.frustumCulled = false;
   world.add(rainLines);
@@ -12198,10 +12199,11 @@ export function createTownScene(
             rainPos[i * 6 + 3] = d.x + slant * 0.09;
             rainPos[i * 6 + 4] = d.y + streak;
             rainPos[i * 6 + 5] = d.z;
-            // Under their roof it does not rain: a streak inside the house
+            // Under their roof it does not rain: a streak over a roofed room
             // is folded away below the floor (seen through the door, the
-            // rain outside still falls).
-            if (d.y < HOME_RAIN_ROOF && homeHouse.inside(d.x, d.z)) {
+            // rain outside still falls). The compluvium is the one deliberate
+            // opening: rain falls through it into the impluvium (Task 76).
+            if (d.y < HOME_RAIN_ROOF && homeHouse.sheltered(d.x, d.z)) {
               rainPos[i * 6 + 1] = -50;
               rainPos[i * 6 + 4] = -50;
             }
