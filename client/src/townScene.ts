@@ -66,6 +66,7 @@ import { buildAthenaTemple, buildLucretia } from "./tributes";
 import { createQuestScene } from "./projectQuests";
 import { createWeddingScene, type WeddingPieceId } from "./romanWedding";
 import { COLOSSEUM_PLACEMENT, COLOSSEUM_ROOF_RATIO, SETTING_PIECES, settingFootprints, type SettingAsset } from "./colosseumSetting";
+import { DRESSING_PIECES, STALL_CRATES, boothPoint, dressingFootprints, type DressingAsset } from "./idyllicDressing";
 import weddingArchUrl from "./assets/wedding/flower_arch.glb";
 import weddingFlammeumUrl from "./assets/wedding/flammeum_stand.glb";
 import weddingTableRoundUrl from "./assets/wedding/table_round.glb";
@@ -228,6 +229,22 @@ import settingSoldierUrl from "./assets/idyllic/statue_soldier.glb";
 import settingGeneralUrl from "./assets/idyllic/statue_general.glb";
 import settingPodestUrl from "./assets/idyllic/podest.glb";
 import settingBannerUrl from "./assets/idyllic/banner.glb";
+import dressingAthenaUrl from "./assets/statuary/athena.glb";
+import dressingAugustusUrl from "./assets/statuary/augustus.glb";
+import dressingPuttoUrl from "./assets/statuary/putto.glb";
+import dressingPodestUrl from "./assets/statuary/podest.glb";
+import dressingVaseAUrl from "./assets/market/vase_a.glb";
+import dressingVaseBUrl from "./assets/market/vase_b.glb";
+import dressingVaseCUrl from "./assets/market/vase_c.glb";
+import dressingAmphoraAUrl from "./assets/market/amphora_a.glb";
+import dressingAmphoraBUrl from "./assets/market/amphora_b.glb";
+import dressingAmphoraCUrl from "./assets/market/amphora_c.glb";
+import dressingBasketFruitUrl from "./assets/market/basket_fruit.glb";
+import dressingBasketGrainUrl from "./assets/market/basket_grain.glb";
+import dressingBreadUrl from "./assets/market/bread.glb";
+import dressingClothAUrl from "./assets/market/cloth_a.glb";
+import dressingClothBUrl from "./assets/market/cloth_b.glb";
+import dressingClothCUrl from "./assets/market/cloth_c.glb";
 import archRoundUrl from "./assets/roman/arch_round.glb";
 import treeAUrl from "./assets/roman/tree_a.glb";
 import treeBUrl from "./assets/roman/tree_b.glb";
@@ -4917,6 +4934,45 @@ export function createTownScene(
   world.add(weddingScene.group);
   const homeHouse = buildHomeHouse(terrainHeight);
   world.add(homeHouse.group);
+  // Task 86: the Idyllic Rome statues (Athena on her podium, Augustus on his, a putto in the domus
+  // garden) and the market stalls' vases, amphorae, baskets, bread and hanging cloth. The stalls'
+  // goods keep the market's hours (layOutGoods); the cloth is part of the canopy and stays up.
+  const DRESSING_URLS: Record<DressingAsset, string> = {
+    athena: dressingAthenaUrl,
+    augustus: dressingAugustusUrl,
+    putto: dressingPuttoUrl,
+    podest: dressingPodestUrl,
+    vase_a: dressingVaseAUrl,
+    vase_b: dressingVaseBUrl,
+    vase_c: dressingVaseCUrl,
+    amphora_a: dressingAmphoraAUrl,
+    amphora_b: dressingAmphoraBUrl,
+    amphora_c: dressingAmphoraCUrl,
+    basket_fruit: dressingBasketFruitUrl,
+    basket_grain: dressingBasketGrainUrl,
+    bread: dressingBreadUrl,
+    cloth_a: dressingClothAUrl,
+    cloth_b: dressingClothBUrl,
+    cloth_c: dressingClothCUrl,
+  };
+  for (const piece of DRESSING_PIECES) {
+    const url = DRESSING_URLS[piece.asset];
+    if (piece.frame === "home") {
+      void placeModel(url, homeHouse.group, { x: piece.x, z: piece.z, y: piece.lift ?? 0, rotY: piece.rotY, width: piece.width, height: piece.height });
+      continue;
+    }
+    const [gx, gz] = piece.groundAt ?? [piece.x, piece.z];
+    const placing = placeWorld(url, {
+      x: piece.x, z: piece.z, rotY: piece.rotY, width: piece.width, height: piece.height,
+      y: (piece.lift ?? 0) + terrainHeight(gx, gz) - terrainHeight(piece.x, piece.z),
+    });
+    if (piece.goods) layOutGoods(placing);
+  }
+  for (const c of STALL_CRATES) {
+    const [bx, bz] = MARKET_BOOTHS[c.booth]!;
+    const [x, z] = boothPoint(c.booth, c.lx, c.lz);
+    layOutGoods(placeWorld(crateUrl, { x, z, rotY: MARKET_BOOTHS[c.booth]![2] + c.rot, width: 0.62, y: terrainHeight(bx, bz) - terrainHeight(x, z) }));
+  }
   const terraceRot = Math.atan2(-SECRET.position[0], -SECRET.position[1]);
   const BENCHES: BenchDef[] = [
     // Turned on Nov 6, 2026 (Task 18): sitters face west, over the
@@ -5458,6 +5514,7 @@ export function createTownScene(
     ...PLACES.map((p) => [p.position[0], p.position[1], (p.buildingWidth ?? 7.6) / 2 + 1.15] as [number, number, number]),
     [COLOSSEUM.position[0], COLOSSEUM.position[1], 9.4],
     ...settingFootprints().map((f) => [f.x, f.z, ("r" in f ? f.r : Math.max(f.hx, f.hz)) + 1.2] as [number, number, number]), // the setting's pieces (Task 85)
+    ...dressingFootprints().map((f) => [f.x, f.z, f.r + 1.2] as [number, number, number]), // Augustus's podest (Task 86)
     [31, -27, 6.6], // temple
     ...MARKET_BOOTHS.map(([x, z]) => [x, z, 2.3] as [number, number, number]),
     [VILLA.gate[0], VILLA.gate[1], 4.2], // triumphal arch
@@ -6034,6 +6091,7 @@ export function createTownScene(
     ...AVENUE_CYPRESSES.map(([x, z]) => circ(x, z, 0.3, 0.15)),
     circ(COLOSSEUM.position[0], COLOSSEUM.position[1], 8), // the Colosseum, solid ring, blocked whole (placed width 16 → r 8)
     ...settingFootprints().map((f) => ("r" in f ? circ(f.x, f.z, f.r) : obb(f.x, f.z, f.hx, f.hz, f.rot))), // the Colosseum's setting (Task 85): stair, podests, houses, vexilla
+    ...dressingFootprints().map((f) => circ(f.x, f.z, f.r)), // Augustus's podest in the forum (Task 86); Athena stands on her podium, the stalls' goods inside the booths' own boxes
     boardObb, // project board
     questObb, // quest board
     goalsObb, // goals obelisk (its square base)

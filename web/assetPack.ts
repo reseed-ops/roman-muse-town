@@ -22,7 +22,9 @@ export interface PackManifest {
  *  wedding pieces by themselves (fetched only once the day dresses the
  *  town, Task 84), the Colosseum and its setting by themselves (the far
  *  landmark's tier asks for them, Task 85, 7 MB that stay out of the
- *  arrival pack). */
+ *  arrival pack), and the Idyllic Rome statues and the stalls' goods in two packs of their own
+ *  (Task 86: `statuary`, 1.9 MB, fetched as he nears the temple, the forum or the domus; `market`,
+ *  0.8 MB, the stalls' vases and baskets), so none of them drags the Colosseum's pack in. */
 export function packNameFor(rel: string): string {
   if (rel.startsWith("anim/outdoor/")) return "outdoor";
   if (rel.startsWith("anim/")) return "anim";
@@ -32,6 +34,8 @@ export function packNameFor(rel: string): string {
   if (rel.startsWith("ships/")) return "ships";
   if (rel.startsWith("wedding/")) return "wedding";
   if (rel.startsWith("idyllic/")) return "idyllic";
+  if (rel.startsWith("statuary/")) return "statuary";
+  if (rel.startsWith("market/")) return "market";
   if (rel === "centurion.vrm" || rel === "muse-avatar.vrm") return "bodies";
   if (rel === "wolf.glb") return "wolf";
   if (rel === "stars-fall-song.mp3") return "song";

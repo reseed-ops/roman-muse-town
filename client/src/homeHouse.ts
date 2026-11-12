@@ -21,7 +21,7 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { circ, obb, type Obstacle } from "./collision";
 import { HOME, HOME_BED, HOME_FLOOR_Y, HOME_STEPS, homeToWorld } from "./town";
 import {
-  ATRIUM_COLUMNS, ATRIUM_ROOF, COLUMN_H, COLUMN_R, COMPLUVIUM, H_ATRIUM, H_COMPLUVIUM, IMPLUVIUM, LAMP_TABLE, PERISTYLE_COLUMNS, PERISTYLE_POOL,
+  ATRIUM_COLUMNS, ATRIUM_ROOF, COLUMN_H, COLUMN_R, COMPLUVIUM, H_ATRIUM, H_COMPLUVIUM, IMPLUVIUM, LAMP_TABLE, PERISTYLE_COLUMNS, PERISTYLE_POOL, PERISTYLE_PUTTO,
   PORTICO, PORTICO_COLUMNS, ROOMS, SLABS, SPOTS, WALLS, inRect, insideRooms, shelteredAt, slabAt,
   type Fresco, type Rect, type Slab, type Wall,
 } from "./homePlan";
@@ -571,6 +571,12 @@ export function buildHomeHouse(terrainHeight: (x: number, z: number) => number):
     b.cyl(0.16, 0.05, 0.1, S(0xb08d57, 0.4, { metal: 0.55 }), P.x, 0.65, P.z, 10);
     b.cyl(0.015, 0.015, 0.2, S(0xcfe6ee, 0.2), P.x, 0.77, P.z, 5);
     colliders.push(co(P.x, P.z, P.r + 0.1, 0.12));
+    // The putto's plinth (the putto itself is the pack's statue, placed by townScene.ts).
+    const U = PERISTYLE_PUTTO;
+    b.box(U.plinthHalf * 2 + 0.06, 0.05, U.plinthHalf * 2 + 0.06, S(MARBLE, 0.55), U.x, 0.025, U.z);
+    b.box(U.plinthHalf * 2, U.plinth - 0.1, U.plinthHalf * 2, S(MARBLE, 0.5), U.x, 0.05 + (U.plinth - 0.1) / 2, U.z);
+    b.box(U.plinthHalf * 2 + 0.06, 0.05, U.plinthHalf * 2 + 0.06, S(MARBLE, 0.55), U.x, U.plinth - 0.025, U.z);
+    colliders.push(ob(U.x, U.z, U.plinthHalf + 0.03, U.plinthHalf + 0.03, 0.12));
     const planter = (x: number, z: number, w: number, d: number, shrub: number, flower: number) => {
       b.box(w, 0.32, d, S(MARBLE, 0.6), x, 0.16, z);
       b.box(w - 0.1, 0.02, d - 0.1, S(0x4a3220, 1), x, 0.33, z);

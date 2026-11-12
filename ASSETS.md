@@ -20,7 +20,7 @@ Aelia's body, pixiv's VRoid sample model, whose terms allow it in a free
 public repo (see its row below). Everything else is purchase/download/
 supply required, and may never be committed to a public repository.
 
-Counts: 139 files excluded from `client/src/assets/` (141 in the folder,
+Counts: 155 files excluded from `client/src/assets/` (157 in the folder,
 less the two above), plus the app icon
 `icon.webp` at the space root. (Compiled copies of these assets also exist
 in the original's `client/dist/` build output, 222 binary files, which
@@ -283,7 +283,7 @@ Not rebuilt, still missing from the owner's folder:
 - `stars-fall-song.mp3`: no candidate on the device at rebuild time; the file in use is the project's own AI-generated song (see section 11), restored to the folder the same day.
 
 `townScene.ts` and `App.tsx` import every one of these files statically,
-so the web build fails until all of them are present (141 since Task 85 (133 since Task 84, 127 since Task 50); see `CLAUDE.md`).
+so the web build fails until all of them are present (157 since Task 86 (141 since Task 85, 133 since Task 84, 127 since Task 50); see `CLAUDE.md`).
 
 ### Added Nov 8, 2026: Gaius's arms
 
@@ -308,7 +308,7 @@ Source: RenderHub "Wedding - Banquet, Cake & Characters - 254 Low-Poly Mode" by 
 
 ### Added Nov 12, 2026: the Colosseum and its setting (Task 85)
 
-Drop at: `client/src/assets/idyllic/` (9 files, 141 in the folder in all). `roman/colosseum.glb` is retired from the folder (the old plain white shell, 2.1 MB; a copy is kept on the box at `~/work/idyllic-rome/previous/`).
+Drop at: `client/src/assets/idyllic/` (9 files; 157 in the folder in all since Task 86). `roman/colosseum.glb` is retired from the folder (the old plain white shell, 2.1 MB; a copy is kept on the box at `~/work/idyllic-rome/previous/`).
 
 Source: Unity Asset Store "Idyllic Rome" (Order #1376027047994, $50 plus $4.13 tax, bought Nov 12, 2026; a 390,917,411-byte `.unitypackage`, 3,245 entries). Licence: the Unity Asset Store EULA that came with the order; same terms as the other packs here (embedded in the shipped build, never committed or redistributed as files). They travel packed, in their own `idyllic` pack that the far-landmark tier asks for (about 7 MB), not in the arrival pack.
 
@@ -325,3 +325,22 @@ Source: Unity Asset Store "Idyllic Rome" (Order #1376027047994, $50 plus $4.13 t
 | `statue_general.glb` | `SM_sculpture_general` (15 percent of the triangles) | 3,674 | 207,384 |
 | `podest.glb` | `SM_podest_rome_01` | 508 | 64,804 |
 | `banner.glb` | `SM_banner_rome_01` | 1,190 | 97,264 |
+
+### Added Nov 12, 2026: statues and market dressing (Task 86)
+
+Drop at: `client/src/assets/statuary/` (4 files) and `client/src/assets/market/` (12 files), 157 in the folder in all. Same source, order and licence as the Colosseum's setting above (Idyllic Rome, Order #1376027047994). They travel in two packs of their own, `statuary` (1.93 MB, fetched as a visitor nears the temple, the forum or the domus) and `market` (0.80 MB, the stalls' goods, fetched at arrival beside the stalls), not in the Colosseum's `idyllic` pack (a pack is one fetch, and that pack's deploy is held).
+
+`tools/idyllic/slim.py` writes them, as for Task 85 (BaseMaps rebuilt from `~/work/idyllic-rome/tex/`, 512 px JPEG, embedded; six materials added to its table). The three statues are cut to 40 percent of the pack's triangles (21,904 / 21,640 / 8,216 as imported: the brief's polygon counts were quads); the props are as the pack has them. The podest is the same mesh as `idyllic/podest.glb`, copied so the forum does not need the other pack.
+
+| File | Pack file | Triangles | Bytes |
+| --- | --- | --- | --- |
+| `statuary/athena.glb` | `SM_sculpture_athena` (40 percent) | 9,275 | 893,344 |
+| `statuary/augustus.glb` | `SM_sculpture_augustus` (40 percent) | 8,460 | 870,000 |
+| `statuary/putto.glb` | `SM_sculpture_putti_01` (40 percent) | 3,286 | 100,100 |
+| `statuary/podest.glb` | `SM_podest_rome_01` | 508 | 64,804 |
+| `market/vase_a.glb`, `vase_b`, `vase_c` | `SM_vase_painted_01` to `03` | 1,394 / 1,284 / 936 | 90,732 / 85,688 / 75,468 |
+| `market/amphora_a.glb`, `amphora_b`, `amphora_c` | `SM_amphora_01` to `03` | 1,100 / 1,260 / 458 | 68,180 / 73,588 / 48,800 |
+| `market/basket_fruit.glb` | `SM_basket_fruit_01` | 1,574 | 99,860 |
+| `market/basket_grain.glb` | `SM_basket_grain` | 612 | 49,992 |
+| `market/bread.glb` | `SM_bread_01` | 780 | 41,204 |
+| `market/cloth_a.glb`, `cloth_b`, `cloth_c` | `SM_cloth_hanging_01` to `03` | 496 / 590 / 816 | 51,020 / 53,184 / 58,316 |

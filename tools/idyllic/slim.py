@@ -50,6 +50,13 @@ TEX = {
     "M_cloth_sculptures": "M_cloth_sculptures_BaseMap.png",
     "M_sculpture_extras": "M_sculpture_extras_BaseMap.png",
     "M_armor_roman": "M_armor_roman_BaseMap.png",
+    # Task 86: statues, vases, baskets, bread, awnings
+    "M_putti_sculpture": "M_Putti_BaseMap.png",
+    "M_pottery_rome": "M_pottery_rome_BaseMap.png",
+    "M_amphoras_rome": "M_amphoras_rome_BaseMap.png",
+    "M_baskets": "M_baskets_BaseMap.png",
+    "M_food_rome": "M_food_rome_BaseMap.png",
+    "M_clothware_market": "M_clothware_market_BaseMap.png",
 }
 FLAT = {
     "M_walls_01": (0.78, 0.72, 0.62, 1),

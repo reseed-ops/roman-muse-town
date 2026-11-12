@@ -77,6 +77,11 @@ export const IMPLUVIUM: Rect = { x0: -0.75, x1: 0.75, z0: -0.05, z1: 1.05 };
 /** The peristyle's pool, round, in the garden. */
 export const PERISTYLE_POOL = { x: 1.25, z: -3.95, r: 0.42 } as const;
 
+/** A putto (Task 86, the Idyllic Rome pack) on a small marble plinth east of the pool, facing it. It
+ *  stands clear of the stepping stones (x up to 0.52), the gallery walk (z from -3.2), the planters and the
+ *  hedges; nothing is built over it, the court stays open to the sky. */
+export const PERISTYLE_PUTTO = { x: 2.1, z: -3.95, plinth: 0.32, plinthHalf: 0.2, height: 0.55, rotY: -Math.PI / 2 } as const;
+
 export const DOOR = { x: 0, width: 1.3, h: 2.15 } as const;
 
 const F = 3.31; // front wall centre

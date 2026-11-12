@@ -8,6 +8,7 @@ import { samplePath } from "./pathGeometry";
 import { routeBetween, WALK_ROUTES } from "./layout";
 import * as town from "./town";
 import { settingFootprints } from "./colosseumSetting";
+import { dressingFootprints } from "./idyllicDressing";
 
 // The walking audit. It runs on the REAL obstacle list, read straight out
 // of townScene.ts, because a copy of the list is exactly what drifts: the
@@ -42,7 +43,7 @@ function buildObstacles(): Obstacle[] {
   const js = new Bun.Transpiler({ loader: "ts" }).transformSync(`export function run() {\n${body}\n}`);
   const names = [
     "circ", "obb", "createPlaceFootprints", "treePlacement", "pavilionColliders",
-    "piscinaColliders", "bathColliders", "homeHouse", "settingFootprints", ...Object.keys(town),
+    "piscinaColliders", "bathColliders", "homeHouse", "settingFootprints", "dressingFootprints", ...Object.keys(town),
   ];
   const { BATHS, LAKE_PAVILION, PISCINA } = town;
   const pavilionColliders = [[-1.5, -1.3], [1.5, -1.3], [-1.5, 1.3], [1.5, 1.3]].map(([cx, cz]) =>
@@ -53,7 +54,7 @@ function buildObstacles(): Obstacle[] {
   new Function("bathColliders", "BATHS", bathSource)(bathColliders, BATHS);
   const values = [
     circ, obb, createPlaceFootprints, { bindCollider: <T>(position: T) => position },
-    pavilionColliders, piscinaColliders, bathColliders, buildHomeHouse(town.terrainHeight), settingFootprints, ...Object.values(town),
+    pavilionColliders, piscinaColliders, bathColliders, buildHomeHouse(town.terrainHeight), settingFootprints, dressingFootprints, ...Object.values(town),
   ];
   const module = new Function(...names, `${js.replace(/export\s+function\s+run/, "return function run")}`)(...values);
   return module() as Obstacle[];
