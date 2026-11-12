@@ -48,6 +48,8 @@ interface Fixture {
   phase: number;
   ignitionOrder: number;
   level: number;
+  /** Latched: true from the ignition crossing until the level falls below the reset. */
+  lit: boolean;
   position: THREE.Vector3;
 }
 
@@ -56,6 +58,18 @@ export interface StreetLampSystem {
   buildPost: (opts?: PostOptions) => THREE.Group;
   update: (opts: LampUpdateOptions) => LampUpdate;
 }
+
+/** Heights (post-local, metres) the festival bunting and the arm share. */
+export const LAMP_CAGE_Y = 2.26;
+export const LAMP_CAGE_REACH = 0.51;
+export const LAMP_ARM_Y = 2.8;
+/** The bunting ropes are tied to the cleat on top of each plaza post here. */
+export const LAMP_BUNTING_Y = 2.95;
+/** Hard capacity of pool/reflection instances. */
+export const LAMP_MAX_FIXTURES = 32;
+/** A latched flame ignites once its level passes this, and resets below the second. */
+export const LAMP_IGNITE_AT = 0.32;
+export const LAMP_RESET_BELOW = 0.12;
 
 /** The small dusk overlap keeps lamps from popping during a slow sky blend. */
 export function lampIgnition(level: number, order: number): number {
@@ -103,7 +117,8 @@ export function createStreetLampSystem(scene: THREE.Scene, world: THREE.Group): 
   const fixtures: Fixture[] = [];
   const metal = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.62, metalness: 0.38 });
   const stone = new THREE.MeshStandardMaterial({ color: 0x8f8371, roughness: 0.94 });
-  const terracotta = new THREE.MeshStandardMaterial({ color: 0x8f4d2f, roughness: 0.82 });
+  const terracotta = new THREE.MeshStandardMaterial({ color: 0x8f4d2f, roughness: 0.82, side: THREE.DoubleSide });
+  const oilMaterial = new THREE.MeshStandardMaterial({ color: 0x3b2209, roughness: 0.15, metalness: 0 });
   const glass = new THREE.MeshStandardMaterial({
     color: 0x796c58,
     roughness: 0.22,
@@ -115,24 +130,40 @@ export function createStreetLampSystem(scene: THREE.Scene, world: THREE.Group): 
   });
 
   // Shared geometries: no post allocates its own cylinders, bars or panes.
-  const octagonalBaseGeo = new THREE.CylinderGeometry(0.24, 0.3, 0.3, 8);
-  const squareBaseGeo = new THREE.BoxGeometry(0.44, 0.3, 0.44);
+  // The masonry foot is taller than before but stays inside the old 0.3 collider radius.
+  const octagonalBaseGeo = new THREE.CylinderGeometry(0.22, 0.3, 0.5, 8);
+  const squareBaseGeo = new THREE.BoxGeometry(0.44, 0.5, 0.44);
   const plinthGeo = new THREE.CylinderGeometry(0.13, 0.18, 0.13, 8);
-  const shaftGeo = new THREE.CylinderGeometry(0.045, 0.065, 2.08, 8);
+  const shaftGeo = new THREE.CylinderGeometry(0.045, 0.065, 2.245, 8);
   const collarGeo = new THREE.CylinderGeometry(0.078, 0.078, 0.07, 8);
   const capitalGeo = new THREE.CylinderGeometry(0.075, 0.12, 0.13, 8);
   const armGeo = new THREE.BoxGeometry(0.62, 0.055, 0.055);
   const braceGeo = new THREE.BoxGeometry(0.38, 0.035, 0.035);
-  const chainGeo = new THREE.CylinderGeometry(0.012, 0.012, 0.2, 6);
+  const chainLinkGeo = new THREE.TorusGeometry(0.022, 0.0055, 5, 8);
+  const hangRingGeo = new THREE.TorusGeometry(0.035, 0.008, 5, 10);
+  const bossGeo = new THREE.CylinderGeometry(0.02, 0.026, 0.04, 6);
+  const stalkGeo = new THREE.CylinderGeometry(0.014, 0.018, 0.075, 6);
+  const cleatGeo = new THREE.CylinderGeometry(0.014, 0.014, 0.12, 6);
   const cagePlateGeo = new THREE.BoxGeometry(0.4, 0.045, 0.4);
   const cageBarGeo = new THREE.BoxGeometry(0.035, 0.42, 0.035);
   const cageRoofGeo = new THREE.CylinderGeometry(0.12, 0.31, 0.13, 4);
   const cageGlassGeo = new THREE.CylinderGeometry(0.15, 0.18, 0.36, 4, 1, true);
-  const oilBowlGeo = new THREE.SphereGeometry(0.105, 9, 6, 0, Math.PI * 2, 0, Math.PI * 0.52);
-  const wickGeo = new THREE.CylinderGeometry(0.013, 0.017, 0.08, 6);
+  const wickGeo = new THREE.CylinderGeometry(0.013, 0.017, 0.07, 6);
   const flameGeo = new THREE.ConeGeometry(0.052, 0.16, 7);
 
+  const CAGE_SCALE_0 = 0.88;
+  const CAGE_SCALE_1 = 0.82;
   const BRONZE = new THREE.Color(0x66503a);
+  const TIMBER = new THREE.Color(0x5b4128);
+  const WICK = new THREE.Color(0x5a4a30);
+  // Cage-local oil lamp layout (before the cage scale).
+  const HANG_RING_Y = 0.425;
+  const HANG_RING_TOP = HANG_RING_Y + 0.043;
+  const BOWL_R = 0.085;
+  const BOWL_X = -0.015;
+  const VESSEL_RIM_Y = -0.13;
+  const OIL_FILL_Y = VESSEL_RIM_Y - 0.01;
+  const WICK_X = 0.09;
   const DARK_BRONZE = new THREE.Color(0x302820);
   const transformed = (
     source: THREE.BufferGeometry,
@@ -140,11 +171,12 @@ export function createStreetLampSystem(scene: THREE.Scene, world: THREE.Group): 
     position: [number, number, number],
     rotationZ = 0,
     rotationY = 0,
+    rotationX = 0,
   ): THREE.BufferGeometry => {
     const geometry = source.clone();
     const matrix = new THREE.Matrix4().compose(
       new THREE.Vector3(...position),
-      new THREE.Quaternion().setFromEuler(new THREE.Euler(0, rotationY, rotationZ)),
+      new THREE.Quaternion().setFromEuler(new THREE.Euler(rotationX, rotationY, rotationZ)),
       new THREE.Vector3(1, 1, 1),
     );
     geometry.applyMatrix4(matrix);
@@ -168,23 +200,60 @@ export function createStreetLampSystem(scene: THREE.Scene, world: THREE.Group): 
     transformed(cagePlateGeo, BRONZE, [0, 0.22, 0]),
     ...[-0.15, 0.15].flatMap((x) => [-0.15, 0.15].map((z) => transformed(cageBarGeo, DARK_BRONZE, [x, 0, z]))),
     transformed(cageRoofGeo, DARK_BRONZE, [0, 0.31, 0], 0, Math.PI / 4),
-    transformed(wickGeo, DARK_BRONZE, [0, -0.045, 0]),
+    // A boss and a ring stand clear of the roof: the chain hooks the ring, not the roof.
+    transformed(bossGeo, DARK_BRONZE, [0, 0.395, 0]),
+    transformed(hangRingGeo, BRONZE, [0, HANG_RING_Y, 0]),
+    // The wick stands in the spout tip of the oil vessel.
+    transformed(wickGeo, WICK, [WICK_X, -0.09, 0]),
   ]);
+  // The squat terracotta oil lamp: a lower-hemisphere bowl opening upward, a
+  // spout toward +x, and a dark oil surface just under the rim.
+  const bowlGeo = new THREE.SphereGeometry(BOWL_R, 12, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
+  bowlGeo.applyMatrix4(new THREE.Matrix4().compose(
+    new THREE.Vector3(BOWL_X, VESSEL_RIM_Y, 0),
+    new THREE.Quaternion(),
+    new THREE.Vector3(1, 0.75, 1),
+  ));
+  const spoutGeo = new THREE.CylinderGeometry(0.016, 0.03, 0.07, 6);
+  spoutGeo.applyMatrix4(new THREE.Matrix4().compose(
+    new THREE.Vector3(0.06, VESSEL_RIM_Y + 0.005, 0),
+    new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -Math.PI / 2)),
+    new THREE.Vector3(1, 1, 1),
+  ));
+  const oilVesselGeo = mergeGeometries([bowlGeo, spoutGeo], false);
+  if (!oilVesselGeo) throw new Error("oil vessel geometry could not be merged");
+  bowlGeo.dispose();
+  spoutGeo.dispose();
+  const oilFillGeo = new THREE.CircleGeometry(0.07, 12);
+  oilFillGeo.rotateX(-Math.PI / 2);
+  oilFillGeo.translate(BOWL_X, OIL_FILL_Y, 0);
   const postMetalGeometries = new Map<string, THREE.BufferGeometry>();
   const postMetalGeometry = (inward: -1 | 1, variant: 0 | 1): THREE.BufferGeometry => {
     const key = `${inward}:${variant}`;
     const cached = postMetalGeometries.get(key);
     if (cached) return cached;
-    const collars = (variant === 0 ? [0.7, 1.55] : [0.9, 1.82]).map((y) =>
+    const collars = (variant === 0 ? [0.85, 1.8] : [1.05, 2.05]).map((y) =>
       transformed(collarGeo, BRONZE, [0, y, 0]));
+    // Chain links run from the ring on the cage roof up to the timber arm,
+    // alternating planes so they read as interlocked links.
+    const cageScale = variant === 0 ? CAGE_SCALE_0 : CAGE_SCALE_1;
+    const ringTop = LAMP_CAGE_Y + HANG_RING_TOP * cageScale;
+    const armUnderside = LAMP_ARM_Y - 0.0275;
+    const span = armUnderside - ringTop;
+    const linkCount = Math.max(2, Math.round(span / 0.034));
+    const links = Array.from({ length: linkCount }, (_, i) =>
+      transformed(chainLinkGeo, DARK_BRONZE, [inward * LAMP_CAGE_REACH, ringTop + ((i + 0.5) * span) / linkCount, 0], 0, i % 2 === 0 ? Math.PI / 2 : 0));
     const geometry = mergeColored([
-      transformed(plinthGeo, BRONZE, [0, 0.365, 0]),
-      transformed(shaftGeo, DARK_BRONZE, [0, 1.405, 0]),
+      transformed(plinthGeo, BRONZE, [0, 0.565, 0]),
+      transformed(shaftGeo, DARK_BRONZE, [0, 1.6225, 0]),
       ...collars,
-      transformed(capitalGeo, BRONZE, [0, 2.46, 0]),
-      transformed(armGeo, BRONZE, [inward * 0.27, 2.56, 0]),
-      transformed(braceGeo, DARK_BRONZE, [inward * 0.2, 2.42, 0], inward * -0.72),
-      transformed(chainGeo, DARK_BRONZE, [inward * 0.51, 2.43, 0]),
+      transformed(capitalGeo, BRONZE, [0, 2.81, 0]),
+      // The bunting cleat: a stalk and a cross-bar whose centre is the rope end.
+      transformed(stalkGeo, DARK_BRONZE, [0, 2.9125, 0]),
+      transformed(cleatGeo, BRONZE, [0, LAMP_BUNTING_Y, 0], Math.PI / 2),
+      transformed(armGeo, TIMBER, [inward * 0.27, LAMP_ARM_Y, 0]),
+      transformed(braceGeo, TIMBER, [inward * 0.2, 2.64, 0], inward * 0.72),
+      ...links,
     ]);
     postMetalGeometries.set(key, geometry);
     return geometry;
@@ -209,7 +278,7 @@ export function createStreetLampSystem(scene: THREE.Scene, world: THREE.Group): 
     blending: THREE.AdditiveBlending,
     toneMapped: false,
   });
-  const MAX_FIXTURES = 32;
+  const MAX_FIXTURES = LAMP_MAX_FIXTURES;
   const poolInstances = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), poolMaterial, MAX_FIXTURES);
   const reflectionInstances = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), reflectionMaterial, MAX_FIXTURES);
   poolInstances.frustumCulled = false;
@@ -223,6 +292,7 @@ export function createStreetLampSystem(scene: THREE.Scene, world: THREE.Group): 
   const localLights = Array.from({ length: 4 }, () => {
     const light = new THREE.PointLight(0xffb86b, 0, 7.5, 2);
     light.castShadow = false;
+    light.visible = false;
     scene.add(light);
     return light;
   });
@@ -255,11 +325,14 @@ export function createStreetLampSystem(scene: THREE.Scene, world: THREE.Group): 
     panes.rotation.y = Math.PI / 4;
     cage.add(panes);
 
-    // The oil cup and wick make the source legible even while unlit by day.
-    const bowl = new THREE.Mesh(oilBowlGeo, terracotta);
-    bowl.scale.y = 0.52;
-    bowl.position.y = -0.13;
-    cage.add(bowl);
+    // The squat terracotta oil lamp: an open bowl with dark oil, a spout and a
+    // wick, legible even while unlit by day.
+    const vessel = new THREE.Mesh(oilVesselGeo, terracotta);
+    vessel.name = "oil-vessel";
+    cage.add(vessel);
+    const oil = new THREE.Mesh(oilFillGeo, oilMaterial);
+    oil.name = "oil-fill";
+    cage.add(oil);
     const flameMaterial = new THREE.MeshBasicMaterial({
       color: 0xffc66d,
       transparent: true,
@@ -269,7 +342,8 @@ export function createStreetLampSystem(scene: THREE.Scene, world: THREE.Group): 
       toneMapped: false,
     });
     const flame = new THREE.Mesh(flameGeo, flameMaterial);
-    flame.position.y = 0.06;
+    flame.name = "flame";
+    flame.position.set(WICK_X, 0.03, 0);
     cage.add(flame);
     const haloMaterial = new THREE.SpriteMaterial({
       map: glowTexture,
@@ -282,7 +356,8 @@ export function createStreetLampSystem(scene: THREE.Scene, world: THREE.Group): 
     });
     const halo = new THREE.Sprite(haloMaterial);
     halo.scale.set(0.72, 0.72, 0.72);
-    halo.position.y = 0.04;
+    halo.name = "halo";
+    halo.position.set(0.05, 0.04, 0);
     cage.add(halo);
     cage.scale.setScalar(scale);
 
@@ -295,6 +370,7 @@ export function createStreetLampSystem(scene: THREE.Scene, world: THREE.Group): 
       phase: fixtures.length * 1.731 + 0.41,
       ignitionOrder: opts.ignitionOrder ?? 0.35,
       level: 0,
+      lit: false,
       position: new THREE.Vector3(),
     });
     return cage;
@@ -305,19 +381,19 @@ export function createStreetLampSystem(scene: THREE.Scene, world: THREE.Group): 
     const variant = opts.variant ?? 0;
     const post = new THREE.Group();
     const base = new THREE.Mesh(variant === 0 ? octagonalBaseGeo : squareBaseGeo, stone);
-    base.position.y = 0.15;
+    base.position.y = 0.25;
     base.rotation.y = variant ? Math.PI / 4 : 0;
     base.receiveShadow = true;
     post.add(base);
     const postMetal = new THREE.Mesh(postMetalGeometry(inward, variant), metal);
     postMetal.castShadow = true;
     post.add(postMetal);
-    const cage = makeCage(variant === 0 ? 0.88 : 0.82, {
-      groundOffset: 2.26,
+    const cage = makeCage(variant === 0 ? CAGE_SCALE_0 : CAGE_SCALE_1, {
+      groundOffset: LAMP_CAGE_Y,
       reflects: true,
       ignitionOrder: opts.ignitionOrder,
     });
-    cage.position.set(inward * 0.51, 2.26, 0);
+    cage.position.set(inward * LAMP_CAGE_REACH, LAMP_CAGE_Y, 0);
     post.add(cage);
     return post;
   };
@@ -346,8 +422,17 @@ export function createStreetLampSystem(scene: THREE.Scene, world: THREE.Group): 
         : 0.975 + Math.sin(opts.t * 1.7 + fixture.phase) * 0.018 + Math.sin(opts.t * 4.1 + fixture.phase * 1.9) * 0.009;
       const windDip = opts.reducedMotion ? 1 : 1 - opts.wind * (0.015 + 0.02 * Math.max(0, Math.sin(opts.t * 2.3 + fixture.phase)));
       const level = THREE.MathUtils.clamp(ignition * flicker * windDip, 0, 1.05);
-      if (initiallySettled && fixture.level < 0.12 && level >= 0.32 && fixture.position.distanceTo(opts.listener) < 14) {
-        ignitedNear = true;
+      // Ignition is a latch, not a frame-to-frame jump: it sets when the
+      // (unflickered) ignition crosses LAMP_IGNITE_AT and resets only once it
+      // falls below LAMP_RESET_BELOW, so a slow dusk ramp fires exactly once.
+      // A hidden fixture tracks the latch silently, so revealing a lamp that is
+      // already burning (an upgrade bought at night) makes no sound.
+      const rawIgnition = lampIgnition(opts.falseDream ? 1 : opts.lampLevel, order);
+      if (!fixture.lit && rawIgnition >= LAMP_IGNITE_AT) {
+        fixture.lit = true;
+        if (shown && initiallySettled && fixture.position.distanceTo(opts.listener) < 14) ignitedNear = true;
+      } else if (fixture.lit && rawIgnition < LAMP_RESET_BELOW) {
+        fixture.lit = false;
       }
       fixture.level = level;
 
@@ -397,14 +482,21 @@ export function createStreetLampSystem(scene: THREE.Scene, world: THREE.Group): 
     reflectionMaterial.opacity = opts.wetness * (opts.fog ? 0.19 : 0.28);
 
     candidates.sort((a, b) => a.distance - b.distance);
-    const budget = lampLightBudget(opts.tier);
+    // Unused slots are made invisible, so the renderer's light setup (and the
+    // shader's point-light loop) really holds only as many lights as are lit.
+    // Three caches one program per count, so at most five variants ever compile
+    // (0..4), and the count changes only when the tier or the set of lit
+    // candidates near the camera changes.
+    const active = Math.min(lampLightBudget(opts.tier), candidates.length);
     for (let i = 0; i < localLights.length; i++) {
       const light = localLights[i]!;
-      const candidate = i < budget ? candidates[i] : undefined;
+      const candidate = i < active ? candidates[i] : undefined;
       if (!candidate) {
         light.intensity = 0;
+        light.visible = false;
         continue;
       }
+      light.visible = true;
       light.position.copy(candidate.fixture.position);
       light.color.setHex(opts.falseDream ? 0xff672f : 0xffb86b);
       light.intensity = candidate.light * (opts.fog ? 38 : 50);
@@ -412,8 +504,9 @@ export function createStreetLampSystem(scene: THREE.Scene, world: THREE.Group): 
     }
 
     const mothSeason = opts.season === "spring" || opts.season === "summer";
+    // Reduced motion hides the moths: their orbit would be continuous motion.
     let mothCount = 0;
-    if (mothSeason && opts.lampLevel > 0.5 && opts.rain < 0.2 && !opts.fog && fixtures.length) {
+    if (mothSeason && !opts.reducedMotion && opts.lampLevel > 0.5 && opts.rain < 0.2 && !opts.fog && fixtures.length) {
       const lit = fixtures.filter((fixture) => fixture.level > 0.45 && visibleThroughParents(fixture.anchor));
       for (let i = 0; i < MOTH_COUNT && lit.length; i++) {
         const fixture = lit[(i * 5 + 1) % lit.length]!;

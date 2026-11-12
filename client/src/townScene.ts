@@ -7,7 +7,7 @@ import { FISHING_BOAT_LENGTH, fishingOut, nextGap, pickFishingSpots, pickShip, p
 import { createTrueSky, skyDirection, SKY_REFRESH_S } from "./trueSky";
 import { armsVisibility, createGaiusArms } from "./gaiusArms";
 import { createNightLights } from "./nightLights";
-import { createStreetLampSystem } from "./streetLamps";
+import { createStreetLampSystem, LAMP_BUNTING_Y } from "./streetLamps";
 import { BUBBLE_SPEAKERS, bubblePageDuration, drawBubblePlate, paginateBubbleText, type BubbleSpeaker } from "./bubblePlate";
 import { samplePath } from "./pathGeometry";
 import { streetWidth } from "./town";
@@ -2701,8 +2701,8 @@ export function createTownScene(
     for (let s = 0; s < plazaLamps.length; s++) {
       const a = plazaLamps[s]!;
       const b = plazaLamps[(s + 1) % plazaLamps.length]!;
-      const start = new THREE.Vector3(a[0], 2.95, a[1]);
-      const end = new THREE.Vector3(b[0], 2.95, b[1]);
+      const start = new THREE.Vector3(a[0], LAMP_BUNTING_Y, a[1]);
+      const end = new THREE.Vector3(b[0], LAMP_BUNTING_Y, b[1]);
       const mid = start.clone().add(end).multiplyScalar(0.5);
       mid.y -= 0.55;
       const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
