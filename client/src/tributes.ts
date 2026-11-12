@@ -3,6 +3,7 @@
 // Mars, and its one temple is already the town's). Pure meshes and
 // colliders here; townScene places them, picks them and seats them.
 import * as THREE from "three";
+import { ATHENA_LAMP_STANDS } from "./athenaTemple";
 import { ATHENA_TEMPLE, LUCRETIA } from "./town";
 
 const MARBLE = 0xece6d8;
@@ -147,23 +148,37 @@ export function buildLucretia(ground: number): Tribute {
 }
 
 /**
- * Athena's temple: a small prostyle temple on a podium, four columns
- * before a hollow plastered cella (a real doorway, Athena within, a lamp), a terracotta gable
- * roof, an olive wreath in the pediment and her name on the frieze, a
- * deep front step to sit on. Local frame: the front is +x.
+ * Athena's temple (Tasks 55, 87, 88): a prostyle temple on a podium you can
+ * walk up to by a stair either side of the seat step, four columns before a
+ * hollow plastered cella (a doorway a walker passes, Athena within against the
+ * back wall, two bronze lamps and their light), a terracotta gable roof, an
+ * olive wreath in the pediment and her name on the frieze. Local frame: the
+ * front is +x; the podium runs from x +halfX back to -backX.
  */
 export function buildAthenaTemple(ground: number): Tribute {
-  const { halfX, halfZ, podiumY, stepY, stepDepth } = ATHENA_TEMPLE;
+  const { halfX, backX, halfZ, podiumY, stepY, stepDepth, stepHalfZ } = ATHENA_TEMPLE;
+  const len = halfX + backX; // the podium's length
+  const xc = (halfX - backX) / 2; // its centre in x
   const group = new THREE.Group();
   const trav = m(TRAVERTINE, 0.9);
   const marble = m(MARBLE, 0.65);
-  const podium = new THREE.Mesh(new THREE.BoxGeometry(halfX * 2, podiumY, halfZ * 2), trav);
-  podium.position.y = podiumY / 2;
-  const step = new THREE.Mesh(new THREE.BoxGeometry(stepDepth, stepY, halfZ * 2 - 0.2), trav);
+  const podium = new THREE.Mesh(new THREE.BoxGeometry(len, podiumY, halfZ * 2), trav);
+  podium.position.set(xc, podiumY / 2, 0);
+  const step = new THREE.Mesh(new THREE.BoxGeometry(stepDepth, stepY, stepHalfZ * 2), trav);
   step.position.set(halfX + stepDepth / 2, stepY / 2, 0);
   group.add(podium, step);
+  // The two flights: a block per tread, each rising a `rise`, as the walk surfaces do (town.ts).
+  const S = ATHENA_TEMPLE.stair;
+  for (const side of [-1, 1]) {
+    for (let k = 1; k <= S.treads; k++) {
+      const x0 = halfX + (S.treads - k) * S.run;
+      const tread = new THREE.Mesh(new THREE.BoxGeometry(S.run, k * S.rise, S.width), trav);
+      tread.position.set(x0 + S.run / 2, (k * S.rise) / 2, side * S.z);
+      group.add(tread);
+    }
+  }
 
-  // The cella (Task 87): a hollow room on the back two-thirds of the podium, its floor at the
+  // The cella (Tasks 87, 88): a hollow room on the back of the podium, its floor at the
   // podium's top, walls a hand thick, and a real doorway in the front wall.
   const C = ATHENA_TEMPLE.cella;
   const cellaH = C.height;
@@ -186,23 +201,28 @@ export function buildAthenaTemple(ground: number): Tribute {
   wallBox(C.x1 - C.wall - 0.02, C.x1 + 0.03, -C.doorHalf, C.doorHalf, C.doorH - 0.08, C.doorH, marble);
   wallBox(C.x0 + C.wall, C.x1 + 0.05, -C.doorHalf, C.doorHalf, 0, 0.03, marble); // sill, running in as the floor's runner
   wallBox(C.x0 + C.wall, C.x1 - C.wall, -C.halfZ + C.wall, C.halfZ - C.wall, 0, 0.02, m(0xd9d2c0, 0.6)); // the floor
-  // A bronze lamp on a stand in the corner and the warm light it throws, so her marble reads inside.
+  // Two bronze lamps on stands against the back wall, either side of her, and the one warm
+  // light between them, so her marble reads inside.
   const bronze = m(0x8a6a3a, 0.45);
-  const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.05, 0.9, 8), bronze);
-  stand.position.set(-0.45, podiumY + 0.45, 0.95);
-  const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.05, 0.07, 10), bronze);
-  bowl.position.set(-0.45, podiumY + 0.93, 0.95);
-  const flame = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffc46b }));
-  flame.scale.y = 1.6;
-  flame.position.set(-0.45, podiumY + 1.0, 0.95);
-  const lamp = new THREE.PointLight(0xffd29a, 3, 5, 1.4);
-  lamp.position.set(-0.3, podiumY + 1.9, 0.2);
-  group.add(stand, bowl, flame, lamp);
+  const flameMat = new THREE.MeshBasicMaterial({ color: 0xffc46b });
+  for (const [lx, lz] of ATHENA_LAMP_STANDS) {
+    const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.05, 0.9, 8), bronze);
+    stand.position.set(lx, podiumY + 0.45, lz);
+    const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.05, 0.07, 10), bronze);
+    bowl.position.set(lx, podiumY + 0.93, lz);
+    const flame = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), flameMat);
+    flame.scale.y = 1.6;
+    flame.position.set(lx, podiumY + 1.0, lz);
+    group.add(stand, bowl, flame);
+  }
+  const lamp = new THREE.PointLight(0xffd29a, 4, 7, 1.4);
+  lamp.position.set(C.x0 + C.wall + 0.9, podiumY + 1.75, 0.2);
+  group.add(lamp);
 
   // Four columns across the front.
   const colH = cellaH;
-  const colX = halfX - 0.3;
-  for (const cz of [-1.35, -0.45, 0.45, 1.35]) {
+  const colX = ATHENA_TEMPLE.colX;
+  for (const cz of ATHENA_TEMPLE.columnZ) {
     const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.155, colH - 0.2, 10), marble);
     shaft.position.set(colX, podiumY + 0.1 + (colH - 0.2) / 2, cz);
     const baseRing = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.1, 10), marble);
@@ -213,8 +233,8 @@ export function buildAthenaTemple(ground: number): Tribute {
   }
   // The entablature, with her name on the frieze.
   const entY = podiumY + colH;
-  const ent = new THREE.Mesh(new THREE.BoxGeometry(halfX * 2, 0.32, halfZ * 2), marble);
-  ent.position.y = entY + 0.16;
+  const ent = new THREE.Mesh(new THREE.BoxGeometry(len, 0.32, halfZ * 2), marble);
+  ent.position.set(xc, entY + 0.16, 0);
   const frieze = carvedPlate("ATHENA · MINERVA", 2.6, 0.22, MARBLE);
   frieze.rotation.y = Math.PI / 2;
   frieze.position.set(halfX + 0.004, entY + 0.16, 0);
@@ -227,7 +247,7 @@ export function buildAthenaTemple(ground: number): Tribute {
   tri.lineTo(halfZ + 0.08, 0);
   tri.lineTo(0, gableH);
   tri.closePath();
-  const pedGeo = new THREE.ExtrudeGeometry(tri, { depth: halfX * 2, bevelEnabled: false });
+  const pedGeo = new THREE.ExtrudeGeometry(tri, { depth: len, bevelEnabled: false });
   const pediment = new THREE.Mesh(pedGeo, marble);
   pediment.rotation.y = -Math.PI / 2;
   pediment.position.set(halfX, entY + 0.32, 0);
@@ -235,8 +255,8 @@ export function buildAthenaTemple(ground: number): Tribute {
   const pitch = Math.atan2(gableH, halfZ + 0.2);
   const roofMat = m(TERRACOTTA, 0.8);
   for (const side of [1, -1]) {
-    const roof = new THREE.Mesh(new THREE.BoxGeometry(halfX * 2 + 0.2, 0.07, slope), roofMat);
-    roof.position.set(0, entY + 0.32 + gableH / 2 + 0.03, (side * (halfZ + 0.2)) / 2);
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(len + 0.2, 0.07, slope), roofMat);
+    roof.position.set(xc, entY + 0.32 + gableH / 2 + 0.03, (side * (halfZ + 0.2)) / 2);
     roof.rotation.x = side * pitch;
     group.add(roof);
   }

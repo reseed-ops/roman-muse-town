@@ -78,17 +78,28 @@ for (const p of DRESSING_PIECES) {
   await ground_(url, { x: p.x, z: p.z, y: (p.lift ?? 0) + terrainHeight(gx, gz), rotY: p.rotY, width: p.width, height: p.height });
 }
 
+const T0 = ATHENA_TEMPLE.position;
+// a stand-in walker (Task 88): the Centurion, 1.8 m, just inside the door facing west toward her; ?walker=stair puts him on the stair
+if (params.get("walker")) {
+  const w = params.get("walker");
+  const [lx, lz, ly] = w === "stair" ? [3.0, 1.6, 0.45] : [-1.45, 0, 0.9];
+  await ground_("./assets/centurion.vrm", { x: T0[0] + lx, z: T0[1] + lz, y: terrainHeight(T0[0], T0[1]) + ly, rotY: w === "stair" ? -Math.PI / 2 : Math.PI, height: 1.8 });
+}
 const cam = new THREE.PerspectiveCamera(48, 1280 / 720, 0.05, 400);
 const T = ATHENA_TEMPLE.position;
 const th = terrainHeight(T[0], T[1]);
 const toWorld = (x: number, y: number, z: number) => home.group.localToWorld(new THREE.Vector3(x, y, z));
 const V: Record<string, [THREE.Vector3, THREE.Vector3]> = {
-  temple: [new THREE.Vector3(T[0] + 6.5, th + 1.7, T[1] + 1.2), new THREE.Vector3(T[0], th + 1.9, T[1])],
-  templeClose: [new THREE.Vector3(T[0] + 4.2, th + 1.6, T[1] - 0.6), new THREE.Vector3(T[0] + 0.5, th + 1.9, T[1])],
-  templeBench: [new THREE.Vector3(T[0] + 2.45, th + 1.35, T[1]), new THREE.Vector3(T[0] - 1.1, th + 1.9, T[1])],
-  templeDoor: [new THREE.Vector3(T[0] + 4.6, th + 1.9, T[1] + 1.4), new THREE.Vector3(T[0] - 0.5, th + 1.7, T[1])],
-  templeInside: [new THREE.Vector3(T[0] + 0.3, th + 1.9, T[1] + 1.1), new THREE.Vector3(T[0] - 1.1, th + 1.6, T[1])],
-  templeSide: [new THREE.Vector3(T[0] + 3, th + 2.2, T[1] + 7), new THREE.Vector3(T[0], th + 1.8, T[1])],
+  temple: [new THREE.Vector3(T[0] + 9, th + 1.7, T[1] + 3.2), new THREE.Vector3(T[0] - 0.7, th + 1.9, T[1])],
+  templeClose: [new THREE.Vector3(T[0] + 6, th + 1.6, T[1] - 1.8), new THREE.Vector3(T[0] - 0.2, th + 1.8, T[1])],
+  templeBench: [new THREE.Vector3(T[0] + 2.15, th + 1.3, T[1]), new THREE.Vector3(T[0] - 2.5, th + 2.0, T[1])],
+  templeDoor: [new THREE.Vector3(T[0] + 5, th + 1.9, T[1] + 1.6), new THREE.Vector3(T[0] - 1.5, th + 1.9, T[1])],
+  templeStair: [new THREE.Vector3(T[0] + 6.5, th + 1.6, T[1] + 4.2), new THREE.Vector3(T[0] + 1.8, th + 0.7, T[1] + 1.2)],
+  // the walker's view: behind him, a step inside the door, looking west at her
+  templeInside: [new THREE.Vector3(T[0] - 0.15, th + 0.9 + 1.55, T[1] + 0.9), new THREE.Vector3(T[0] - 2.2, th + 0.9 + 1.2, T[1])],
+  templeInside2: [new THREE.Vector3(T[0] - 0.3, th + 0.9 + 2.0, T[1] + 1.4), new THREE.Vector3(T[0] - 2.0, th + 0.9 + 1.0, T[1] - 0.3)],
+  templeSide: [new THREE.Vector3(T[0] - 1, th + 2.4, T[1] + 8.5), new THREE.Vector3(T[0] - 0.7, th + 1.8, T[1])],
+  templeBack: [new THREE.Vector3(T[0] - 8, th + 2.6, T[1] - 2.5), new THREE.Vector3(T[0] - 0.7, th + 1.8, T[1])],
   templeRoof: [new THREE.Vector3(T[0] + 8, th + 6, T[1] + 5), new THREE.Vector3(T[0], th + 2.4, T[1])],
   forum: [new THREE.Vector3(1.5, 2.0, 14), new THREE.Vector3(6.5, 2.0, 7.6)],
   forumClose: [new THREE.Vector3(2.5, 1.8, 11), new THREE.Vector3(6.5, 2.0, 7.6)],

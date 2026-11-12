@@ -3142,25 +3142,55 @@ export const LUCRETIA = {
 } as const;
 
 export const ATHENA_TEMPLE = {
-  /** The podium's centre; the front (east, toward Lucretia) is +x. */
+  /** The temple's origin: the podium's FRONT face is at local x +halfX (east, toward Lucretia); the front stays where Task 55 put it, the bench, the step and the olives with it. */
   position: [-20.6, 8.0] as [number, number],
-  /** Podium half-depth along x and half-width along z. */
+  /** The podium's front face, in local x. Task 88 grew the temple BACKWARD (west): see backX. */
   halfX: 1.85,
-  halfZ: 1.8,
+  /** How far the podium reaches behind the origin (Task 88): 3.3 m, so its back face is 0.3 m clear of the rock at (-24.6, 7.6) and the ground is still flat (it rises past x -27). */
+  backX: 3.3,
+  /** The podium's half-width along z (Task 88: 1.8 to 2.2): the Sounds house's platform ends 1.15 m north of it, the Garden house's platform 0.65 m south. */
+  halfZ: 2.2,
   podiumY: 0.9,
-  /** The seat step along the front: its top, and how far it stands out. */
+  /** The seat step along the front: its top, how far it stands out, and its half-width (Task 88: 1.0, the middle of the front, with a stair either side). */
   stepY: 0.45,
   stepDepth: 0.6,
-  /** The cella (Task 87), in the temple's local frame (front +x): a hollow room with its floor at the podium's top. */
+  stepHalfZ: 1.0,
+  /** The cella (Tasks 87, 88), in the temple's local frame (front +x): a hollow room with its floor at the podium's top. Interior 2.7 m deep by 3.4 m wide by 2.3 m high. */
   cella: {
     /** Outer back face and outer front face along x, outer half-width along z, wall thickness, and the height of the room (floor to the entablature's underside). */
-    x0: -1.7, x1: 0.6, halfZ: 1.55, wall: 0.2, height: 2.3,
-    /** The doorway in the front wall: half-width and height, a real opening. */
-    doorHalf: 0.65, doorH: 1.95,
+    x0: -3.15, x1: -0.05, halfZ: 1.9, wall: 0.2, height: 2.3,
+    /** The doorway in the front wall: half-width and height, a real opening a walker passes. */
+    doorHalf: 0.7, doorH: 2.05,
   },
-  /** The olive trees either side of the steps. */
-  olives: [[-17.7, 5.7], [-17.7, 10.3]] as [number, number][],
+  /** The four front columns: their x (the portico is 0.95 m deep between them and the cella) and their z. The middle bay, 1.5 m, lines up with the door. */
+  colX: 1.0,
+  columnZ: [-1.65, -0.75, 0.75, 1.65] as readonly number[],
+  /** Two flights up the front, one either side of the seat step, each `width` wide and centred at +-z: `treads` treads of `rise` and `run` leading up to the podium's top (podiumY = (treads + 1) * rise). */
+  stair: { z: 1.6, width: 1.0, treads: 5, rise: 0.15, run: 0.3 },
+  /** Where Athena stands, in local x (against the back wall, facing east), and how tall. */
+  statueX: -2.5,
+  /** The olive trees either side of the steps (moved out from z +-2.3 to +-2.75 so the flights are clear). */
+  olives: [[-17.7, 5.25], [-17.7, 10.75]] as [number, number][],
 } as const;
+
+/** The temple's walkable tops (Task 88): the podium's floor, which is the cella's floor, and the treads of the two flights, each a surface of its own height. The scene's stair is built from the same numbers. */
+WALK_SURFACES.push(
+  ...(() => {
+    const [px, pz] = ATHENA_TEMPLE.position;
+    const base = terrainHeight(px, pz);
+    const T = ATHENA_TEMPLE;
+    const out: WalkSurface[] = [
+      { cx: px + (T.halfX - T.backX) / 2, cz: pz, rotY: 0, halfW: (T.halfX + T.backX) / 2, halfD: T.halfZ, top: base + T.podiumY, label: "athena temple podium" },
+    ];
+    for (const side of [-1, 1]) {
+      for (let k = 1; k <= T.stair.treads; k++) {
+        const x0 = T.halfX + (T.stair.treads - k) * T.stair.run;
+        out.push({ cx: px + x0 + T.stair.run / 2, cz: pz + side * T.stair.z, rotY: 0, halfW: T.stair.run / 2, halfD: T.stair.width / 2, top: base + k * T.stair.rise, label: `athena temple stair ${side > 0 ? "south" : "north"} ${k}` });
+      }
+    }
+    return out;
+  })(),
+);
 
 /** The young olives (Task 60): two by their house, two by the cliff path. They grow with the real seasons (shared/seasons.ts). */
 export const YOUNG_OLIVES: readonly (readonly [number, number])[] = [

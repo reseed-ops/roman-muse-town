@@ -88,14 +88,15 @@ describe("Idyllic Rome statues and market dressing (Task 86)", () => {
       expect(LUCRETIA.position[0]).toBeGreaterThan(tx);
     });
 
-    test("she stands inside the podium's collision box, so nothing new blocks the ground", () => {
-      expect(Math.abs(local)).toBeLessThan(ATHENA_TEMPLE.halfX);
+    test("she stands on the podium, inside its footprint, and her own collider is the temple's (athenaTemple.ts), not a free-standing circle", () => {
+      expect(local).toBeGreaterThan(-ATHENA_TEMPLE.backX);
+      expect(local).toBeLessThan(ATHENA_TEMPLE.halfX);
       expect(Math.abs(a.z - tz)).toBeLessThan(ATHENA_TEMPLE.halfZ);
       expect(dressingFootprints().some((f) => f.id === "athena")).toBe(false);
     });
 
     test("the seat on the step is unchanged and she is on its axis, through the doorway", () => {
-      expect(ATHENA_SEAT.x - (tx + local)).toBeGreaterThan(3); // out on the step, a room and a portico away
+      expect(ATHENA_SEAT.x - (tx + local)).toBeGreaterThan(4.5); // out on the step, a room and a portico away
       expect(ATHENA_SEAT.x).toBeGreaterThan(tx + ATHENA_TEMPLE.halfX); // the step, not the podium
       expect(Math.abs(ATHENA_SEAT.z - a.z)).toBeLessThan(0.01);
     });
@@ -111,8 +112,8 @@ describe("Idyllic Rome statues and market dressing (Task 86)", () => {
       const yAtDoor = eyeY + ((headY - eyeY) * (eyeX - doorX)) / (eyeX - headX);
       expect(yAtDoor).toBeGreaterThan(ATHENA_TEMPLE.podiumY); // over the sill
       expect(yAtDoor).toBeLessThan(ATHENA_TEMPLE.podiumY + C.doorH); // under the lintel
-      // the middle two columns (z +-0.45, capital 0.36) leave a clear slot on the axis
-      expect(0.45 - 0.18).toBeGreaterThan(0.25);
+      // the middle two columns (z +-0.75, capital 0.36) leave a clear slot on the axis
+      expect(Math.min(...ATHENA_TEMPLE.columnZ.map(Math.abs)) - 0.18).toBeGreaterThan(0.5);
     });
 
     test("she clears the ceiling by well over a hand's breadth, and the walls hold her", () => {
@@ -131,14 +132,13 @@ describe("Idyllic Rome statues and market dressing (Task 86)", () => {
       expect(scene).toContain("terrainHeight(ATHENA_TEMPLE.position[0], ATHENA_TEMPLE.position[1]) + 0.9 + 2.3 + 0.32 + 0.75 - 0.35");
     });
 
-    test("a walker cannot enter: the podium and step stay one solid collider, so no one clips into the cella", () => {
+    test("the temple's footprint holds the cella and the scene walks it with the real colliders (Task 88; the walking is in athenaTemple.test.ts)", () => {
       const scene = readFileSync(new URL("./townScene.ts", import.meta.url), "utf8");
-      expect(scene).toContain("ATHENA_TEMPLE.halfX + ATHENA_TEMPLE.stepDepth / 2, ATHENA_TEMPLE.halfZ, 0), // Athena's temple, podium and step");
-      // the collider's footprint covers every wall and the whole floor
-      expect(C.x0).toBeGreaterThanOrEqual(-ATHENA_TEMPLE.halfX);
+      expect(scene).toContain("...athenaColliders(), // Athena's temple (Task 88)");
+      expect(scene).not.toContain("// Athena's temple, podium and step (Task 55)");
+      expect(C.x0).toBeGreaterThanOrEqual(-ATHENA_TEMPLE.backX);
       expect(C.x1).toBeLessThanOrEqual(ATHENA_TEMPLE.halfX);
       expect(C.halfZ).toBeLessThanOrEqual(ATHENA_TEMPLE.halfZ);
-      expect(ATHENA_TEMPLE.podiumY).toBeGreaterThan(0.6); // a floor a metre up, with no stair: a threshold to look over, not to walk
     });
 
     test("her height suits the cella and the town", () => {

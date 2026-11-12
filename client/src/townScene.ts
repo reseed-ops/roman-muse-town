@@ -62,6 +62,7 @@ import { frameDimensions } from "./visitFrames";
 import { playLampIgnite, setBeeHumLevel, setCricketLevel, setLampCrackleLevel, setRainLevel, setRainShelter, setSurfLevel } from "./audio";
 import { HOME } from "./town";
 import { createCritters, type XZ } from "./townCritters";
+import { athenaColliders } from "./athenaTemple";
 import { buildAthenaTemple, buildLucretia } from "./tributes";
 import { createQuestScene } from "./projectQuests";
 import { createWeddingScene, type WeddingPieceId } from "./romanWedding";
@@ -5522,7 +5523,7 @@ export function createTownScene(
     [8.8, 4.6, 1.5], // the stone bench
     [VILLA.ionicColumn[0], VILLA.ionicColumn[1], 1], // the ionic column
     [LUCRETIA.position[0], LUCRETIA.position[1], 1.1], // Lucretia's plinth
-    [ATHENA_TEMPLE.position[0], ATHENA_TEMPLE.position[1], 3.4], // Athena's temple
+    [ATHENA_TEMPLE.position[0] + (ATHENA_TEMPLE.halfX - ATHENA_TEMPLE.backX) / 2 + 0.7, ATHENA_TEMPLE.position[1], 4.9], // Athena's temple, podium, flights and seat step (Task 88)
   ];
   const plantClear = (x: number, z: number) =>
     PLANT_CLEARANCE.every(([cx, cz, r]) => Math.hypot(x - cx, z - cz) > r);
@@ -6080,7 +6081,7 @@ export function createTownScene(
     templeFootprint, // temple
     circ(VILLA.statueMars[0], VILLA.statueMars[1], 0.5), // statue of Mars (its pedestal, measured)
     circ(LUCRETIA.position[0], LUCRETIA.position[1], LUCRETIA.plinthHalf + 0.12), // Lucretia's plinth (Task 54)
-    obb(ATHENA_TEMPLE.position[0] + ATHENA_TEMPLE.stepDepth / 2, ATHENA_TEMPLE.position[1], ATHENA_TEMPLE.halfX + ATHENA_TEMPLE.stepDepth / 2, ATHENA_TEMPLE.halfZ, 0), // Athena's temple, podium and step (Task 55)
+    ...athenaColliders(), // Athena's temple (Task 88): the podium's rail, the seat step, the cella's walls, the columns, her and the lamps; the doorway and the two flights stay open
     ...ATHENA_TEMPLE.olives.map(([x, z]) => circ(x, z, 0.3)), // its olive trees (trunks)
     ...YOUNG_OLIVES.map(([x, z]) => treePlacement.bindCollider(circ(x, z, 0.3), x, z)), // the young olives by their house and the cliff (Task 60)
     obb(VILLA.gate[0] + 2.55, VILLA.gate[1], 1.25, 1.8, 0), // triumphal arch, east pillar (the opening between the pillars stays walkable)

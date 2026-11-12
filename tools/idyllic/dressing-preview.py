@@ -9,6 +9,7 @@ subprocess.check_call([os.path.expanduser("~/.local/bin/bun"), "build", os.path.
 A = os.path.join(out, "assets"); os.makedirs(A, exist_ok=True)
 for d in ("statuary", "market"):
     shutil.copytree(os.path.join(repo, "client/src/assets", d), A, dirs_exist_ok=True)
+shutil.copy(os.path.join(repo, "client/src/assets/centurion.vrm"), A)
 for n in ("booth_a", "booth_b", "booth_c", "crate"):
     shutil.copy(os.path.join(repo, f"client/src/assets/roman/{n}.glb"), A)
 open(os.path.join(out, "index.html"), "w").write('<!doctype html><body style="margin:0"><script type="module" src="preview.js"></script>')
@@ -21,7 +22,8 @@ with sync_playwright() as p:
         pg = b.new_page(viewport={"width": 1280, "height": 720})
         pg.on("console", lambda m: print("console:", m.text))
         pg.on("pageerror", lambda e: print("pageerror:", e))
-        pg.goto(f"http://127.0.0.1:{port}/index.html?view={view}")
+        v, _, w = view.partition("+")
+        pg.goto(f"http://127.0.0.1:{port}/index.html?view={v}" + (f"&walker={w}" if w else ""))
         pg.wait_for_function("window.__done === true", timeout=120000)
-        pg.screenshot(path=os.path.join(out, f"{view}.png")); print("SHOT", view)
+        pg.screenshot(path=os.path.join(out, f"{view.replace('+', '_')}.png")); print("SHOT", view)
     b.close()
