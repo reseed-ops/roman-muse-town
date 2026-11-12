@@ -244,9 +244,11 @@ marker is state, not a queue.
   - Owner desk: the mark is `REVISION_PATH` (default `./revision.json`).
   - Paired towns (Task 70): each town has its own mark, in a file named by
     the digest of its visitor key under `REVISION_PATH` + `.towns/` (never
-    the key itself), and also kept in memory while the process runs (the
-    5,000 most recently used towns; a town with an awake desk is never
-    dropped). A desk recreated after idle eviction stays above the one it
+    the key itself), and also kept in memory while the process runs. The
+    bound is `max(5,000, awake desks)`: a town with an awake desk is never
+    dropped (so a burst of awake towns may exceed 5,000 while it lasts), and
+    idle marks are trimmed oldest-use first, on each save and after each
+    idle sweep, so the count returns to 5,000 once the burst has idled out. A desk recreated after idle eviction stays above the one it
     replaced if its mark is still retained, even with no disk. Past that
     bound, with no usable file, it falls back to the clock seed alone (the
     same practical expectation as after a restart). A healthy per-town file

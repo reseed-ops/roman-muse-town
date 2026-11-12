@@ -123,13 +123,14 @@ class Batch {
 
 /** Height of the impluvium's water sheet above the court floor (local y). */
 export const IMPLUVIUM_WATER_Y = 0.1;
+/** Height of the peristyle garden pool's water sheet above the court floor (local y). */
+export const PERISTYLE_WATER_Y = 0.17;
 /** A splash ring floats this far above the surface it lands on (water or floor). */
 export const SPLASH_RING_LIFT = 0.06;
 
 /** Where a ground splash ring may land: null under any roof of the house (no rain falls
  *  there), else the surface's height: the built water of the impluvium where the ring is
- *  over the basin, otherwise the ground (the floor, in the open court). The garden pool
- *  has no dedicated water landing surface here. */
+ *  over the basin or the round garden pool, otherwise the ground (the floor, in the open court). */
 export function splashLanding(house: Pick<HomeHouse, "sheltered" | "waterSurfaceAt">, x: number, z: number, ground: (x: number, z: number) => number): number | null {
   if (house.sheltered(x, z)) return null;
   return house.waterSurfaceAt(x, z) ?? ground(x, z);
@@ -564,7 +565,7 @@ export function buildHomeHouse(terrainHeight: (x: number, z: number) => number):
     b.cyl(P.r + 0.1, P.r + 0.1, 0.2, S(MARBLE, 0.45), P.x, 0.1, P.z, 16);
     const sheet = new THREE.Mesh(new THREE.CircleGeometry(P.r, 16), water);
     sheet.rotation.x = -Math.PI / 2;
-    sheet.position.set(P.x, 0.17, P.z);
+    sheet.position.set(P.x, PERISTYLE_WATER_Y, P.z);
     group.add(sheet);
     b.cyl(0.07, 0.09, 0.4, S(MARBLE, 0.5), P.x, 0.4, P.z, 8);
     b.cyl(0.16, 0.05, 0.1, S(0xb08d57, 0.4, { metal: 0.55 }), P.x, 0.65, P.z, 10);
@@ -795,6 +796,8 @@ export function buildHomeHouse(terrainHeight: (x: number, z: number) => number):
     sheltered: shelterOf,
     waterSurfaceAt(x, z) {
       const { lx, lz } = toLocal(x, z);
+      const P = PERISTYLE_POOL;
+      if ((lx - P.x) ** 2 + (lz - P.z) ** 2 <= P.r * P.r) return HOME_FLOOR_Y + PERISTYLE_WATER_Y;
       const r = IMPLUVIUM;
       return lx >= r.x0 + 0.14 && lx <= r.x1 - 0.14 && lz >= r.z0 + 0.14 && lz <= r.z1 - 0.14 ? HOME_FLOOR_Y + IMPLUVIUM_WATER_Y : null;
     },

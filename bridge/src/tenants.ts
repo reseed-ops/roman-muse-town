@@ -166,6 +166,16 @@ export function createTenantRegistry(opts: TenantRegistryOptions): TenantRegistr
       marks.set(id, m);
     }
   };
+  // The bound: marks.size <= max(MARK_CAP, awake desks). Trims the oldest idle marks (never an awake
+  // desk's) until the cap holds, so overflow from an awake burst recovers once those desks go idle.
+  const trimMarks = (keep?: string) => {
+    if (marks.size <= MARK_CAP) return;
+    for (const k of marks.keys()) {
+      if (marks.size <= MARK_CAP) break;
+      if (k === keep || towns.has(k)) continue; // the saving desk may not be registered yet
+      marks.delete(k);
+    }
+  };
   const storeFor = (id: string) => {
     let durable: { load(): number; save(high: number): void } | undefined;
     try {
@@ -185,14 +195,8 @@ export function createTenantRegistry(opts: TenantRegistryOptions): TenantRegistr
       },
       save: (high: number) => {
         marks.delete(id);
-        if (marks.size >= MARK_CAP) {
-          for (const k of marks.keys()) {
-            if (towns.has(k)) continue; // an awake desk's mark stays
-            marks.delete(k);
-            break;
-          }
-        }
         marks.set(id, high);
+        trimMarks(id);
         durable?.save(high); // a throw is logged by the desk; the memory mark is already kept
       },
     };
@@ -256,6 +260,7 @@ export function createTenantRegistry(opts: TenantRegistryOptions): TenantRegistr
           /* a town that cannot be read this beat is read again next beat */
         }
       }
+      trimMarks(); // after the sweep, so a desk idling out is judged by its last use against those still awake
     },
     async pumpAll() {
       for (const town of towns.values()) {

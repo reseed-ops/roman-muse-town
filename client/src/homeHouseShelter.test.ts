@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import * as THREE from "three";
 import { buildHomeHouse, splashLanding, splashRingY, SPLASH_RING_LIFT } from "./homeHouse";
 import { groundHeightAt, HOME_FLOOR_Y, homeToWorld, terrainHeight } from "./town";
-import { COMPLUVIUM, inRect, ROOMS, WALLS } from "./homePlan";
+import { COMPLUVIUM, inRect, PERISTYLE_POOL, ROOMS, WALLS } from "./homePlan";
 
 // Task 79: the domus's thresholds, eaves and overhang (Codex's Task 76 review, section 3).
 // Expected answers below are written out by hand from the plan, not derived from ROOMS.
@@ -198,7 +198,7 @@ describe("splash rings", () => {
       if (sheltered) expect([what, y]).toEqual([what, null]);
       else expect([what, y === null]).toEqual([what, false]);
     }
-    const g = world(1.2, -4.0);
+    const g = world(0.4, -3.9); // open court floor beside the pool (the pool itself now has water)
     expect(splashLanding(house, g.x, g.z, groundHeightAt)).toBeCloseTo(HOME_FLOOR_Y);
     expect(splashRingY(house, g.x, g.z, groundHeightAt)).toBeCloseTo(HOME_FLOOR_Y + SPLASH_RING_LIFT); // court-floor control
     const c = world(0, 0.5);
@@ -217,6 +217,28 @@ describe("splash rings", () => {
     expect(splashRingY(house, c.x, c.z, groundHeightAt)).toBeCloseTo(water + SPLASH_RING_LIFT, 6);
     // Returning the floor's height would put the ring below the water.
     expect(splashRingY(house, c.x, c.z, groundHeightAt)!).toBeGreaterThan(water);
+  });
+
+  test("the garden pool takes rings on its built water, at the water's height plus the explicit lift", () => {
+    const house = buildHomeHouse(terrainHeight);
+    const P = PERISTYLE_POOL;
+    const spot = world(P.x + P.r * 0.6, P.z); // on the water, off the fountain's column
+    expect(house.sheltered(spot.x, spot.z)).toBe(false); // the garden stays open to the sky
+    house.group.updateMatrixWorld(true);
+    const ray = new THREE.Raycaster(new THREE.Vector3(spot.x, HOME_FLOOR_Y + 5, spot.z), new THREE.Vector3(0, -1, 0));
+    const hit = ray.intersectObject(house.group, true).find((h) => {
+      const m = (h.object as THREE.Mesh).material as THREE.MeshStandardMaterial;
+      return m.transparent && m.opacity > 0.8;
+    });
+    expect(hit).toBeDefined();
+    const water = hit!.point.y;
+    expect(water).toBeGreaterThan(HOME_FLOOR_Y + 0.1);
+    expect(splashLanding(house, spot.x, spot.z, groundHeightAt)).toBeCloseTo(water, 6);
+    expect(splashRingY(house, spot.x, spot.z, groundHeightAt)).toBeCloseTo(water + SPLASH_RING_LIFT, 6);
+    expect(splashRingY(house, spot.x, spot.z, groundHeightAt)!).toBeGreaterThan(water); // floor height would sink it
+    // Just outside the pool's water: the court floor again.
+    const out = world(P.x + P.r + 0.4, P.z);
+    expect(splashLanding(house, out.x, out.z, groundHeightAt)).toBeCloseTo(HOME_FLOOR_Y);
   });
 
   test("the scene parks sheltered rings below the ground, and says the garden is open too", async () => {

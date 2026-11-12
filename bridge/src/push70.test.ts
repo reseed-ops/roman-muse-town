@@ -162,8 +162,9 @@ test("2b. cache pressure (Codex's case): an awake or retained mark holds; an evi
   const top = await churn(w, A, 3);
   for (let i = 0; i < 20; i++) { w.registry.deskFor(filler(i)).marker(); w.clock.t += 1; }
   expect(w.registry.size()).toBe(21); // all awake: nothing awake is evicted, the cap yields to them
+  w.registry.deskFor(A); // A is used last, so it is the most recently used mark
   w.clock.t += 61_000;
-  await w.registry.observeAll(); // every desk idles out; their marks (21 > cap 5) stay until a save needs room
+  await w.registry.observeAll(); // every desk idles out; marks trim back to the cap (5), the oldest first, A's kept
   expect(w.registry.size()).toBe(0);
   w.clock.t = 100;
   expect(w.registry.deskFor(A).marker().rev!).toBeGreaterThan(top);
@@ -181,6 +182,57 @@ test("2c. past the cap, the least recently used idle town's mark is the one drop
   await w.registry.observeAll(); // fillers idle out; only 3 marks fit
   w.clock.t = 100;
   expect(w.registry.deskFor(A).marker().rev!).toBeLessThan(topA); // the stated fallback: the clock
+});
+
+test("2d. last-use order: A, B, then A used again; under pressure B loses its mark, A keeps its own", async () => {
+  const noDisk = () => { throw new Error("no disk"); };
+  const w = world({ revisionStoreFor: noDisk, markCap: 3 }, { t: 5000 });
+  const topA = await churn(w, A, 3);
+  const topB = await churn(w, B, 3);
+  w.registry.deskFor(A); // an existing desk reused after B's reservation: A is now the most recently used
+  w.clock.t += 61_000;
+  await w.registry.observeAll(); // both idle out; marks kept in last-use order B, A
+  expect(w.registry.size()).toBe(0);
+  for (let i = 0; i < 2; i++) { w.registry.deskFor(filler(i)).marker(); w.clock.t += 1; await w.registry.observeAll(); w.clock.t += 61_000; await w.registry.observeAll(); }
+  w.clock.t = 100;
+  expect(w.registry.deskFor(A).marker().rev!).toBeGreaterThan(topA); // kept
+  expect(w.registry.deskFor(B).marker().rev!).toBeLessThan(topB); // dropped: the clock fallback
+});
+
+test("2e. overflow recovers: after an awake burst idles out, retention returns to the cap, and holds under churn", async () => {
+  const noDisk = () => { throw new Error("no disk"); };
+  const w = world({ revisionStoreFor: noDisk, markCap: 3 }, { t: 5000 });
+  const retainedOf = async (keys: string[], tops: number[]) => {
+    w.clock.t = 100; // the clock fallback sits far below every churned top
+    let n = 0;
+    for (let i = keys.length - 1; i >= 0; i--) if (w.registry.deskFor(keys[i]!).marker().rev! > tops[i]!) n++;
+    return n;
+  };
+  const burst = Array.from({ length: 8 }, (_, i) => `burst-${i}-`.padEnd(30, "x"));
+  const burstTops: number[] = [];
+  for (const k of burst) burstTops.push(await churn(w, k, 3)); // eight awake towns: the cap yields to them
+  w.clock.t += 61_000;
+  await w.registry.observeAll(); // all idle out
+  expect(w.registry.size()).toBe(0);
+  expect(await retainedOf(burst, burstTops)).toBe(3); // back to the cap, not the historical peak of 8
+
+  // Codex's reproduction: eight awake, all idle, then twenty more towns created and idled in turn.
+  const w2 = world({ revisionStoreFor: noDisk, markCap: 3 }, { t: 5000 });
+  Object.assign(w, w2);
+  const old = burst.map((k) => `old-${k}`);
+  const oldTops: number[] = [];
+  for (const k of old) oldTops.push(await churn(w, k, 3));
+  w.clock.t += 61_000;
+  await w.registry.observeAll();
+  const later = Array.from({ length: 20 }, (_, i) => filler(i));
+  const laterTops: number[] = [];
+  for (const k of later) {
+    laterTops.push(await churn(w, k, 3));
+    w.clock.t += 61_000;
+    await w.registry.observeAll();
+  }
+  expect(w.registry.size()).toBe(0);
+  expect((await retainedOf(old, oldTops)) + (await retainedOf(later, laterTops))).toBeLessThanOrEqual(3);
 });
 
 // ---- timing through coalescing ----
