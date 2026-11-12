@@ -20,7 +20,9 @@ export interface PackManifest {
  *  itself (160 KB the summit asks for), the sea's ships by themselves
  *  (fetched only once he walks out onto the sea cliff, Task 50), the
  *  wedding pieces by themselves (fetched only once the day dresses the
- *  town, Task 84). */
+ *  town, Task 84), the Colosseum and its setting by themselves (the far
+ *  landmark's tier asks for them, Task 85, 7 MB that stay out of the
+ *  arrival pack). */
 export function packNameFor(rel: string): string {
   if (rel.startsWith("anim/outdoor/")) return "outdoor";
   if (rel.startsWith("anim/")) return "anim";
@@ -29,6 +31,7 @@ export function packNameFor(rel: string): string {
   if (rel.startsWith("pets/")) return "pets";
   if (rel.startsWith("ships/")) return "ships";
   if (rel.startsWith("wedding/")) return "wedding";
+  if (rel.startsWith("idyllic/")) return "idyllic";
   if (rel === "centurion.vrm" || rel === "muse-avatar.vrm") return "bodies";
   if (rel === "wolf.glb") return "wolf";
   if (rel === "stars-fall-song.mp3") return "song";

@@ -2,7 +2,7 @@
 
 This repository is **code and text, plus two freely redistributable
 binaries** (below). Every other binary asset the town needs is excluded
-(131 files), because nearly all of them
+(139 files), because nearly all of them
 are commercial assets whose licences allow them to be *embedded in a
 shipped product* but **never redistributed as files**. This manifest lists
 everything excluded, grouped by source pack, with the exact folder path
@@ -20,7 +20,7 @@ Aelia's body, pixiv's VRoid sample model, whose terms allow it in a free
 public repo (see its row below). Everything else is purchase/download/
 supply required, and may never be committed to a public repository.
 
-Counts: 131 files excluded from `client/src/assets/` (133 in the folder,
+Counts: 139 files excluded from `client/src/assets/` (141 in the folder,
 less the two above), plus the app icon
 `icon.webp` at the space root. (Compiled copies of these assets also exist
 in the original's `client/dist/` build output, 222 binary files, which
@@ -95,7 +95,7 @@ EULA terms.
 `banner_triangle.glb`, `barrel.glb`, `bench_stone.glb`, `bench_wooden.glb`,
 `boat_small.glb`, `booth_a.glb`, `booth_b.glb`, `booth_c.glb`, `bowl.glb`,
 `bread.glb`, `bush_a.glb`, `bush_b.glb`, `bush_c.glb`, `bush_d.glb`,
-`bush_e.glb`, `bush_roman.glb`, `colosseum.glb`, `column_ionic.glb`,
+`bush_e.glb`, `bush_roman.glb`, `column_ionic.glb`,
 `column_simple.glb`, `conifer.glb`, `crate.glb`, `cypress.glb`,
 `flower_a.glb`, `flower_group.glb`, `gladius.glb`, `flower_med.glb`, `grapes.glb`,
 `grass_patch.glb`, `house_garden.glb`, `house_sounds.glb`,
@@ -200,7 +200,7 @@ town file was made from, so the next rebuild is a copy, not a hunt:
   SM_house_roman_01, `house_garden` = SM_house_roman_02,
   `insulae_recipes` = SM_insulae_building_02, `senate` = SM_senate,
   `annex_sidechat` = SM_attachment_building_01, `temple` = SM_temple,
-  `pavilion_stars` = SM_pavillion, `colosseum` = SM_colosseum,
+  `pavilion_stars` = SM_pavillion, `colosseum` = SM_colosseum (retired Nov 12, 2026: Task 85 replaced it with `idyllic/colosseum.glb`, below),
   `booth_a/b/c` = the `_2x1` variants (the scene's measured 1.73 × 0.86
   booth footprint is 2:1).
 - **Orientation note (Nov 6, 2026):** the rebuilt `bench_stone.glb`
@@ -283,7 +283,7 @@ Not rebuilt, still missing from the owner's folder:
 - `stars-fall-song.mp3`: no candidate on the device at rebuild time; the file in use is the project's own AI-generated song (see section 11), restored to the folder the same day.
 
 `townScene.ts` and `App.tsx` import every one of these files statically,
-so the web build fails until all of them are present (133 since Task 84 (127 since Task 50); see `CLAUDE.md`).
+so the web build fails until all of them are present (141 since Task 85 (133 since Task 84, 127 since Task 50); see `CLAUDE.md`).
 
 ### Added Nov 8, 2026: Gaius's arms
 
@@ -305,3 +305,23 @@ Source: RenderHub "Wedding - Banquet, Cake & Characters - 254 Low-Poly Mode" by 
 | `table_long.glb` | `wedding_table_long_dressed_classic` | 265,724 |
 | `cake.glb` | `wedding_cake_classic_3` | 55,844 |
 | `ring_box.glb` | `wedding_ring_box_open` | 109,716 |
+
+### Added Nov 12, 2026: the Colosseum and its setting (Task 85)
+
+Drop at: `client/src/assets/idyllic/` (9 files, 141 in the folder in all). `roman/colosseum.glb` is retired from the folder (the old plain white shell, 2.1 MB; a copy is kept on the box at `~/work/idyllic-rome/previous/`).
+
+Source: Unity Asset Store "Idyllic Rome" (Order #1376027047994, $50 plus $4.13 tax, bought Nov 12, 2026; a 390,917,411-byte `.unitypackage`, 3,245 entries). Licence: the Unity Asset Store EULA that came with the order; same terms as the other packs here (embedded in the shipped build, never committed or redistributed as files). They travel packed, in their own `idyllic` pack that the far-landmark tier asks for (about 7 MB), not in the arrival pack.
+
+`tools/idyllic/slim.py` (Blender 4.5.3, headless) writes all nine from the pack's FBXs and its `*_BaseMap.png` textures (copied out of the unitypackage; the converted GLBs carry no textures, so the materials are rebuilt: BaseMap only, 512 px, JPEG, embedded; the four materials with no BaseMap in the pack keep a flat colour). The amphitheatre (`SM_amphitheatre_rome`, 532,584 polygons, 29.5 MB as GLB) is cut per material to 62,789 triangles in 14 meshes, 4.7 MB; the rest are light.
+
+| File | Pack file | Triangles | Bytes |
+| --- | --- | --- | --- |
+| `colosseum.glb` | `SM_amphitheatre_rome` | 62,789 | 4,733,596 |
+| `stairs.glb` | `SM_staircase_01` | 1,584 | 165,712 |
+| `house_a.glb` | `SM_house_building_01` | 7,460 | 496,424 |
+| `house_b.glb` | `SM_house_building_02` (half the triangles) | 6,849 | 540,900 |
+| `insula.glb` | `SM_insulae_building_01` (half the triangles) | 6,852 | 587,936 |
+| `statue_soldier.glb` | `SM_sculpture_soldier` (15 percent of the triangles) | 3,349 | 179,180 |
+| `statue_general.glb` | `SM_sculpture_general` (15 percent of the triangles) | 3,674 | 207,384 |
+| `podest.glb` | `SM_podest_rome_01` | 508 | 64,804 |
+| `banner.glb` | `SM_banner_rome_01` | 1,190 | 97,264 |

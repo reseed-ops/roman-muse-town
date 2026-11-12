@@ -65,6 +65,7 @@ import { createCritters, type XZ } from "./townCritters";
 import { buildAthenaTemple, buildLucretia } from "./tributes";
 import { createQuestScene } from "./projectQuests";
 import { createWeddingScene, type WeddingPieceId } from "./romanWedding";
+import { COLOSSEUM_PLACEMENT, COLOSSEUM_ROOF_RATIO, SETTING_PIECES, settingFootprints, type SettingAsset } from "./colosseumSetting";
 import weddingArchUrl from "./assets/wedding/flower_arch.glb";
 import weddingFlammeumUrl from "./assets/wedding/flammeum_stand.glb";
 import weddingTableRoundUrl from "./assets/wedding/table_round.glb";
@@ -218,7 +219,15 @@ import grapesUrl from "./assets/roman/grapes.glb";
 import cypressUrl from "./assets/roman/cypress.glb";
 import coniferUrl from "./assets/roman/conifer.glb";
 import oliveUrl from "./assets/roman/olive.glb";
-import colosseumUrl from "./assets/roman/colosseum.glb";
+import colosseumUrl from "./assets/idyllic/colosseum.glb";
+import settingStairsUrl from "./assets/idyllic/stairs.glb";
+import settingHouseAUrl from "./assets/idyllic/house_a.glb";
+import settingHouseBUrl from "./assets/idyllic/house_b.glb";
+import settingInsulaUrl from "./assets/idyllic/insula.glb";
+import settingSoldierUrl from "./assets/idyllic/statue_soldier.glb";
+import settingGeneralUrl from "./assets/idyllic/statue_general.glb";
+import settingPodestUrl from "./assets/idyllic/podest.glb";
+import settingBannerUrl from "./assets/idyllic/banner.glb";
 import archRoundUrl from "./assets/roman/arch_round.glb";
 import treeAUrl from "./assets/roman/tree_a.glb";
 import treeBUrl from "./assets/roman/tree_b.glb";
@@ -995,7 +1004,7 @@ function loadModelScene(url: string, opts?: { tier?: LoadTier }): Promise<THREE.
 // town: a single 9 KB PNG, fetched once: a streaming WIN, not a
 // cost.
 const ROMAN_ARCHITECTURE = new Set([
-  colosseumUrl, templeUrl, senateUrl, annexUrl, insulaeUrl,
+  templeUrl, senateUrl, annexUrl, insulaeUrl,
   houseSoundsUrl, houseGardenUrl, villaUrl, pavilionUrl,
   aqueductUrl, aqueductConnectorUrl, triumphalArchUrl, archRoundUrl,
   columnIonicUrl, columnSimpleUrl, boothAUrl, boothBUrl, boothCUrl,
@@ -1517,7 +1526,7 @@ export function createTownScene(
     streetDistance(x, z) > radius + 1.6 && Math.hypot(x, z) > radius + 6 &&
     Math.hypot((x - LAKE.position[0]) / (LAKE.rx + radius + 0.5), (z - LAKE.position[1]) / (LAKE.rz + radius + 0.5)) > 1);
   const treeUrls = new Set([treeAUrl, treeBUrl, treeCUrl, treeDUrl, cypressUrl, coniferUrl, oliveUrl]);
-  const buildingUrls = new Set([templeUrl, colosseumUrl, aqueductUrl, aqueductConnectorUrl, triumphalArchUrl, boothAUrl, boothBUrl, boothCUrl]);
+  const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductConnectorUrl, triumphalArchUrl, boothAUrl, boothBUrl, boothCUrl]);
 
   /** placeModel, standing the model on the terrain at (x, z). */
   const placeWorld = (
@@ -3130,27 +3139,42 @@ export function createTownScene(
   void placeWorld(ballistaUrl, { x: -36, z: 4, rotY: 0.8, width: 2.3 });
   void placeWorld(bannerUrl, { x: 6.2, z: 44.6, height: 3.1 });
   void placeWorld(bannerUrl, { x: -6.2, z: 44.6, height: 3.1 });
-  // The Colosseum in its prime in the eastern basin, the pack's mesh is
-  // the complete building (full ring, every tier), and a ring of
-  // velarium masts around its rim finishes the silhouette.
-  void placeWorld(colosseumUrl, { x: COLOSSEUM.position[0], z: COLOSSEUM.position[1], rotY: -0.35, width: 16 }).then((wrap) => {
-    if (disposed) return null;
-    if (!wrap) return;
-    const bb = new THREE.Box3().setFromObject(wrap);
-    const topY = bb.max.y - terrainHeight(COLOSSEUM.position[0], COLOSSEUM.position[1]);
-    for (let i = 0; i < 12; i++) {
-      const a = (i / 12) * Math.PI * 2;
-      const mast = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.05, 0.07, 2.8, 6),
-        mat(0x8a6a48, { rough: 0.85 }),
-      );
-      mast.position.set(Math.cos(a) * 7.7, topY + 1.0, Math.sin(a) * 6.0);
-      mast.rotation.z = Math.cos(a) * 0.3;
-      mast.rotation.x = -Math.sin(a) * 0.3;
-      mast.castShadow = true;
-      wrap.add(mast);
-    }
-  });
+  // The Colosseum in its prime in the eastern basin: the Idyllic Rome
+  // amphitheatre (Task 85), slimmed to a phone budget, textured, and
+  // complete with its own velarium ring and masts. Its setting follows:
+  // the stair and the statues at the road's end, the houses on the rim.
+  void placeWorld(colosseumUrl, { x: COLOSSEUM_PLACEMENT.x, z: COLOSSEUM_PLACEMENT.z, rotY: COLOSSEUM_PLACEMENT.rotY, width: COLOSSEUM_PLACEMENT.width });
+  const SETTING_URLS: Record<SettingAsset, string> = {
+    colosseum: colosseumUrl, stairs: settingStairsUrl, house_a: settingHouseAUrl, house_b: settingHouseBUrl,
+    insula: settingInsulaUrl, statue_soldier: settingSoldierUrl, statue_general: settingGeneralUrl,
+    podest: settingPodestUrl, banner: settingBannerUrl,
+  };
+  const SETTING_POLE = mat(0x6b4a2b, { rough: 0.9 });
+  for (const piece of SETTING_PIECES) {
+    void placeWorld(SETTING_URLS[piece.asset], {
+      x: piece.x, z: piece.z, rotY: piece.rotY, width: piece.width, height: piece.height, y: piece.lift,
+    }).then((wrap) => {
+      if (disposed || !wrap) return;
+      // placeWorld has already frozen this subtree's matrices; refresh the ones changed here.
+      const inner = wrap.children[0]!;
+      if (piece.squashY) wrap.scale.y = piece.squashY;
+      if (piece.pole) {
+        // A vexillum: the pole stands in the ground, the banner hangs from its top.
+        inner.position.y += piece.pole - 1.2;
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, piece.pole, 8), SETTING_POLE);
+        pole.position.y = piece.pole / 2;
+        pole.castShadow = true;
+        wrap.add(pole);
+      }
+      inner.updateMatrix();
+      wrap.updateMatrix();
+      wrap.updateMatrixWorld(true);
+    });
+  }
+  // The houses stand on the rim's slope: each gets the town's stone footing.
+  for (const f of settingFootprints()) {
+    if (f.foundation && "hx" in f) addFoundation(f.x, f.z, f.rot, f.hx * 0.97, f.hz * 0.97, terrainHeight(f.x, f.z));
+  }
   // The peristyle: a rectangle of columns around the Town Tree, open on the
   // axis and to each wing.
   const ROMAN_COLUMN_SPOTS: [number, number][] = [
@@ -5433,6 +5457,7 @@ export function createTownScene(
   const PLANT_CLEARANCE: [number, number, number][] = [
     ...PLACES.map((p) => [p.position[0], p.position[1], (p.buildingWidth ?? 7.6) / 2 + 1.15] as [number, number, number]),
     [COLOSSEUM.position[0], COLOSSEUM.position[1], 9.4],
+    ...settingFootprints().map((f) => [f.x, f.z, ("r" in f ? f.r : Math.max(f.hx, f.hz)) + 1.2] as [number, number, number]), // the setting's pieces (Task 85)
     [31, -27, 6.6], // temple
     ...MARKET_BOOTHS.map(([x, z]) => [x, z, 2.3] as [number, number, number]),
     [VILLA.gate[0], VILLA.gate[1], 4.2], // triumphal arch
@@ -6008,6 +6033,7 @@ export function createTownScene(
     ...VILLA_WALLS.map(([x, z, hx, hz]) => obb(x, z, hx, hz, 0)), // terrace walls and the stair's balustrades
     ...AVENUE_CYPRESSES.map(([x, z]) => circ(x, z, 0.3, 0.15)),
     circ(COLOSSEUM.position[0], COLOSSEUM.position[1], 8), // the Colosseum, solid ring, blocked whole (placed width 16 → r 8)
+    ...settingFootprints().map((f) => ("r" in f ? circ(f.x, f.z, f.r) : obb(f.x, f.z, f.hx, f.hz, f.rot))), // the Colosseum's setting (Task 85): stair, podests, houses, vexilla
     boardObb, // project board
     questObb, // quest board
     goalsObb, // goals obelisk (its square base)
@@ -9754,14 +9780,15 @@ export function createTownScene(
   } | null = null;
   const phoenixPerch = new THREE.Vector3(COLOSSEUM.position[0] + 4.6, 0, COLOSSEUM.position[1] - 2.6);
   void runtime.streaming.request(() => loadModelScene(colosseumUrl), () => ({ x: COLOSSEUM.position[0], z: COLOSSEUM.position[1] }))
-    .then((model) => {
+    .then(() => {
       if (disposed) return;
-      const box = new THREE.Box3().setFromObject(model);
-      phoenixPerch.y = terrainHeight(COLOSSEUM.position[0], COLOSSEUM.position[1]) + (box.max.y - box.min.y) - 0.35;
+      // The roof of the placed building (Task 85: the model's masts rise above it, and its native
+      // size is not the placed size), less the bird's own 0.35.
+      phoenixPerch.y = terrainHeight(COLOSSEUM.position[0], COLOSSEUM.position[1]) + COLOSSEUM_PLACEMENT.width * COLOSSEUM_ROOF_RATIO - 0.35;
     })
     .catch(() => {
       if (disposed) return;
-      phoenixPerch.y = terrainHeight(COLOSSEUM.position[0], COLOSSEUM.position[1]) + 7.6;
+      phoenixPerch.y = terrainHeight(COLOSSEUM.position[0], COLOSSEUM.position[1]) + COLOSSEUM_PLACEMENT.width * COLOSSEUM_ROOF_RATIO - 0.35;
     });
   const emberGeo = new THREE.BufferGeometry();
   const emberPos = new Float32Array(30 * 3);
