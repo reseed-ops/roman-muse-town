@@ -61,7 +61,7 @@ Copy the complete assets folder from the earlier builds into
 (`muse-avatar.vrm`, `trees_pack.glb`); `.gitignore` keeps all the others
 out of git, which is correct. Never commit or push the licensed files.
 
-Expected: 127 files in total (the two tracked files plus the 125
+Expected: 133 files in total (the two tracked files plus the 131
 itemised in `ASSETS.md`, the authority); the script in step 3 names
 every one.
 
@@ -69,7 +69,7 @@ every one.
 
 Run this from the checkout root. It prints every missing file and the
 total count; proceed only when nothing is listed as missing and the count
-is 127.
+is 133.
 
 ```bash
 A=client/src/assets; missing=0
@@ -80,10 +80,11 @@ for f in muse-avatar.vrm trees_pack.glb centurion.vrm phoenix.fbx phoenix_tex.pn
   roman/torch.fbx roman/palette.png roman/water_normal.png \
   greek/{greek_bench_1,greek_bench_2,greek_bowl,greek_bucket,greek_decorative_bowl,greek_dock,greek_drying_rack,greek_garden_1,greek_pool_1,greek_pot_1,greek_pot_2,greek_table_1,greek_wood_pile}.fbx \
   pets/{cat.fbx,cat_05.png,chicken.fbx,chicken_01.png,pig.fbx,pig_01.png,sheep.fbx,sheep_05.png} \
-  ships/{trade_ship.glb,trireme.glb,trireme_hull2.jpg,trireme_sail2.png}; do
+  ships/{trade_ship.glb,trireme.glb,trireme_hull2.jpg,trireme_sail2.png} \
+  wedding/{flower_arch,flammeum_stand,table_round,table_long,cake,ring_box}.glb; do
   [ -f "$A/$f" ] || { echo "MISSING: $f"; missing=$((missing+1)); }
 done
-echo "missing: $missing"; echo "present: $(find $A -type f | wc -l) (expect 127)"
+echo "missing: $missing"; echo "present: $(find $A -type f | wc -l) (expect 133)"
 git status --short client/src/assets   # must print nothing
 ```
 
@@ -115,7 +116,7 @@ railway status                                       # confirms project Reseed, 
 E=$(mktemp -d)/upload; mkdir -p "$E"
 git ls-files -z | grep -z -v -x '.gitignore' | tar --null -T - -cf - | tar -xf - -C "$E"
 cp -r client/src/assets/. "$E/client/src/assets/"
-echo "assets in export: $(find "$E/client/src/assets" -type f | wc -l) (expect 127)"
+echo "assets in export: $(find "$E/client/src/assets" -type f | wc -l) (expect 133)"
 
 # Upload from INSIDE the export (a path argument outside the working
 # directory fails with "prefix not found"); the link lives in the

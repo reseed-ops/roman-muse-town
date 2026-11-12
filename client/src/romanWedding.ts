@@ -17,6 +17,50 @@ export const WEDDING_POSTS: readonly (readonly [number, number])[] = [
 ];
 /** The flowered arch the couple stand under, and the banner's poles. */
 export const WEDDING_ARCH = { z: -1.5, halfWidth: 1.9, height: 3.1 } as const;
+/**
+ * The Wedding Banquet pack's pieces (Task 84), recoloured to the Roman
+ * palette by tools/wedding/recolour.py and placed where the quest happens:
+ * the forum's avenue, inside the posts. `at: "dressing"` pieces stand from
+ * the dressing step to the end of the celebration; `at: "feast"` pieces are
+ * laid only while the celebration plays (the day is held, the table is
+ * set). `width` is the model's X extent in metres after rotation is
+ * ignored (as placeModel reads it); `y` lifts a piece onto a table top.
+ * The scene supplies the loader, so this module never imports an asset
+ * (the tests and CI have none).
+ */
+export type WeddingPieceId = "flower_arch" | "flammeum_stand" | "table_round" | "table_long" | "cake" | "ring_box";
+export interface WeddingPiece {
+  id: WeddingPieceId;
+  at: "dressing" | "feast";
+  x: number;
+  z: number;
+  rotY: number;
+  width?: number;
+  height?: number;
+  /** Height above the terrain (a table top). */
+  y?: number;
+}
+const TABLE_TOP = 1.06; // the long table is 0.85 m tall natively and 2.25 m long; at width 2.8 (x1.244) its top is 1.06 m
+export const WEDDING_PIECES: readonly WeddingPiece[] = [
+  // The pack's flower arch stands where the wooden one's garland was, between its poles.
+  { id: "flower_arch", at: "dressing", x: 0, z: WEDDING_ARCH.z + 0.05, rotY: 0, width: 3.06 },
+  // The flammeum on its stand, by the arch on the bride's side (west).
+  { id: "flammeum_stand", at: "dressing", x: -2.9, z: -1.2, rotY: 0.35, height: 1.9 },
+  // A round table for the guests' gifts, west of the avenue's middle.
+  { id: "table_round", at: "dressing", x: -3.0, z: -4.6, rotY: 0, width: 2.1 },
+  // The banquet, laid when the day is held: a long table, the cake on it, the ring box by the cake.
+  { id: "table_long", at: "feast", x: 3.0, z: -3.6, rotY: Math.PI / 2, width: 2.8 },
+  { id: "cake", at: "feast", x: 3.0, z: -3.6, rotY: 0, width: 0.74, y: TABLE_TOP },
+  { id: "ring_box", at: "feast", x: 3.0, z: -4.3, rotY: 0.5, width: 0.22, y: TABLE_TOP },
+];
+
+/** Stands one piece on the terrain under `parent` (the scene's placeModel); null when it will not load. */
+export type WeddingPlacer = (
+  id: WeddingPieceId,
+  parent: THREE.Object3D,
+  o: { x: number; z: number; y: number; rotY: number; width?: number; height?: number },
+) => Promise<THREE.Object3D | null>;
+
 /** How long the celebration plays, in seconds, before the town is undressed. */
 export const WEDDING_CELEBRATION_SECONDS = 150;
 
@@ -72,7 +116,9 @@ export function buildWeddingArch(): THREE.Group {
   const g = new THREE.Group();
   const { halfWidth: w, height: h } = WEDDING_ARCH;
   for (const x of [-w, w]) g.add(box(0.16, h, 0.16, m(0x6b4a2f), x, h / 2, 0));
-  g.add(buildGarland(-w, h, 0, w, h, 0, 14));
+  const bow = buildGarland(-w, h, 0, w, h, 0, 14);
+  bow.name = "archGarland"; // hidden when the pack's flower arch has loaded (Task 84)
+  g.add(bow);
   // The banner: saffron cloth, the colour of the veil, with a gold border.
   g.add(box(2.4, 0.9, 0.04, m(0xe9a23b), 0, h + 0.85, 0));
   g.add(box(2.4, 0.08, 0.05, m(0xd4af37), 0, h + 1.3, 0));
@@ -91,6 +137,10 @@ export interface WeddingScene {
   /** Is the dressing standing now (dressed, or celebrating)? For tests. */
   dressed(): boolean;
   celebrating(): boolean;
+  /** The pack's pieces (Task 84) that have loaded, by id, and whether each is showing. For tests. */
+  pieces(): { id: WeddingPieceId; visible: boolean }[];
+  /** Resolves once every piece has settled (loaded or failed). For tests. */
+  loaded(): Promise<void>;
 }
 
 /**
@@ -98,11 +148,15 @@ export interface WeddingScene {
  * dressing step until the day is held, and never from a held and
  * celebrated day, so a reload after the day finds the town ordinary.
  */
-export function createWeddingScene(): WeddingScene {
+export function createWeddingScene(options: { place?: WeddingPlacer } = {}): WeddingScene {
   const group = new THREE.Group();
   const dressing = new THREE.Group();
   dressing.visible = false;
   group.add(dressing);
+  // The feast sits inside the dressing (so it goes when the dressing goes) and shows only for the celebration.
+  const feast = new THREE.Group();
+  feast.visible = false;
+  dressing.add(feast);
   for (const [x, z] of WEDDING_POSTS) {
     const post = buildWeddingPost();
     post.position.set(x, terrainHeight(x, z), z);
@@ -121,6 +175,26 @@ export function createWeddingScene(): WeddingScene {
   arch.position.set(0, terrainHeight(0, WEDDING_ARCH.z), WEDDING_ARCH.z);
   dressing.add(arch);
 
+  // The pack's pieces load once, the first time the town is dressed (never for a visitor who never marries),
+  // and a piece that fails simply leaves its spot to the procedural dressing.
+  const standing = new Map<WeddingPieceId, THREE.Object3D>();
+  let loading: Promise<void> | null = null;
+  const loadPieces = (): Promise<void> => {
+    if (!options.place || loading) return loading ?? Promise.resolve();
+    const place = options.place;
+    loading = Promise.all(
+      WEDDING_PIECES.map(async (piece) => {
+        const parent = piece.at === "feast" ? feast : dressing;
+        const y = terrainHeight(piece.x, piece.z) + (piece.y ?? 0);
+        const model = await place(piece.id, parent, { x: piece.x, z: piece.z, y, rotY: piece.rotY, width: piece.width, height: piece.height }).catch(() => null);
+        if (!model) return;
+        standing.set(piece.id, model);
+        if (piece.id === "flower_arch") arch.getObjectByName("archGarland")?.removeFromParent();
+      }),
+    ).then(() => undefined);
+    return loading;
+  };
+
   // Petals drift down while the celebration plays.
   const petals = new THREE.Group();
   petals.visible = false;
@@ -138,7 +212,9 @@ export function createWeddingScene(): WeddingScene {
 
   const refresh = () => {
     dressing.visible = dressed || celebrationAge !== null;
+    feast.visible = celebrationAge !== null;
     petals.visible = celebrationAge !== null;
+    if (dressing.visible) void loadPieces();
   };
 
   return {
@@ -177,5 +253,7 @@ export function createWeddingScene(): WeddingScene {
     },
     dressed: () => dressing.visible,
     celebrating: () => celebrationAge !== null,
+    pieces: () => [...standing].map(([id, o]) => ({ id, visible: o.visible && (o.parent === feast ? feast.visible && dressing.visible : dressing.visible) })),
+    loaded: () => loading ?? Promise.resolve(),
   };
 }

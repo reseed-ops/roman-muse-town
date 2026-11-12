@@ -64,7 +64,13 @@ import { HOME } from "./town";
 import { createCritters, type XZ } from "./townCritters";
 import { buildAthenaTemple, buildLucretia } from "./tributes";
 import { createQuestScene } from "./projectQuests";
-import { createWeddingScene } from "./romanWedding";
+import { createWeddingScene, type WeddingPieceId } from "./romanWedding";
+import weddingArchUrl from "./assets/wedding/flower_arch.glb";
+import weddingFlammeumUrl from "./assets/wedding/flammeum_stand.glb";
+import weddingTableRoundUrl from "./assets/wedding/table_round.glb";
+import weddingTableLongUrl from "./assets/wedding/table_long.glb";
+import weddingCakeUrl from "./assets/wedding/cake.glb";
+import weddingRingBoxUrl from "./assets/wedding/ring_box.glb";
 import { readWeddingBook } from "../../shared/romanWedding";
 import { readQuestBook, type CelebrationKind, type QuestKind } from "../../shared/projectQuests";
 import { createSeasonalTown } from "./seasonalTown";
@@ -4876,7 +4882,14 @@ export function createTownScene(
   // the bed's edge joins the benches, a seat for two.
   const questScene = createQuestScene();
   world.add(questScene.group);
-  const weddingScene = createWeddingScene();
+  // Task 84: the Wedding Banquet pack's pieces, loaded the first time the day dresses the town.
+  const WEDDING_PIECE_URLS: Record<WeddingPieceId, string> = {
+    flower_arch: weddingArchUrl, flammeum_stand: weddingFlammeumUrl, table_round: weddingTableRoundUrl,
+    table_long: weddingTableLongUrl, cake: weddingCakeUrl, ring_box: weddingRingBoxUrl,
+  };
+  const weddingScene = createWeddingScene({
+    place: (id, parent, o) => placeModel(WEDDING_PIECE_URLS[id], parent, o),
+  });
   world.add(weddingScene.group);
   const homeHouse = buildHomeHouse(terrainHeight);
   world.add(homeHouse.group);

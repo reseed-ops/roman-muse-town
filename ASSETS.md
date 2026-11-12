@@ -2,7 +2,7 @@
 
 This repository is **code and text, plus two freely redistributable
 binaries** (below). Every other binary asset the town needs is excluded
-(125 files), because nearly all of them
+(131 files), because nearly all of them
 are commercial assets whose licences allow them to be *embedded in a
 shipped product* but **never redistributed as files**. This manifest lists
 everything excluded, grouped by source pack, with the exact folder path
@@ -20,7 +20,7 @@ Aelia's body, pixiv's VRoid sample model, whose terms allow it in a free
 public repo (see its row below). Everything else is purchase/download/
 supply required, and may never be committed to a public repository.
 
-Counts: 125 files excluded from `client/src/assets/` (127 in the folder,
+Counts: 131 files excluded from `client/src/assets/` (133 in the folder,
 less the two above), plus the app icon
 `icon.webp` at the space root. (Compiled copies of these assets also exist
 in the original's `client/dist/` build output, 222 binary files, which
@@ -283,8 +283,25 @@ Not rebuilt, still missing from the owner's folder:
 - `stars-fall-song.mp3`: no candidate on the device at rebuild time; the file in use is the project's own AI-generated song (see section 11), restored to the folder the same day.
 
 `townScene.ts` and `App.tsx` import every one of these files statically,
-so the web build fails until all of them are present (127 since Task 50; see `CLAUDE.md`).
+so the web build fails until all of them are present (133 since Task 84 (127 since Task 50); see `CLAUDE.md`).
 
 ### Added Nov 8, 2026: Gaius's arms
 
 - `roman/gladius.glb` from `SM_weapon_gladius.FBX` and `roman/shield_legionaire.glb` from `SM_shield_legionaire.FBX`, both in `Roman Empire - Stylized Low Poly.unitypackage` (`MESHES/Military/Weapons and Shields/`), converted in Blender like the rest (FBX to GLB, no images, transforms applied, Y up). The gladius FBX carries a second object, `Box069`, a helper box scaled to zero, dropped in the conversion. Both use the pack palette material (`M_colorpallete_roman`); the town's loader assigns `palette.png`. The pack has no scabbard; the town builds one.
+
+### Added Nov 12, 2026: the wedding pieces (Task 84)
+
+Drop at: `client/src/assets/wedding/` (6 files, 133 in the folder in all).
+
+Source: RenderHub "Wedding - Banquet, Cake & Characters - 254 Low-Poly Mode" by Absurdox Lab (Order 423445, $19.99, bought Nov 11, 2026; 508 native GLBs, HD and Mobile). Licence: use and modify in projects, never resell or share the model files (the town ships them packed, like the rest, and they stay out of git). Credit "Models by Absurdox Lab" is appreciated, not required.
+
+`tools/wedding/recolour.py <pack>/ <out>/` writes all six from the pack's **Mobile** files, changing only material colour factors (laurel and olive greens, deep red and terracotta blooms, ivory, `#d4af37` gold, a saffron translucent ribbon and veil); geometry and the pack's fabric textures are untouched:
+
+| File | Pack file (Mobile) | Bytes |
+| --- | --- | --- |
+| `flower_arch.glb` | `wedding_merge_flower_05` | 156,496 |
+| `flammeum_stand.glb` | `wedding_veil_long` | 193,096 |
+| `table_round.glb` | `wedding_table_round_dressed_classic` | 144,508 |
+| `table_long.glb` | `wedding_table_long_dressed_classic` | 265,724 |
+| `cake.glb` | `wedding_cake_classic_3` | 55,844 |
+| `ring_box.glb` | `wedding_ring_box_open` | 109,716 |
