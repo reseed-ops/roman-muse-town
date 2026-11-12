@@ -855,6 +855,12 @@ The Nov 11, 2026 town walk QA (browser, fresh test town, 1:21-1:35 PM) found thr
 - Fix: locate each in the code and remove it if it is a stray/unintentional decoration. If any is an intentional named feature (part of a quest, a named prop, or a deliberate joke the owner placed), leave it and report why instead of deleting it. Remove nothing else.
 - Tests: assert the removed objects are gone; full suites pass; deploy the town if production code changes. Summary to town-build19-done.md, landing note under Task 83.
 - NOT in scope: the pale bowl planters (separate QA observation, still open), the cliffside bench check, the bridge, pairing, dispatcher, watcher, affection gates, tender-only line.
+**Landing note (Nov 12, 2026): nothing removed; all three are intentional.**
+- (1) The purple cone hat is the `pointy-hat` collectible (`COLLECTIBLES` in `client/src/town.ts`; built in `townScene.ts` "Collectible: the pointy hat", perched on the VILLA.ionicColumn). It is a named, pickable discovery with a server `markFound` record and tests. Kept.
+- (2) The yellow ball is the Basilica's porch resident (`PLACES` "mainchat", `residentColor` 0xd4af37, "The town's great hall"). Kept.
+- (3) The purple-blue blob is Nova's porch resident at the Stargazing Pavilion (`PLACES` "stars", `residentColor` 0x9b7ed9). Kept. Items 2 and 3 come from one loop in `townScene.ts` ("Porch resident") that builds one cheeked, eyed, umbrella-carrying resident per place, bobbing and tied to the place's pick; the Embassy's is left out on purpose ("rather the point of the place").
+- No production code changed: no new tests, no deploy; suites untouched. The pale bowl planters and the cliffside bench remain open and out of scope. Live check Nov 12: both town hosts and the bridge `/healthz` return `{"ok":true}`; bridge `/pair` returns `{"pairing":true}`.
+- Open for the owner: if the porch residents should still go (all seven, or only the basilica's and pavilion's, which would be a design change rather than a stray cleanup), say so in a new task.
 ## Task 84 (READY, added Nov 11, 2026): Wedding Banquet pack inspection and fold-in (town only)
 
 The RenderHub Wedding Banquet pack (Order 423445, $19.99) is on the box at ~/work/wedding-pack.zip (122,538,568 bytes, sha256 verified, 508 GLBs). Full brief: town-build20-prompt.md on the box.
