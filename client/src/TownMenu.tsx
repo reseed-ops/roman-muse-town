@@ -13,7 +13,7 @@ export interface TownMenuItem {
   /** A colour for the icon alone (her star takes her gold). */
   tint?: string;
 }
-interface MenuGroup {
+export interface MenuGroup {
   heading: string;
   collapsed?: boolean;
   /** The heading names the group for assistive tech only; nothing is

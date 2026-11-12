@@ -1,7 +1,9 @@
 // Connect my Muse (Task 29), the panel: the one-time pairing code and
 // the message the visitor pastes to their Muse, with a copy button.
 // Moved out of App.tsx, which keeps the state and the code request.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ComponentProps } from "react";
+import { TownMenu } from "./TownMenu";
+import { connectMuseMenuItem } from "./connectMuse";
 import { disconnectMuse, museConnectMessage, startPairingCheck, requestPairCode, type PairCode, type PairingState } from "./connectMuse";
 import { isHostedTown } from "./hosted";
 
@@ -96,4 +98,29 @@ export function ConnectMusePanel({ state, onClose, onCopied }: { state: ConnectM
       </section>
     </div>
   );
+}
+
+/** Task 75: the production boundary for Connect my Muse. It owns the hook,
+ *  draws the panel, and draws the town menu with the row appended to the
+ *  group named by `rowGroup`. App renders this in place of TownMenu, so the
+ *  wiring (hook, item, group insertion, handlers) is mounted in the test
+ *  with the real TownMenu, not searched for in App's source. */
+export function ConnectMuseMenu({ menuOpen, closeMenu, rowGroup, groups, ...menu }: Omit<ComponentProps<typeof TownMenu>, "onClose"> & {
+  menuOpen: boolean;
+  closeMenu: () => void;
+  rowGroup: string;
+}) {
+  const { connectMuse, setConnectMuse, pairing, retryPairing, openConnectMuse } = useConnectMuse(closeMenu);
+  const item = connectMuseMenuItem(pairing, { openConnectMuse, retryPairing }, connectMuse !== null);
+  return <>
+    {connectMuse && (
+      <ConnectMusePanel
+        state={connectMuse}
+        onClose={() => setConnectMuse(null)}
+        onCopied={(copied) => setConnectMuse((cur) => (cur && cur.state === "ready" ? { ...cur, copied } : cur))}
+      />
+    )}
+    {menuOpen && <TownMenu {...menu} onClose={closeMenu}
+      groups={item ? groups.map((g) => (g.heading === rowGroup ? { ...g, items: [...g.items, item] } : g)) : groups} />}
+  </>;
 }

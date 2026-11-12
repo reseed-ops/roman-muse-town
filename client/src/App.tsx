@@ -1,4 +1,3 @@
-import { TownMenu } from "./TownMenu";
 import { TownMap } from "./TownMap";
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -223,8 +222,7 @@ import { HARNESS_STORAGE_KEY, IDLE_GLANCE_MS, resolveHarnessUrl, syncWithHarness
 import { bridgeClose, bridgeConfigured, bridgeGlance, bridgeLeaving, bridgePull, bridgePush, emptyBridgeCursor, hostedBridgeSettings, readBridgeSettings, resolveBridge, storeBridgeSettings, type BridgeCursor, type BridgeSettings } from "./visitBridgeClient";
 import { BRIDGE_BEAT_MS, BRIDGE_HOLD_S, FRAME_JPEG_QUALITY, FRAME_MAX_EDGE, SNAPSHOT_HEARTBEAT_MS, VISIT_LAPSE_MS, VISIT_POLL_MS, type QueuedDirection } from "../../shared/visitProtocol";
 import { clearVisitResume, loadVisitResume, saveVisitResume, sessionStore } from "./visitResume";
-import { ConnectMusePanel, useConnectMuse } from "./ConnectMusePanel";
-import { connectMuseMenuItem } from "./connectMuse";
+import { ConnectMuseMenu } from "./ConnectMusePanel";
 import { purgeImageCaches } from "./imageCache";
 import { HistoryBook, lessonForPlace, TownStoryTag } from "./HistoryBook";
 import { HomePanel } from "./HomePanel";
@@ -536,6 +534,7 @@ export function App() {
     /* storage unavailable, the hint simply may show once per visit */
   }
   const [menuOpen, setMenuOpen] = useState(false);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
   // A physical pad in use (owner's ask, Nov 6, 2026): once a pad has
   // given input in the last ten seconds the on-screen stick, cluster
   // and shoulders stand down, so the town is unobstructed while a
@@ -576,8 +575,6 @@ export function App() {
   // closed and why (fix list, Nov 7, 2026). Shown a few seconds.
   const [visitNotice, setVisitNotice] = useVisitNotice();
   // Connect my Muse (Task 29): offered only once the hosted bridge pairs.
-  const { connectMuse, setConnectMuse, pairing, retryPairing, openConnectMuse } = useConnectMuse(() => setMenuOpen(false));
-  const connectMuseItem = connectMuseMenuItem(pairing, { openConnectMuse, retryPairing }, connectMuse !== null);
   const directorSeenAtRef = useRef<number | null>(null);
   // Bridge beats that failed in a row: "unreachable" only after a few.
   const bridgeFailsRef = useRef(0);
@@ -7276,17 +7273,11 @@ export function App() {
       {historyLesson !== undefined && (
         <HistoryBook lessonId={historyLesson} onOpen={(id) => setHistoryLesson(id)} onClose={() => setHistoryLesson(undefined)} />
       )}
-      {connectMuse && (
-        <ConnectMusePanel
-          state={connectMuse}
-          onClose={() => setConnectMuse(null)}
-          onCopied={(copied) => setConnectMuse((cur) => (cur && cur.state === "ready" ? { ...cur, copied } : cur))}
-        />
-      )}
-
       {/* Keep routine actions visible and occasional controls in expandable groups. */}
-      {menuOpen && <TownMenu
-        onClose={() => setMenuOpen(false)}
+      <ConnectMuseMenu
+        menuOpen={menuOpen}
+        closeMenu={closeMenu}
+        rowGroup="Muse's visit"
         onSettings={() => { closeTownPanels(); setUtilitiesOpen(true); }}
         festival={activeFestival}
         footerNote={motionStatus ?? undefined}
@@ -7336,7 +7327,7 @@ export function App() {
             active: visitUi.active,
             action: () => (visitUi.active ? endVisitNow() : beginVisitNow()),
             aria: visitUi.active ? "End Muse's visit; Aelia returns to her own voice" : "Talk to my Muse: open a visit, so Muse can move Aelia and speak through her",
-          }, ...(connectMuseItem ? [connectMuseItem] : [])]
+          }]
         },
         {
           heading: "Your day", items: [{
@@ -7560,7 +7551,7 @@ export function App() {
             aria: "Restart at the peristyle. Clear the resume snapshot and start from the town spawn",
           }]
         }]}
-      />}
+      />
 
       {/* Found celebration */}
       {foundBannerVisible && (
