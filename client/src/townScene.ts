@@ -573,6 +573,10 @@ export interface TownSceneHandle {
    *  (0 day → 1 night), whether this is a golden window, and the
    *  named phase. Other systems read their triggers from here. */
   skyState: () => { elev: number; azim: number; darkness: number; golden: boolean; phase: "night" | "dawn" | "day" | "dusk" };
+  /** The walkthrough's hook (Task 90, tools/tour): the seats and named anchors the tour's place list is built from. Read-only. */
+  tourData: () => { seats: { id: string; x: number; z: number; rotY: number }[]; anchors: Record<string, [number, number]> };
+  /** The walkthrough's hook (Task 90): put the sun where the (overridden) clock says at once, not by the slow ease. */
+  tourSnapSky: () => void;
   /** The sky-watch spot he stands at (or nearest), if any. */
   nearSkyWatchSpot: () => string | null;
   /** Begin a sky watch at a spot: the pair stand side by side turned
@@ -13064,6 +13068,13 @@ export function createTownScene(
     setSkyMode: (mode: "auto" | "day" | "night") => {
       skyMode = mode;
     },
+    tourData: () => ({
+      seats: BENCHES.map((b) => ({ id: b.id, x: b.x, z: b.z, rotY: b.rotY })),
+      anchors: { ...VISIT_SPOTS },
+    }),
+    tourSnapSky: () => {
+      skySnap = true;
+    },
     skyState: () => ({
       elev: skyElevDeg,
       azim: skyAzimDeg,
@@ -13257,7 +13268,7 @@ export function createTownScene(
       }
     },
     restoreResume: (snap) => {
-      const spot = resumeSpot(snap.x, snap.z, PLAYER.spawn, (x, z) => resolveCollisions(x, z, 0.5), (x, z) => Math.hypot(x, z) <= 52 || forestNorm(x, z) <= 0.985);
+      const spot = resumeSpot(snap.x, snap.z, PLAYER.spawn, (x, z) => resolveCollisions(x, z, 0.5), (x, z) => Math.hypot(x, z) <= 52 || forestNorm(x, z) <= 0.985 || onCliffPath(x, z));
       walkPos.x = spot.x;
       walkPos.z = spot.z;
       walkHeading = spot.moved ? PLAYER.spawnHeading : snap.heading;

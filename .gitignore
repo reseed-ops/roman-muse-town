@@ -20,3 +20,4 @@ SWEEP-REPORT.md
 
 # TypeScript incremental state
 .tsbuildinfo*
+tools/tour/out/

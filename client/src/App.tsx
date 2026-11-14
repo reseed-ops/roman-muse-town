@@ -1,3 +1,4 @@
+import { exposeTour } from "./tourPlaces";
 import { TownMap } from "./TownMap";
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -5493,6 +5494,7 @@ export function App() {
         }
       }
       sceneRef.current = handle;
+      exposeTour(handle); // the walkthrough's hook, only under ?tour (Task 90)
       // Walk-together from frame one (see the following state): she
       // starts as his companion, so no greeting wave fires on load
       // (setFollowMode also disarms the greeting, as always).
