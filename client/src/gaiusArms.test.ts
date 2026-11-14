@@ -84,8 +84,8 @@ test("Task 47: the scene starts stowed; LT and RT sit inside LB and RB; R and G 
   expect(app).toMatch(/\(key === "g" \|\| key === "r"\) && !e\.repeat && walkingRef\.current\) \{\n\s+triggerPressRef\.current\(key === "r" \? "LT" : "RT"\);/);
   expect(app).toContain("for (const side of pressedTriggers(was, now)) triggerPressRef.current(side);");
   // Inside LB and RB at the same height, clear of the speech bubble's band (252 px portrait, 212 landscape).
-  expect(app).toContain('"absolute left-[84px] bottom-[168px] z-20"');
-  expect(app).toContain('"absolute right-[84px] bottom-[168px] z-20"');
+  expect(app).toContain('"absolute left-[calc(env(safe-area-inset-left,0px)+88px)] bottom-[calc(env(safe-area-inset-bottom,0px)+172px)] z-20"');
+  expect(app).toContain('"absolute right-[calc(env(safe-area-inset-right,0px)+88px)] bottom-[calc(env(safe-area-inset-bottom,0px)+172px)] z-20"');
   expect(app).not.toContain('data-mt-shield="1"');
 });
 

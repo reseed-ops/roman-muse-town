@@ -10324,8 +10324,8 @@ export function App() {
           <div
             className={
               isLandscape
-                ? "absolute bottom-3 left-3 z-20 origin-bottom-left scale-90"
-                : "absolute bottom-5 left-3 z-20 sm:left-4"
+                ? "absolute bottom-[calc(env(safe-area-inset-bottom,0px)+16px)] left-[calc(env(safe-area-inset-left,0px)+16px)] z-20 origin-bottom-left scale-90"
+                : "absolute bottom-[calc(env(safe-area-inset-bottom,0px)+20px)] left-[calc(env(safe-area-inset-left,0px)+16px)] z-20"
             }
           >
             <div
@@ -10360,8 +10360,8 @@ export function App() {
           <div
             className={
               isLandscape
-                ? "absolute right-3 bottom-3 z-20 grid origin-bottom-right scale-90 grid-cols-3 gap-1"
-                : "absolute right-3 bottom-5 z-20 grid grid-cols-3 gap-1 sm:right-4"
+                ? "absolute right-[calc(env(safe-area-inset-right,0px)+16px)] bottom-[calc(env(safe-area-inset-bottom,0px)+16px)] z-20 grid origin-bottom-right scale-90 grid-cols-3 gap-1"
+                : "absolute right-[calc(env(safe-area-inset-right,0px)+16px)] bottom-[calc(env(safe-area-inset-bottom,0px)+20px)] z-20 grid grid-cols-3 gap-1"
             }
             role="group"
             data-mt-controls="1"
@@ -10452,11 +10452,11 @@ export function App() {
                 className={
                   side === "LB"
                     ? isLandscape
-                      ? "absolute left-3 bottom-[168px] z-20"
-                      : "absolute left-3 bottom-[200px] z-20 sm:left-4"
+                      ? "absolute left-[calc(env(safe-area-inset-left,0px)+16px)] bottom-[calc(env(safe-area-inset-bottom,0px)+172px)] z-20"
+                      : "absolute left-[calc(env(safe-area-inset-left,0px)+16px)] bottom-[calc(env(safe-area-inset-bottom,0px)+204px)] z-20"
                     : isLandscape
-                      ? "absolute right-3 bottom-[168px] z-20"
-                      : "absolute right-3 bottom-[200px] z-20 sm:right-4"
+                      ? "absolute right-[calc(env(safe-area-inset-right,0px)+16px)] bottom-[calc(env(safe-area-inset-bottom,0px)+172px)] z-20"
+                      : "absolute right-[calc(env(safe-area-inset-right,0px)+16px)] bottom-[calc(env(safe-area-inset-bottom,0px)+204px)] z-20"
                 }
                 data-mt-shoulders={side}
               >
@@ -10493,11 +10493,11 @@ export function App() {
                   className={
                     side === "LT"
                       ? isLandscape
-                        ? "absolute left-[84px] bottom-[168px] z-20"
-                        : "absolute left-[84px] bottom-[200px] z-20 sm:left-[88px]"
+                        ? "absolute left-[calc(env(safe-area-inset-left,0px)+88px)] bottom-[calc(env(safe-area-inset-bottom,0px)+172px)] z-20"
+                        : "absolute left-[calc(env(safe-area-inset-left,0px)+88px)] bottom-[calc(env(safe-area-inset-bottom,0px)+204px)] z-20"
                       : isLandscape
-                        ? "absolute right-[84px] bottom-[168px] z-20"
-                        : "absolute right-[84px] bottom-[200px] z-20 sm:right-[88px]"
+                        ? "absolute right-[calc(env(safe-area-inset-right,0px)+88px)] bottom-[calc(env(safe-area-inset-bottom,0px)+172px)] z-20"
+                        : "absolute right-[calc(env(safe-area-inset-right,0px)+88px)] bottom-[calc(env(safe-area-inset-bottom,0px)+204px)] z-20"
                   }
                   data-mt-triggers={side}
                 >
@@ -10534,8 +10534,8 @@ export function App() {
             <div
               className={
                 isLandscape
-                  ? "pointer-events-none absolute right-3 bottom-[52px] z-20 flex w-[152px] justify-center"
-                  : "pointer-events-none absolute right-3 bottom-[76px] z-20 flex w-[152px] justify-center sm:right-4"
+                  ? "pointer-events-none absolute right-[calc(env(safe-area-inset-right,0px)+16px)] bottom-[calc(env(safe-area-inset-bottom,0px)+56px)] z-20 flex w-[152px] justify-center"
+                  : "pointer-events-none absolute right-[calc(env(safe-area-inset-right,0px)+16px)] bottom-[calc(env(safe-area-inset-bottom,0px)+80px)] z-20 flex w-[152px] justify-center"
               }
             >
               <button
