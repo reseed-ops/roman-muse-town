@@ -41,7 +41,7 @@ export const DRESSING_BUDGET = {
   statueTriangles: 10_000,
   puttoTriangles: 4_000,
   propTriangles: 2_000,
-  statuaryBytes: 2_000_000,
+  statuaryBytes: 2_700_000, // 2.0 MB until Task 93 put the pack's normal maps back (athena, augustus, putto, podest: +0.67 MB)
   marketBytes: 900_000,
 } as const;
 

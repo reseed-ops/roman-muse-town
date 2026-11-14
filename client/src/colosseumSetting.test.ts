@@ -77,7 +77,7 @@ describe("the Colosseum and its setting (Task 85)", () => {
       expect(triangles(json)).toBeGreaterThan(0);
       if (asset !== "colosseum") expect(triangles(json)).toBeLessThan(8_000);
     }
-    expect(total).toBeLessThan(7_500_000);
+    expect(total).toBeLessThan(8_000_000) // 7.5 MB until Task 93 restored the normal and mask maps (+0.6 MB with the podest);
   });
 
   test("the stair, statues and podests stand on the ring's road side, clear of the ring and of the road", () => {

@@ -1,0 +1,4 @@
+node_modules/
+out/
+showcase/textures1k/
+*.tgz

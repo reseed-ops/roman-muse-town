@@ -268,6 +268,7 @@ import triremeUrl from "./assets/ships/trireme.glb";
 import triremeHull2Url from "./assets/ships/trireme_hull2.jpg";
 import triremeSail2Url from "./assets/ships/trireme_sail2.png";
 import waterNormalUrl from "./assets/roman/water_normal.png";
+import { GROUND_TILE_METRES, groundAnisotropy, groundMaterial, loadGroundMaps, repeatedMaps, worldMetricUVs } from "./groundTextures";
 
 export type PickKind = "place" | "collectible" | "tree" | "muse" | "board" | "secret" | "landmark" | "questboard" | "letters" | "goals" | "market" | "bench" | "dock" | "inscription" | "summit" | "piscina" | "baths" | "cat" | "phoenix" | "sky" | "stone" | "rest" | "forage" | "history" | "home";
 
@@ -654,38 +655,6 @@ function noiseTexture(base: string, fleck: string, flecks = 900, size = 256): TH
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
   tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
-}
-
-/** Cobblestone texture for the peristyle: rounded stones with grout lines. */
-function cobbleTexture(): THREE.CanvasTexture {
-  const size = 256;
-  const c = document.createElement("canvas");
-  c.width = size;
-  c.height = size;
-  const ctx = c.getContext("2d");
-  if (ctx) {
-    ctx.fillStyle = "#a89a78";
-    ctx.fillRect(0, 0, size, size);
-    const tones = ["#ded3b8", "#d2c5a4", "#d9cdb0", "#c9ba94"];
-    const cell = 32;
-    for (let y = 0; y < size / cell; y++) {
-      for (let x = 0; x < size / cell; x++) {
-        ctx.fillStyle = tones[(x * 7 + y * 13) % tones.length]!;
-        ctx.beginPath();
-        const cx = x * cell + cell / 2 + (y % 2 ? 6 : -2);
-        const cy = y * cell + cell / 2;
-        if (typeof ctx.roundRect === "function") ctx.roundRect(cx - 13, cy - 11, 26, 22, 9);
-        else ctx.rect(cx - 13, cy - 11, 26, 22);
-        ctx.fill();
-      }
-    }
-  }
-  const tex = new THREE.CanvasTexture(c);
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.repeat.set(5, 5);
   return tex;
 }
 
@@ -1760,7 +1729,11 @@ export function createTownScene(
   }
 
   // Winding cobblestone streets, draped over the terrain as ribbons.
-  const streetMat = new THREE.MeshStandardMaterial({ map: cobbleTexture(), roughness: 0.92 });
+  // Task 93: loom-made PBR cobbles (albedo, normal, ORM) at metric UVs, with
+  // the renderer's anisotropy so the stones hold at a grazing angle.
+  const groundAniso = groundAnisotropy(renderer.capabilities.getMaxAnisotropy());
+  const cobbleMaps = loadGroundMaps("cobbles", groundAniso);
+  const streetMat = groundMaterial(cobbleMaps);
   function buildStreet(points: [number, number][], width = 2.7, mat: THREE.Material = streetMat) {
     const { points: centreline, length } = samplePath(points);
     const segs = centreline.length - 1;
@@ -1779,7 +1752,7 @@ export function createTownScene(
         const vx = pt.x + nx * (width / 2) * sgn;
         const vz = pt.z + nz * (width / 2) * sgn;
         positions.push(vx, terrainHeight(vx, vz) + 0.045, vz);
-        uvs.push(sgn * 0.5 + 0.5, (t * length) / 2.4);
+        uvs.push((sgn * width) / 2 / GROUND_TILE_METRES.cobbles, (t * length) / GROUND_TILE_METRES.cobbles);
       }
       if (i < segs) {
         const a = i * 2;
@@ -1805,7 +1778,7 @@ export function createTownScene(
 
   // The peristyle: a cobbled disc draped over the (nearly level) heart of
   // town, where all the streets meet around the Town Tree.
-  const plazaMat = new THREE.MeshStandardMaterial({ map: cobbleTexture(), roughness: 0.9 });
+  const plazaMat = groundMaterial(repeatedMaps(cobbleMaps, 11.2 / GROUND_TILE_METRES.cobbles));
   const plazaGeo = new THREE.CircleGeometry(5.6, 44);
   plazaGeo.rotateX(-Math.PI / 2);
   {
@@ -3260,7 +3233,9 @@ export function createTownScene(
       paving.push(block(halfX * 2 + 2.4, 0.4, 2.4, 0, lawnY - 0.18, side * halfZ));
       paving.push(block(2.4, 0.4, halfZ * 2 - 2.4, side * halfX, lawnY - 0.18, 0));
     }
-    merged(paving, mat(0xd9cfb6, { rough: 0.9 }), false);
+    // Task 93: travertine slabs (loom), UVs in world metres so a tile is 4 m on every block.
+    const pavingMat = groundMaterial(loadGroundMaps("paving", groundAnisotropy(renderer.capabilities.getMaxAnisotropy())));
+    merged(paving.map((g) => worldMetricUVs(g, GROUND_TILE_METRES.paving)), pavingMat, false);
     // Entablature and a tiled portico over the colonnade.
     const beams: THREE.BufferGeometry[] = [];
     const tiles: THREE.BufferGeometry[] = [];
@@ -11423,7 +11398,7 @@ export function createTownScene(
     if (wetness > 0.01) g.multiplyScalar(1 - wetness * 0.22);
     if (snowCover > 0.01) g.lerp(tmpColorB.setHex(0xf2f6f8), snowCover * 0.5);
     groundMat.roughness = 0.95 - wetness * 0.5;
-    plazaMat.roughness = 0.9 - wetness * 0.55;
+    plazaMat.roughness = 1 - wetness * 0.55;
     puddleMat.opacity = wetness * 0.55 * (1 - nightMix * 0.3);
   }
   applyDayNight();

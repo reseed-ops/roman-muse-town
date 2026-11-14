@@ -24,7 +24,8 @@ export const SETTING_FILES: Record<SettingAsset, string> = {
 
 /** What the build chose for the slimmed building (measured, then rounded up). The
  *  pack's own mesh is 518,560 triangles and 29.5 MB; this is the ceiling the test holds. */
-export const COLOSSEUM_BUDGET = { maxTriangles: 66_000, maxBytes: 5_000_000 } as const;
+export const COLOSSEUM_BUDGET = { maxTriangles: 66_000, maxBytes: 5_500_000 } as const;
+/** maxBytes was 5,000,000 until Task 93 restored the pack's normal and mask maps (4.73 MB to 5.30 MB). */
 /** The source mesh, for the record: 532,584 polygons as imported, 29,456,696 bytes as GLB. */
 export const COLOSSEUM_SOURCE = { polygons: 532_584, glbBytes: 29_456_696 } as const;
 
