@@ -57,3 +57,53 @@ Before then the live site has no hook and the tour reports "the town did not loa
 `bun test tools/tour` runs the place-list test and the tour's self-test (`tour.py --self-test`,
 no browser): the frame and reach checks, and that a tour over a list writes every shot and says
 so in its log.
+
+## The director (Task 94)
+
+The tour photographs places. The director stages a *moment*, films it, checks its own frames and
+reshoots on a note. It adds files to this folder and changes nothing in the tour or the town.
+
+```bash
+tools/tour/direct.sh tools/tour/scenes/wedding-arch.json                       # stage, film, check, report
+tools/tour/direct.sh tools/tour/scenes/wedding-arch.json --note "closer, zoom the camera"
+tools/tour/direct.sh tools/tour/scenes/terrace-dusk.json --note night --dry    # try a note without saving it
+DIRECT_BUILD=1 tools/tour/direct.sh ...                                        # rebuild web/dist first
+```
+
+**The script is the scene file** (`scenes/*.json`): Gaius's spot and heading, Aelia's mark (and `via`
+waypoints she walks through, e.g. a doorway), the clock (`rome` "HH:MM", `golden`, or `elev` = the
+evening sun's elevation in degrees), the weather, the wedding dressing (`wedding`, `celebrate`), the
+camera (`zoom`, `pitch`, `yawOffset`) and what must be in frame (`require`, with extra `subjects`).
+A note edits that file in place (`closer`, `wider`, `lower`, `higher`, `left`, `right`, `night`,
+`midday`, `dusk`, `rain`...) and keeps the note and what it changed in `notes`; a note the director
+does not understand reshoots the scene unchanged and says so. `--dry` leaves the file alone.
+
+**What it does:** puts the page in walk mode with a visit open (so Aelia takes `goto`), sets the sky
+(Date shim, as the tour), places Gaius through `restoreResume` (collision-resolved, camera set), walks
+Aelia to her mark, waits for the network to go quiet, hides every overlay, and shoots a burst of 4
+frames (`takeN-f1..4.png`, plus a GIF clip when ffmpeg is on the box).
+
+**What it checks before it reports** (`director-log.md`, `director-log.json`):
+
+| check | flags |
+|---|---|
+| black / flat / near-black / blown-out frame | the tour's thresholds, plus "over half the frame is chalk white" |
+| nothing happening | the burst's frames do not move (mean luma difference under 0.06%) |
+| subject out of frame, cut by the edge, behind the camera, too small | Gaius, Aelia and extra subjects are projected with the walk camera's own model (fov 52, 4.0 m back, 1.85 m up, 1.2 m look-ahead on a landscape frame) |
+| one person hidden behind the other | their screen centres are under 8% of the width apart |
+| Gaius not visible where he stands | his deep-red cloak is missing from the shoulder or hem band of his projected body: scenery stands between the camera and him |
+| Aelia not at her mark | more than 2.5 m off (she stops short when her path is blocked) |
+
+A flagged take is **reshot automatically** where there is a fix (pull the zoom back for a subject out of
+frame, closer for a tiny one, close in past scenery, move Aelia's mark away from his line), up to
+`--retries` (2). A reshoot that works is saved into the scene file as "(director's own reshoot)". A frame
+that still fails ends the run as **FLAGGED, do not show as a good frame** (exit code 1).
+
+**What it cannot see:** it knows where the subjects are, not what the scene looks like. Scenery
+covering Aelia is invisible to it (only Gaius's cloak is a known colour), and so is a blown-out stone
+face, an ugly sky or a creature standing in the shot (a wolf stood beside them on the terrace). The
+log is the first review, a human glance at the frames is still the last.
+
+Tests: `bun test tools/tour` (and `python3 -I tools/tour/director.py --self-test`): a black frame, a
+flat frame, a subject out of frame, a person hidden behind the other, a frame where nothing moves and
+a missing cloak are each caught; a good frame passes; notes edit the script.

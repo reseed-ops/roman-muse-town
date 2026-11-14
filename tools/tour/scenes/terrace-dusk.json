@@ -1,0 +1,38 @@
+{
+  "name": "terrace-dusk",
+  "about": "Dusk on the lantern terrace (Our place): the sun just under the horizon, lanterns lit, Aelia and Gaius side by side facing the arch and the town below.",
+  "weather": "clear",
+  "wedding": false,
+  "clock": {
+    "elev": -2.5
+  },
+  "gaius": {
+    "x": -28.93,
+    "z": -32.86,
+    "heading": 0.7036
+  },
+  "aelia": {
+    "x": -26.82,
+    "z": -32.69,
+    "via": [
+      [
+        -25.4,
+        -29.9
+      ],
+      [
+        -27.1,
+        -31.9
+      ]
+    ]
+  },
+  "camera": {
+    "zoom": 1.0,
+    "pitch": 0.0,
+    "yawOffset": 0.0
+  },
+  "require": [
+    "gaius",
+    "aelia"
+  ],
+  "notes": []
+}

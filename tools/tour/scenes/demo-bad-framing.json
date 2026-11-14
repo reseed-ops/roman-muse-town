@@ -1,0 +1,30 @@
+{
+  "name": "demo-bad-framing",
+  "about": "A deliberately bad setup: the camera is tight (zoom 0.55) and Aelia stands 4 m to his left, so she is cut by the frame edge. The director must flag it and reshoot wider.",
+  "weather": "clear",
+  "wedding": true,
+  "celebrate": false,
+  "clock": {
+    "rome": "12:00"
+  },
+  "gaius": {
+    "x": 0.4,
+    "z": -3.8,
+    "heading": 0.0
+  },
+  "aelia": {
+    "x": 4.2,
+    "z": -3.8
+  },
+  "camera": {
+    "zoom": 0.55,
+    "pitch": 0.0,
+    "yawOffset": 0.0
+  },
+  "require": [
+    "gaius",
+    "aelia"
+  ],
+  "notes": [],
+  "subjects": []
+}
