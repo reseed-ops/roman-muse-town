@@ -974,3 +974,25 @@ Findings:
 - **Cost (code only, not measured):** faceFill, plazaGlow, the home lamp and the temple lamp stay `visible` at or near zero by day, so about 4 point lights sit in every lit shader for nothing.
 
 Ranked fixes (by look): 1 tame the whites, exposure/environment/hemisphere/sun or the tone mapper (small, a few constants, needs a look pass); 2 real paving and cobble surfaces (anisotropy one line, textures a build task); 3 bake the pack's normal and mask maps back into the statues, then the colosseum (build task); 4 close the horizon seam (one line plus a night-sea follow-up); 5 lamps: bigger halo and less shared plaza light (small), light on the columns (build task); 6 temple and colonnade materials (medium); 7 planters and cones (small to medium); 8 zero-intensity point lights (small, performance). Not measured: real-GPU frame cost, true golden hour, the sea from the ground in clear weather.
+## Standing note (added Nov 14, 2026): brief template
+
+Future task briefs start from ~/work/town-brief-template.md on the box (copy
+in the goal files dir). Every brief includes the town style block verbatim
+and the look-at-your-own-output verification step. The template was added
+after Tuan approved three borrowings from the claude-game-pipeline skill
+(msveshnikov/claude-game-pipeline, r/ClaudeGameDev, Nov 14, 2026): the style
+block, the verification step, and the automated walkthrough (Task 90). The
+skill's Godot half and Blender-generation half do not apply to this town
+(Three.js, bought packs, code-built architecture); only those three ideas
+were taken.
+## Task 90 (READY, added Nov 14, 2026): Automated walkthrough of the town (tour script, no town changes)
+
+Tuan approved all three borrowings from the claude-game-pipeline skill (Nov 14, 2026): the style block, the look-at-your-own-output step, and an automated walkthrough. This task is the third one. Full brief: town-build26-prompt.md on the box.
+
+- Build a walkthrough script that runs with one command on the box and tours the town place by place: the forum, the basilica, Athena's temple (from the bench and from inside the cella before her), the domus, the lake dock, the Stargazing Pavilion, the cliffside bench, the colosseum, the market, the Villa of Stories, the Atrium of Sounds, the Hortus, the Culina, the Baths, and the gate. Use the town's place and seat data to build the list, so a new place is picked up rather than hardcoded, and report the full list it visited.
+- At each place, take a screenshot by day and by night, and write a tour log naming each shot. The script must set the time for each pass rather than waiting for it; if true golden hour cannot be reached by changing the time, say so plainly and cover day and night only. Run it against the local build (the checkout on the box), so it can see unreleased work including the held batch, and say how to point it at the live site instead.
+- The tour must prove itself: every place on the list gets its shots, and the log says so. Flag any place that fails to load, any black or empty frame, and any place the walker cannot reach. A full visual diff against reference shots is out of scope; the tour produces the shots and the log, and the look-at-your-own-output step compares them.
+- Put the script where it belongs in the repo (a tools/ or scripts home, committed, with a short README on how to run it), and keep its screenshots in a gitignored output folder, not in git. Verify by running the whole tour once end to end and including the tour log and a few of the shots in the done file.
+- Tests: a smoke test or test harness that proves the tour visits every place on the list and writes every screenshot. Typechecks clean.
+- NO DEPLOY. This run builds a tool, not a town change. Nothing goes to Railway. If the walkthrough needs a small change to the town code to work, keep it minimal, flag it plainly in the done file, and do not deploy it; it ships with the next approved batch deploy. Summary to town-build26-done.md, landing note under Task 90.
+- NOT in scope: any town feature, quest, asset or system change beyond the minimal hook the walkthrough needs, the bridge, pairing, dispatcher, watcher, affection gates, tender-only line.
