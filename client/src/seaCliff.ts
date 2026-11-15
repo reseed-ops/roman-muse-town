@@ -18,7 +18,7 @@ import * as THREE from "three";
  * green channel won and the sea read as meadow (Task 69).
  */
 export const OCEAN_DAY = 0x2260ae;
-export const OCEAN_NIGHT = 0x0a1a2a;
+export const OCEAN_NIGHT = 0x0e2a4a;
 
 export const CLIFF = {
   /** The coast: the town ground's south edge, and the sea's level. */

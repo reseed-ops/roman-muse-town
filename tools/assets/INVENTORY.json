@@ -25,13 +25,13 @@
    "bytes": 1072048,
    "status": "used",
    "where": [
-    "townScene.ts:5393 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU`"
+    "townScene.ts:5397 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5393,
+     "line": 5397,
      "text": "idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceUrl, poseA: fPoseAUrl, poseB: fPoseBUrl,"
     }
    ]
@@ -45,18 +45,18 @@
    "bytes": 831968,
    "status": "used",
    "where": [
-    "townScene.ts:5393 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU`"
+    "townScene.ts:5397 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 825,
+     "line": 826,
      "text": "fIdleUrl, fWalkUrl, fRunUrl, fWaveUrl, fSitUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 5393,
+     "line": 5397,
      "text": "idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceUrl, poseA: fPoseAUrl, poseB: fPoseBUrl,"
     }
    ]
@@ -70,13 +70,13 @@
    "bytes": 702704,
    "status": "used",
    "where": [
-    "townScene.ts:5393 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU`"
+    "townScene.ts:5397 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5393,
+     "line": 5397,
      "text": "idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceUrl, poseA: fPoseAUrl, poseB: fPoseBUrl,"
     }
    ]
@@ -90,13 +90,13 @@
    "bytes": 573440,
    "status": "used",
    "where": [
-    "townScene.ts:5393 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU`"
+    "townScene.ts:5397 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5393,
+     "line": 5397,
      "text": "idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceUrl, poseA: fPoseAUrl, poseB: fPoseBUrl,"
     }
    ]
@@ -110,18 +110,18 @@
    "bytes": 444176,
    "status": "used",
    "where": [
-    "townScene.ts:5393 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU`"
+    "townScene.ts:5397 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 825,
+     "line": 826,
      "text": "fIdleUrl, fWalkUrl, fRunUrl, fWaveUrl, fSitUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 5393,
+     "line": 5397,
      "text": "idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceUrl, poseA: fPoseAUrl, poseB: fPoseBUrl,"
     }
    ]
@@ -135,18 +135,18 @@
    "bytes": 702752,
    "status": "used",
    "where": [
-    "townScene.ts:5393 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU`"
+    "townScene.ts:5397 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 825,
+     "line": 826,
      "text": "fIdleUrl, fWalkUrl, fRunUrl, fWaveUrl, fSitUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 5393,
+     "line": 5397,
      "text": "idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceUrl, poseA: fPoseAUrl, poseB: fPoseBUrl,"
     }
    ]
@@ -160,18 +160,18 @@
    "bytes": 481104,
    "status": "used",
    "where": [
-    "townScene.ts:5393 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU`"
+    "townScene.ts:5397 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 825,
+     "line": 826,
      "text": "fIdleUrl, fWalkUrl, fRunUrl, fWaveUrl, fSitUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 5393,
+     "line": 5397,
      "text": "idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceUrl, poseA: fPoseAUrl, poseB: fPoseBUrl,"
     }
    ]
@@ -185,18 +185,18 @@
    "bytes": 801200,
    "status": "used",
    "where": [
-    "townScene.ts:5393 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU`"
+    "townScene.ts:5397 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 825,
+     "line": 826,
      "text": "fIdleUrl, fWalkUrl, fRunUrl, fWaveUrl, fSitUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 5393,
+     "line": 5397,
      "text": "idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceUrl, poseA: fPoseAUrl, poseB: fPoseBUrl,"
     }
    ]
@@ -210,13 +210,13 @@
    "bytes": 1071920,
    "status": "used",
    "where": [
-    "townScene.ts:5902 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU`"
+    "townScene.ts:5906 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5902,
+     "line": 5906,
      "text": "idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceUrl,"
     }
    ]
@@ -230,18 +230,18 @@
    "bytes": 831968,
    "status": "used",
    "where": [
-    "townScene.ts:5902 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU`"
+    "townScene.ts:5906 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 824,
+     "line": 825,
      "text": "mIdleUrl, mWalkUrl, mRunUrl, mWaveUrl, mSitUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 5902,
+     "line": 5906,
      "text": "idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceUrl,"
     }
    ]
@@ -255,13 +255,13 @@
    "bytes": 518000,
    "status": "used",
    "where": [
-    "townScene.ts:5903 `jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },`"
+    "townScene.ts:5907 `jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5903,
+     "line": 5907,
      "text": "jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },"
     }
    ]
@@ -275,13 +275,13 @@
    "bytes": 456480,
    "status": "used",
    "where": [
-    "townScene.ts:5903 `jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },`"
+    "townScene.ts:5907 `jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5903,
+     "line": 5907,
      "text": "jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },"
     }
    ]
@@ -295,13 +295,13 @@
    "bytes": 456480,
    "status": "used",
    "where": [
-    "townScene.ts:5903 `jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },`"
+    "townScene.ts:5907 `jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5903,
+     "line": 5907,
      "text": "jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },"
     }
    ]
@@ -315,18 +315,18 @@
    "bytes": 444176,
    "status": "used",
    "where": [
-    "townScene.ts:5902 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU`"
+    "townScene.ts:5906 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 824,
+     "line": 825,
      "text": "mIdleUrl, mWalkUrl, mRunUrl, mWaveUrl, mSitUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 5902,
+     "line": 5906,
      "text": "idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceUrl,"
     }
    ]
@@ -340,18 +340,18 @@
    "bytes": 702752,
    "status": "used",
    "where": [
-    "townScene.ts:5902 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU`"
+    "townScene.ts:5906 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 824,
+     "line": 825,
      "text": "mIdleUrl, mWalkUrl, mRunUrl, mWaveUrl, mSitUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 5902,
+     "line": 5906,
      "text": "idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceUrl,"
     }
    ]
@@ -365,13 +365,13 @@
    "bytes": 591904,
    "status": "used",
    "where": [
-    "townScene.ts:5904 `slide: mSlideUrl,`"
+    "townScene.ts:5908 `slide: mSlideUrl,`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5904,
+     "line": 5908,
      "text": "slide: mSlideUrl,"
     }
    ]
@@ -385,18 +385,18 @@
    "bytes": 481104,
    "status": "used",
    "where": [
-    "townScene.ts:5902 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU`"
+    "townScene.ts:5906 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 824,
+     "line": 825,
      "text": "mIdleUrl, mWalkUrl, mRunUrl, mWaveUrl, mSitUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 5902,
+     "line": 5906,
      "text": "idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceUrl,"
     }
    ]
@@ -410,18 +410,18 @@
    "bytes": 801200,
    "status": "used",
    "where": [
-    "townScene.ts:5902 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU`"
+    "townScene.ts:5906 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 824,
+     "line": 825,
      "text": "mIdleUrl, mWalkUrl, mRunUrl, mWaveUrl, mSitUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 5902,
+     "line": 5906,
      "text": "idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceUrl,"
     }
    ]
@@ -435,13 +435,13 @@
    "bytes": 838108,
    "status": "used",
    "where": [
-    "townScene.ts:5397 `benchSit: [fBench1Url, fBench2Url],`"
+    "townScene.ts:5401 `benchSit: [fBench1Url, fBench2Url],`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5397,
+     "line": 5401,
      "text": "benchSit: [fBench1Url, fBench2Url],"
     }
    ]
@@ -455,13 +455,13 @@
    "bytes": 832172,
    "status": "used",
    "where": [
-    "townScene.ts:5397 `benchSit: [fBench1Url, fBench2Url],`"
+    "townScene.ts:5401 `benchSit: [fBench1Url, fBench2Url],`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5397,
+     "line": 5401,
      "text": "benchSit: [fBench1Url, fBench2Url],"
     }
    ]
@@ -475,13 +475,13 @@
    "bytes": 835340,
    "status": "used",
    "where": [
-    "townScene.ts:5398 `flirt: fFlirtUrl,`"
+    "townScene.ts:5402 `flirt: fFlirtUrl,`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5398,
+     "line": 5402,
      "text": "flirt: fFlirtUrl,"
     }
    ]
@@ -495,13 +495,13 @@
    "bytes": 832236,
    "status": "used",
    "where": [
-    "townScene.ts:5399 `hug: fHugUrl,`"
+    "townScene.ts:5403 `hug: fHugUrl,`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5399,
+     "line": 5403,
      "text": "hug: fHugUrl,"
     }
    ]
@@ -515,13 +515,13 @@
    "bytes": 914300,
    "status": "used",
    "where": [
-    "townScene.ts:5396 `sitTalk: [fSitTalk1Url, fSitTalk2Url],`"
+    "townScene.ts:5400 `sitTalk: [fSitTalk1Url, fSitTalk2Url],`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5396,
+     "line": 5400,
      "text": "sitTalk: [fSitTalk1Url, fSitTalk2Url],"
     }
    ]
@@ -535,13 +535,13 @@
    "bytes": 847996,
    "status": "used",
    "where": [
-    "townScene.ts:5396 `sitTalk: [fSitTalk1Url, fSitTalk2Url],`"
+    "townScene.ts:5400 `sitTalk: [fSitTalk1Url, fSitTalk2Url],`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5396,
+     "line": 5400,
      "text": "sitTalk: [fSitTalk1Url, fSitTalk2Url],"
     }
    ]
@@ -555,13 +555,13 @@
    "bytes": 840508,
    "status": "used",
    "where": [
-    "townScene.ts:5395 `talk: [fTalk1Url, fTalk2Url, fTalk3Url],`"
+    "townScene.ts:5399 `talk: [fTalk1Url, fTalk2Url, fTalk3Url],`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5395,
+     "line": 5399,
      "text": "talk: [fTalk1Url, fTalk2Url, fTalk3Url],"
     }
    ]
@@ -575,13 +575,13 @@
    "bytes": 848764,
    "status": "used",
    "where": [
-    "townScene.ts:5395 `talk: [fTalk1Url, fTalk2Url, fTalk3Url],`"
+    "townScene.ts:5399 `talk: [fTalk1Url, fTalk2Url, fTalk3Url],`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5395,
+     "line": 5399,
      "text": "talk: [fTalk1Url, fTalk2Url, fTalk3Url],"
     }
    ]
@@ -595,13 +595,13 @@
    "bytes": 861052,
    "status": "used",
    "where": [
-    "townScene.ts:5395 `talk: [fTalk1Url, fTalk2Url, fTalk3Url],`"
+    "townScene.ts:5399 `talk: [fTalk1Url, fTalk2Url, fTalk3Url],`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5395,
+     "line": 5399,
      "text": "talk: [fTalk1Url, fTalk2Url, fTalk3Url],"
     }
    ]
@@ -615,13 +615,13 @@
    "bytes": 850764,
    "status": "used",
    "where": [
-    "townScene.ts:5908 `benchSit: [mBench1Url, mBench2Url],`"
+    "townScene.ts:5912 `benchSit: [mBench1Url, mBench2Url],`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5908,
+     "line": 5912,
      "text": "benchSit: [mBench1Url, mBench2Url],"
     }
    ]
@@ -635,13 +635,13 @@
    "bytes": 852972,
    "status": "used",
    "where": [
-    "townScene.ts:5908 `benchSit: [mBench1Url, mBench2Url],`"
+    "townScene.ts:5912 `benchSit: [mBench1Url, mBench2Url],`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5908,
+     "line": 5912,
      "text": "benchSit: [mBench1Url, mBench2Url],"
     }
    ]
@@ -655,13 +655,13 @@
    "bytes": 835388,
    "status": "used",
    "where": [
-    "townScene.ts:5909 `flirt: mFlirtUrl,`"
+    "townScene.ts:5913 `flirt: mFlirtUrl,`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5909,
+     "line": 5913,
      "text": "flirt: mFlirtUrl,"
     }
    ]
@@ -675,13 +675,13 @@
    "bytes": 833116,
    "status": "used",
    "where": [
-    "townScene.ts:5910 `hug: mHugUrl,`"
+    "townScene.ts:5914 `hug: mHugUrl,`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5910,
+     "line": 5914,
      "text": "hug: mHugUrl,"
     }
    ]
@@ -695,13 +695,13 @@
    "bytes": 845068,
    "status": "used",
    "where": [
-    "townScene.ts:5907 `sitTalk: [mSitTalk1Url, mSitTalk2Url],`"
+    "townScene.ts:5911 `sitTalk: [mSitTalk1Url, mSitTalk2Url],`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5907,
+     "line": 5911,
      "text": "sitTalk: [mSitTalk1Url, mSitTalk2Url],"
     }
    ]
@@ -715,13 +715,13 @@
    "bytes": 835020,
    "status": "used",
    "where": [
-    "townScene.ts:5907 `sitTalk: [mSitTalk1Url, mSitTalk2Url],`"
+    "townScene.ts:5911 `sitTalk: [mSitTalk1Url, mSitTalk2Url],`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5907,
+     "line": 5911,
      "text": "sitTalk: [mSitTalk1Url, mSitTalk2Url],"
     }
    ]
@@ -735,13 +735,13 @@
    "bytes": 845788,
    "status": "used",
    "where": [
-    "townScene.ts:5906 `talk: [mTalk1Url, mTalk2Url, mTalk3Url],`"
+    "townScene.ts:5910 `talk: [mTalk1Url, mTalk2Url, mTalk3Url],`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5906,
+     "line": 5910,
      "text": "talk: [mTalk1Url, mTalk2Url, mTalk3Url],"
     }
    ]
@@ -755,13 +755,13 @@
    "bytes": 853244,
    "status": "used",
    "where": [
-    "townScene.ts:5906 `talk: [mTalk1Url, mTalk2Url, mTalk3Url],`"
+    "townScene.ts:5910 `talk: [mTalk1Url, mTalk2Url, mTalk3Url],`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5906,
+     "line": 5910,
      "text": "talk: [mTalk1Url, mTalk2Url, mTalk3Url],"
     }
    ]
@@ -775,13 +775,13 @@
    "bytes": 855564,
    "status": "used",
    "where": [
-    "townScene.ts:5906 `talk: [mTalk1Url, mTalk2Url, mTalk3Url],`"
+    "townScene.ts:5910 `talk: [mTalk1Url, mTalk2Url, mTalk3Url],`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 5906,
+     "line": 5910,
      "text": "talk: [mTalk1Url, mTalk2Url, mTalk3Url],"
     }
    ]
@@ -795,28 +795,28 @@
    "bytes": 16589604,
    "status": "used",
    "where": [
-    "townScene.ts:5858 `loadModelScene(centurionUrl)`"
+    "townScene.ts:5862 `loadModelScene(centurionUrl)`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 815,
+     "line": 816,
      "text": "[centurionUrl, 0],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 862,
+     "line": 863,
      "text": "[...[centurionUrl, museAvatarUrl].filter((url) => !modelCache.has(url)).map(fetchModelBytes), ...CORE_CLIP_URLS.map(fetchClipBytes)],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 5858,
+     "line": 5862,
      "text": "loadModelScene(centurionUrl)"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 5925,
+     "line": 5929,
      "text": "modelCache.delete(centurionUrl);"
     }
    ],
@@ -832,13 +832,13 @@
    "bytes": 16764,
    "status": "used",
    "where": [
-    "townScene.ts:9298 `greekBench(greekBench1Url, \"bench-greek-stone\", 12.2, -15, Math.PI / 2);`"
+    "townScene.ts:9302 `greekBench(greekBench1Url, \"bench-greek-stone\", 12.2, -15, Math.PI / 2);`"
    ],
    "note": "Turned on Nov 6, 2026 (Task 18): both sat with their backs to the peristyle; sitters now face it (no backrest on either).",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 9298,
+     "line": 9302,
      "text": "greekBench(greekBench1Url, \"bench-greek-stone\", 12.2, -15, Math.PI / 2);"
     }
    ],
@@ -854,13 +854,13 @@
    "bytes": 19292,
    "status": "used",
    "where": [
-    "townScene.ts:9299 `greekBench(greekBench2Url, \"bench-greek-wood\", -12.2, -15, -Math.PI / 2);`"
+    "townScene.ts:9303 `greekBench(greekBench2Url, \"bench-greek-wood\", -12.2, -15, -Math.PI / 2);`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 9299,
+     "line": 9303,
      "text": "greekBench(greekBench2Url, \"bench-greek-wood\", -12.2, -15, -Math.PI / 2);"
     }
    ],
@@ -876,13 +876,13 @@
    "bytes": 17020,
    "status": "used",
    "where": [
-    "(6.9, 38.4) [townScene.ts:9272]"
+    "(6.9, 38.4) [townScene.ts:9276]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 9272,
+     "line": 9276,
      "text": "void placeFbx(greekBowlUrl, { x: 6.9, z: 38.4, width: 0.42, greek: true });"
     }
    ],
@@ -898,13 +898,13 @@
    "bytes": 15772,
    "status": "used",
    "where": [
-    "(21.3, 26.9) [townScene.ts:9276]"
+    "(21.3, 26.9) [townScene.ts:9280]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 9276,
+     "line": 9280,
      "text": "void placeFbx(greekBucketUrl, { x: 21.3, z: 26.9, height: 0.42, greek: true });"
     }
    ],
@@ -920,13 +920,13 @@
    "bytes": 17884,
    "status": "used",
    "where": [
-    "(6.9, 39.6) [townScene.ts:9273]"
+    "(6.9, 39.6) [townScene.ts:9277]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 9273,
+     "line": 9277,
      "text": "void placeFbx(greekDecoBowlUrl, { x: 6.9, z: 39.6, width: 0.5, greek: true });"
     }
    ],
@@ -956,13 +956,13 @@
    "bytes": 42620,
    "status": "used",
    "where": [
-    "(-22.6, 25.4) [townScene.ts:9279]"
+    "(-22.6, 25.4) [townScene.ts:9283]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 9279,
+     "line": 9283,
      "text": "void placeFbx(greekRackUrl, { x: -22.6, z: 25.4, rotY: 0.5, width: 1.8, greek: true });"
     }
    ],
@@ -978,19 +978,19 @@
    "bytes": 19100,
    "status": "used",
    "where": [
-    "(9.8, 25.2) [townScene.ts:9277]",
-    "(13.4, 25.2) [townScene.ts:9278]"
+    "(9.8, 25.2) [townScene.ts:9281]",
+    "(13.4, 25.2) [townScene.ts:9282]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 9277,
+     "line": 9281,
      "text": "void placeFbx(greekGardenUrl, { x: 9.8, z: 25.2, width: 2.3, greek: true });"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 9278,
+     "line": 9282,
      "text": "void placeFbx(greekGardenUrl, { x: 13.4, z: 25.2, width: 2.3, greek: true });"
     }
    ],
@@ -1020,13 +1020,13 @@
    "bytes": 25548,
    "status": "used",
    "where": [
-    "(-25, 23) [townScene.ts:9274]"
+    "(-25, 23) [townScene.ts:9278]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 9274,
+     "line": 9278,
      "text": "void placeFbx(greekPot1Url, { x: -25, z: 23, height: 0.55, greek: true });"
     }
    ],
@@ -1042,13 +1042,13 @@
    "bytes": 19868,
    "status": "used",
    "where": [
-    "(-20.8, 24.0) [townScene.ts:9275]"
+    "(-20.8, 24.0) [townScene.ts:9279]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 9275,
+     "line": 9279,
      "text": "void placeFbx(greekPot2Url, { x: -20.8, z: 24.0, height: 0.7, greek: true });"
     }
    ],
@@ -1064,19 +1064,19 @@
    "bytes": 22556,
    "status": "used",
    "where": [
-    "(-27.0, 9.6) [townScene.ts:9270]",
-    "(24.8, -1.6) [townScene.ts:9271]"
+    "(-27.0, 9.6) [townScene.ts:9274]",
+    "(24.8, -1.6) [townScene.ts:9275]"
    ],
    "note": "--- Greek dressing: furniture and small goods at the houses' doorsteps and terraces (the town has no interiors, Rome lives outside), planters in the garden beds, a wood pile for the caldarium's appetite, and two measured",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 9270,
+     "line": 9274,
      "text": "void placeFbx(greekTableUrl, { x: -27.0, z: 9.6, rotY: 0.6, width: 1.7, greek: true });"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 9271,
+     "line": 9275,
      "text": "void placeFbx(greekTableUrl, { x: 24.8, z: -1.6, rotY: -0.4, width: 1.7, greek: true });"
     }
    ],
@@ -1092,19 +1092,19 @@
    "bytes": 16684,
    "status": "used",
    "where": [
-    "(27.9, 27.6) [townScene.ts:9280]",
-    "(-24.6, 20.2) [townScene.ts:9281]"
+    "(27.9, 27.6) [townScene.ts:9284]",
+    "(-24.6, 20.2) [townScene.ts:9285]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 9280,
+     "line": 9284,
      "text": "void placeFbx(greekWoodPileUrl, { x: 27.9, z: 27.6, rotY: 0.8, width: 1.6, greek: true });"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 9281,
+     "line": 9285,
      "text": "void placeFbx(greekWoodPileUrl, { x: -24.6, z: 20.2, rotY: 2.2, width: 1.4, greek: true });"
     }
    ],
@@ -1142,7 +1142,7 @@
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 3145,
+     "line": 3146,
      "text": "podest: settingPodestUrl, banner: settingBannerUrl,"
     }
    ],
@@ -1159,33 +1159,33 @@
    "bytes": 5303164,
    "status": "used",
    "where": [
-    "townScene.ts:3141 `void placeWorld(colosseumUrl, { x: COLOSSEUM_PLACEMENT.x, z: COLOSSEUM_PLACEMENT.z, rotY: `"
+    "townScene.ts:3142 `void placeWorld(colosseumUrl, { x: COLOSSEUM_PLACEMENT.x, z: COLOSSEUM_PLACEMENT.z, rotY: `"
    ],
    "note": "The Colosseum in its prime in the eastern basin: the Idyllic Rome amphitheatre (Task 85), slimmed to a phone budget, textured, and complete with its own velarium ring and masts. Its setting follows: the stair and the sta",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 807,
+     "line": 808,
      "text": "[colosseumUrl, 2],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 1520,
+     "line": 1521,
      "text": "const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductCo"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3141,
+     "line": 3142,
      "text": "void placeWorld(colosseumUrl, { x: COLOSSEUM_PLACEMENT.x, z: COLOSSEUM_PLACEMENT.z, rotY: COLOSSEUM_PLACEMENT.rotY, width: COLOSSEUM_PLACEMENT.width }"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3143,
+     "line": 3144,
      "text": "colosseum: colosseumUrl, stairs: settingStairsUrl, house_a: settingHouseAUrl, house_b: settingHouseBUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 9820,
+     "line": 9824,
      "text": "void runtime.streaming.request(() => loadModelScene(colosseumUrl), () => ({ x: COLOSSEUM.position[0], z: COLOSSEUM.position[1] }))"
     }
    ],
@@ -1208,12 +1208,12 @@
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 1520,
+     "line": 1521,
      "text": "const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductCo"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3143,
+     "line": 3144,
      "text": "colosseum: colosseumUrl, stairs: settingStairsUrl, house_a: settingHouseAUrl, house_b: settingHouseBUrl,"
     }
    ],
@@ -1236,12 +1236,12 @@
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 1520,
+     "line": 1521,
      "text": "const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductCo"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3143,
+     "line": 3144,
      "text": "colosseum: colosseumUrl, stairs: settingStairsUrl, house_a: settingHouseAUrl, house_b: settingHouseBUrl,"
     }
    ],
@@ -1264,12 +1264,12 @@
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 1520,
+     "line": 1521,
      "text": "const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductCo"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3144,
+     "line": 3145,
      "text": "insula: settingInsulaUrl, statue_soldier: settingSoldierUrl, statue_general: settingGeneralUrl,"
     }
    ],
@@ -1293,7 +1293,7 @@
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 3145,
+     "line": 3146,
      "text": "podest: settingPodestUrl, banner: settingBannerUrl,"
     }
    ],
@@ -1316,12 +1316,12 @@
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 1520,
+     "line": 1521,
      "text": "const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductCo"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3143,
+     "line": 3144,
      "text": "colosseum: colosseumUrl, stairs: settingStairsUrl, house_a: settingHouseAUrl, house_b: settingHouseBUrl,"
     }
    ],
@@ -1344,7 +1344,7 @@
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 3144,
+     "line": 3145,
      "text": "insula: settingInsulaUrl, statue_soldier: settingSoldierUrl, statue_general: settingGeneralUrl,"
     }
    ],
@@ -1367,7 +1367,7 @@
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 3144,
+     "line": 3145,
      "text": "insula: settingInsulaUrl, statue_soldier: settingSoldierUrl, statue_general: settingGeneralUrl,"
     }
    ],
@@ -1391,7 +1391,7 @@
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 4928,
+     "line": 4932,
      "text": "amphora_a: dressingAmphoraAUrl,"
     }
    ],
@@ -1415,7 +1415,7 @@
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 4929,
+     "line": 4933,
      "text": "amphora_b: dressingAmphoraBUrl,"
     }
    ],
@@ -1438,7 +1438,7 @@
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 4930,
+     "line": 4934,
      "text": "amphora_c: dressingAmphoraCUrl,"
     }
    ],
@@ -1462,7 +1462,7 @@
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 4931,
+     "line": 4935,
      "text": "basket_fruit: dressingBasketFruitUrl,"
     }
    ],
@@ -1487,7 +1487,7 @@
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 4932,
+     "line": 4936,
      "text": "basket_grain: dressingBasketGrainUrl,"
     }
    ],
@@ -1510,7 +1510,7 @@
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 4933,
+     "line": 4937,
      "text": "bread: dressingBreadUrl,"
     }
    ],
@@ -1534,7 +1534,7 @@
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 4934,
+     "line": 4938,
      "text": "cloth_a: dressingClothAUrl,"
     }
    ],
@@ -1558,7 +1558,7 @@
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 4935,
+     "line": 4939,
      "text": "cloth_b: dressingClothBUrl,"
     }
    ],
@@ -1582,7 +1582,7 @@
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 4936,
+     "line": 4940,
      "text": "cloth_c: dressingClothCUrl,"
     }
    ],
@@ -1606,7 +1606,7 @@
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 4925,
+     "line": 4929,
      "text": "vase_a: dressingVaseAUrl,"
     }
    ],
@@ -1629,7 +1629,7 @@
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 4926,
+     "line": 4930,
      "text": "vase_b: dressingVaseBUrl,"
     }
    ],
@@ -1653,7 +1653,7 @@
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 4927,
+     "line": 4931,
      "text": "vase_c: dressingVaseCUrl,"
     }
    ],
@@ -1669,23 +1669,23 @@
    "bytes": 17176448,
    "status": "used",
    "where": [
-    "townScene.ts:5358 `loadModelScene(museAvatarUrl)`"
+    "townScene.ts:5362 `loadModelScene(museAvatarUrl)`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 818,
+     "line": 819,
      "text": "[museAvatarUrl, 0],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 862,
+     "line": 863,
      "text": "[...[centurionUrl, museAvatarUrl].filter((url) => !modelCache.has(url)).map(fetchModelBytes), ...CORE_CLIP_URLS.map(fetchClipBytes)],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 5358,
+     "line": 5362,
      "text": "loadModelScene(museAvatarUrl)"
     }
    ],
@@ -1701,13 +1701,13 @@
    "bytes": 785872,
    "status": "used",
    "where": [
-    "(6.4, 17.8) [townScene.ts:9581]"
+    "(6.4, 17.8) [townScene.ts:9585]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 9581,
+     "line": 9585,
      "text": "void loadAnimal(\"cat\", catUrl, 0.31, { x: 6.4, z: 17.8, r: 2 }, 0.85).then((a) => {"
     }
    ],
@@ -1723,13 +1723,13 @@
    "bytes": 93911,
    "status": "used",
    "where": [
-    "townScene.ts:9478 `: kind === \"cat\" ? catTexUrl`"
+    "townScene.ts:9482 `: kind === \"cat\" ? catTexUrl`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 9478,
+     "line": 9482,
      "text": ": kind === \"cat\" ? catTexUrl"
     }
    ],
@@ -1744,25 +1744,25 @@
    "bytes": 597904,
    "status": "used",
    "where": [
-    "(11.4, 27) [townScene.ts:9561]",
-    "(12.6, 26.8) [townScene.ts:9562]",
-    "(10.2, 27.2) [townScene.ts:9563]"
+    "(11.4, 27) [townScene.ts:9565]",
+    "(12.6, 26.8) [townScene.ts:9566]",
+    "(10.2, 27.2) [townScene.ts:9567]"
    ],
    "note": "Two chickens and a rooster at the market (the pack has one chicken; the third wears a slightly larger scale and a russet tint and carries the title with dignity).",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 9561,
+     "line": 9565,
      "text": "void loadAnimal(\"chicken\", chickenUrl, 0.42, { x: 11.4, z: 27, r: 2.2 }, 0.55);"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 9562,
+     "line": 9566,
      "text": "void loadAnimal(\"chicken\", chickenUrl, 0.45, { x: 12.6, z: 26.8, r: 2.2 }, 0.5);"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 9563,
+     "line": 9567,
      "text": "void loadAnimal(\"chicken\", chickenUrl, 0.52, { x: 10.2, z: 27.2, r: 2 }, 0.6).then((a) => {"
     }
    ],
@@ -1778,13 +1778,13 @@
    "bytes": 195241,
    "status": "used",
    "where": [
-    "townScene.ts:9477 `kind === \"chicken\" ? chickenTexUrl`"
+    "townScene.ts:9481 `kind === \"chicken\" ? chickenTexUrl`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 9477,
+     "line": 9481,
      "text": "kind === \"chicken\" ? chickenTexUrl"
     }
    ],
@@ -1799,13 +1799,13 @@
    "bytes": 706848,
    "status": "used",
    "where": [
-    "(-20, 28) [townScene.ts:9574]"
+    "(-20, 28) [townScene.ts:9578]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 9574,
+     "line": 9578,
      "text": "void loadAnimal(\"pig\", pigUrl, 0.64, { x: -20, z: 28, r: 2.2 }, 0.5);"
     }
    ],
@@ -1821,13 +1821,13 @@
    "bytes": 162646,
    "status": "used",
    "where": [
-    "townScene.ts:9479 `: kind === \"pig\" ? pigTexUrl`"
+    "townScene.ts:9483 `: kind === \"pig\" ? pigTexUrl`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 9479,
+     "line": 9483,
      "text": ": kind === \"pig\" ? pigTexUrl"
     }
    ],
@@ -1842,13 +1842,13 @@
    "bytes": 580656,
    "status": "used",
    "where": [
-    "(-15, 28.2) [townScene.ts:9573]"
+    "(-15, 28.2) [townScene.ts:9577]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 9573,
+     "line": 9577,
      "text": "void loadAnimal(\"sheep\", sheepUrl, 0.8, { x: -15, z: 28.2, r: 2.4 }, 0.45);"
     }
    ],
@@ -1864,13 +1864,13 @@
    "bytes": 166404,
    "status": "used",
    "where": [
-    "townScene.ts:9480 `: kind === \"sheep\" ? sheepTexUrl`"
+    "townScene.ts:9484 `: kind === \"sheep\" ? sheepTexUrl`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 9480,
+     "line": 9484,
      "text": ": kind === \"sheep\" ? sheepTexUrl"
     }
    ],
@@ -1885,13 +1885,13 @@
    "bytes": 878892,
    "status": "used",
    "where": [
-    "townScene.ts:9868 `void runtime.streaming.request(() => assetUrl(phoenixUrl).then((resolved) => fbxLoader2.lo`"
+    "townScene.ts:9872 `void runtime.streaming.request(() => assetUrl(phoenixUrl).then((resolved) => fbxLoader2.lo`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 9868,
+     "line": 9872,
      "text": "void runtime.streaming.request(() => assetUrl(phoenixUrl).then((resolved) => fbxLoader2.loadAsync(resolved)), () => ({ x: COLOSSEUM.position[0], z: CO"
     }
    ],
@@ -1907,13 +1907,13 @@
    "bytes": 228,
    "status": "used",
    "where": [
-    "townScene.ts:9872 `const tex = loadAssetTexture(phoenixTexUrl);`"
+    "townScene.ts:9876 `const tex = loadAssetTexture(phoenixTexUrl);`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 9872,
+     "line": 9876,
      "text": "const tex = loadAssetTexture(phoenixTexUrl);"
     }
    ],
@@ -1929,23 +1929,23 @@
    "bytes": 341776,
    "status": "used",
    "where": [
-    "townScene.ts:3001 `sidechat: annexUrl,`"
+    "townScene.ts:3002 `sidechat: annexUrl,`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 786,
+     "line": 787,
      "text": "[annexUrl, 0],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 998,
+     "line": 999,
      "text": "templeUrl, senateUrl, annexUrl, insulaeUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3001,
+     "line": 3002,
      "text": "sidechat: annexUrl,"
     }
    ],
@@ -1975,28 +1975,28 @@
    "bytes": 200596,
    "status": "used",
    "where": [
-    "(-22, -25) [townScene.ts:3131]"
+    "(-22, -25) [townScene.ts:3132]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 810,
+     "line": 811,
      "text": "[aqueductUrl, 2],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 1000,
+     "line": 1001,
      "text": "aqueductUrl, aqueductConnectorUrl, triumphalArchUrl, archRoundUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 1520,
+     "line": 1521,
      "text": "const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductCo"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3131,
+     "line": 3132,
      "text": "void placeWorld(aqueductUrl, { x: -22, z: -25, rotY: 0.85, width: 17, y: -0.5 });"
     }
    ],
@@ -2012,28 +2012,28 @@
    "bytes": 14028,
    "status": "used",
    "where": [
-    "(-35, -16) [townScene.ts:3132]"
+    "(-35, -16) [townScene.ts:3133]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 811,
+     "line": 812,
      "text": "[aqueductConnectorUrl, 2],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 1000,
+     "line": 1001,
      "text": "aqueductUrl, aqueductConnectorUrl, triumphalArchUrl, archRoundUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 1520,
+     "line": 1521,
      "text": "const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductCo"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3132,
+     "line": 3133,
      "text": "void placeWorld(aqueductConnectorUrl, { x: -35, z: -16, rotY: 1.3, width: 10, y: -0.4 });"
     }
    ],
@@ -2049,19 +2049,19 @@
    "bytes": 12700,
    "status": "used",
    "where": [
-    "(0, 2.1) [townScene.ts:4336]"
+    "(0, 2.1) [townScene.ts:4338]"
    ],
-   "note": "",
+   "note": "Task 96: the arch's own near-white face glowed chalk under the lanterns at dusk; travertine instead.",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 1000,
+     "line": 1001,
      "text": "aqueductUrl, aqueductConnectorUrl, triumphalArchUrl, archRoundUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 4336,
-     "text": "void placeModel(archRoundUrl, secretGroup, { x: 0, z: 2.1, width: 2.7 });"
+     "line": 4338,
+     "text": "void placeModel(archRoundUrl, secretGroup, { x: 0, z: 2.1, width: 2.7 }).then((g) => {"
     }
    ],
    "triangles": 216,
@@ -2076,18 +2076,18 @@
    "bytes": 60528,
    "status": "used",
    "where": [
-    "(-36, 4) [townScene.ts:3134]"
+    "(-36, 4) [townScene.ts:3135]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 812,
+     "line": 813,
      "text": "[ballistaUrl, 2],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3134,
+     "line": 3135,
      "text": "void placeWorld(ballistaUrl, { x: -36, z: 4, rotY: 0.8, width: 2.3 });"
     }
    ],
@@ -2103,24 +2103,24 @@
    "bytes": 14652,
    "status": "used",
    "where": [
-    "(6.2, 44.6) [townScene.ts:3135]",
-    "(-6.2, 44.6) [townScene.ts:3136]"
+    "(6.2, 44.6) [townScene.ts:3136]",
+    "(-6.2, 44.6) [townScene.ts:3137]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 803,
+     "line": 804,
      "text": "[bannerUrl, 1],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3135,
+     "line": 3136,
      "text": "void placeWorld(bannerUrl, { x: 6.2, z: 44.6, height: 3.1 });"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3136,
+     "line": 3137,
      "text": "void placeWorld(bannerUrl, { x: -6.2, z: 44.6, height: 3.1 });"
     }
    ],
@@ -2136,18 +2136,18 @@
    "bytes": 14460,
    "status": "used",
    "where": [
-    "(6.8, 31.2) [townScene.ts:3437]"
+    "(6.8, 31.2) [townScene.ts:3438]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 804,
+     "line": 805,
      "text": "[bannerTriangleUrl, 1],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3437,
+     "line": 3438,
      "text": "void placeWorld(bannerTriangleUrl, { x: 6.8, z: 31.2, height: 2.7 });"
     }
    ],
@@ -2163,13 +2163,13 @@
    "bytes": 16108,
    "status": "used",
    "where": [
-    "(6.9, 35.8) [townScene.ts:3481]"
+    "(6.9, 35.8) [townScene.ts:3482]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 3481,
+     "line": 3482,
      "text": "layOutGoods(placeWorld(barrelUrl, { x: 6.9, z: 35.8, width: 0.72 }));"
     }
    ],
@@ -2185,35 +2185,35 @@
    "bytes": 11636,
    "status": "used",
    "where": [
-    "(8.8, 4.6) [townScene.ts:2840]",
-    "(-2.3, 2.62) [townScene.ts:2969]",
-    "(17.3, -23.6) [townScene.ts:4002]"
+    "(8.8, 4.6) [townScene.ts:2841]",
+    "(-2.3, 2.62) [townScene.ts:2970]",
+    "(17.3, -23.6) [townScene.ts:4003]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 801,
+     "line": 802,
      "text": "[benchStoneUrl, 1],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 2840,
+     "line": 2841,
      "text": "void placeWorld(benchStoneUrl, { x: 8.8, z: 4.6, rotY: Math.PI / 2, width: 1.9 }).then((g) => {"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 2969,
+     "line": 2970,
      "text": "void placeModel(benchStoneUrl, house, { x: -2.3, z: 2.62, y: 0.14, rotY: 0.35, width: 1.9 }).then((g) => {"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3633,
+     "line": 3634,
      "text": "void placeWorld(benchStoneUrl, { x: CLIFF.bench.x, z: CLIFF.bench.z, rotY: CLIFF.bench.rotY, width: 1.9 }).then((g) => {"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 4002,
+     "line": 4003,
      "text": "void placeWorld(benchStoneUrl, { x: 17.3, z: -23.6, rotY: Math.PI / 2, width: 1.9 }).then((g) => {"
     }
    ],
@@ -2229,18 +2229,18 @@
    "bytes": 6864,
    "status": "used",
    "where": [
-    "(0, -0.7) [townScene.ts:4337]"
+    "(0, -0.7) [townScene.ts:4341]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 802,
+     "line": 803,
      "text": "[benchWoodenUrl, 1],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 4337,
+     "line": 4341,
      "text": "void placeModel(benchWoodenUrl, secretGroup, { x: 0, z: -0.7, rotY: 0, width: 1.7 }).then((g) => {"
     }
    ],
@@ -2256,23 +2256,23 @@
    "bytes": 46184,
    "status": "used",
    "where": [
-    "townScene.ts:3745 `.request(() => loadModelScene(boatSmallUrl), () => ({ x: CLIFF.head.x, z: CLIFF.head.z }))`"
+    "townScene.ts:3746 `.request(() => loadModelScene(boatSmallUrl), () => ({ x: CLIFF.head.x, z: CLIFF.head.z }))`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 808,
+     "line": 809,
      "text": "[boatSmallUrl, 2],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3745,
+     "line": 3746,
      "text": ".request(() => loadModelScene(boatSmallUrl), () => ({ x: CLIFF.head.x, z: CLIFF.head.z }))"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3888,
+     "line": 3889,
      "text": "void runtime.streaming.request(() => loadModelScene(boatSmallUrl), () => ({ x: LAKE.position[0], z: LAKE.position[1] })).then((scene) => {"
     }
    ],
@@ -2288,28 +2288,28 @@
    "bytes": 42488,
    "status": "used",
    "where": [
-    "townScene.ts:3424 `void placeWorld(boothAUrl, { x: boothA[0], z: boothA[1], rotY: boothA[2], width: 3.6 });`"
+    "townScene.ts:3425 `void placeWorld(boothAUrl, { x: boothA[0], z: boothA[1], rotY: boothA[2], width: 3.6 });`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 796,
+     "line": 797,
      "text": "[boothAUrl, 1],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 1001,
+     "line": 1002,
      "text": "columnIonicUrl, columnSimpleUrl, boothAUrl, boothBUrl, boothCUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 1520,
+     "line": 1521,
      "text": "const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductCo"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3424,
+     "line": 3425,
      "text": "void placeWorld(boothAUrl, { x: boothA[0], z: boothA[1], rotY: boothA[2], width: 3.6 });"
     }
    ],
@@ -2325,28 +2325,28 @@
    "bytes": 42416,
    "status": "used",
    "where": [
-    "townScene.ts:3425 `void placeWorld(boothBUrl, { x: boothB[0], z: boothB[1], rotY: boothB[2], width: 3.6 });`"
+    "townScene.ts:3426 `void placeWorld(boothBUrl, { x: boothB[0], z: boothB[1], rotY: boothB[2], width: 3.6 });`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 797,
+     "line": 798,
      "text": "[boothBUrl, 1],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 1001,
+     "line": 1002,
      "text": "columnIonicUrl, columnSimpleUrl, boothAUrl, boothBUrl, boothCUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 1520,
+     "line": 1521,
      "text": "const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductCo"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3425,
+     "line": 3426,
      "text": "void placeWorld(boothBUrl, { x: boothB[0], z: boothB[1], rotY: boothB[2], width: 3.6 });"
     }
    ],
@@ -2362,28 +2362,28 @@
    "bytes": 42228,
    "status": "used",
    "where": [
-    "townScene.ts:3426 `void placeWorld(boothCUrl, { x: boothC[0], z: boothC[1], rotY: boothC[2], width: 3.6 });`"
+    "townScene.ts:3427 `void placeWorld(boothCUrl, { x: boothC[0], z: boothC[1], rotY: boothC[2], width: 3.6 });`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 798,
+     "line": 799,
      "text": "[boothCUrl, 1],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 1001,
+     "line": 1002,
      "text": "columnIonicUrl, columnSimpleUrl, boothAUrl, boothBUrl, boothCUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 1520,
+     "line": 1521,
      "text": "const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductCo"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3426,
+     "line": 3427,
      "text": "void placeWorld(boothCUrl, { x: boothC[0], z: boothC[1], rotY: boothC[2], width: 3.6 });"
     }
    ],
@@ -2413,13 +2413,13 @@
    "bytes": 14564,
    "status": "used",
    "where": [
-    "(6.9, 33.6) [townScene.ts:3479]"
+    "(6.9, 33.6) [townScene.ts:3480]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 3479,
+     "line": 3480,
      "text": "layOutGoods(placeWorld(breadUrl, { x: 6.9, z: 33.6, y: 0.6, rotY: 0.7, width: 0.5 }));"
     }
    ],
@@ -2435,13 +2435,13 @@
    "bytes": 10916,
    "status": "used",
    "where": [
-    "townScene.ts:2885 `const PACK_BUSHES = [bushAUrl, bushBUrl, bushCUrl, bushDUrl, bushEUrl];`"
+    "townScene.ts:2886 `const PACK_BUSHES = [bushAUrl, bushBUrl, bushCUrl, bushDUrl, bushEUrl];`"
    ],
    "note": "Pack vegetation: the Roman Empire pack's own trees, bushes, and flowers, converted like the buildings, so the greenery matches the district's art style. (The Town Tree stays procedural, it grows and changes with the seas",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 2885,
+     "line": 2886,
      "text": "const PACK_BUSHES = [bushAUrl, bushBUrl, bushCUrl, bushDUrl, bushEUrl];"
     }
    ],
@@ -2457,18 +2457,18 @@
    "bytes": 10848,
    "status": "used",
    "where": [
-    "(-2.3, 1.5) [townScene.ts:4343]"
+    "(-2.3, 1.5) [townScene.ts:4347]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 2885,
+     "line": 2886,
      "text": "const PACK_BUSHES = [bushAUrl, bushBUrl, bushCUrl, bushDUrl, bushEUrl];"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 4343,
+     "line": 4347,
      "text": "void placeModel(bushBUrl, secretGroup, { x: -2.3, z: 1.5, height: 0.95 });"
     }
    ],
@@ -2484,18 +2484,18 @@
    "bytes": 8864,
    "status": "used",
    "where": [
-    "townScene.ts:3644 `if (kind === 0) void placeWorld(bushCUrl, { x: px, z: pz, rotY: rot, width: 1.6 });`"
+    "townScene.ts:3645 `if (kind === 0) void placeWorld(bushCUrl, { x: px, z: pz, rotY: rot, width: 1.6 });`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 2885,
+     "line": 2886,
      "text": "const PACK_BUSHES = [bushAUrl, bushBUrl, bushCUrl, bushDUrl, bushEUrl];"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3644,
+     "line": 3645,
      "text": "if (kind === 0) void placeWorld(bushCUrl, { x: px, z: pz, rotY: rot, width: 1.6 });"
     }
    ],
@@ -2511,18 +2511,18 @@
    "bytes": 13224,
    "status": "used",
    "where": [
-    "(2.4, 1.3) [townScene.ts:4344]"
+    "(2.4, 1.3) [townScene.ts:4348]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 2885,
+     "line": 2886,
      "text": "const PACK_BUSHES = [bushAUrl, bushBUrl, bushCUrl, bushDUrl, bushEUrl];"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 4344,
+     "line": 4348,
      "text": "void placeModel(bushDUrl, secretGroup, { x: 2.4, z: 1.3, rotY: 1.2, height: 0.9 });"
     }
    ],
@@ -2538,13 +2538,13 @@
    "bytes": 16292,
    "status": "used",
    "where": [
-    "townScene.ts:2885 `const PACK_BUSHES = [bushAUrl, bushBUrl, bushCUrl, bushDUrl, bushEUrl];`"
+    "townScene.ts:2886 `const PACK_BUSHES = [bushAUrl, bushBUrl, bushCUrl, bushDUrl, bushEUrl];`"
    ],
    "note": "Pack vegetation: the Roman Empire pack's own trees, bushes, and flowers, converted like the buildings, so the greenery matches the district's art style. (The Town Tree stays procedural, it grows and changes with the seas",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 2885,
+     "line": 2886,
      "text": "const PACK_BUSHES = [bushAUrl, bushBUrl, bushCUrl, bushDUrl, bushEUrl];"
     }
    ],
@@ -2574,23 +2574,23 @@
    "bytes": 77740,
    "status": "used",
    "where": [
-    "townScene.ts:3421 `void placeWorld(columnIonicUrl, { x: VILLA.ionicColumn[0], z: VILLA.ionicColumn[1], height`"
+    "townScene.ts:3422 `void placeWorld(columnIonicUrl, { x: VILLA.ionicColumn[0], z: VILLA.ionicColumn[1], height`"
    ],
    "note": "One grand ionic column in the peristyle garden, the pointy hat's perch.",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 799,
+     "line": 800,
      "text": "[columnIonicUrl, 1],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 1001,
+     "line": 1002,
      "text": "columnIonicUrl, columnSimpleUrl, boothAUrl, boothBUrl, boothCUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3421,
+     "line": 3422,
      "text": "void placeWorld(columnIonicUrl, { x: VILLA.ionicColumn[0], z: VILLA.ionicColumn[1], height: 3.2 });"
     }
    ],
@@ -2606,28 +2606,28 @@
    "bytes": 22436,
    "status": "used",
    "where": [
-    "townScene.ts:3182 `void placeWorld(columnSimpleUrl, { x: cx, z: cz, height: VILLA.peristyle.columnHeight });`"
+    "townScene.ts:3183 `void placeWorld(columnSimpleUrl, { x: cx, z: cz, height: VILLA.peristyle.columnHeight });`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 800,
+     "line": 801,
      "text": "[columnSimpleUrl, 1],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 1001,
+     "line": 1002,
      "text": "columnIonicUrl, columnSimpleUrl, boothAUrl, boothBUrl, boothCUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3182,
+     "line": 3183,
      "text": "void placeWorld(columnSimpleUrl, { x: cx, z: cz, height: VILLA.peristyle.columnHeight });"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 4814,
+     "line": 4818,
      "text": "void placeWorld(columnSimpleUrl, { x: cx, z: cz, height: 3.0 });"
     }
    ],
@@ -2643,29 +2643,29 @@
    "bytes": 59484,
    "status": "used",
    "where": [
-    "(-40, 10) [townScene.ts:3491]",
-    "(-10.6, -35.9) [townScene.ts:4009]"
+    "(-40, 10) [townScene.ts:3492]",
+    "(-10.6, -35.9) [townScene.ts:4010]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 1519,
+     "line": 1520,
      "text": "const treeUrls = new Set([treeAUrl, treeBUrl, treeCUrl, treeDUrl, cypressUrl, coniferUrl, oliveUrl]);"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3491,
+     "line": 3492,
      "text": "void placeWorld(coniferUrl, { x: -40, z: 10, height: 6.5 });"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 4009,
+     "line": 4010,
      "text": "void placeWorld(coniferUrl, { x: -10.6, z: -35.9, height: 5.6 });"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 5470,
+     "line": 5474,
      "text": "void placeWorld(coniferUrl, { x: px, z: pz, rotY: i * 1.9, height: 4.2 * ps });"
     }
    ],
@@ -2681,24 +2681,24 @@
    "bytes": 43060,
    "status": "used",
    "where": [
-    "(6.9, 33.6) [townScene.ts:3477]",
-    "(-6.9, 33.6) [townScene.ts:3478]"
+    "(6.9, 33.6) [townScene.ts:3478]",
+    "(-6.9, 33.6) [townScene.ts:3479]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 3477,
+     "line": 3478,
      "text": "layOutGoods(placeWorld(crateUrl, { x: 6.9, z: 33.6, rotY: 0.4, width: 0.62 }));"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3478,
+     "line": 3479,
      "text": "layOutGoods(placeWorld(crateUrl, { x: -6.9, z: 33.6, rotY: -0.5, width: 0.62 }));"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 4954,
+     "line": 4958,
      "text": "layOutGoods(placeWorld(crateUrl, { x, z, rotY: MARKET_BOOTHS[c.booth]![2] + c.rot, width: 0.62, y: terrainHeight(bx, bz) - terrainHeight(x, z) }));"
     }
    ],
@@ -2714,53 +2714,53 @@
    "bytes": 11988,
    "status": "used",
    "where": [
-    "(31.5, 33) [townScene.ts:3486]",
-    "(-27.2, 30.6) [townScene.ts:3487]",
-    "(34, -10.2) [townScene.ts:3488]",
-    "(-39.1, -22.1) [townScene.ts:3489]",
-    "(-2.7, -1.3) [townScene.ts:4341]",
-    "(2.7, -1.5) [townScene.ts:4342]"
+    "(31.5, 33) [townScene.ts:3487]",
+    "(-27.2, 30.6) [townScene.ts:3488]",
+    "(34, -10.2) [townScene.ts:3489]",
+    "(-39.1, -22.1) [townScene.ts:3490]",
+    "(-2.7, -1.3) [townScene.ts:4345]",
+    "(2.7, -1.5) [townScene.ts:4346]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 1519,
+     "line": 1520,
      "text": "const treeUrls = new Set([treeAUrl, treeBUrl, treeCUrl, treeDUrl, cypressUrl, coniferUrl, oliveUrl]);"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3418,
+     "line": 3419,
      "text": "void placeModel(cypressUrl, world, { x: cx, z: cz, y: terrainHeight(cx, cz), height: 5.6 });"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3486,
+     "line": 3487,
      "text": "void placeWorld(cypressUrl, { x: 31.5, z: 33, height: 4.6 });"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3487,
+     "line": 3488,
      "text": "void placeWorld(cypressUrl, { x: -27.2, z: 30.6, rotY: 1.2, height: 4.2 });"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3488,
+     "line": 3489,
      "text": "void placeWorld(cypressUrl, { x: 34, z: -10.2, rotY: 2.1, height: 4.8 });"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3489,
+     "line": 3490,
      "text": "void placeWorld(cypressUrl, { x: -39.1, z: -22.1, rotY: 0.6, height: 4.4 });"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 4341,
+     "line": 4345,
      "text": "void placeModel(cypressUrl, secretGroup, { x: -2.7, z: -1.3, height: 3.8 });"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 4342,
+     "line": 4346,
      "text": "void placeModel(cypressUrl, secretGroup, { x: 2.7, z: -1.5, rotY: 1.1, height: 3.4 });"
     }
    ],
@@ -2776,13 +2776,13 @@
    "bytes": 7996,
    "status": "used",
    "where": [
-    "townScene.ts:2887 `const PACK_FLOWERS = [flowerAUrl, flowerMedUrl, flowerGroupUrl];`"
+    "townScene.ts:2888 `const PACK_FLOWERS = [flowerAUrl, flowerMedUrl, flowerGroupUrl];`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 2887,
+     "line": 2888,
      "text": "const PACK_FLOWERS = [flowerAUrl, flowerMedUrl, flowerGroupUrl];"
     }
    ],
@@ -2798,18 +2798,18 @@
    "bytes": 53380,
    "status": "used",
    "where": [
-    "townScene.ts:5526 `height: flowerUrl === flowerGroupUrl ? 0.5 : 0.62,`"
+    "townScene.ts:5530 `height: flowerUrl === flowerGroupUrl ? 0.5 : 0.62,`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 2887,
+     "line": 2888,
      "text": "const PACK_FLOWERS = [flowerAUrl, flowerMedUrl, flowerGroupUrl];"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 5526,
+     "line": 5530,
      "text": "height: flowerUrl === flowerGroupUrl ? 0.5 : 0.62,"
     }
    ],
@@ -2825,13 +2825,13 @@
    "bytes": 56016,
    "status": "used",
    "where": [
-    "townScene.ts:2887 `const PACK_FLOWERS = [flowerAUrl, flowerMedUrl, flowerGroupUrl];`"
+    "townScene.ts:2888 `const PACK_FLOWERS = [flowerAUrl, flowerMedUrl, flowerGroupUrl];`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 2887,
+     "line": 2888,
      "text": "const PACK_FLOWERS = [flowerAUrl, flowerMedUrl, flowerGroupUrl];"
     }
    ],
@@ -2848,18 +2848,18 @@
    "bytes": 8612,
    "status": "used",
    "where": [
-    "townScene.ts:5842 `const gaiusArms = createGaiusArms({ frame: avatar, place: placeModel, gladiusUrl, shieldUr`"
+    "townScene.ts:5846 `const gaiusArms = createGaiusArms({ frame: avatar, place: placeModel, gladiusUrl, shieldUr`"
    ],
    "note": "Gaius's arms: the gladius at his right hip, the scutum on his back (gaiusArms.ts).",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 816,
+     "line": 817,
      "text": "[gladiusUrl, 0],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 5842,
+     "line": 5846,
      "text": "const gaiusArms = createGaiusArms({ frame: avatar, place: placeModel, gladiusUrl, shieldUrl: shieldLegionaireUrl });"
     }
    ],
@@ -2875,13 +2875,13 @@
    "bytes": 22740,
    "status": "used",
    "where": [
-    "(-6.9, 33.6) [townScene.ts:3480]"
+    "(-6.9, 33.6) [townScene.ts:3481]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 3480,
+     "line": 3481,
      "text": "layOutGoods(placeWorld(grapesUrl, { x: -6.9, z: 33.6, y: 0.6, rotY: 0.2, width: 0.42 }));"
     }
    ],
@@ -2897,30 +2897,30 @@
    "bytes": 2860,
    "status": "used",
    "where": [
-    "(-9.6, -29.2) [townScene.ts:4012]",
-    "(-11.8, -34.6) [townScene.ts:4013]",
-    "(-19.8, -25.9) [townScene.ts:4014]"
+    "(-9.6, -29.2) [townScene.ts:4013]",
+    "(-11.8, -34.6) [townScene.ts:4014]",
+    "(-19.8, -25.9) [townScene.ts:4015]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 4012,
+     "line": 4013,
      "text": "void placeWorld(grassPatchUrl, { x: -9.6, z: -29.2, rotY: 0.4, width: 1.2 });"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 4013,
+     "line": 4014,
      "text": "void placeWorld(grassPatchUrl, { x: -11.8, z: -34.6, rotY: 1.6, width: 1.2 });"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 4014,
+     "line": 4015,
      "text": "void placeWorld(grassPatchUrl, { x: -19.8, z: -25.9, rotY: 2.8, width: 1.1 });"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 5532,
+     "line": 5536,
      "text": "void placeWorld(grassPatchUrl, { x: gx, z: gz, rotY: i * 0.7, width: 1.15 });"
     }
    ],
@@ -2937,23 +2937,23 @@
    "bytes": 469872,
    "status": "used",
    "where": [
-    "townScene.ts:2997 `garden: houseGardenUrl,`"
+    "townScene.ts:2998 `garden: houseGardenUrl,`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 787,
+     "line": 788,
      "text": "[houseGardenUrl, 0],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 999,
+     "line": 1000,
      "text": "houseSoundsUrl, houseGardenUrl, villaUrl, pavilionUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 2997,
+     "line": 2998,
      "text": "garden: houseGardenUrl,"
     }
    ],
@@ -2970,23 +2970,23 @@
    "bytes": 326164,
    "status": "used",
    "where": [
-    "townScene.ts:2996 `sounds: houseSoundsUrl,`"
+    "townScene.ts:2997 `sounds: houseSoundsUrl,`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 791,
+     "line": 792,
      "text": "[houseSoundsUrl, 1],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 999,
+     "line": 1000,
      "text": "houseSoundsUrl, houseGardenUrl, villaUrl, pavilionUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 2996,
+     "line": 2997,
      "text": "sounds: houseSoundsUrl,"
     }
    ],
@@ -3003,23 +3003,23 @@
    "bytes": 306960,
    "status": "used",
    "where": [
-    "townScene.ts:2999 `recipes: insulaeUrl,`"
+    "townScene.ts:3000 `recipes: insulaeUrl,`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 792,
+     "line": 793,
      "text": "[insulaeUrl, 1],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 998,
+     "line": 999,
      "text": "templeUrl, senateUrl, annexUrl, insulaeUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 2999,
+     "line": 3000,
      "text": "recipes: insulaeUrl,"
     }
    ],
@@ -3035,40 +3035,40 @@
    "bytes": 62880,
    "status": "used",
    "where": [
-    "(-23, 34) [townScene.ts:3490]",
-    "(-8.6, -26.4) [townScene.ts:3997]",
-    "(19.6, -25.4) [townScene.ts:4001]"
+    "(-23, 34) [townScene.ts:3491]",
+    "(-8.6, -26.4) [townScene.ts:3998]",
+    "(19.6, -25.4) [townScene.ts:4002]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 1519,
+     "line": 1520,
      "text": "const treeUrls = new Set([treeAUrl, treeBUrl, treeCUrl, treeDUrl, cypressUrl, coniferUrl, oliveUrl]);"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3490,
+     "line": 3491,
      "text": "void placeWorld(oliveUrl, { x: -23, z: 34, width: 3.4 });"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3997,
+     "line": 3998,
      "text": "void placeWorld(oliveUrl, { x: -8.6, z: -26.4, width: 3.2 });"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 4001,
+     "line": 4002,
      "text": "void placeWorld(oliveUrl, { x: 19.6, z: -25.4, width: 3.2 });"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 5803,
+     "line": 5807,
      "text": "for (const [ox, oz] of ATHENA_TEMPLE.olives) void placeWorld(oliveUrl, { x: ox, z: oz, rotY: ox * 1.7 + oz, width: 2.6 });"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 5818,
+     "line": 5822,
      "text": "void placeWorld(oliveUrl, { x: ox, z: oz, rotY: ox * 2.3 + oz, width: 3.2 }).then((g) => {"
     }
    ],
@@ -3084,18 +3084,18 @@
    "bytes": 4800,
    "status": "used",
    "where": [
-    "townScene.ts:3901 `void loadModelScene(paddleUrl).then((paddleScene) => {`"
+    "townScene.ts:3902 `void loadModelScene(paddleUrl).then((paddleScene) => {`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 809,
+     "line": 810,
      "text": "[paddleUrl, 2],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3901,
+     "line": 3902,
      "text": "void loadModelScene(paddleUrl).then((paddleScene) => {"
     }
    ],
@@ -3112,13 +3112,13 @@
    "bytes": 10217,
    "status": "used",
    "where": [
-    "townScene.ts:1008 `loadAssetTexture(paletteUrl, (texture) => {`"
+    "townScene.ts:1009 `loadAssetTexture(paletteUrl, (texture) => {`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 1008,
+     "line": 1009,
      "text": "loadAssetTexture(paletteUrl, (texture) => {"
     }
    ],
@@ -3134,23 +3134,23 @@
    "bytes": 351012,
    "status": "used",
    "where": [
-    "townScene.ts:2998 `stars: pavilionUrl,`"
+    "townScene.ts:2999 `stars: pavilionUrl,`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 788,
+     "line": 789,
      "text": "[pavilionUrl, 0],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 999,
+     "line": 1000,
      "text": "houseSoundsUrl, houseGardenUrl, villaUrl, pavilionUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 2998,
+     "line": 2999,
      "text": "stars: pavilionUrl,"
     }
    ],
@@ -3180,13 +3180,13 @@
    "bytes": 14084,
    "status": "used",
    "where": [
-    "(-6.9, 35.6) [townScene.ts:3482]"
+    "(-6.9, 35.6) [townScene.ts:3483]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 3482,
+     "line": 3483,
      "text": "layOutGoods(placeWorld(pottery1Url, { x: -6.9, z: 35.6, width: 0.55 }));"
     }
    ],
@@ -3202,13 +3202,13 @@
    "bytes": 17460,
    "status": "used",
    "where": [
-    "(-7, 36.6) [townScene.ts:3483]"
+    "(-7, 36.6) [townScene.ts:3484]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 3483,
+     "line": 3484,
      "text": "layOutGoods(placeWorld(pottery2Url, { x: -7, z: 36.6, width: 0.48 }));"
     }
    ],
@@ -3224,29 +3224,29 @@
    "bytes": 12128,
    "status": "used",
    "where": [
-    "(-10.9, -28.4) [townScene.ts:4010]",
-    "(-20.4, -31.8) [townScene.ts:4011]"
+    "(-10.9, -28.4) [townScene.ts:4011]",
+    "(-20.4, -31.8) [townScene.ts:4012]"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 3645,
+     "line": 3646,
      "text": "else void placeWorld(rockPackUrl, { x: px, z: pz, rotY: rot, width: 1.1 });"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 4010,
+     "line": 4011,
      "text": "void placeWorld(rockPackUrl, { x: -10.9, z: -28.4, rotY: 0.7, width: 0.8 });"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 4011,
+     "line": 4012,
      "text": "void placeWorld(rockPackUrl, { x: -20.4, z: -31.8, rotY: 2.1, width: 0.95 });"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 5485,
+     "line": 5489,
      "text": "void placeWorld(rockPackUrl, { x: rx, z: rz, rotY: i * 0.9, width: 0.85 });"
     }
    ],
@@ -3263,23 +3263,23 @@
    "bytes": 1811736,
    "status": "used",
    "where": [
-    "townScene.ts:3000 `mainchat: senateUrl,`"
+    "townScene.ts:3001 `mainchat: senateUrl,`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 785,
+     "line": 786,
      "text": "[senateUrl, 0],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 998,
+     "line": 999,
      "text": "templeUrl, senateUrl, annexUrl, insulaeUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3000,
+     "line": 3001,
      "text": "mainchat: senateUrl,"
     }
    ],
@@ -3296,18 +3296,18 @@
    "bytes": 22152,
    "status": "used",
    "where": [
-    "townScene.ts:5842 `const gaiusArms = createGaiusArms({ frame: avatar, place: placeModel, gladiusUrl, shieldUr`"
+    "townScene.ts:5846 `const gaiusArms = createGaiusArms({ frame: avatar, place: placeModel, gladiusUrl, shieldUr`"
    ],
    "note": "Gaius's arms: the gladius at his right hip, the scutum on his back (gaiusArms.ts).",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 817,
+     "line": 818,
      "text": "[shieldLegionaireUrl, 0],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 5842,
+     "line": 5846,
      "text": "const gaiusArms = createGaiusArms({ frame: avatar, place: placeModel, gladiusUrl, shieldUrl: shieldLegionaireUrl });"
     }
    ],
@@ -3323,18 +3323,18 @@
    "bytes": 132268,
    "status": "used",
    "where": [
-    "townScene.ts:3130 `void placeWorld(statueMarsUrl, { x: VILLA.statueMars[0], z: VILLA.statueMars[1], rotY: Mat`"
+    "townScene.ts:3131 `void placeWorld(statueMarsUrl, { x: VILLA.statueMars[0], z: VILLA.statueMars[1], rotY: Mat`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 795,
+     "line": 796,
      "text": "[statueMarsUrl, 1],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3130,
+     "line": 3131,
      "text": "void placeWorld(statueMarsUrl, { x: VILLA.statueMars[0], z: VILLA.statueMars[1], rotY: Math.PI / 2, height: 2.7 });"
     }
    ],
@@ -3351,28 +3351,28 @@
    "bytes": 921216,
    "status": "used",
    "where": [
-    "(31, -27) [townScene.ts:3124]"
+    "(31, -27) [townScene.ts:3125]"
    ],
    "note": "--- Roman landmarks, market, and dressing ------------------------- The temple keeps its own hill to the north-east, the aqueduct strides in from the north-west, and the triumphal arch is the estate's gate.",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 793,
+     "line": 794,
      "text": "[templeUrl, 1],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 998,
+     "line": 999,
      "text": "templeUrl, senateUrl, annexUrl, insulaeUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 1520,
+     "line": 1521,
      "text": "const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductCo"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3124,
+     "line": 3125,
      "text": "void placeWorld(templeUrl, { x: 31, z: -27, rotY: -0.6, width: 11 });"
     }
    ],
@@ -3389,13 +3389,13 @@
    "bytes": 28864,
    "status": "used",
    "where": [
-    "townScene.ts:9082 `void placeFbx(torchUrl, { x, z, rotY, height: 1.7 }).then((g) => {`"
+    "townScene.ts:9086 `void placeFbx(torchUrl, { x, z, rotY, height: 1.7 }).then((g) => {`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 9082,
+     "line": 9086,
      "text": "void placeFbx(torchUrl, { x, z, rotY, height: 1.7 }).then((g) => {"
     }
    ],
@@ -3411,18 +3411,18 @@
    "bytes": 39740,
    "status": "used",
    "where": [
-    "townScene.ts:2886 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];`"
+    "townScene.ts:2887 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 1519,
+     "line": 1520,
      "text": "const treeUrls = new Set([treeAUrl, treeBUrl, treeCUrl, treeDUrl, cypressUrl, coniferUrl, oliveUrl]);"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 2886,
+     "line": 2887,
      "text": "const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];"
     }
    ],
@@ -3438,18 +3438,18 @@
    "bytes": 100392,
    "status": "used",
    "where": [
-    "townScene.ts:2886 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];`"
+    "townScene.ts:2887 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 1519,
+     "line": 1520,
      "text": "const treeUrls = new Set([treeAUrl, treeBUrl, treeCUrl, treeDUrl, cypressUrl, coniferUrl, oliveUrl]);"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 2886,
+     "line": 2887,
      "text": "const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];"
     }
    ],
@@ -3465,18 +3465,18 @@
    "bytes": 43792,
    "status": "used",
    "where": [
-    "townScene.ts:2886 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];`"
+    "townScene.ts:2887 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 1519,
+     "line": 1520,
      "text": "const treeUrls = new Set([treeAUrl, treeBUrl, treeCUrl, treeDUrl, cypressUrl, coniferUrl, oliveUrl]);"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 2886,
+     "line": 2887,
      "text": "const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];"
     }
    ],
@@ -3492,18 +3492,18 @@
    "bytes": 34444,
    "status": "used",
    "where": [
-    "townScene.ts:2886 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];`"
+    "townScene.ts:2887 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 1519,
+     "line": 1520,
      "text": "const treeUrls = new Set([treeAUrl, treeBUrl, treeCUrl, treeDUrl, cypressUrl, coniferUrl, oliveUrl]);"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 2886,
+     "line": 2887,
      "text": "const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];"
     }
    ],
@@ -3519,28 +3519,28 @@
    "bytes": 222488,
    "status": "used",
    "where": [
-    "townScene.ts:3133 `void placeWorld(triumphalArchUrl, { x: VILLA.gate[0], z: VILLA.gate[1], width: 7.5 });`"
+    "townScene.ts:3134 `void placeWorld(triumphalArchUrl, { x: VILLA.gate[0], z: VILLA.gate[1], width: 7.5 });`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 794,
+     "line": 795,
      "text": "[triumphalArchUrl, 1],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 1000,
+     "line": 1001,
      "text": "aqueductUrl, aqueductConnectorUrl, triumphalArchUrl, archRoundUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 1520,
+     "line": 1521,
      "text": "const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductCo"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3133,
+     "line": 3134,
      "text": "void placeWorld(triumphalArchUrl, { x: VILLA.gate[0], z: VILLA.gate[1], width: 7.5 });"
     }
    ],
@@ -3557,28 +3557,28 @@
    "bytes": 508432,
    "status": "used",
    "where": [
-    "townScene.ts:3009 `void placeModel(ROMAN_HOUSES[place.id] ?? villaUrl, house, {`"
+    "townScene.ts:3010 `void placeModel(ROMAN_HOUSES[place.id] ?? villaUrl, house, {`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 790,
+     "line": 791,
      "text": "[villaUrl, 1],"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 999,
+     "line": 1000,
      "text": "houseSoundsUrl, houseGardenUrl, villaUrl, pavilionUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 2995,
+     "line": 2996,
      "text": "stories: villaUrl,"
     },
     {
      "file": "client/src/townScene.ts",
-     "line": 3009,
+     "line": 3010,
      "text": "void placeModel(ROMAN_HOUSES[place.id] ?? villaUrl, house, {"
     }
    ],
@@ -3595,13 +3595,13 @@
    "bytes": 232345,
    "status": "used",
    "where": [
-    "townScene.ts:3519 `const waterTex = loadAssetTexture(waterNormalUrl);`"
+    "townScene.ts:3520 `const waterTex = loadAssetTexture(waterNormalUrl);`"
    ],
    "note": "Water, bank, dock, boat, and shore planting for the lake whose constants sit by placeWorld above. The water uses the pack's own M_water_Normal as its normal map (the pack ships it for exactly this), drifting slowly; at n",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 3519,
+     "line": 3520,
      "text": "const waterTex = loadAssetTexture(waterNormalUrl);"
     }
    ],
@@ -3616,13 +3616,13 @@
    "bytes": 488640,
    "status": "used",
    "where": [
-    "townScene.ts:3677 `const urls: Record<ShipKind, string> = { trade: tradeShipUrl, trireme: triremeUrl };`"
+    "townScene.ts:3678 `const urls: Record<ShipKind, string> = { trade: tradeShipUrl, trireme: triremeUrl };`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 3677,
+     "line": 3678,
      "text": "const urls: Record<ShipKind, string> = { trade: tradeShipUrl, trireme: triremeUrl };"
     }
    ],
@@ -3638,13 +3638,13 @@
    "bytes": 1494636,
    "status": "used",
    "where": [
-    "townScene.ts:3677 `const urls: Record<ShipKind, string> = { trade: tradeShipUrl, trireme: triremeUrl };`"
+    "townScene.ts:3678 `const urls: Record<ShipKind, string> = { trade: tradeShipUrl, trireme: triremeUrl };`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 3677,
+     "line": 3678,
      "text": "const urls: Record<ShipKind, string> = { trade: tradeShipUrl, trireme: triremeUrl };"
     }
    ],
@@ -3660,13 +3660,13 @@
    "bytes": 199826,
    "status": "used",
    "where": [
-    "townScene.ts:3712 `const hullMap = liveryMap(triremeHull2Url);`"
+    "townScene.ts:3713 `const hullMap = liveryMap(triremeHull2Url);`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 3712,
+     "line": 3713,
      "text": "const hullMap = liveryMap(triremeHull2Url);"
     }
    ],
@@ -3681,13 +3681,13 @@
    "bytes": 504959,
    "status": "used",
    "where": [
-    "townScene.ts:3713 `const sailMap = liveryMap(triremeSail2Url);`"
+    "townScene.ts:3714 `const sailMap = liveryMap(triremeSail2Url);`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 3713,
+     "line": 3714,
      "text": "const sailMap = liveryMap(triremeSail2Url);"
     }
    ],
@@ -3734,7 +3734,7 @@
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 4921,
+     "line": 4925,
      "text": "athena: dressingAthenaUrl,"
     }
    ],
@@ -3757,7 +3757,7 @@
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 4922,
+     "line": 4926,
      "text": "augustus: dressingAugustusUrl,"
     }
    ],
@@ -3780,7 +3780,7 @@
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 4924,
+     "line": 4928,
      "text": "podest: dressingPodestUrl,"
     }
    ],
@@ -3803,7 +3803,7 @@
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 4923,
+     "line": 4927,
      "text": "putto: dressingPuttoUrl,"
     }
    ],
@@ -3945,13 +3945,13 @@
    "bytes": 3596284,
    "status": "used",
    "where": [
-    "townScene.ts:9132 `void assetUrl(treesPackUrl)`"
+    "townScene.ts:9136 `void assetUrl(treesPackUrl)`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 9132,
+     "line": 9136,
      "text": "void assetUrl(treesPackUrl)"
     }
    ],
@@ -3968,13 +3968,13 @@
    "bytes": 55844,
    "status": "used",
    "where": [
-    "townScene.ts:4909 `table_long: weddingTableLongUrl, cake: weddingCakeUrl, ring_box: weddingRingBoxUrl,`"
+    "townScene.ts:4913 `table_long: weddingTableLongUrl, cake: weddingCakeUrl, ring_box: weddingRingBoxUrl,`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 4909,
+     "line": 4913,
      "text": "table_long: weddingTableLongUrl, cake: weddingCakeUrl, ring_box: weddingRingBoxUrl,"
     }
    ],
@@ -3991,13 +3991,13 @@
    "bytes": 193096,
    "status": "used",
    "where": [
-    "townScene.ts:4908 `flower_arch: weddingArchUrl, flammeum_stand: weddingFlammeumUrl, table_round: weddingTable`"
+    "townScene.ts:4912 `flower_arch: weddingArchUrl, flammeum_stand: weddingFlammeumUrl, table_round: weddingTable`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 4908,
+     "line": 4912,
      "text": "flower_arch: weddingArchUrl, flammeum_stand: weddingFlammeumUrl, table_round: weddingTableRoundUrl,"
     }
    ],
@@ -4014,13 +4014,13 @@
    "bytes": 156496,
    "status": "used",
    "where": [
-    "townScene.ts:4908 `flower_arch: weddingArchUrl, flammeum_stand: weddingFlammeumUrl, table_round: weddingTable`"
+    "townScene.ts:4912 `flower_arch: weddingArchUrl, flammeum_stand: weddingFlammeumUrl, table_round: weddingTable`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 4908,
+     "line": 4912,
      "text": "flower_arch: weddingArchUrl, flammeum_stand: weddingFlammeumUrl, table_round: weddingTableRoundUrl,"
     }
    ],
@@ -4037,13 +4037,13 @@
    "bytes": 109716,
    "status": "used",
    "where": [
-    "townScene.ts:4909 `table_long: weddingTableLongUrl, cake: weddingCakeUrl, ring_box: weddingRingBoxUrl,`"
+    "townScene.ts:4913 `table_long: weddingTableLongUrl, cake: weddingCakeUrl, ring_box: weddingRingBoxUrl,`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 4909,
+     "line": 4913,
      "text": "table_long: weddingTableLongUrl, cake: weddingCakeUrl, ring_box: weddingRingBoxUrl,"
     }
    ],
@@ -4060,13 +4060,13 @@
    "bytes": 265724,
    "status": "used",
    "where": [
-    "townScene.ts:4909 `table_long: weddingTableLongUrl, cake: weddingCakeUrl, ring_box: weddingRingBoxUrl,`"
+    "townScene.ts:4913 `table_long: weddingTableLongUrl, cake: weddingCakeUrl, ring_box: weddingRingBoxUrl,`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 4909,
+     "line": 4913,
      "text": "table_long: weddingTableLongUrl, cake: weddingCakeUrl, ring_box: weddingRingBoxUrl,"
     }
    ],
@@ -4083,13 +4083,13 @@
    "bytes": 144508,
    "status": "used",
    "where": [
-    "townScene.ts:4908 `flower_arch: weddingArchUrl, flammeum_stand: weddingFlammeumUrl, table_round: weddingTable`"
+    "townScene.ts:4912 `flower_arch: weddingArchUrl, flammeum_stand: weddingFlammeumUrl, table_round: weddingTable`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 4908,
+     "line": 4912,
      "text": "flower_arch: weddingArchUrl, flammeum_stand: weddingFlammeumUrl, table_round: weddingTableRoundUrl,"
     }
    ],
@@ -4106,13 +4106,13 @@
    "bytes": 12437756,
    "status": "used",
    "where": [
-    "townScene.ts:10195 `void runtime.streaming.request(() => assetUrl(wolfUrl).then((resolved) => gltfLoader.loadA`"
+    "townScene.ts:10199 `void runtime.streaming.request(() => assetUrl(wolfUrl).then((resolved) => gltfLoader.loadA`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/townScene.ts",
-     "line": 10195,
+     "line": 10199,
      "text": "void runtime.streaming.request(() => assetUrl(wolfUrl).then((resolved) => gltfLoader.loadAsync(resolved)), () => ({ x: FOREST.glade[0], z: FOREST.glad"
     }
    ],

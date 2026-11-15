@@ -1,6 +1,7 @@
 import { createPlaceFootprints } from "./buildingFootprints";
 import { readArrangement } from "../../shared/homeDecor";
 import { buildHomeHouse, splashRingY } from "./homeHouse";
+import { seaFogColor, warmStone, ENV_DAY, HEMI_DAY, SEA_NIGHT_BLEND, SUN_DAY, TONE_EXPOSURE } from "./skyLook";
 import { aimSeaPath, buildSeaCliff, CLIFF, clampToWorld, clearOfSea, cutAtCoast, HILL_BASE_Y, HORIZON_HILLS, horizonHillGeometry, OCEAN_DAY, OCEAN_NIGHT, walkable as onCliffPath } from "./seaCliff";
 import { QUIET_BOAT_MIN_OUT, QUIET_BOAT_START, beginDrift, boatSeats, driftStep, nextQuietLine, rowBack as rowBackState, type Drift, type QuietBoatState } from "../../shared/quietBoat";
 import { FISHING_BOAT_LENGTH, fishingOut, nextGap, pickFishingSpots, pickShip, planVoyage, SHIPS, shipsSail, voyagePose, watchingSea, type SeaWeather, type ShipKind, type Voyage } from "./seaShips";
@@ -1356,7 +1357,7 @@ export function createTownScene(
   if (!softwareGl) renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.12;
+  renderer.toneMappingExposure = TONE_EXPOSURE;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const scene = new THREE.Scene();
@@ -1384,7 +1385,7 @@ export function createTownScene(
     const environment = new RoomEnvironment();
     const target = resources.track(pmrem.fromScene(environment, 0.04));
     scene.environment = target.texture;
-    scene.environmentIntensity = 0.35;
+    scene.environmentIntensity = ENV_DAY;
     environment.dispose();
     pmrem.dispose();
   }
@@ -1485,9 +1486,9 @@ export function createTownScene(
 
   // Lights: warm key sun, sky/ground bounce, and a cool rim from behind
   // the town so rooftops and canopies separate from the sky.
-  const hemi = new THREE.HemisphereLight(0xcfe8ff, 0x6a9a52, 0.95);
+  const hemi = new THREE.HemisphereLight(0xcfe8ff, 0x6a9a52, HEMI_DAY);
   scene.add(hemi);
-  const sun = new THREE.DirectionalLight(0xfff2d8, 1.9);
+  const sun = new THREE.DirectionalLight(0xfff2d8, SUN_DAY);
   sun.position.set(30, 42, 20);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
@@ -4333,7 +4334,10 @@ export function createTownScene(
     floor.position.y = 0.04;
     floor.receiveShadow = true;
     secretGroup.add(floor);
-    void placeModel(archRoundUrl, secretGroup, { x: 0, z: 2.1, width: 2.7 });
+    // Task 96: the arch's own near-white face glowed chalk under the lanterns at dusk; travertine instead.
+    void placeModel(archRoundUrl, secretGroup, { x: 0, z: 2.1, width: 2.7 }).then((g) => {
+      if (g && !disposed) warmStone(g);
+    });
     void placeModel(benchWoodenUrl, secretGroup, { x: 0, z: -0.7, rotY: 0, width: 1.7 }).then((g) => {
       if (disposed) return null;
       if (g) benchGroups.set("bench-terrace", g);
@@ -11318,7 +11322,8 @@ export function createTownScene(
     if (lightningFlash > 0.01) skyColor.lerp(tmpColorB.setHex(0xcfdcff), lightningFlash * 0.5);
     scene.background = skyColor;
     if (scene.fog instanceof THREE.Fog) {
-      scene.fog.color.copy(skyColor);
+      // Task 96: the colour the dome displays at the horizon, so the far sea meets the sky without a seam.
+      seaFogColor(skyUniforms.horizonColor.value, nightMix, scene.fog.color);
       // Fog closes in with fog/rain/snow/storm weather; at night it also
       // creeps a little nearer so the lamps feel pools of light.
       scene.fog.near = wCur.fogNear - nightMix * 6;
@@ -11331,10 +11336,10 @@ export function createTownScene(
         scene.fog.color.lerp(tmpColorB.setHex(0xc78a4a), 0.38);
       }
     }
-    hemi.intensity = (0.95 - nightMix * 0.55) * wCur.hemiMul + lightningFlash * 0.7;
-    sun.intensity = (1.9 - nightMix * 1.55) * wCur.sunMul;
+    hemi.intensity = (HEMI_DAY - nightMix * 0.55) * wCur.hemiMul + lightningFlash * 0.7;
+    sun.intensity = (SUN_DAY - nightMix * 1.55) * wCur.sunMul;
     rim.intensity = 0.55 - nightMix * 0.3;
-    scene.environmentIntensity = (0.35 - nightMix * 0.22) * (0.55 + wCur.sunMul * 0.45);
+    scene.environmentIntensity = (ENV_DAY - nightMix * 0.22) * (0.55 + wCur.sunMul * 0.45);
     sun.color.copy(sunWarm).lerp(tmpColorB.setHex(0x8fb4ff), nightMix);
     // Lamps come on at night, and early under fog or rain, where a
     // warm window against the grey does most of the cosy work.
@@ -12779,7 +12784,7 @@ export function createTownScene(
             sea.offset.x = t * 0.0021;
             sea.offset.y = t * 0.0013;
           }
-          seaCliff.oceanMat.color.setHex(OCEAN_DAY).lerp(tmpColorB.setHex(OCEAN_NIGHT), nightMix * 0.8);
+          seaCliff.oceanMat.color.setHex(OCEAN_DAY).lerp(tmpColorB.setHex(OCEAN_NIGHT), nightMix * SEA_NIGHT_BLEND);
           seaCliff.foamMat.opacity = 0.32 + 0.22 * Math.sin(t * 0.7) + 0.1 * Math.sin(t * 1.9 + 1.3);
           if (seaCliff.foamMat.map) seaCliff.foamMat.map.offset.x = t * 0.02;
           const vx = camera.position.x;
