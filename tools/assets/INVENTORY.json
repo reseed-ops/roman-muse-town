@@ -3702,18 +3702,18 @@
    "bytes": 160741,
    "status": "used",
    "where": [
-    "App.tsx:2761 `songAudioRef.current = new Audio(assetUrlSync(summitSongUrl));`"
+    "App.tsx:2762 `songAudioRef.current = new Audio(assetUrlSync(summitSongUrl));`"
    ],
    "note": "",
    "uses": [
     {
      "file": "client/src/App.tsx",
-     "line": 448,
+     "line": 449,
      "text": "void assetUrl(summitSongUrl).catch(() => {"
     },
     {
      "file": "client/src/App.tsx",
-     "line": 2761,
+     "line": 2762,
      "text": "songAudioRef.current = new Audio(assetUrlSync(summitSongUrl));"
     }
    ]

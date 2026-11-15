@@ -16,7 +16,7 @@ Search it with `bun tools/assets/search.ts <words>` (see `tools/assets/README.md
 | `muse-avatar.vrm` | character | pixiv VRoid sample model (AvatarSample_M) | 16774 | 52389 | used | townScene.ts:5362 `loadModelScene(museAvatarUrl)` |
 | `phoenix.fbx` | animal | Low Poly Legend Phoenix (PULSAR BYTES) | 858 | 2241 | used | townScene.ts:9872 `void runtime.streaming.request(() => assetUrl(phoenixUrl).then((resolved) => fbxLoader2.lo` |
 | `phoenix_tex.png` | texture | Low Poly Legend Phoenix (PULSAR BYTES) | 0 | 32x32 | used | townScene.ts:9876 `const tex = loadAssetTexture(phoenixTexUrl);` |
-| `stars-fall-song.mp3` | audio | the project's own song for the summit scene | 157 |  | used | App.tsx:2761 `songAudioRef.current = new Audio(assetUrlSync(summitSongUrl));` |
+| `stars-fall-song.mp3` | audio | the project's own song for the summit scene | 157 |  | used | App.tsx:2762 `songAudioRef.current = new Audio(assetUrlSync(summitSongUrl));` |
 | `trees_pack.glb` | nature | Low Poly Trees (itch.io) | 3512 | 7215 | used | townScene.ts:9136 `void assetUrl(treesPackUrl)` |
 | `wolf.glb` | animal | Dire Wolf Lite: `Dire_Wolf_Lite.glb (unchanged)` | 12146 | 9991 | used | townScene.ts:10199 `void runtime.streaming.request(() => assetUrl(wolfUrl).then((resolved) => gltfLoader.loadA` |
 

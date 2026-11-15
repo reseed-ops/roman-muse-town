@@ -1,5 +1,6 @@
 import { exposeTour } from "./tourPlaces";
 import { TownMap } from "./TownMap";
+import { PAD_PRESS_ALL, PAD_PRESS_RELEASE, padPressOn } from "./padPress";
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTownState } from "./useTownState";
@@ -10377,7 +10378,8 @@ export function App() {
                     : "Y button: walk together with Aelia (also T on the keyboard)"
                   : "Y button: pick up a loose stone at your feet, or throw the stone you are holding; with no stone in play, ask Aelia for a hint"
               }
-              className="pointer-events-auto relative flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#ffb900]/80 bg-[#1b1b1b]/55 text-lg font-black text-[#ffb900] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8),1px_0_0_rgba(0,0,0,0.6),-1px_0_0_rgba(0,0,0,0.6)] transition active:scale-90 active:bg-[#ffb900] active:text-black"
+              className="pointer-events-auto relative flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#ffb900]/80 bg-[#1b1b1b]/55 text-lg font-black text-[#ffb900] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8),1px_0_0_rgba(0,0,0,0.6),-1px_0_0_rgba(0,0,0,0.6)] transition active:scale-90 data-[pressed]:scale-90 active:bg-[#ffb900] data-[pressed]:bg-[#ffb900] active:text-black data-[pressed]:text-black"
+              {...PAD_PRESS_ALL}
               onClick={xboxStone}
             >
               Y
@@ -10391,7 +10393,8 @@ export function App() {
             <button
               type="button"
               aria-label="X button, talk and interact with what the X prompt shows: chat with Aelia, water the tree, or visit the place you are standing by"
-              className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#2d7dd2]/90 bg-[#1b1b1b]/55 text-lg font-black text-[#5aa2e8] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8),1px_0_0_rgba(0,0,0,0.6),-1px_0_0_rgba(0,0,0,0.6)] transition active:scale-90 active:bg-[#2d7dd2] active:text-white"
+              className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#2d7dd2]/90 bg-[#1b1b1b]/55 text-lg font-black text-[#5aa2e8] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8),1px_0_0_rgba(0,0,0,0.6),-1px_0_0_rgba(0,0,0,0.6)] transition active:scale-90 data-[pressed]:scale-90 active:bg-[#2d7dd2] data-[pressed]:bg-[#2d7dd2] active:text-white data-[pressed]:text-white"
+              {...PAD_PRESS_ALL}
               onClick={xboxInteract}
             >
               X
@@ -10404,12 +10407,14 @@ export function App() {
                   ? "B button, slide while moving; otherwise close a panel or step back from what you are doing"
                   : "B button, close a panel or dismiss what is open"
               }
-              className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#e74856]/90 bg-[#1b1b1b]/55 text-lg font-black text-[#ff7a85] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8),1px_0_0_rgba(0,0,0,0.6),-1px_0_0_rgba(0,0,0,0.6)] transition active:scale-90 active:bg-[#e74856] active:text-white"
+              className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#e74856]/90 bg-[#1b1b1b]/55 text-lg font-black text-[#ff7a85] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8),1px_0_0_rgba(0,0,0,0.6),-1px_0_0_rgba(0,0,0,0.6)] transition active:scale-90 data-[pressed]:scale-90 active:bg-[#e74856] data-[pressed]:bg-[#e74856] active:text-white data-[pressed]:text-white"
+              {...PAD_PRESS_RELEASE}
               onPointerDown={(e) => {
                 // B acts on the press, like A: on release (the old
                 // click) the same gesture had already centred the
                 // stick, so the slide branch saw a standing man and
                 // every touch slide was refused.
+                padPressOn(e);
                 e.preventDefault();
                 xboxBack();
               }}
@@ -10424,8 +10429,10 @@ export function App() {
             <button
               type="button"
               aria-label="A button, jump"
-              className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#52b043]/90 bg-[#1b1b1b]/55 text-lg font-black text-[#7ed37a] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8),1px_0_0_rgba(0,0,0,0.6),-1px_0_0_rgba(0,0,0,0.6)] transition active:scale-90 active:bg-[#107c10] active:text-white"
+              className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#52b043]/90 bg-[#1b1b1b]/55 text-lg font-black text-[#7ed37a] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8),1px_0_0_rgba(0,0,0,0.6),-1px_0_0_rgba(0,0,0,0.6)] transition active:scale-90 data-[pressed]:scale-90 active:bg-[#107c10] data-[pressed]:bg-[#107c10] active:text-white data-[pressed]:text-white"
+              {...PAD_PRESS_RELEASE}
               onPointerDown={(e) => {
+                padPressOn(e);
                 e.preventDefault();
                 sceneRef.current?.jump();
               }}
@@ -10465,8 +10472,10 @@ export function App() {
                   aria-label={
                     `${side} button, ${side === "LB" ? "flirt with Aelia" : "hug Aelia"} (also ${side === "LB" ? "F" : "H"} on the keyboard)`
                   }
-                  className={`pointer-events-auto flex h-9 w-[66px] flex-col items-center justify-center rounded-t-2xl rounded-b-lg border-2 border-white/45 bg-[#1b1b1b]/55 text-[13px] leading-none font-black text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8)] transition active:scale-90 active:bg-white/80 active:text-black`}
+                  className={`pointer-events-auto flex h-9 w-[66px] flex-col items-center justify-center rounded-t-2xl rounded-b-lg border-2 border-white/45 bg-[#1b1b1b]/55 text-[13px] leading-none font-black text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8)] transition active:scale-90 data-[pressed]:scale-90 active:bg-white/80 data-[pressed]:bg-white/80 active:text-black data-[pressed]:text-black`}
+                  {...PAD_PRESS_RELEASE}
                   onPointerDown={(e) => {
+                    padPressOn(e);
                     e.preventDefault();
                     shoulderPress(side);
                   }}
@@ -10509,8 +10518,10 @@ export function App() {
                         : `RT button, ${on ? "stow the shield" : "bring out the shield"} (also G on the keyboard)`
                     }
                     aria-pressed={on}
-                    className={`pointer-events-auto flex h-9 w-[54px] items-center justify-center gap-0.5 rounded-t-2xl rounded-b-lg border-2 ${on ? "border-[#ffd34e]/80 bg-[#3a2f12]/70" : "border-white/45 bg-[#1b1b1b]/55"} text-[13px] leading-none font-black text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8)] transition active:scale-90 active:bg-white/80 active:text-black`}
+                    className={`pointer-events-auto flex h-9 w-[54px] items-center justify-center gap-0.5 rounded-t-2xl rounded-b-lg border-2 ${on ? "border-[#ffd34e]/80 bg-[#3a2f12]/70" : "border-white/45 bg-[#1b1b1b]/55"} text-[13px] leading-none font-black text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8)] transition active:scale-90 data-[pressed]:scale-90 active:bg-white/80 data-[pressed]:bg-white/80 active:text-black data-[pressed]:text-black`}
+                    {...PAD_PRESS_RELEASE}
                     onPointerDown={(e) => {
+                      padPressOn(e);
                       e.preventDefault();
                       triggerPress(side);
                     }}
@@ -10540,9 +10551,10 @@ export function App() {
             >
               <button
                 type="button"
+                {...PAD_PRESS_ALL}
                 onClick={backToGaius}
                 aria-label="Back to Gaius, return to the third-person view behind him"
-                className="pointer-events-auto rounded-full bg-[#1b1b1b]/55 px-2.5 py-1 text-[11px] font-bold whitespace-nowrap text-white/85 shadow backdrop-blur transition active:scale-95 active:bg-[#ffd34e] active:text-black"
+                className="pointer-events-auto rounded-full bg-[#1b1b1b]/55 px-2.5 py-1 text-[11px] font-bold whitespace-nowrap text-white/85 shadow backdrop-blur transition active:scale-95 data-[pressed]:scale-95 active:bg-[#ffd34e] data-[pressed]:bg-[#ffd34e] active:text-black data-[pressed]:text-black"
               >
                 Back to Gaius
               </button>
