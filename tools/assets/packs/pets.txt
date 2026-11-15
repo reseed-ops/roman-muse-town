@@ -1,0 +1,6 @@
+cat
+chicken
+cow
+dog
+pig
+sheep

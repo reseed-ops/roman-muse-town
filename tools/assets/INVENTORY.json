@@ -1,0 +1,4786 @@
+{
+ "summary": {
+  "generated": "by tools/assets/build.ts",
+  "totalFiles": 163,
+  "assetsFolder": 157,
+  "used": 156,
+  "unusedInFolder": [
+   "greek/greek_dock.fbx",
+   "greek/greek_pool_1.fbx",
+   "greek_atlas.png",
+   "roman/apple.glb",
+   "roman/bowl.glb",
+   "roman/bush_roman.glb",
+   "roman/platform_wooden.glb"
+  ],
+  "bytes": 105313543
+ },
+ "assets": [
+  {
+   "file": "anim/f_dance.fbx",
+   "kind": "animation",
+   "pack": "Human Dance Animations (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 1072048,
+   "status": "used",
+   "where": [
+    "townScene.ts:5393 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5393,
+     "text": "idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceUrl, poseA: fPoseAUrl, poseB: fPoseBUrl,"
+    }
+   ]
+  },
+  {
+   "file": "anim/f_idle.fbx",
+   "kind": "animation",
+   "pack": "Human Basic Motions (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 831968,
+   "status": "used",
+   "where": [
+    "townScene.ts:5393 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 825,
+     "text": "fIdleUrl, fWalkUrl, fRunUrl, fWaveUrl, fSitUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5393,
+     "text": "idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceUrl, poseA: fPoseAUrl, poseB: fPoseBUrl,"
+    }
+   ]
+  },
+  {
+   "file": "anim/f_pose_a.fbx",
+   "kind": "animation",
+   "pack": "Human Dance Animations (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 702704,
+   "status": "used",
+   "where": [
+    "townScene.ts:5393 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5393,
+     "text": "idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceUrl, poseA: fPoseAUrl, poseB: fPoseBUrl,"
+    }
+   ]
+  },
+  {
+   "file": "anim/f_pose_b.fbx",
+   "kind": "animation",
+   "pack": "Human Dance Animations (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 573440,
+   "status": "used",
+   "where": [
+    "townScene.ts:5393 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5393,
+     "text": "idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceUrl, poseA: fPoseAUrl, poseB: fPoseBUrl,"
+    }
+   ]
+  },
+  {
+   "file": "anim/f_run.fbx",
+   "kind": "animation",
+   "pack": "Human Basic Motions (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 444176,
+   "status": "used",
+   "where": [
+    "townScene.ts:5393 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 825,
+     "text": "fIdleUrl, fWalkUrl, fRunUrl, fWaveUrl, fSitUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5393,
+     "text": "idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceUrl, poseA: fPoseAUrl, poseB: fPoseBUrl,"
+    }
+   ]
+  },
+  {
+   "file": "anim/f_sit.fbx",
+   "kind": "animation",
+   "pack": "Human Basic Motions (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 702752,
+   "status": "used",
+   "where": [
+    "townScene.ts:5393 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 825,
+     "text": "fIdleUrl, fWalkUrl, fRunUrl, fWaveUrl, fSitUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5393,
+     "text": "idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceUrl, poseA: fPoseAUrl, poseB: fPoseBUrl,"
+    }
+   ]
+  },
+  {
+   "file": "anim/f_walk.fbx",
+   "kind": "animation",
+   "pack": "Human Basic Motions (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 481104,
+   "status": "used",
+   "where": [
+    "townScene.ts:5393 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 825,
+     "text": "fIdleUrl, fWalkUrl, fRunUrl, fWaveUrl, fSitUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5393,
+     "text": "idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceUrl, poseA: fPoseAUrl, poseB: fPoseBUrl,"
+    }
+   ]
+  },
+  {
+   "file": "anim/f_wave.fbx",
+   "kind": "animation",
+   "pack": "Human Basic Motions (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 801200,
+   "status": "used",
+   "where": [
+    "townScene.ts:5393 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 825,
+     "text": "fIdleUrl, fWalkUrl, fRunUrl, fWaveUrl, fSitUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5393,
+     "text": "idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceUrl, poseA: fPoseAUrl, poseB: fPoseBUrl,"
+    }
+   ]
+  },
+  {
+   "file": "anim/m_dance.fbx",
+   "kind": "animation",
+   "pack": "Human Dance Animations (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 1071920,
+   "status": "used",
+   "where": [
+    "townScene.ts:5902 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5902,
+     "text": "idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceUrl,"
+    }
+   ]
+  },
+  {
+   "file": "anim/m_idle.fbx",
+   "kind": "animation",
+   "pack": "Human Basic Motions (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 831968,
+   "status": "used",
+   "where": [
+    "townScene.ts:5902 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 824,
+     "text": "mIdleUrl, mWalkUrl, mRunUrl, mWaveUrl, mSitUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5902,
+     "text": "idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceUrl,"
+    }
+   ]
+  },
+  {
+   "file": "anim/m_jump_air.fbx",
+   "kind": "animation",
+   "pack": "Human Basic Motions (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 518000,
+   "status": "used",
+   "where": [
+    "townScene.ts:5903 `jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5903,
+     "text": "jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },"
+    }
+   ]
+  },
+  {
+   "file": "anim/m_jump_end.fbx",
+   "kind": "animation",
+   "pack": "Human Basic Motions (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 456480,
+   "status": "used",
+   "where": [
+    "townScene.ts:5903 `jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5903,
+     "text": "jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },"
+    }
+   ]
+  },
+  {
+   "file": "anim/m_jump_start.fbx",
+   "kind": "animation",
+   "pack": "Human Basic Motions (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 456480,
+   "status": "used",
+   "where": [
+    "townScene.ts:5903 `jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5903,
+     "text": "jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },"
+    }
+   ]
+  },
+  {
+   "file": "anim/m_run.fbx",
+   "kind": "animation",
+   "pack": "Human Basic Motions (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 444176,
+   "status": "used",
+   "where": [
+    "townScene.ts:5902 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 824,
+     "text": "mIdleUrl, mWalkUrl, mRunUrl, mWaveUrl, mSitUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5902,
+     "text": "idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceUrl,"
+    }
+   ]
+  },
+  {
+   "file": "anim/m_sit.fbx",
+   "kind": "animation",
+   "pack": "Human Basic Motions (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 702752,
+   "status": "used",
+   "where": [
+    "townScene.ts:5902 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 824,
+     "text": "mIdleUrl, mWalkUrl, mRunUrl, mWaveUrl, mSitUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5902,
+     "text": "idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceUrl,"
+    }
+   ]
+  },
+  {
+   "file": "anim/m_slide.fbx",
+   "kind": "animation",
+   "pack": "Human Basic Motions (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 591904,
+   "status": "used",
+   "where": [
+    "townScene.ts:5904 `slide: mSlideUrl,`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5904,
+     "text": "slide: mSlideUrl,"
+    }
+   ]
+  },
+  {
+   "file": "anim/m_walk.fbx",
+   "kind": "animation",
+   "pack": "Human Basic Motions (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 481104,
+   "status": "used",
+   "where": [
+    "townScene.ts:5902 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 824,
+     "text": "mIdleUrl, mWalkUrl, mRunUrl, mWaveUrl, mSitUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5902,
+     "text": "idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceUrl,"
+    }
+   ]
+  },
+  {
+   "file": "anim/m_wave.fbx",
+   "kind": "animation",
+   "pack": "Human Basic Motions (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 801200,
+   "status": "used",
+   "where": [
+    "townScene.ts:5902 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 824,
+     "text": "mIdleUrl, mWalkUrl, mRunUrl, mWaveUrl, mSitUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5902,
+     "text": "idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceUrl,"
+    }
+   ]
+  },
+  {
+   "file": "anim/outdoor/f_bench1.fbx",
+   "kind": "animation",
+   "pack": "BUNDLE Outdoor Animations, FBX (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 838108,
+   "status": "used",
+   "where": [
+    "townScene.ts:5397 `benchSit: [fBench1Url, fBench2Url],`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5397,
+     "text": "benchSit: [fBench1Url, fBench2Url],"
+    }
+   ]
+  },
+  {
+   "file": "anim/outdoor/f_bench2.fbx",
+   "kind": "animation",
+   "pack": "BUNDLE Outdoor Animations, FBX (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 832172,
+   "status": "used",
+   "where": [
+    "townScene.ts:5397 `benchSit: [fBench1Url, fBench2Url],`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5397,
+     "text": "benchSit: [fBench1Url, fBench2Url],"
+    }
+   ]
+  },
+  {
+   "file": "anim/outdoor/f_flirt.fbx",
+   "kind": "animation",
+   "pack": "BUNDLE Outdoor Animations, FBX (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 835340,
+   "status": "used",
+   "where": [
+    "townScene.ts:5398 `flirt: fFlirtUrl,`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5398,
+     "text": "flirt: fFlirtUrl,"
+    }
+   ]
+  },
+  {
+   "file": "anim/outdoor/f_hug.fbx",
+   "kind": "animation",
+   "pack": "BUNDLE Outdoor Animations, FBX (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 832236,
+   "status": "used",
+   "where": [
+    "townScene.ts:5399 `hug: fHugUrl,`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5399,
+     "text": "hug: fHugUrl,"
+    }
+   ]
+  },
+  {
+   "file": "anim/outdoor/f_sittalk1.fbx",
+   "kind": "animation",
+   "pack": "BUNDLE Outdoor Animations, FBX (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 914300,
+   "status": "used",
+   "where": [
+    "townScene.ts:5396 `sitTalk: [fSitTalk1Url, fSitTalk2Url],`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5396,
+     "text": "sitTalk: [fSitTalk1Url, fSitTalk2Url],"
+    }
+   ]
+  },
+  {
+   "file": "anim/outdoor/f_sittalk2.fbx",
+   "kind": "animation",
+   "pack": "BUNDLE Outdoor Animations, FBX (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 847996,
+   "status": "used",
+   "where": [
+    "townScene.ts:5396 `sitTalk: [fSitTalk1Url, fSitTalk2Url],`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5396,
+     "text": "sitTalk: [fSitTalk1Url, fSitTalk2Url],"
+    }
+   ]
+  },
+  {
+   "file": "anim/outdoor/f_talk1.fbx",
+   "kind": "animation",
+   "pack": "BUNDLE Outdoor Animations, FBX (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 840508,
+   "status": "used",
+   "where": [
+    "townScene.ts:5395 `talk: [fTalk1Url, fTalk2Url, fTalk3Url],`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5395,
+     "text": "talk: [fTalk1Url, fTalk2Url, fTalk3Url],"
+    }
+   ]
+  },
+  {
+   "file": "anim/outdoor/f_talk2.fbx",
+   "kind": "animation",
+   "pack": "BUNDLE Outdoor Animations, FBX (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 848764,
+   "status": "used",
+   "where": [
+    "townScene.ts:5395 `talk: [fTalk1Url, fTalk2Url, fTalk3Url],`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5395,
+     "text": "talk: [fTalk1Url, fTalk2Url, fTalk3Url],"
+    }
+   ]
+  },
+  {
+   "file": "anim/outdoor/f_talk3.fbx",
+   "kind": "animation",
+   "pack": "BUNDLE Outdoor Animations, FBX (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 861052,
+   "status": "used",
+   "where": [
+    "townScene.ts:5395 `talk: [fTalk1Url, fTalk2Url, fTalk3Url],`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5395,
+     "text": "talk: [fTalk1Url, fTalk2Url, fTalk3Url],"
+    }
+   ]
+  },
+  {
+   "file": "anim/outdoor/m_bench1.fbx",
+   "kind": "animation",
+   "pack": "BUNDLE Outdoor Animations, FBX (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 850764,
+   "status": "used",
+   "where": [
+    "townScene.ts:5908 `benchSit: [mBench1Url, mBench2Url],`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5908,
+     "text": "benchSit: [mBench1Url, mBench2Url],"
+    }
+   ]
+  },
+  {
+   "file": "anim/outdoor/m_bench2.fbx",
+   "kind": "animation",
+   "pack": "BUNDLE Outdoor Animations, FBX (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 852972,
+   "status": "used",
+   "where": [
+    "townScene.ts:5908 `benchSit: [mBench1Url, mBench2Url],`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5908,
+     "text": "benchSit: [mBench1Url, mBench2Url],"
+    }
+   ]
+  },
+  {
+   "file": "anim/outdoor/m_flirt.fbx",
+   "kind": "animation",
+   "pack": "BUNDLE Outdoor Animations, FBX (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 835388,
+   "status": "used",
+   "where": [
+    "townScene.ts:5909 `flirt: mFlirtUrl,`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5909,
+     "text": "flirt: mFlirtUrl,"
+    }
+   ]
+  },
+  {
+   "file": "anim/outdoor/m_hug.fbx",
+   "kind": "animation",
+   "pack": "BUNDLE Outdoor Animations, FBX (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 833116,
+   "status": "used",
+   "where": [
+    "townScene.ts:5910 `hug: mHugUrl,`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5910,
+     "text": "hug: mHugUrl,"
+    }
+   ]
+  },
+  {
+   "file": "anim/outdoor/m_sittalk1.fbx",
+   "kind": "animation",
+   "pack": "BUNDLE Outdoor Animations, FBX (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 845068,
+   "status": "used",
+   "where": [
+    "townScene.ts:5907 `sitTalk: [mSitTalk1Url, mSitTalk2Url],`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5907,
+     "text": "sitTalk: [mSitTalk1Url, mSitTalk2Url],"
+    }
+   ]
+  },
+  {
+   "file": "anim/outdoor/m_sittalk2.fbx",
+   "kind": "animation",
+   "pack": "BUNDLE Outdoor Animations, FBX (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 835020,
+   "status": "used",
+   "where": [
+    "townScene.ts:5907 `sitTalk: [mSitTalk1Url, mSitTalk2Url],`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5907,
+     "text": "sitTalk: [mSitTalk1Url, mSitTalk2Url],"
+    }
+   ]
+  },
+  {
+   "file": "anim/outdoor/m_talk1.fbx",
+   "kind": "animation",
+   "pack": "BUNDLE Outdoor Animations, FBX (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 845788,
+   "status": "used",
+   "where": [
+    "townScene.ts:5906 `talk: [mTalk1Url, mTalk2Url, mTalk3Url],`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5906,
+     "text": "talk: [mTalk1Url, mTalk2Url, mTalk3Url],"
+    }
+   ]
+  },
+  {
+   "file": "anim/outdoor/m_talk2.fbx",
+   "kind": "animation",
+   "pack": "BUNDLE Outdoor Animations, FBX (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 853244,
+   "status": "used",
+   "where": [
+    "townScene.ts:5906 `talk: [mTalk1Url, mTalk2Url, mTalk3Url],`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5906,
+     "text": "talk: [mTalk1Url, mTalk2Url, mTalk3Url],"
+    }
+   ]
+  },
+  {
+   "file": "anim/outdoor/m_talk3.fbx",
+   "kind": "animation",
+   "pack": "BUNDLE Outdoor Animations, FBX (Kevin Iglesias)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 855564,
+   "status": "used",
+   "where": [
+    "townScene.ts:5906 `talk: [mTalk1Url, mTalk2Url, mTalk3Url],`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5906,
+     "text": "talk: [mTalk1Url, mTalk2Url, mTalk3Url],"
+    }
+   ]
+  },
+  {
+   "file": "centurion.vrm",
+   "kind": "character",
+   "pack": "owner-built in VRoid Studio (Gaius)",
+   "origin": "owner-made",
+   "licence": "owner's own",
+   "bytes": 16589604,
+   "status": "used",
+   "where": [
+    "townScene.ts:5858 `loadModelScene(centurionUrl)`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 815,
+     "text": "[centurionUrl, 0],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 862,
+     "text": "[...[centurionUrl, museAvatarUrl].filter((url) => !modelCache.has(url)).map(fetchModelBytes), ...CORE_CLIP_URLS.map(fetchClipBytes)],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5858,
+     "text": "loadModelScene(centurionUrl)"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5925,
+     "text": "modelCache.delete(centurionUrl);"
+    }
+   ],
+   "triangles": 37737,
+   "materials": 14
+  },
+  {
+   "file": "greek/greek_bench_1.fbx",
+   "kind": "prop",
+   "pack": "Greek Low Poly pack (Unity Asset Store)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 16764,
+   "status": "used",
+   "where": [
+    "townScene.ts:9298 `greekBench(greekBench1Url, \"bench-greek-stone\", 12.2, -15, Math.PI / 2);`"
+   ],
+   "note": "Turned on Nov 6, 2026 (Task 18): both sat with their backs to the peristyle; sitters now face it (no backrest on either).",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9298,
+     "text": "greekBench(greekBench1Url, \"bench-greek-stone\", 12.2, -15, Math.PI / 2);"
+    }
+   ],
+   "triangles": 192,
+   "materials": 1
+  },
+  {
+   "file": "greek/greek_bench_2.fbx",
+   "kind": "prop",
+   "pack": "Greek Low Poly pack (Unity Asset Store)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 19292,
+   "status": "used",
+   "where": [
+    "townScene.ts:9299 `greekBench(greekBench2Url, \"bench-greek-wood\", -12.2, -15, -Math.PI / 2);`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9299,
+     "text": "greekBench(greekBench2Url, \"bench-greek-wood\", -12.2, -15, -Math.PI / 2);"
+    }
+   ],
+   "triangles": 288,
+   "materials": 1
+  },
+  {
+   "file": "greek/greek_bowl.fbx",
+   "kind": "prop",
+   "pack": "Greek Low Poly pack (Unity Asset Store)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 17020,
+   "status": "used",
+   "where": [
+    "(6.9, 38.4) [townScene.ts:9272]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9272,
+     "text": "void placeFbx(greekBowlUrl, { x: 6.9, z: 38.4, width: 0.42, greek: true });"
+    }
+   ],
+   "triangles": 100,
+   "materials": 1
+  },
+  {
+   "file": "greek/greek_bucket.fbx",
+   "kind": "prop",
+   "pack": "Greek Low Poly pack (Unity Asset Store)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 15772,
+   "status": "used",
+   "where": [
+    "(21.3, 26.9) [townScene.ts:9276]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9276,
+     "text": "void placeFbx(greekBucketUrl, { x: 21.3, z: 26.9, height: 0.42, greek: true });"
+    }
+   ],
+   "triangles": 92,
+   "materials": 1
+  },
+  {
+   "file": "greek/greek_decorative_bowl.fbx",
+   "kind": "prop",
+   "pack": "Greek Low Poly pack (Unity Asset Store)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 17884,
+   "status": "used",
+   "where": [
+    "(6.9, 39.6) [townScene.ts:9273]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9273,
+     "text": "void placeFbx(greekDecoBowlUrl, { x: 6.9, z: 39.6, width: 0.5, greek: true });"
+    }
+   ],
+   "triangles": 238,
+   "materials": 1
+  },
+  {
+   "file": "greek/greek_dock.fbx",
+   "kind": "prop",
+   "pack": "Greek Low Poly pack (Unity Asset Store)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 31004,
+   "status": "unused",
+   "where": [],
+   "note": "",
+   "uses": [],
+   "triangles": 900,
+   "materials": 1
+  },
+  {
+   "file": "greek/greek_drying_rack.fbx",
+   "kind": "prop",
+   "pack": "Greek Low Poly pack (Unity Asset Store)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 42620,
+   "status": "used",
+   "where": [
+    "(-22.6, 25.4) [townScene.ts:9279]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9279,
+     "text": "void placeFbx(greekRackUrl, { x: -22.6, z: 25.4, rotY: 0.5, width: 1.8, greek: true });"
+    }
+   ],
+   "triangles": 972,
+   "materials": 3
+  },
+  {
+   "file": "greek/greek_garden_1.fbx",
+   "kind": "prop",
+   "pack": "Greek Low Poly pack (Unity Asset Store)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 19100,
+   "status": "used",
+   "where": [
+    "(9.8, 25.2) [townScene.ts:9277]",
+    "(13.4, 25.2) [townScene.ts:9278]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9277,
+     "text": "void placeFbx(greekGardenUrl, { x: 9.8, z: 25.2, width: 2.3, greek: true });"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9278,
+     "text": "void placeFbx(greekGardenUrl, { x: 13.4, z: 25.2, width: 2.3, greek: true });"
+    }
+   ],
+   "triangles": 124,
+   "materials": 2
+  },
+  {
+   "file": "greek/greek_pool_1.fbx",
+   "kind": "prop",
+   "pack": "Greek Low Poly pack (Unity Asset Store)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 20028,
+   "status": "unused",
+   "where": [],
+   "note": "",
+   "uses": [],
+   "triangles": 208,
+   "materials": 2
+  },
+  {
+   "file": "greek/greek_pot_1.fbx",
+   "kind": "prop",
+   "pack": "Greek Low Poly pack (Unity Asset Store)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 25548,
+   "status": "used",
+   "where": [
+    "(-25, 23) [townScene.ts:9274]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9274,
+     "text": "void placeFbx(greekPot1Url, { x: -25, z: 23, height: 0.55, greek: true });"
+    }
+   ],
+   "triangles": 754,
+   "materials": 2
+  },
+  {
+   "file": "greek/greek_pot_2.fbx",
+   "kind": "prop",
+   "pack": "Greek Low Poly pack (Unity Asset Store)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 19868,
+   "status": "used",
+   "where": [
+    "(-20.8, 24.0) [townScene.ts:9275]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9275,
+     "text": "void placeFbx(greekPot2Url, { x: -20.8, z: 24.0, height: 0.7, greek: true });"
+    }
+   ],
+   "triangles": 348,
+   "materials": 2
+  },
+  {
+   "file": "greek/greek_table_1.fbx",
+   "kind": "prop",
+   "pack": "Greek Low Poly pack (Unity Asset Store)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 22556,
+   "status": "used",
+   "where": [
+    "(-27.0, 9.6) [townScene.ts:9270]",
+    "(24.8, -1.6) [townScene.ts:9271]"
+   ],
+   "note": "--- Greek dressing: furniture and small goods at the houses' doorsteps and terraces (the town has no interiors, Rome lives outside), planters in the garden beds, a wood pile for the caldarium's appetite, and two measured",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9270,
+     "text": "void placeFbx(greekTableUrl, { x: -27.0, z: 9.6, rotY: 0.6, width: 1.7, greek: true });"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9271,
+     "text": "void placeFbx(greekTableUrl, { x: 24.8, z: -1.6, rotY: -0.4, width: 1.7, greek: true });"
+    }
+   ],
+   "triangles": 548,
+   "materials": 1
+  },
+  {
+   "file": "greek/greek_wood_pile.fbx",
+   "kind": "prop",
+   "pack": "Greek Low Poly pack (Unity Asset Store)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 16684,
+   "status": "used",
+   "where": [
+    "(27.9, 27.6) [townScene.ts:9280]",
+    "(-24.6, 20.2) [townScene.ts:9281]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9280,
+     "text": "void placeFbx(greekWoodPileUrl, { x: 27.9, z: 27.6, rotY: 0.8, width: 1.6, greek: true });"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9281,
+     "text": "void placeFbx(greekWoodPileUrl, { x: -24.6, z: 20.2, rotY: 2.2, width: 1.4, greek: true });"
+    }
+   ],
+   "triangles": 122,
+   "materials": 1
+  },
+  {
+   "file": "greek_atlas.png",
+   "kind": "texture",
+   "pack": "Greek Low Poly pack (Unity Asset Store)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "Textures/Greek_Combined.png",
+   "bytes": 652,
+   "status": "unused",
+   "where": [],
+   "note": "",
+   "uses": [],
+   "image": "128x128"
+  },
+  {
+   "file": "idyllic/banner.glb",
+   "kind": "prop",
+   "pack": "Idyllic Rome (Unity Asset Store), slimmed by tools/idyllic/slim.py",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_banner_rome_01",
+   "bytes": 97264,
+   "status": "used",
+   "where": [
+    "vexillum-left at (33.7, 20.51) [colosseumSetting.ts SETTING_PIECES]",
+    "vexillum-right at (34.81, 4.69) [colosseumSetting.ts SETTING_PIECES]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3145,
+     "text": "podest: settingPodestUrl, banner: settingBannerUrl,"
+    }
+   ],
+   "triangles": 1190,
+   "materials": 2
+  },
+  {
+   "file": "idyllic/colosseum.glb",
+   "kind": "building",
+   "pack": "Idyllic Rome (Unity Asset Store), slimmed by tools/idyllic/slim.py",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_amphitheatre_rome",
+   "bytes": 5303164,
+   "status": "used",
+   "where": [
+    "townScene.ts:3141 `void placeWorld(colosseumUrl, { x: COLOSSEUM_PLACEMENT.x, z: COLOSSEUM_PLACEMENT.z, rotY: `"
+   ],
+   "note": "The Colosseum in its prime in the eastern basin: the Idyllic Rome amphitheatre (Task 85), slimmed to a phone budget, textured, and complete with its own velarium ring and masts. Its setting follows: the stair and the sta",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 807,
+     "text": "[colosseumUrl, 2],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1520,
+     "text": "const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductCo"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3141,
+     "text": "void placeWorld(colosseumUrl, { x: COLOSSEUM_PLACEMENT.x, z: COLOSSEUM_PLACEMENT.z, rotY: COLOSSEUM_PLACEMENT.rotY, width: COLOSSEUM_PLACEMENT.width }"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3143,
+     "text": "colosseum: colosseumUrl, stairs: settingStairsUrl, house_a: settingHouseAUrl, house_b: settingHouseBUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9820,
+     "text": "void runtime.streaming.request(() => loadModelScene(colosseumUrl), () => ({ x: COLOSSEUM.position[0], z: COLOSSEUM.position[1] }))"
+    }
+   ],
+   "triangles": 62789,
+   "materials": 14
+  },
+  {
+   "file": "idyllic/house_a.glb",
+   "kind": "building",
+   "pack": "Idyllic Rome (Unity Asset Store), slimmed by tools/idyllic/slim.py",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_house_building_01",
+   "bytes": 496424,
+   "status": "used",
+   "where": [
+    "house-north at (45.87, -5.07) [colosseumSetting.ts SETTING_PIECES]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1520,
+     "text": "const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductCo"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3143,
+     "text": "colosseum: colosseumUrl, stairs: settingStairsUrl, house_a: settingHouseAUrl, house_b: settingHouseBUrl,"
+    }
+   ],
+   "triangles": 7460,
+   "materials": 8
+  },
+  {
+   "file": "idyllic/house_b.glb",
+   "kind": "building",
+   "pack": "Idyllic Rome (Unity Asset Store), slimmed by tools/idyllic/slim.py",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_house_building_02",
+   "bytes": 540900,
+   "status": "used",
+   "where": [
+    "house-east at (59.02, 6.82) [colosseumSetting.ts SETTING_PIECES]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1520,
+     "text": "const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductCo"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3143,
+     "text": "colosseum: colosseumUrl, stairs: settingStairsUrl, house_a: settingHouseAUrl, house_b: settingHouseBUrl,"
+    }
+   ],
+   "triangles": 6849,
+   "materials": 9
+  },
+  {
+   "file": "idyllic/insula.glb",
+   "kind": "building",
+   "pack": "Idyllic Rome (Unity Asset Store), slimmed by tools/idyllic/slim.py",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_insulae_building_01",
+   "bytes": 587936,
+   "status": "used",
+   "where": [
+    "insula-south-east at (56.55, 25.93) [colosseumSetting.ts SETTING_PIECES]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1520,
+     "text": "const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductCo"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3144,
+     "text": "insula: settingInsulaUrl, statue_soldier: settingSoldierUrl, statue_general: settingGeneralUrl,"
+    }
+   ],
+   "triangles": 6852,
+   "materials": 9
+  },
+  {
+   "file": "idyllic/podest.glb",
+   "kind": "prop",
+   "pack": "Idyllic Rome (Unity Asset Store), slimmed by tools/idyllic/slim.py",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_podest_rome_01",
+   "bytes": 172272,
+   "status": "used",
+   "where": [
+    "podest-left at (30.83, 15.12) [colosseumSetting.ts SETTING_PIECES]",
+    "podest-right at (31.21, 9.63) [colosseumSetting.ts SETTING_PIECES]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3145,
+     "text": "podest: settingPodestUrl, banner: settingBannerUrl,"
+    }
+   ],
+   "triangles": 508,
+   "materials": 1
+  },
+  {
+   "file": "idyllic/stairs.glb",
+   "kind": "building",
+   "pack": "Idyllic Rome (Unity Asset Store), slimmed by tools/idyllic/slim.py",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_staircase_01",
+   "bytes": 165712,
+   "status": "used",
+   "where": [
+    "stair at (30.72, 12.35) [colosseumSetting.ts SETTING_PIECES]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1520,
+     "text": "const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductCo"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3143,
+     "text": "colosseum: colosseumUrl, stairs: settingStairsUrl, house_a: settingHouseAUrl, house_b: settingHouseBUrl,"
+    }
+   ],
+   "triangles": 1584,
+   "materials": 2
+  },
+  {
+   "file": "idyllic/statue_general.glb",
+   "kind": "statue",
+   "pack": "Idyllic Rome (Unity Asset Store), slimmed by tools/idyllic/slim.py",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_sculpture_general",
+   "bytes": 207384,
+   "status": "used",
+   "where": [
+    "statue-right at (31.21, 9.63) [colosseumSetting.ts SETTING_PIECES]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3144,
+     "text": "insula: settingInsulaUrl, statue_soldier: settingSoldierUrl, statue_general: settingGeneralUrl,"
+    }
+   ],
+   "triangles": 3674,
+   "materials": 4
+  },
+  {
+   "file": "idyllic/statue_soldier.glb",
+   "kind": "statue",
+   "pack": "Idyllic Rome (Unity Asset Store), slimmed by tools/idyllic/slim.py",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_sculpture_soldier",
+   "bytes": 179180,
+   "status": "used",
+   "where": [
+    "statue-left at (30.83, 15.12) [colosseumSetting.ts SETTING_PIECES]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3144,
+     "text": "insula: settingInsulaUrl, statue_soldier: settingSoldierUrl, statue_general: settingGeneralUrl,"
+    }
+   ],
+   "triangles": 3349,
+   "materials": 5
+  },
+  {
+   "file": "market/amphora_a.glb",
+   "kind": "prop",
+   "pack": "Idyllic Rome (Unity Asset Store), slimmed by tools/idyllic/slim.py",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_amphora_01",
+   "bytes": 68180,
+   "status": "used",
+   "where": [
+    "market stall-0-amphora_a-0 at (9, 32.25), stall 0 [idyllicDressing.ts DRESSING_PIECES]",
+    "market stall-2-amphora_a-1 at (9, 37.1), stall 2 [idyllicDressing.ts DRESSING_PIECES]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4928,
+     "text": "amphora_a: dressingAmphoraAUrl,"
+    }
+   ],
+   "triangles": 1100,
+   "materials": 1
+  },
+  {
+   "file": "market/amphora_b.glb",
+   "kind": "prop",
+   "pack": "Idyllic Rome (Unity Asset Store), slimmed by tools/idyllic/slim.py",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_amphora_02",
+   "bytes": 73588,
+   "status": "used",
+   "where": [
+    "market stall-0-amphora_b-1 at (9.02, 32.75), stall 0 [idyllicDressing.ts DRESSING_PIECES]",
+    "market stall-1-amphora_b-0 at (-9.02, 33.5), stall 1 [idyllicDressing.ts DRESSING_PIECES]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4929,
+     "text": "amphora_b: dressingAmphoraBUrl,"
+    }
+   ],
+   "triangles": 1260,
+   "materials": 1
+  },
+  {
+   "file": "market/amphora_c.glb",
+   "kind": "prop",
+   "pack": "Idyllic Rome (Unity Asset Store), slimmed by tools/idyllic/slim.py",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_amphora_03",
+   "bytes": 48800,
+   "status": "used",
+   "where": [
+    "market stall-0-amphora_c-4 at (8.95, 35), stall 0 [idyllicDressing.ts DRESSING_PIECES]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4930,
+     "text": "amphora_c: dressingAmphoraCUrl,"
+    }
+   ],
+   "triangles": 458,
+   "materials": 1
+  },
+  {
+   "file": "market/basket_fruit.glb",
+   "kind": "prop",
+   "pack": "Idyllic Rome (Unity Asset Store), slimmed by tools/idyllic/slim.py",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_basket_fruit_01",
+   "bytes": 99860,
+   "status": "used",
+   "where": [
+    "market stall-1-basket_fruit-2 at (-8.22, 34.55), stall 1 [idyllicDressing.ts DRESSING_PIECES]",
+    "market stall-2-basket_fruit-3 at (8.2, 38.65), stall 2 [idyllicDressing.ts DRESSING_PIECES]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4931,
+     "text": "basket_fruit: dressingBasketFruitUrl,"
+    }
+   ],
+   "triangles": 1574,
+   "materials": 2
+  },
+  {
+   "file": "market/basket_grain.glb",
+   "kind": "prop",
+   "pack": "Idyllic Rome (Unity Asset Store), slimmed by tools/idyllic/slim.py",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_basket_grain",
+   "bytes": 49992,
+   "status": "used",
+   "where": [
+    "market stall-0-basket_grain-5 at (8.2, 33.4), stall 0 [idyllicDressing.ts DRESSING_PIECES]",
+    "market stall-1-basket_grain-3 at (-8.2, 33.55), stall 1 [idyllicDressing.ts DRESSING_PIECES]",
+    "market stall-2-basket_grain-4 at (8.2, 37.45), stall 2 [idyllicDressing.ts DRESSING_PIECES]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4932,
+     "text": "basket_grain: dressingBasketGrainUrl,"
+    }
+   ],
+   "triangles": 612,
+   "materials": 1
+  },
+  {
+   "file": "market/bread.glb",
+   "kind": "prop",
+   "pack": "Idyllic Rome (Unity Asset Store), slimmed by tools/idyllic/slim.py",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_bread_01",
+   "bytes": 41204,
+   "status": "used",
+   "where": [
+    "market stall-1-bread-4 at (-8.28, 32.48), stall 1 [idyllicDressing.ts DRESSING_PIECES]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4933,
+     "text": "bread: dressingBreadUrl,"
+    }
+   ],
+   "triangles": 780,
+   "materials": 1
+  },
+  {
+   "file": "market/cloth_a.glb",
+   "kind": "prop",
+   "pack": "Idyllic Rome (Unity Asset Store), slimmed by tools/idyllic/slim.py",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_cloth_hanging_01",
+   "bytes": 51020,
+   "status": "used",
+   "where": [
+    "market stall-0-cloth_a-6 at (7.74, 32.1), stall 0 [idyllicDressing.ts DRESSING_PIECES]",
+    "market stall-1-cloth_a-6 at (-7.74, 32.1), stall 1 [idyllicDressing.ts DRESSING_PIECES]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4934,
+     "text": "cloth_a: dressingClothAUrl,"
+    }
+   ],
+   "triangles": 496,
+   "materials": 1
+  },
+  {
+   "file": "market/cloth_b.glb",
+   "kind": "prop",
+   "pack": "Idyllic Rome (Unity Asset Store), slimmed by tools/idyllic/slim.py",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_cloth_hanging_02",
+   "bytes": 53184,
+   "status": "used",
+   "where": [
+    "market stall-0-cloth_b-7 at (7.74, 35.1), stall 0 [idyllicDressing.ts DRESSING_PIECES]",
+    "market stall-2-cloth_b-5 at (7.74, 36.9), stall 2 [idyllicDressing.ts DRESSING_PIECES]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4935,
+     "text": "cloth_b: dressingClothBUrl,"
+    }
+   ],
+   "triangles": 590,
+   "materials": 1
+  },
+  {
+   "file": "market/cloth_c.glb",
+   "kind": "prop",
+   "pack": "Idyllic Rome (Unity Asset Store), slimmed by tools/idyllic/slim.py",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_cloth_hanging_03",
+   "bytes": 58316,
+   "status": "used",
+   "where": [
+    "market stall-1-cloth_c-5 at (-7.74, 35.1), stall 1 [idyllicDressing.ts DRESSING_PIECES]",
+    "market stall-2-cloth_c-6 at (7.74, 39.9), stall 2 [idyllicDressing.ts DRESSING_PIECES]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4936,
+     "text": "cloth_c: dressingClothCUrl,"
+    }
+   ],
+   "triangles": 816,
+   "materials": 1
+  },
+  {
+   "file": "market/vase_a.glb",
+   "kind": "prop",
+   "pack": "Idyllic Rome (Unity Asset Store), slimmed by tools/idyllic/slim.py",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_vase_painted_01",
+   "bytes": 90732,
+   "status": "used",
+   "where": [
+    "market stall-0-vase_a-2 at (8.98, 33.75), stall 0 [idyllicDressing.ts DRESSING_PIECES]",
+    "market stall-2-vase_a-2 at (9, 37.9), stall 2 [idyllicDressing.ts DRESSING_PIECES]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4925,
+     "text": "vase_a: dressingVaseAUrl,"
+    }
+   ],
+   "triangles": 1394,
+   "materials": 1
+  },
+  {
+   "file": "market/vase_b.glb",
+   "kind": "prop",
+   "pack": "Idyllic Rome (Unity Asset Store), slimmed by tools/idyllic/slim.py",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_vase_painted_02",
+   "bytes": 85688,
+   "status": "used",
+   "where": [
+    "market stall-0-vase_b-3 at (8.95, 34.4), stall 0 [idyllicDressing.ts DRESSING_PIECES]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4926,
+     "text": "vase_b: dressingVaseBUrl,"
+    }
+   ],
+   "triangles": 1284,
+   "materials": 1
+  },
+  {
+   "file": "market/vase_c.glb",
+   "kind": "prop",
+   "pack": "Idyllic Rome (Unity Asset Store), slimmed by tools/idyllic/slim.py",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_vase_painted_03",
+   "bytes": 75468,
+   "status": "used",
+   "where": [
+    "market stall-1-vase_c-1 at (-8.96, 34.9), stall 1 [idyllicDressing.ts DRESSING_PIECES]",
+    "market stall-2-vase_c-0 at (8.96, 39.7), stall 2 [idyllicDressing.ts DRESSING_PIECES]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4927,
+     "text": "vase_c: dressingVaseCUrl,"
+    }
+   ],
+   "triangles": 936,
+   "materials": 1
+  },
+  {
+   "file": "muse-avatar.vrm",
+   "kind": "character",
+   "pack": "pixiv VRoid sample model (AvatarSample_M)",
+   "origin": "pack",
+   "licence": "VRoid terms; tracked in git",
+   "bytes": 17176448,
+   "status": "used",
+   "where": [
+    "townScene.ts:5358 `loadModelScene(museAvatarUrl)`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 818,
+     "text": "[museAvatarUrl, 0],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 862,
+     "text": "[...[centurionUrl, museAvatarUrl].filter((url) => !modelCache.has(url)).map(fetchModelBytes), ...CORE_CLIP_URLS.map(fetchClipBytes)],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5358,
+     "text": "loadModelScene(museAvatarUrl)"
+    }
+   ],
+   "triangles": 52389,
+   "materials": 17
+  },
+  {
+   "file": "pets/cat.fbx",
+   "kind": "animal",
+   "pack": "Animated Pets & Farm Animals (HONETi)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 785872,
+   "status": "used",
+   "where": [
+    "(6.4, 17.8) [townScene.ts:9581]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9581,
+     "text": "void loadAnimal(\"cat\", catUrl, 0.31, { x: 6.4, z: 17.8, r: 2 }, 0.85).then((a) => {"
+    }
+   ],
+   "triangles": 390,
+   "materials": 1
+  },
+  {
+   "file": "pets/cat_05.png",
+   "kind": "texture",
+   "pack": "Animated Pets & Farm Animals (HONETi)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 93911,
+   "status": "used",
+   "where": [
+    "townScene.ts:9478 `: kind === \"cat\" ? catTexUrl`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9478,
+     "text": ": kind === \"cat\" ? catTexUrl"
+    }
+   ],
+   "image": "512x512"
+  },
+  {
+   "file": "pets/chicken.fbx",
+   "kind": "animal",
+   "pack": "Animated Pets & Farm Animals (HONETi)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 597904,
+   "status": "used",
+   "where": [
+    "(11.4, 27) [townScene.ts:9561]",
+    "(12.6, 26.8) [townScene.ts:9562]",
+    "(10.2, 27.2) [townScene.ts:9563]"
+   ],
+   "note": "Two chickens and a rooster at the market (the pack has one chicken; the third wears a slightly larger scale and a russet tint and carries the title with dignity).",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9561,
+     "text": "void loadAnimal(\"chicken\", chickenUrl, 0.42, { x: 11.4, z: 27, r: 2.2 }, 0.55);"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9562,
+     "text": "void loadAnimal(\"chicken\", chickenUrl, 0.45, { x: 12.6, z: 26.8, r: 2.2 }, 0.5);"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9563,
+     "text": "void loadAnimal(\"chicken\", chickenUrl, 0.52, { x: 10.2, z: 27.2, r: 2 }, 0.6).then((a) => {"
+    }
+   ],
+   "triangles": 598,
+   "materials": 1
+  },
+  {
+   "file": "pets/chicken_01.png",
+   "kind": "texture",
+   "pack": "Animated Pets & Farm Animals (HONETi)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 195241,
+   "status": "used",
+   "where": [
+    "townScene.ts:9477 `kind === \"chicken\" ? chickenTexUrl`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9477,
+     "text": "kind === \"chicken\" ? chickenTexUrl"
+    }
+   ],
+   "image": "512x512"
+  },
+  {
+   "file": "pets/pig.fbx",
+   "kind": "animal",
+   "pack": "Animated Pets & Farm Animals (HONETi)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 706848,
+   "status": "used",
+   "where": [
+    "(-20, 28) [townScene.ts:9574]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9574,
+     "text": "void loadAnimal(\"pig\", pigUrl, 0.64, { x: -20, z: 28, r: 2.2 }, 0.5);"
+    }
+   ],
+   "triangles": 454,
+   "materials": 1
+  },
+  {
+   "file": "pets/pig_01.png",
+   "kind": "texture",
+   "pack": "Animated Pets & Farm Animals (HONETi)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 162646,
+   "status": "used",
+   "where": [
+    "townScene.ts:9479 `: kind === \"pig\" ? pigTexUrl`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9479,
+     "text": ": kind === \"pig\" ? pigTexUrl"
+    }
+   ],
+   "image": "512x512"
+  },
+  {
+   "file": "pets/sheep.fbx",
+   "kind": "animal",
+   "pack": "Animated Pets & Farm Animals (HONETi)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 580656,
+   "status": "used",
+   "where": [
+    "(-15, 28.2) [townScene.ts:9573]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9573,
+     "text": "void loadAnimal(\"sheep\", sheepUrl, 0.8, { x: -15, z: 28.2, r: 2.4 }, 0.45);"
+    }
+   ],
+   "triangles": 744,
+   "materials": 1
+  },
+  {
+   "file": "pets/sheep_05.png",
+   "kind": "texture",
+   "pack": "Animated Pets & Farm Animals (HONETi)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 166404,
+   "status": "used",
+   "where": [
+    "townScene.ts:9480 `: kind === \"sheep\" ? sheepTexUrl`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9480,
+     "text": ": kind === \"sheep\" ? sheepTexUrl"
+    }
+   ],
+   "image": "512x512"
+  },
+  {
+   "file": "phoenix.fbx",
+   "kind": "animal",
+   "pack": "Low Poly Legend Phoenix (PULSAR BYTES)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 878892,
+   "status": "used",
+   "where": [
+    "townScene.ts:9868 `void runtime.streaming.request(() => assetUrl(phoenixUrl).then((resolved) => fbxLoader2.lo`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9868,
+     "text": "void runtime.streaming.request(() => assetUrl(phoenixUrl).then((resolved) => fbxLoader2.loadAsync(resolved)), () => ({ x: COLOSSEUM.position[0], z: CO"
+    }
+   ],
+   "triangles": 2241,
+   "materials": 3
+  },
+  {
+   "file": "phoenix_tex.png",
+   "kind": "texture",
+   "pack": "Low Poly Legend Phoenix (PULSAR BYTES)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 228,
+   "status": "used",
+   "where": [
+    "townScene.ts:9872 `const tex = loadAssetTexture(phoenixTexUrl);`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9872,
+     "text": "const tex = loadAssetTexture(phoenixTexUrl);"
+    }
+   ],
+   "image": "32x32"
+  },
+  {
+   "file": "roman/annex_sidechat.glb",
+   "kind": "building",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_attachment_building_01",
+   "bytes": 341776,
+   "status": "used",
+   "where": [
+    "townScene.ts:3001 `sidechat: annexUrl,`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 786,
+     "text": "[annexUrl, 0],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 998,
+     "text": "templeUrl, senateUrl, annexUrl, insulaeUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3001,
+     "text": "sidechat: annexUrl,"
+    }
+   ],
+   "triangles": 4264,
+   "materials": 8
+  },
+  {
+   "file": "roman/apple.glb",
+   "kind": "prop",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 4996,
+   "status": "unused",
+   "where": [],
+   "note": "",
+   "uses": [],
+   "triangles": 86,
+   "materials": 1
+  },
+  {
+   "file": "roman/aqueduct.glb",
+   "kind": "building",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 200596,
+   "status": "used",
+   "where": [
+    "(-22, -25) [townScene.ts:3131]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 810,
+     "text": "[aqueductUrl, 2],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1000,
+     "text": "aqueductUrl, aqueductConnectorUrl, triumphalArchUrl, archRoundUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1520,
+     "text": "const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductCo"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3131,
+     "text": "void placeWorld(aqueductUrl, { x: -22, z: -25, rotY: 0.85, width: 17, y: -0.5 });"
+    }
+   ],
+   "triangles": 3955,
+   "materials": 1
+  },
+  {
+   "file": "roman/aqueduct_connector.glb",
+   "kind": "building",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 14028,
+   "status": "used",
+   "where": [
+    "(-35, -16) [townScene.ts:3132]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 811,
+     "text": "[aqueductConnectorUrl, 2],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1000,
+     "text": "aqueductUrl, aqueductConnectorUrl, triumphalArchUrl, archRoundUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1520,
+     "text": "const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductCo"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3132,
+     "text": "void placeWorld(aqueductConnectorUrl, { x: -35, z: -16, rotY: 1.3, width: 10, y: -0.4 });"
+    }
+   ],
+   "triangles": 180,
+   "materials": 1
+  },
+  {
+   "file": "roman/arch_round.glb",
+   "kind": "building",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 12700,
+   "status": "used",
+   "where": [
+    "(0, 2.1) [townScene.ts:4336]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1000,
+     "text": "aqueductUrl, aqueductConnectorUrl, triumphalArchUrl, archRoundUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4336,
+     "text": "void placeModel(archRoundUrl, secretGroup, { x: 0, z: 2.1, width: 2.7 });"
+    }
+   ],
+   "triangles": 216,
+   "materials": 1
+  },
+  {
+   "file": "roman/ballista.glb",
+   "kind": "prop",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 60528,
+   "status": "used",
+   "where": [
+    "(-36, 4) [townScene.ts:3134]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 812,
+     "text": "[ballistaUrl, 2],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3134,
+     "text": "void placeWorld(ballistaUrl, { x: -36, z: 4, rotY: 0.8, width: 2.3 });"
+    }
+   ],
+   "triangles": 996,
+   "materials": 1
+  },
+  {
+   "file": "roman/banner.glb",
+   "kind": "prop",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 14652,
+   "status": "used",
+   "where": [
+    "(6.2, 44.6) [townScene.ts:3135]",
+    "(-6.2, 44.6) [townScene.ts:3136]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 803,
+     "text": "[bannerUrl, 1],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3135,
+     "text": "void placeWorld(bannerUrl, { x: 6.2, z: 44.6, height: 3.1 });"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3136,
+     "text": "void placeWorld(bannerUrl, { x: -6.2, z: 44.6, height: 3.1 });"
+    }
+   ],
+   "triangles": 166,
+   "materials": 1
+  },
+  {
+   "file": "roman/banner_triangle.glb",
+   "kind": "prop",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 14460,
+   "status": "used",
+   "where": [
+    "(6.8, 31.2) [townScene.ts:3437]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 804,
+     "text": "[bannerTriangleUrl, 1],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3437,
+     "text": "void placeWorld(bannerTriangleUrl, { x: 6.8, z: 31.2, height: 2.7 });"
+    }
+   ],
+   "triangles": 166,
+   "materials": 1
+  },
+  {
+   "file": "roman/barrel.glb",
+   "kind": "prop",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 16108,
+   "status": "used",
+   "where": [
+    "(6.9, 35.8) [townScene.ts:3481]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3481,
+     "text": "layOutGoods(placeWorld(barrelUrl, { x: 6.9, z: 35.8, width: 0.72 }));"
+    }
+   ],
+   "triangles": 264,
+   "materials": 1
+  },
+  {
+   "file": "roman/bench_stone.glb",
+   "kind": "prop",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 11636,
+   "status": "used",
+   "where": [
+    "(8.8, 4.6) [townScene.ts:2840]",
+    "(-2.3, 2.62) [townScene.ts:2969]",
+    "(17.3, -23.6) [townScene.ts:4002]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 801,
+     "text": "[benchStoneUrl, 1],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 2840,
+     "text": "void placeWorld(benchStoneUrl, { x: 8.8, z: 4.6, rotY: Math.PI / 2, width: 1.9 }).then((g) => {"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 2969,
+     "text": "void placeModel(benchStoneUrl, house, { x: -2.3, z: 2.62, y: 0.14, rotY: 0.35, width: 1.9 }).then((g) => {"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3633,
+     "text": "void placeWorld(benchStoneUrl, { x: CLIFF.bench.x, z: CLIFF.bench.z, rotY: CLIFF.bench.rotY, width: 1.9 }).then((g) => {"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4002,
+     "text": "void placeWorld(benchStoneUrl, { x: 17.3, z: -23.6, rotY: Math.PI / 2, width: 1.9 }).then((g) => {"
+    }
+   ],
+   "triangles": 164,
+   "materials": 1
+  },
+  {
+   "file": "roman/bench_wooden.glb",
+   "kind": "prop",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 6864,
+   "status": "used",
+   "where": [
+    "(0, -0.7) [townScene.ts:4337]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 802,
+     "text": "[benchWoodenUrl, 1],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4337,
+     "text": "void placeModel(benchWoodenUrl, secretGroup, { x: 0, z: -0.7, rotY: 0, width: 1.7 }).then((g) => {"
+    }
+   ],
+   "triangles": 74,
+   "materials": 1
+  },
+  {
+   "file": "roman/boat_small.glb",
+   "kind": "prop",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 46184,
+   "status": "used",
+   "where": [
+    "townScene.ts:3745 `.request(() => loadModelScene(boatSmallUrl), () => ({ x: CLIFF.head.x, z: CLIFF.head.z }))`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 808,
+     "text": "[boatSmallUrl, 2],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3745,
+     "text": ".request(() => loadModelScene(boatSmallUrl), () => ({ x: CLIFF.head.x, z: CLIFF.head.z }))"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3888,
+     "text": "void runtime.streaming.request(() => loadModelScene(boatSmallUrl), () => ({ x: LAKE.position[0], z: LAKE.position[1] })).then((scene) => {"
+    }
+   ],
+   "triangles": 672,
+   "materials": 1
+  },
+  {
+   "file": "roman/booth_a.glb",
+   "kind": "building",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 42488,
+   "status": "used",
+   "where": [
+    "townScene.ts:3424 `void placeWorld(boothAUrl, { x: boothA[0], z: boothA[1], rotY: boothA[2], width: 3.6 });`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 796,
+     "text": "[boothAUrl, 1],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1001,
+     "text": "columnIonicUrl, columnSimpleUrl, boothAUrl, boothBUrl, boothCUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1520,
+     "text": "const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductCo"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3424,
+     "text": "void placeWorld(boothAUrl, { x: boothA[0], z: boothA[1], rotY: boothA[2], width: 3.6 });"
+    }
+   ],
+   "triangles": 464,
+   "materials": 2
+  },
+  {
+   "file": "roman/booth_b.glb",
+   "kind": "building",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 42416,
+   "status": "used",
+   "where": [
+    "townScene.ts:3425 `void placeWorld(boothBUrl, { x: boothB[0], z: boothB[1], rotY: boothB[2], width: 3.6 });`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 797,
+     "text": "[boothBUrl, 1],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1001,
+     "text": "columnIonicUrl, columnSimpleUrl, boothAUrl, boothBUrl, boothCUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1520,
+     "text": "const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductCo"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3425,
+     "text": "void placeWorld(boothBUrl, { x: boothB[0], z: boothB[1], rotY: boothB[2], width: 3.6 });"
+    }
+   ],
+   "triangles": 464,
+   "materials": 2
+  },
+  {
+   "file": "roman/booth_c.glb",
+   "kind": "building",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 42228,
+   "status": "used",
+   "where": [
+    "townScene.ts:3426 `void placeWorld(boothCUrl, { x: boothC[0], z: boothC[1], rotY: boothC[2], width: 3.6 });`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 798,
+     "text": "[boothCUrl, 1],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1001,
+     "text": "columnIonicUrl, columnSimpleUrl, boothAUrl, boothBUrl, boothCUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1520,
+     "text": "const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductCo"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3426,
+     "text": "void placeWorld(boothCUrl, { x: boothC[0], z: boothC[1], rotY: boothC[2], width: 3.6 });"
+    }
+   ],
+   "triangles": 464,
+   "materials": 2
+  },
+  {
+   "file": "roman/bowl.glb",
+   "kind": "prop",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 7504,
+   "status": "unused",
+   "where": [],
+   "note": "",
+   "uses": [],
+   "triangles": 116,
+   "materials": 1
+  },
+  {
+   "file": "roman/bread.glb",
+   "kind": "prop",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 14564,
+   "status": "used",
+   "where": [
+    "(6.9, 33.6) [townScene.ts:3479]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3479,
+     "text": "layOutGoods(placeWorld(breadUrl, { x: 6.9, z: 33.6, y: 0.6, rotY: 0.7, width: 0.5 }));"
+    }
+   ],
+   "triangles": 128,
+   "materials": 1
+  },
+  {
+   "file": "roman/bush_a.glb",
+   "kind": "nature",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 10916,
+   "status": "used",
+   "where": [
+    "townScene.ts:2885 `const PACK_BUSHES = [bushAUrl, bushBUrl, bushCUrl, bushDUrl, bushEUrl];`"
+   ],
+   "note": "Pack vegetation: the Roman Empire pack's own trees, bushes, and flowers, converted like the buildings, so the greenery matches the district's art style. (The Town Tree stays procedural, it grows and changes with the seas",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 2885,
+     "text": "const PACK_BUSHES = [bushAUrl, bushBUrl, bushCUrl, bushDUrl, bushEUrl];"
+    }
+   ],
+   "triangles": 94,
+   "materials": 1
+  },
+  {
+   "file": "roman/bush_b.glb",
+   "kind": "nature",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 10848,
+   "status": "used",
+   "where": [
+    "(-2.3, 1.5) [townScene.ts:4343]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 2885,
+     "text": "const PACK_BUSHES = [bushAUrl, bushBUrl, bushCUrl, bushDUrl, bushEUrl];"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4343,
+     "text": "void placeModel(bushBUrl, secretGroup, { x: -2.3, z: 1.5, height: 0.95 });"
+    }
+   ],
+   "triangles": 94,
+   "materials": 1
+  },
+  {
+   "file": "roman/bush_c.glb",
+   "kind": "nature",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 8864,
+   "status": "used",
+   "where": [
+    "townScene.ts:3644 `if (kind === 0) void placeWorld(bushCUrl, { x: px, z: pz, rotY: rot, width: 1.6 });`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 2885,
+     "text": "const PACK_BUSHES = [bushAUrl, bushBUrl, bushCUrl, bushDUrl, bushEUrl];"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3644,
+     "text": "if (kind === 0) void placeWorld(bushCUrl, { x: px, z: pz, rotY: rot, width: 1.6 });"
+    }
+   ],
+   "triangles": 74,
+   "materials": 1
+  },
+  {
+   "file": "roman/bush_d.glb",
+   "kind": "nature",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 13224,
+   "status": "used",
+   "where": [
+    "(2.4, 1.3) [townScene.ts:4344]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 2885,
+     "text": "const PACK_BUSHES = [bushAUrl, bushBUrl, bushCUrl, bushDUrl, bushEUrl];"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4344,
+     "text": "void placeModel(bushDUrl, secretGroup, { x: 2.4, z: 1.3, rotY: 1.2, height: 0.9 });"
+    }
+   ],
+   "triangles": 116,
+   "materials": 1
+  },
+  {
+   "file": "roman/bush_e.glb",
+   "kind": "nature",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 16292,
+   "status": "used",
+   "where": [
+    "townScene.ts:2885 `const PACK_BUSHES = [bushAUrl, bushBUrl, bushCUrl, bushDUrl, bushEUrl];`"
+   ],
+   "note": "Pack vegetation: the Roman Empire pack's own trees, bushes, and flowers, converted like the buildings, so the greenery matches the district's art style. (The Town Tree stays procedural, it grows and changes with the seas",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 2885,
+     "text": "const PACK_BUSHES = [bushAUrl, bushBUrl, bushCUrl, bushDUrl, bushEUrl];"
+    }
+   ],
+   "triangles": 146,
+   "materials": 1
+  },
+  {
+   "file": "roman/bush_roman.glb",
+   "kind": "nature",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 14248,
+   "status": "unused",
+   "where": [],
+   "note": "",
+   "uses": [],
+   "triangles": 126,
+   "materials": 1
+  },
+  {
+   "file": "roman/column_ionic.glb",
+   "kind": "building",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 77740,
+   "status": "used",
+   "where": [
+    "townScene.ts:3421 `void placeWorld(columnIonicUrl, { x: VILLA.ionicColumn[0], z: VILLA.ionicColumn[1], height`"
+   ],
+   "note": "One grand ionic column in the peristyle garden, the pointy hat's perch.",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 799,
+     "text": "[columnIonicUrl, 1],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1001,
+     "text": "columnIonicUrl, columnSimpleUrl, boothAUrl, boothBUrl, boothCUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3421,
+     "text": "void placeWorld(columnIonicUrl, { x: VILLA.ionicColumn[0], z: VILLA.ionicColumn[1], height: 3.2 });"
+    }
+   ],
+   "triangles": 796,
+   "materials": 1
+  },
+  {
+   "file": "roman/column_simple.glb",
+   "kind": "building",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 22436,
+   "status": "used",
+   "where": [
+    "townScene.ts:3182 `void placeWorld(columnSimpleUrl, { x: cx, z: cz, height: VILLA.peristyle.columnHeight });`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 800,
+     "text": "[columnSimpleUrl, 1],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1001,
+     "text": "columnIonicUrl, columnSimpleUrl, boothAUrl, boothBUrl, boothCUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3182,
+     "text": "void placeWorld(columnSimpleUrl, { x: cx, z: cz, height: VILLA.peristyle.columnHeight });"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4814,
+     "text": "void placeWorld(columnSimpleUrl, { x: cx, z: cz, height: 3.0 });"
+    }
+   ],
+   "triangles": 360,
+   "materials": 1
+  },
+  {
+   "file": "roman/conifer.glb",
+   "kind": "nature",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 59484,
+   "status": "used",
+   "where": [
+    "(-40, 10) [townScene.ts:3491]",
+    "(-10.6, -35.9) [townScene.ts:4009]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1519,
+     "text": "const treeUrls = new Set([treeAUrl, treeBUrl, treeCUrl, treeDUrl, cypressUrl, coniferUrl, oliveUrl]);"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3491,
+     "text": "void placeWorld(coniferUrl, { x: -40, z: 10, height: 6.5 });"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4009,
+     "text": "void placeWorld(coniferUrl, { x: -10.6, z: -35.9, height: 5.6 });"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5470,
+     "text": "void placeWorld(coniferUrl, { x: px, z: pz, rotY: i * 1.9, height: 4.2 * ps });"
+    }
+   ],
+   "triangles": 593,
+   "materials": 2
+  },
+  {
+   "file": "roman/crate.glb",
+   "kind": "prop",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 43060,
+   "status": "used",
+   "where": [
+    "(6.9, 33.6) [townScene.ts:3477]",
+    "(-6.9, 33.6) [townScene.ts:3478]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3477,
+     "text": "layOutGoods(placeWorld(crateUrl, { x: 6.9, z: 33.6, rotY: 0.4, width: 0.62 }));"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3478,
+     "text": "layOutGoods(placeWorld(crateUrl, { x: -6.9, z: 33.6, rotY: -0.5, width: 0.62 }));"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4954,
+     "text": "layOutGoods(placeWorld(crateUrl, { x, z, rotY: MARKET_BOOTHS[c.booth]![2] + c.rot, width: 0.62, y: terrainHeight(bx, bz) - terrainHeight(x, z) }));"
+    }
+   ],
+   "triangles": 468,
+   "materials": 1
+  },
+  {
+   "file": "roman/cypress.glb",
+   "kind": "nature",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 11988,
+   "status": "used",
+   "where": [
+    "(31.5, 33) [townScene.ts:3486]",
+    "(-27.2, 30.6) [townScene.ts:3487]",
+    "(34, -10.2) [townScene.ts:3488]",
+    "(-39.1, -22.1) [townScene.ts:3489]",
+    "(-2.7, -1.3) [townScene.ts:4341]",
+    "(2.7, -1.5) [townScene.ts:4342]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1519,
+     "text": "const treeUrls = new Set([treeAUrl, treeBUrl, treeCUrl, treeDUrl, cypressUrl, coniferUrl, oliveUrl]);"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3418,
+     "text": "void placeModel(cypressUrl, world, { x: cx, z: cz, y: terrainHeight(cx, cz), height: 5.6 });"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3486,
+     "text": "void placeWorld(cypressUrl, { x: 31.5, z: 33, height: 4.6 });"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3487,
+     "text": "void placeWorld(cypressUrl, { x: -27.2, z: 30.6, rotY: 1.2, height: 4.2 });"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3488,
+     "text": "void placeWorld(cypressUrl, { x: 34, z: -10.2, rotY: 2.1, height: 4.8 });"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3489,
+     "text": "void placeWorld(cypressUrl, { x: -39.1, z: -22.1, rotY: 0.6, height: 4.4 });"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4341,
+     "text": "void placeModel(cypressUrl, secretGroup, { x: -2.7, z: -1.3, height: 3.8 });"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4342,
+     "text": "void placeModel(cypressUrl, secretGroup, { x: 2.7, z: -1.5, rotY: 1.1, height: 3.4 });"
+    }
+   ],
+   "triangles": 103,
+   "materials": 2
+  },
+  {
+   "file": "roman/flower_a.glb",
+   "kind": "nature",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 7996,
+   "status": "used",
+   "where": [
+    "townScene.ts:2887 `const PACK_FLOWERS = [flowerAUrl, flowerMedUrl, flowerGroupUrl];`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 2887,
+     "text": "const PACK_FLOWERS = [flowerAUrl, flowerMedUrl, flowerGroupUrl];"
+    }
+   ],
+   "triangles": 118,
+   "materials": 1
+  },
+  {
+   "file": "roman/flower_group.glb",
+   "kind": "nature",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 53380,
+   "status": "used",
+   "where": [
+    "townScene.ts:5526 `height: flowerUrl === flowerGroupUrl ? 0.5 : 0.62,`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 2887,
+     "text": "const PACK_FLOWERS = [flowerAUrl, flowerMedUrl, flowerGroupUrl];"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5526,
+     "text": "height: flowerUrl === flowerGroupUrl ? 0.5 : 0.62,"
+    }
+   ],
+   "triangles": 704,
+   "materials": 1
+  },
+  {
+   "file": "roman/flower_med.glb",
+   "kind": "nature",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 56016,
+   "status": "used",
+   "where": [
+    "townScene.ts:2887 `const PACK_FLOWERS = [flowerAUrl, flowerMedUrl, flowerGroupUrl];`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 2887,
+     "text": "const PACK_FLOWERS = [flowerAUrl, flowerMedUrl, flowerGroupUrl];"
+    }
+   ],
+   "triangles": 770,
+   "materials": 1
+  },
+  {
+   "file": "roman/gladius.glb",
+   "kind": "weapon",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_weapon_gladius",
+   "bytes": 8612,
+   "status": "used",
+   "where": [
+    "townScene.ts:5842 `const gaiusArms = createGaiusArms({ frame: avatar, place: placeModel, gladiusUrl, shieldUr`"
+   ],
+   "note": "Gaius's arms: the gladius at his right hip, the scutum on his back (gaiusArms.ts).",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 816,
+     "text": "[gladiusUrl, 0],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5842,
+     "text": "const gaiusArms = createGaiusArms({ frame: avatar, place: placeModel, gladiusUrl, shieldUrl: shieldLegionaireUrl });"
+    }
+   ],
+   "triangles": 104,
+   "materials": 1
+  },
+  {
+   "file": "roman/grapes.glb",
+   "kind": "prop",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 22740,
+   "status": "used",
+   "where": [
+    "(-6.9, 33.6) [townScene.ts:3480]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3480,
+     "text": "layOutGoods(placeWorld(grapesUrl, { x: -6.9, z: 33.6, y: 0.6, rotY: 0.2, width: 0.42 }));"
+    }
+   ],
+   "triangles": 220,
+   "materials": 1
+  },
+  {
+   "file": "roman/grass_patch.glb",
+   "kind": "nature",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 2860,
+   "status": "used",
+   "where": [
+    "(-9.6, -29.2) [townScene.ts:4012]",
+    "(-11.8, -34.6) [townScene.ts:4013]",
+    "(-19.8, -25.9) [townScene.ts:4014]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4012,
+     "text": "void placeWorld(grassPatchUrl, { x: -9.6, z: -29.2, rotY: 0.4, width: 1.2 });"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4013,
+     "text": "void placeWorld(grassPatchUrl, { x: -11.8, z: -34.6, rotY: 1.6, width: 1.2 });"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4014,
+     "text": "void placeWorld(grassPatchUrl, { x: -19.8, z: -25.9, rotY: 2.8, width: 1.1 });"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5532,
+     "text": "void placeWorld(grassPatchUrl, { x: gx, z: gz, rotY: i * 0.7, width: 1.15 });"
+    }
+   ],
+   "triangles": 24,
+   "materials": 1
+  },
+  {
+   "file": "roman/house_garden.glb",
+   "kind": "building",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_house_roman_02",
+   "bytes": 469872,
+   "status": "used",
+   "where": [
+    "townScene.ts:2997 `garden: houseGardenUrl,`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 787,
+     "text": "[houseGardenUrl, 0],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 999,
+     "text": "houseSoundsUrl, houseGardenUrl, villaUrl, pavilionUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 2997,
+     "text": "garden: houseGardenUrl,"
+    }
+   ],
+   "triangles": 7506,
+   "materials": 3
+  },
+  {
+   "file": "roman/house_sounds.glb",
+   "kind": "building",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_house_roman_01",
+   "bytes": 326164,
+   "status": "used",
+   "where": [
+    "townScene.ts:2996 `sounds: houseSoundsUrl,`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 791,
+     "text": "[houseSoundsUrl, 1],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 999,
+     "text": "houseSoundsUrl, houseGardenUrl, villaUrl, pavilionUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 2996,
+     "text": "sounds: houseSoundsUrl,"
+    }
+   ],
+   "triangles": 5102,
+   "materials": 3
+  },
+  {
+   "file": "roman/insulae_recipes.glb",
+   "kind": "building",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_insulae_building_02",
+   "bytes": 306960,
+   "status": "used",
+   "where": [
+    "townScene.ts:2999 `recipes: insulaeUrl,`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 792,
+     "text": "[insulaeUrl, 1],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 998,
+     "text": "templeUrl, senateUrl, annexUrl, insulaeUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 2999,
+     "text": "recipes: insulaeUrl,"
+    }
+   ],
+   "triangles": 5076,
+   "materials": 3
+  },
+  {
+   "file": "roman/olive.glb",
+   "kind": "nature",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 62880,
+   "status": "used",
+   "where": [
+    "(-23, 34) [townScene.ts:3490]",
+    "(-8.6, -26.4) [townScene.ts:3997]",
+    "(19.6, -25.4) [townScene.ts:4001]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1519,
+     "text": "const treeUrls = new Set([treeAUrl, treeBUrl, treeCUrl, treeDUrl, cypressUrl, coniferUrl, oliveUrl]);"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3490,
+     "text": "void placeWorld(oliveUrl, { x: -23, z: 34, width: 3.4 });"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3997,
+     "text": "void placeWorld(oliveUrl, { x: -8.6, z: -26.4, width: 3.2 });"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4001,
+     "text": "void placeWorld(oliveUrl, { x: 19.6, z: -25.4, width: 3.2 });"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5803,
+     "text": "for (const [ox, oz] of ATHENA_TEMPLE.olives) void placeWorld(oliveUrl, { x: ox, z: oz, rotY: ox * 1.7 + oz, width: 2.6 });"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5818,
+     "text": "void placeWorld(oliveUrl, { x: ox, z: oz, rotY: ox * 2.3 + oz, width: 3.2 }).then((g) => {"
+    }
+   ],
+   "triangles": 694,
+   "materials": 2
+  },
+  {
+   "file": "roman/paddle.glb",
+   "kind": "prop",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 4800,
+   "status": "used",
+   "where": [
+    "townScene.ts:3901 `void loadModelScene(paddleUrl).then((paddleScene) => {`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 809,
+     "text": "[paddleUrl, 2],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3901,
+     "text": "void loadModelScene(paddleUrl).then((paddleScene) => {"
+    }
+   ],
+   "triangles": 48,
+   "materials": 1
+  },
+  {
+   "file": "roman/palette.png",
+   "kind": "texture",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "M_colorpalette_BaseColor",
+   "bytes": 10217,
+   "status": "used",
+   "where": [
+    "townScene.ts:1008 `loadAssetTexture(paletteUrl, (texture) => {`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1008,
+     "text": "loadAssetTexture(paletteUrl, (texture) => {"
+    }
+   ],
+   "image": "1024x1024"
+  },
+  {
+   "file": "roman/pavilion_stars.glb",
+   "kind": "building",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_pavillion",
+   "bytes": 351012,
+   "status": "used",
+   "where": [
+    "townScene.ts:2998 `stars: pavilionUrl,`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 788,
+     "text": "[pavilionUrl, 0],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 999,
+     "text": "houseSoundsUrl, houseGardenUrl, villaUrl, pavilionUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 2998,
+     "text": "stars: pavilionUrl,"
+    }
+   ],
+   "triangles": 6052,
+   "materials": 2
+  },
+  {
+   "file": "roman/platform_wooden.glb",
+   "kind": "prop",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 49008,
+   "status": "unused",
+   "where": [],
+   "note": "",
+   "uses": [],
+   "triangles": 550,
+   "materials": 1
+  },
+  {
+   "file": "roman/pottery1.glb",
+   "kind": "prop",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 14084,
+   "status": "used",
+   "where": [
+    "(-6.9, 35.6) [townScene.ts:3482]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3482,
+     "text": "layOutGoods(placeWorld(pottery1Url, { x: -6.9, z: 35.6, width: 0.55 }));"
+    }
+   ],
+   "triangles": 188,
+   "materials": 1
+  },
+  {
+   "file": "roman/pottery2.glb",
+   "kind": "prop",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 17460,
+   "status": "used",
+   "where": [
+    "(-7, 36.6) [townScene.ts:3483]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3483,
+     "text": "layOutGoods(placeWorld(pottery2Url, { x: -7, z: 36.6, width: 0.48 }));"
+    }
+   ],
+   "triangles": 236,
+   "materials": 1
+  },
+  {
+   "file": "roman/rock_pack.glb",
+   "kind": "nature",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 12128,
+   "status": "used",
+   "where": [
+    "(-10.9, -28.4) [townScene.ts:4010]",
+    "(-20.4, -31.8) [townScene.ts:4011]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3645,
+     "text": "else void placeWorld(rockPackUrl, { x: px, z: pz, rotY: rot, width: 1.1 });"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4010,
+     "text": "void placeWorld(rockPackUrl, { x: -10.9, z: -28.4, rotY: 0.7, width: 0.8 });"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4011,
+     "text": "void placeWorld(rockPackUrl, { x: -20.4, z: -31.8, rotY: 2.1, width: 0.95 });"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5485,
+     "text": "void placeWorld(rockPackUrl, { x: rx, z: rz, rotY: i * 0.9, width: 0.85 });"
+    }
+   ],
+   "triangles": 144,
+   "materials": 1
+  },
+  {
+   "file": "roman/senate.glb",
+   "kind": "building",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_senate",
+   "bytes": 1811736,
+   "status": "used",
+   "where": [
+    "townScene.ts:3000 `mainchat: senateUrl,`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 785,
+     "text": "[senateUrl, 0],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 998,
+     "text": "templeUrl, senateUrl, annexUrl, insulaeUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3000,
+     "text": "mainchat: senateUrl,"
+    }
+   ],
+   "triangles": 31096,
+   "materials": 4
+  },
+  {
+   "file": "roman/shield_legionaire.glb",
+   "kind": "weapon",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_shield_legionaire",
+   "bytes": 22152,
+   "status": "used",
+   "where": [
+    "townScene.ts:5842 `const gaiusArms = createGaiusArms({ frame: avatar, place: placeModel, gladiusUrl, shieldUr`"
+   ],
+   "note": "Gaius's arms: the gladius at his right hip, the scutum on his back (gaiusArms.ts).",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 817,
+     "text": "[shieldLegionaireUrl, 0],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 5842,
+     "text": "const gaiusArms = createGaiusArms({ frame: avatar, place: placeModel, gladiusUrl, shieldUrl: shieldLegionaireUrl });"
+    }
+   ],
+   "triangles": 354,
+   "materials": 1
+  },
+  {
+   "file": "roman/statue_mars.glb",
+   "kind": "statue",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 132268,
+   "status": "used",
+   "where": [
+    "townScene.ts:3130 `void placeWorld(statueMarsUrl, { x: VILLA.statueMars[0], z: VILLA.statueMars[1], rotY: Mat`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 795,
+     "text": "[statueMarsUrl, 1],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3130,
+     "text": "void placeWorld(statueMarsUrl, { x: VILLA.statueMars[0], z: VILLA.statueMars[1], rotY: Math.PI / 2, height: 2.7 });"
+    }
+   ],
+   "triangles": 1368,
+   "materials": 1
+  },
+  {
+   "file": "roman/temple.glb",
+   "kind": "building",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_temple",
+   "bytes": 921216,
+   "status": "used",
+   "where": [
+    "(31, -27) [townScene.ts:3124]"
+   ],
+   "note": "--- Roman landmarks, market, and dressing ------------------------- The temple keeps its own hill to the north-east, the aqueduct strides in from the north-west, and the triumphal arch is the estate's gate.",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 793,
+     "text": "[templeUrl, 1],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 998,
+     "text": "templeUrl, senateUrl, annexUrl, insulaeUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1520,
+     "text": "const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductCo"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3124,
+     "text": "void placeWorld(templeUrl, { x: 31, z: -27, rotY: -0.6, width: 11 });"
+    }
+   ],
+   "triangles": 15558,
+   "materials": 2
+  },
+  {
+   "file": "roman/torch.fbx",
+   "kind": "prop",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_torch",
+   "bytes": 28864,
+   "status": "used",
+   "where": [
+    "townScene.ts:9082 `void placeFbx(torchUrl, { x, z, rotY, height: 1.7 }).then((g) => {`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9082,
+     "text": "void placeFbx(torchUrl, { x, z, rotY, height: 1.7 }).then((g) => {"
+    }
+   ],
+   "triangles": 80,
+   "materials": 1
+  },
+  {
+   "file": "roman/tree_a.glb",
+   "kind": "nature",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 39740,
+   "status": "used",
+   "where": [
+    "townScene.ts:2886 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1519,
+     "text": "const treeUrls = new Set([treeAUrl, treeBUrl, treeCUrl, treeDUrl, cypressUrl, coniferUrl, oliveUrl]);"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 2886,
+     "text": "const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];"
+    }
+   ],
+   "triangles": 408,
+   "materials": 2
+  },
+  {
+   "file": "roman/tree_b.glb",
+   "kind": "nature",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 100392,
+   "status": "used",
+   "where": [
+    "townScene.ts:2886 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1519,
+     "text": "const treeUrls = new Set([treeAUrl, treeBUrl, treeCUrl, treeDUrl, cypressUrl, coniferUrl, oliveUrl]);"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 2886,
+     "text": "const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];"
+    }
+   ],
+   "triangles": 1226,
+   "materials": 2
+  },
+  {
+   "file": "roman/tree_c.glb",
+   "kind": "nature",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 43792,
+   "status": "used",
+   "where": [
+    "townScene.ts:2886 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1519,
+     "text": "const treeUrls = new Set([treeAUrl, treeBUrl, treeCUrl, treeDUrl, cypressUrl, coniferUrl, oliveUrl]);"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 2886,
+     "text": "const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];"
+    }
+   ],
+   "triangles": 500,
+   "materials": 2
+  },
+  {
+   "file": "roman/tree_d.glb",
+   "kind": "nature",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 34444,
+   "status": "used",
+   "where": [
+    "townScene.ts:2886 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1519,
+     "text": "const treeUrls = new Set([treeAUrl, treeBUrl, treeCUrl, treeDUrl, cypressUrl, coniferUrl, oliveUrl]);"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 2886,
+     "text": "const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];"
+    }
+   ],
+   "triangles": 396,
+   "materials": 2
+  },
+  {
+   "file": "roman/triumphal_arch.glb",
+   "kind": "building",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 222488,
+   "status": "used",
+   "where": [
+    "townScene.ts:3133 `void placeWorld(triumphalArchUrl, { x: VILLA.gate[0], z: VILLA.gate[1], width: 7.5 });`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 794,
+     "text": "[triumphalArchUrl, 1],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1000,
+     "text": "aqueductUrl, aqueductConnectorUrl, triumphalArchUrl, archRoundUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 1520,
+     "text": "const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductCo"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3133,
+     "text": "void placeWorld(triumphalArchUrl, { x: VILLA.gate[0], z: VILLA.gate[1], width: 7.5 });"
+    }
+   ],
+   "triangles": 3906,
+   "materials": 1
+  },
+  {
+   "file": "roman/villa_stories.glb",
+   "kind": "building",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_villa_roman_01",
+   "bytes": 508432,
+   "status": "used",
+   "where": [
+    "townScene.ts:3009 `void placeModel(ROMAN_HOUSES[place.id] ?? villaUrl, house, {`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 790,
+     "text": "[villaUrl, 1],"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 999,
+     "text": "houseSoundsUrl, houseGardenUrl, villaUrl, pavilionUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 2995,
+     "text": "stories: villaUrl,"
+    },
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3009,
+     "text": "void placeModel(ROMAN_HOUSES[place.id] ?? villaUrl, house, {"
+    }
+   ],
+   "triangles": 6775,
+   "materials": 10
+  },
+  {
+   "file": "roman/water_normal.png",
+   "kind": "texture",
+   "pack": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART)",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "M_water_Normal",
+   "bytes": 232345,
+   "status": "used",
+   "where": [
+    "townScene.ts:3519 `const waterTex = loadAssetTexture(waterNormalUrl);`"
+   ],
+   "note": "Water, bank, dock, boat, and shore planting for the lake whose constants sit by placeWorld above. The water uses the pack's own M_water_Normal as its normal map (the pack ships it for exactly this), drifting slowly; at n",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3519,
+     "text": "const waterTex = loadAssetTexture(waterNormalUrl);"
+    }
+   ],
+   "image": "512x512"
+  },
+  {
+   "file": "ships/trade_ship.glb",
+   "kind": "ship",
+   "pack": "Ancient trade ship + Low-poly Greek Trireme (Alin Loghin), converted by tools/ships/",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 488640,
+   "status": "used",
+   "where": [
+    "townScene.ts:3677 `const urls: Record<ShipKind, string> = { trade: tradeShipUrl, trireme: triremeUrl };`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3677,
+     "text": "const urls: Record<ShipKind, string> = { trade: tradeShipUrl, trireme: triremeUrl };"
+    }
+   ],
+   "triangles": 675,
+   "materials": 2
+  },
+  {
+   "file": "ships/trireme.glb",
+   "kind": "ship",
+   "pack": "Ancient trade ship + Low-poly Greek Trireme (Alin Loghin), converted by tools/ships/",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 1494636,
+   "status": "used",
+   "where": [
+    "townScene.ts:3677 `const urls: Record<ShipKind, string> = { trade: tradeShipUrl, trireme: triremeUrl };`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3677,
+     "text": "const urls: Record<ShipKind, string> = { trade: tradeShipUrl, trireme: triremeUrl };"
+    }
+   ],
+   "triangles": 9009,
+   "materials": 5
+  },
+  {
+   "file": "ships/trireme_hull2.jpg",
+   "kind": "texture",
+   "pack": "Ancient trade ship + Low-poly Greek Trireme (Alin Loghin), converted by tools/ships/",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 199826,
+   "status": "used",
+   "where": [
+    "townScene.ts:3712 `const hullMap = liveryMap(triremeHull2Url);`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3712,
+     "text": "const hullMap = liveryMap(triremeHull2Url);"
+    }
+   ],
+   "image": "1024x1024"
+  },
+  {
+   "file": "ships/trireme_sail2.png",
+   "kind": "texture",
+   "pack": "Ancient trade ship + Low-poly Greek Trireme (Alin Loghin), converted by tools/ships/",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "bytes": 504959,
+   "status": "used",
+   "where": [
+    "townScene.ts:3713 `const sailMap = liveryMap(triremeSail2Url);`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 3713,
+     "text": "const sailMap = liveryMap(triremeSail2Url);"
+    }
+   ],
+   "image": "512x512"
+  },
+  {
+   "file": "stars-fall-song.mp3",
+   "kind": "audio",
+   "pack": "the project's own song for the summit scene",
+   "origin": "ai-generated",
+   "licence": "AI generated for the town",
+   "bytes": 160741,
+   "status": "used",
+   "where": [
+    "App.tsx:2761 `songAudioRef.current = new Audio(assetUrlSync(summitSongUrl));`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/App.tsx",
+     "line": 448,
+     "text": "void assetUrl(summitSongUrl).catch(() => {"
+    },
+    {
+     "file": "client/src/App.tsx",
+     "line": 2761,
+     "text": "songAudioRef.current = new Audio(assetUrlSync(summitSongUrl));"
+    }
+   ]
+  },
+  {
+   "file": "statuary/athena.glb",
+   "kind": "statue",
+   "pack": "Idyllic Rome (Unity Asset Store), slimmed by tools/idyllic/slim.py",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_sculpture_athena",
+   "bytes": 1106076,
+   "status": "used",
+   "where": [
+    "temple athena at (-23.1, 8) [idyllicDressing.ts DRESSING_PIECES]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4921,
+     "text": "athena: dressingAthenaUrl,"
+    }
+   ],
+   "triangles": 9275,
+   "materials": 3
+  },
+  {
+   "file": "statuary/augustus.glb",
+   "kind": "statue",
+   "pack": "Idyllic Rome (Unity Asset Store), slimmed by tools/idyllic/slim.py",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_sculpture_augustus",
+   "bytes": 1074996,
+   "status": "used",
+   "where": [
+    "forum augustus at (6.5, 7.6) [idyllicDressing.ts DRESSING_PIECES]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4922,
+     "text": "augustus: dressingAugustusUrl,"
+    }
+   ],
+   "triangles": 8460,
+   "materials": 2
+  },
+  {
+   "file": "statuary/podest.glb",
+   "kind": "statue",
+   "pack": "Idyllic Rome (Unity Asset Store), slimmed by tools/idyllic/slim.py",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_podest_rome_01",
+   "bytes": 172272,
+   "status": "used",
+   "where": [
+    "forum augustus-podest at (6.5, 7.6) [idyllicDressing.ts DRESSING_PIECES]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4924,
+     "text": "podest: dressingPodestUrl,"
+    }
+   ],
+   "triangles": 508,
+   "materials": 1
+  },
+  {
+   "file": "statuary/putto.glb",
+   "kind": "statue",
+   "pack": "Idyllic Rome (Unity Asset Store), slimmed by tools/idyllic/slim.py",
+   "origin": "pack",
+   "licence": "Asset Store EULA: embed only",
+   "madeFrom": "SM_sculpture_putti_01",
+   "bytes": 252076,
+   "status": "used",
+   "where": [
+    "garden putto at domus-local (2.1, -3.95) [idyllicDressing.ts DRESSING_PIECES]"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4923,
+     "text": "putto: dressingPuttoUrl,"
+    }
+   ],
+   "triangles": 3286,
+   "materials": 1
+  },
+  {
+   "file": "textures/cobbles_albedo.png",
+   "kind": "texture",
+   "pack": "generated by loom (tools/textures/town.tx.js)",
+   "origin": "code-built",
+   "licence": "ours; tracked in git",
+   "bytes": 201365,
+   "status": "used",
+   "where": [
+    "groundTextures.ts:22 `cobbles: { albedo: cobbleAlbedoUrl, normal: cobbleNormalUrl, orm: cobbleOrmUrl },`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/groundTextures.ts",
+     "line": 22,
+     "text": "cobbles: { albedo: cobbleAlbedoUrl, normal: cobbleNormalUrl, orm: cobbleOrmUrl },"
+    }
+   ],
+   "image": "512x512"
+  },
+  {
+   "file": "textures/cobbles_normal.png",
+   "kind": "texture",
+   "pack": "generated by loom (tools/textures/town.tx.js)",
+   "origin": "code-built",
+   "licence": "ours; tracked in git",
+   "bytes": 537741,
+   "status": "used",
+   "where": [
+    "groundTextures.ts:22 `cobbles: { albedo: cobbleAlbedoUrl, normal: cobbleNormalUrl, orm: cobbleOrmUrl },`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/groundTextures.ts",
+     "line": 22,
+     "text": "cobbles: { albedo: cobbleAlbedoUrl, normal: cobbleNormalUrl, orm: cobbleOrmUrl },"
+    }
+   ],
+   "image": "512x512"
+  },
+  {
+   "file": "textures/cobbles_orm.png",
+   "kind": "texture",
+   "pack": "generated by loom (tools/textures/town.tx.js)",
+   "origin": "code-built",
+   "licence": "ours; tracked in git",
+   "bytes": 254818,
+   "status": "used",
+   "where": [
+    "groundTextures.ts:22 `cobbles: { albedo: cobbleAlbedoUrl, normal: cobbleNormalUrl, orm: cobbleOrmUrl },`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/groundTextures.ts",
+     "line": 22,
+     "text": "cobbles: { albedo: cobbleAlbedoUrl, normal: cobbleNormalUrl, orm: cobbleOrmUrl },"
+    }
+   ],
+   "image": "512x512"
+  },
+  {
+   "file": "textures/forum_paving_albedo.png",
+   "kind": "texture",
+   "pack": "generated by loom (tools/textures/town.tx.js)",
+   "origin": "code-built",
+   "licence": "ours; tracked in git",
+   "bytes": 185757,
+   "status": "used",
+   "where": [
+    "groundTextures.ts:21 `paving: { albedo: pavingAlbedoUrl, normal: pavingNormalUrl, orm: pavingOrmUrl },`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/groundTextures.ts",
+     "line": 21,
+     "text": "paving: { albedo: pavingAlbedoUrl, normal: pavingNormalUrl, orm: pavingOrmUrl },"
+    }
+   ],
+   "image": "512x512"
+  },
+  {
+   "file": "textures/forum_paving_normal.png",
+   "kind": "texture",
+   "pack": "generated by loom (tools/textures/town.tx.js)",
+   "origin": "code-built",
+   "licence": "ours; tracked in git",
+   "bytes": 422760,
+   "status": "used",
+   "where": [
+    "groundTextures.ts:21 `paving: { albedo: pavingAlbedoUrl, normal: pavingNormalUrl, orm: pavingOrmUrl },`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/groundTextures.ts",
+     "line": 21,
+     "text": "paving: { albedo: pavingAlbedoUrl, normal: pavingNormalUrl, orm: pavingOrmUrl },"
+    }
+   ],
+   "image": "512x512"
+  },
+  {
+   "file": "textures/forum_paving_orm.png",
+   "kind": "texture",
+   "pack": "generated by loom (tools/textures/town.tx.js)",
+   "origin": "code-built",
+   "licence": "ours; tracked in git",
+   "bytes": 252080,
+   "status": "used",
+   "where": [
+    "groundTextures.ts:21 `paving: { albedo: pavingAlbedoUrl, normal: pavingNormalUrl, orm: pavingOrmUrl },`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/groundTextures.ts",
+     "line": 21,
+     "text": "paving: { albedo: pavingAlbedoUrl, normal: pavingNormalUrl, orm: pavingOrmUrl },"
+    }
+   ],
+   "image": "512x512"
+  },
+  {
+   "file": "trees_pack.glb",
+   "kind": "nature",
+   "pack": "Low Poly Trees (itch.io)",
+   "origin": "cc0",
+   "licence": "CC0; tracked in git",
+   "bytes": 3596284,
+   "status": "used",
+   "where": [
+    "townScene.ts:9132 `void assetUrl(treesPackUrl)`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 9132,
+     "text": "void assetUrl(treesPackUrl)"
+    }
+   ],
+   "triangles": 7215,
+   "materials": 3
+  },
+  {
+   "file": "wedding/cake.glb",
+   "kind": "wedding",
+   "pack": "Wedding - Banquet, Cake & Characters (Absurdox Lab, RenderHub), recoloured by tools/wedding/recolour.py",
+   "origin": "pack",
+   "licence": "use and modify, never resell or share",
+   "madeFrom": "wedding_cake_classic_3",
+   "bytes": 55844,
+   "status": "used",
+   "where": [
+    "townScene.ts:4909 `table_long: weddingTableLongUrl, cake: weddingCakeUrl, ring_box: weddingRingBoxUrl,`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4909,
+     "text": "table_long: weddingTableLongUrl, cake: weddingCakeUrl, ring_box: weddingRingBoxUrl,"
+    }
+   ],
+   "triangles": 1402,
+   "materials": 10
+  },
+  {
+   "file": "wedding/flammeum_stand.glb",
+   "kind": "wedding",
+   "pack": "Wedding - Banquet, Cake & Characters (Absurdox Lab, RenderHub), recoloured by tools/wedding/recolour.py",
+   "origin": "pack",
+   "licence": "use and modify, never resell or share",
+   "madeFrom": "wedding_veil_long",
+   "bytes": 193096,
+   "status": "used",
+   "where": [
+    "townScene.ts:4908 `flower_arch: weddingArchUrl, flammeum_stand: weddingFlammeumUrl, table_round: weddingTable`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4908,
+     "text": "flower_arch: weddingArchUrl, flammeum_stand: weddingFlammeumUrl, table_round: weddingTableRoundUrl,"
+    }
+   ],
+   "triangles": 1004,
+   "materials": 6
+  },
+  {
+   "file": "wedding/flower_arch.glb",
+   "kind": "wedding",
+   "pack": "Wedding - Banquet, Cake & Characters (Absurdox Lab, RenderHub), recoloured by tools/wedding/recolour.py",
+   "origin": "pack",
+   "licence": "use and modify, never resell or share",
+   "madeFrom": "wedding_merge_flower_05",
+   "bytes": 156496,
+   "status": "used",
+   "where": [
+    "townScene.ts:4908 `flower_arch: weddingArchUrl, flammeum_stand: weddingFlammeumUrl, table_round: weddingTable`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4908,
+     "text": "flower_arch: weddingArchUrl, flammeum_stand: weddingFlammeumUrl, table_round: weddingTableRoundUrl,"
+    }
+   ],
+   "triangles": 3948,
+   "materials": 14
+  },
+  {
+   "file": "wedding/ring_box.glb",
+   "kind": "wedding",
+   "pack": "Wedding - Banquet, Cake & Characters (Absurdox Lab, RenderHub), recoloured by tools/wedding/recolour.py",
+   "origin": "pack",
+   "licence": "use and modify, never resell or share",
+   "madeFrom": "wedding_ring_box_open",
+   "bytes": 109716,
+   "status": "used",
+   "where": [
+    "townScene.ts:4909 `table_long: weddingTableLongUrl, cake: weddingCakeUrl, ring_box: weddingRingBoxUrl,`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4909,
+     "text": "table_long: weddingTableLongUrl, cake: weddingCakeUrl, ring_box: weddingRingBoxUrl,"
+    }
+   ],
+   "triangles": 616,
+   "materials": 4
+  },
+  {
+   "file": "wedding/table_long.glb",
+   "kind": "wedding",
+   "pack": "Wedding - Banquet, Cake & Characters (Absurdox Lab, RenderHub), recoloured by tools/wedding/recolour.py",
+   "origin": "pack",
+   "licence": "use and modify, never resell or share",
+   "madeFrom": "wedding_table_long_dressed_classic",
+   "bytes": 265724,
+   "status": "used",
+   "where": [
+    "townScene.ts:4909 `table_long: weddingTableLongUrl, cake: weddingCakeUrl, ring_box: weddingRingBoxUrl,`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4909,
+     "text": "table_long: weddingTableLongUrl, cake: weddingCakeUrl, ring_box: weddingRingBoxUrl,"
+    }
+   ],
+   "triangles": 4010,
+   "materials": 12
+  },
+  {
+   "file": "wedding/table_round.glb",
+   "kind": "wedding",
+   "pack": "Wedding - Banquet, Cake & Characters (Absurdox Lab, RenderHub), recoloured by tools/wedding/recolour.py",
+   "origin": "pack",
+   "licence": "use and modify, never resell or share",
+   "madeFrom": "wedding_table_round_dressed_classic",
+   "bytes": 144508,
+   "status": "used",
+   "where": [
+    "townScene.ts:4908 `flower_arch: weddingArchUrl, flammeum_stand: weddingFlammeumUrl, table_round: weddingTable`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 4908,
+     "text": "flower_arch: weddingArchUrl, flammeum_stand: weddingFlammeumUrl, table_round: weddingTableRoundUrl,"
+    }
+   ],
+   "triangles": 1290,
+   "materials": 12
+  },
+  {
+   "file": "wolf.glb",
+   "kind": "animal",
+   "pack": "Dire Wolf Lite (Literock, itch.io)",
+   "origin": "pack",
+   "licence": "free; embed only",
+   "madeFrom": "Dire_Wolf_Lite.glb (unchanged)",
+   "bytes": 12437756,
+   "status": "used",
+   "where": [
+    "townScene.ts:10195 `void runtime.streaming.request(() => assetUrl(wolfUrl).then((resolved) => gltfLoader.loadA`"
+   ],
+   "note": "",
+   "uses": [
+    {
+     "file": "client/src/townScene.ts",
+     "line": 10195,
+     "text": "void runtime.streaming.request(() => assetUrl(wolfUrl).then((resolved) => gltfLoader.loadAsync(resolved)), () => ({ x: FOREST.glade[0], z: FOREST.glad"
+    }
+   ],
+   "triangles": 9991,
+   "materials": 1
+  }
+ ],
+ "packs": [
+  {
+   "name": "Idyllic Rome (Unity Asset Store)",
+   "source": "~/work/idyllic-rome/extracted (pathname per GUID folder)",
+   "meshesListed": 184,
+   "notInTown": [
+    "SM_Scroll_01",
+    "SM_Scroll_02",
+    "SM_amphora_preset",
+    "SM_amphora_preset_01",
+    "SM_apple_01",
+    "SM_apple_02",
+    "SM_banner_rome_02",
+    "SM_banner_rome_03",
+    "SM_banner_rome_04",
+    "SM_banner_rome_05",
+    "SM_banner_rome_06",
+    "SM_barrel_01",
+    "SM_barrel_02",
+    "SM_basket_berries",
+    "SM_basket_empty",
+    "SM_bed_roman",
+    "SM_book_01",
+    "SM_book_02",
+    "SM_bread_02",
+    "SM_broncepot_01",
+    "SM_broncevase_01",
+    "SM_broncevase_02",
+    "SM_broncevase_03",
+    "SM_bush_01",
+    "SM_candle_01",
+    "SM_candle_02",
+    "SM_candle_03",
+    "SM_candle_04",
+    "SM_candle_05",
+    "SM_candle_06",
+    "SM_candle_preset_01",
+    "SM_candle_preset_02",
+    "SM_candle_preset_03",
+    "SM_chair",
+    "SM_chair_rome",
+    "SM_cloth_folded_01",
+    "SM_cloth_folded_02",
+    "SM_cloth_folded_03",
+    "SM_column_large_rome_01",
+    "SM_column_large_rome_02",
+    "SM_column_large_rome_03",
+    "SM_column_large_rome_04",
+    "SM_column_rome_01",
+    "SM_column_rome_02",
+    "SM_column_rome_03",
+    "SM_column_rome_04",
+    "SM_column_rome_05",
+    "SM_crate_01",
+    "SM_crate_02",
+    "SM_crate_small",
+    "SM_crate_small_base",
+    "SM_crate_small_lid",
+    "SM_crate_small_opened",
+    "SM_desk_rome",
+    "SM_door_rome_01",
+    "SM_door_rome_02",
+    "SM_door_wooden_01",
+    "SM_door_wooden_02",
+    "SM_doorknob_lion",
+    "SM_fence_marble",
+    "SM_fence_stone_01",
+    "SM_fence_wooden_01",
+    "SM_fence_wooden_02",
+    "SM_fence_wooden_preset_01",
+    "SM_fence_wooden_preset_02",
+    "SM_fireplace",
+    "SM_fruit_hanging_01",
+    "SM_fruit_hanging_02",
+    "SM_insulae_building_03",
+    "SM_insulae_building_04",
+    "SM_insulae_building_05",
+    "SM_insulae_building_06",
+    "SM_insulae_building_07",
+    "SM_insulae_building_08",
+    "SM_marketstand_01",
+    "SM_marketstand_02",
+    "SM_marketstand_03",
+    "SM_marketstand_04",
+    "SM_peach",
+    "SM_pilum_spear",
+    "SM_platform_preset_large",
+    "SM_podest_rome_02",
+    "SM_pottery_bowl_01",
+    "SM_pottery_bowl_02",
+    "SM_pottery_bowl_04",
+    "SM_pottery_large_01",
+    "SM_pottery_large_02",
+    "SM_pottery_plate",
+    "SM_pottery_preset_01",
+    "SM_pottery_preset_02",
+    "SM_pottery_preset_03",
+    "SM_pottery_preset_04",
+    "SM_pottery_preset_05",
+    "SM_pottery_small_01",
+    "SM_pottery_small_02",
+    "SM_rock_large_01",
+    "SM_rock_large_02",
+    "SM_rock_large_03",
+    "SM_rock_large_04",
+    "SM_rock_small_01",
+    "SM_rock_small_02",
+    "SM_rocks_ground_01",
+    "SM_rocks_ground_02",
+    "SM_rocks_stack_01",
+    "SM_rocks_stack_02",
+    "SM_rope_ground_01",
+    "SM_rope_ground_02",
+    "SM_rope_ground_03",
+    "SM_rope_hanging",
+    "SM_rope_hanging_cloth",
+    "SM_rope_hanging_cloth_02",
+    "SM_scroll_open",
+    "SM_sculpture_Midathrias",
+    "SM_sculpture_godess",
+    "SM_sculpture_man",
+    "SM_sculpture_putti_02",
+    "SM_sculpture_putti_03",
+    "SM_sculpture_putti_04",
+    "SM_sculpture_putti_05",
+    "SM_sculpture_woman",
+    "SM_senate_building",
+    "SM_shelf_01",
+    "SM_shelf_02",
+    "SM_shelf_pottery",
+    "SM_shelf_rome",
+    "SM_shelf_rome_scrolls_01",
+    "SM_shield_roman_01",
+    "SM_shield_roman_02",
+    "SM_sidewalk_01",
+    "SM_sidewalk_02",
+    "SM_staircase_02",
+    "SM_stand_cloth",
+    "SM_stand_fruit",
+    "SM_standard_rome",
+    "SM_streetlight",
+    "SM_sword_gladius",
+    "SM_table_01",
+    "SM_table_02",
+    "SM_table_03",
+    "SM_table_cloth",
+    "SM_table_food",
+    "SM_table_pottery",
+    "SM_temple_rome",
+    "SM_temple_rome_02",
+    "SM_tree_01",
+    "SM_tree_02",
+    "SM_tree_03",
+    "SM_tree_04",
+    "SM_tree_05",
+    "SM_wall_01",
+    "SM_wall_02",
+    "SM_wall_interior_fresco",
+    "SM_weaponstand_01",
+    "SM_weaponstand_preset_01",
+    "SM_weaponstand_preset_02",
+    "SM_windowcover_cloth",
+    "SM_windowcover_wooden"
+   ]
+  },
+  {
+   "name": "Wedding - Banquet, Cake & Characters (Mobile set)",
+   "source": "~/work/wedding-pack-x/Wedding_Banquet_Cake_Characters/Mobile",
+   "meshesListed": 241,
+   "notInTown": [
+    "wedding_bar_cart",
+    "wedding_bar_counter_1",
+    "wedding_bar_counter_2",
+    "wedding_bar_counter_3",
+    "wedding_bar_counter_4",
+    "wedding_bottle_champagne_closed",
+    "wedding_bottle_champagne_open",
+    "wedding_bottle_wine_red",
+    "wedding_bottle_wine_white",
+    "wedding_bridesmaid_dress_blush",
+    "wedding_bridesmaid_dress_classic",
+    "wedding_bridesmaid_dress_garden",
+    "wedding_bridesmaid_dress_royal",
+    "wedding_cake_blush_1",
+    "wedding_cake_blush_2",
+    "wedding_cake_blush_3",
+    "wedding_cake_blush_4",
+    "wedding_cake_blush_5",
+    "wedding_cake_classic_1",
+    "wedding_cake_classic_2",
+    "wedding_cake_classic_4",
+    "wedding_cake_classic_5",
+    "wedding_cake_garden_1",
+    "wedding_cake_garden_2",
+    "wedding_cake_garden_3",
+    "wedding_cake_garden_4",
+    "wedding_cake_garden_5",
+    "wedding_cake_knife_set",
+    "wedding_cake_pops",
+    "wedding_cake_royal_1",
+    "wedding_cake_royal_2",
+    "wedding_cake_royal_3",
+    "wedding_cake_royal_4",
+    "wedding_cake_royal_5",
+    "wedding_cake_slice",
+    "wedding_cake_stand_glass",
+    "wedding_cake_stand_gold",
+    "wedding_cake_stand_rosegold",
+    "wedding_cake_stand_wood",
+    "wedding_candy_jars",
+    "wedding_centerpiece_candles",
+    "wedding_centerpiece_candles_off",
+    "wedding_centerpiece_garland_blush",
+    "wedding_centerpiece_garland_classic",
+    "wedding_centerpiece_garland_garden",
+    "wedding_centerpiece_garland_royal",
+    "wedding_centerpiece_jar",
+    "wedding_centerpiece_low_blush",
+    "wedding_centerpiece_low_classic",
+    "wedding_centerpiece_low_garden",
+    "wedding_centerpiece_low_royal",
+    "wedding_centerpiece_tall_blush",
+    "wedding_centerpiece_tall_classic",
+    "wedding_centerpiece_tall_garden",
+    "wedding_centerpiece_tall_royal",
+    "wedding_chair_banquet_1",
+    "wedding_chair_banquet_2",
+    "wedding_chair_banquet_3",
+    "wedding_chair_banquet_4",
+    "wedding_chair_bride",
+    "wedding_chair_cover_blush",
+    "wedding_chair_cover_classic",
+    "wedding_chair_cover_garden",
+    "wedding_chair_cover_royal",
+    "wedding_chair_groom",
+    "wedding_champagne_bucket",
+    "wedding_charger_1",
+    "wedding_charger_2",
+    "wedding_charger_3",
+    "wedding_charger_4",
+    "wedding_chocolate_fountain",
+    "wedding_coupe_tower",
+    "wedding_coupe_tower_full",
+    "wedding_cupcake_blush",
+    "wedding_cupcake_classic",
+    "wedding_cupcake_garden",
+    "wedding_cupcake_royal",
+    "wedding_cupcake_tower",
+    "wedding_cutlery_set",
+    "wedding_dance_floor_1",
+    "wedding_dance_floor_2",
+    "wedding_dance_floor_3",
+    "wedding_dance_floor_4",
+    "wedding_dance_floor_4_off",
+    "wedding_dance_floor_led_blush",
+    "wedding_dance_floor_led_blush_off",
+    "wedding_dance_floor_led_classic",
+    "wedding_dance_floor_led_classic_off",
+    "wedding_dance_floor_led_garden",
+    "wedding_dance_floor_led_garden_off",
+    "wedding_dance_floor_led_royal",
+    "wedding_dance_floor_led_royal_off",
+    "wedding_dessert_cups",
+    "wedding_dessert_table_1",
+    "wedding_dessert_table_2",
+    "wedding_dessert_table_3",
+    "wedding_dessert_table_4",
+    "wedding_dinner_plate",
+    "wedding_donut_wall",
+    "wedding_dress_aline",
+    "wedding_dress_ballgown",
+    "wedding_dress_boho",
+    "wedding_dress_mermaid",
+    "wedding_dress_rack",
+    "wedding_dress_sheath",
+    "wedding_dress_short",
+    "wedding_dress_tea",
+    "wedding_dress_train",
+    "wedding_dressform",
+    "wedding_drinks_tray",
+    "wedding_glass_coupe",
+    "wedding_glass_coupe_full",
+    "wedding_glass_flute",
+    "wedding_glass_flute_full",
+    "wedding_glass_water",
+    "wedding_glass_water_full",
+    "wedding_glass_wine",
+    "wedding_glass_wine_red",
+    "wedding_glass_wine_white",
+    "wedding_high_table_blush",
+    "wedding_high_table_classic",
+    "wedding_high_table_garden",
+    "wedding_high_table_royal",
+    "wedding_jewelry_set",
+    "wedding_lemonade_dispenser",
+    "wedding_lounge_armchair_blush",
+    "wedding_lounge_armchair_classic",
+    "wedding_lounge_armchair_garden",
+    "wedding_lounge_armchair_royal",
+    "wedding_lounge_sofa_blush",
+    "wedding_lounge_sofa_classic",
+    "wedding_lounge_sofa_garden",
+    "wedding_lounge_sofa_royal",
+    "wedding_macaron_plate",
+    "wedding_macaron_tower_blush",
+    "wedding_macaron_tower_classic",
+    "wedding_macaron_tower_garden",
+    "wedding_macaron_tower_royal",
+    "wedding_merge_cake_01",
+    "wedding_merge_cake_02",
+    "wedding_merge_cake_03",
+    "wedding_merge_cake_04",
+    "wedding_merge_flower_01",
+    "wedding_merge_flower_02",
+    "wedding_merge_flower_03",
+    "wedding_merge_flower_04",
+    "wedding_merge_ribbon_01",
+    "wedding_merge_ribbon_02",
+    "wedding_merge_ribbon_03",
+    "wedding_merge_ribbon_04",
+    "wedding_mic_stand",
+    "wedding_napkin_folded_blush",
+    "wedding_napkin_folded_classic",
+    "wedding_napkin_folded_garden",
+    "wedding_napkin_folded_royal",
+    "wedding_place_card_blush",
+    "wedding_place_card_classic",
+    "wedding_place_card_garden",
+    "wedding_place_card_royal",
+    "wedding_place_setting_blush",
+    "wedding_place_setting_classic",
+    "wedding_place_setting_garden",
+    "wedding_place_setting_royal",
+    "wedding_plate_stack",
+    "wedding_ring_box_closed",
+    "wedding_seating_chart",
+    "wedding_shoes_bride",
+    "wedding_shoes_groom",
+    "wedding_stage_1",
+    "wedding_stage_1_off",
+    "wedding_stage_2",
+    "wedding_stage_2_off",
+    "wedding_stage_3",
+    "wedding_stage_3_off",
+    "wedding_stage_4",
+    "wedding_stage_4_off",
+    "wedding_strawberries_choc",
+    "wedding_suit_black",
+    "wedding_suit_emerald",
+    "wedding_suit_ivory",
+    "wedding_suit_navy",
+    "wedding_suit_rustic",
+    "wedding_suit_sand",
+    "wedding_sweetheart_table_1",
+    "wedding_sweetheart_table_1_off",
+    "wedding_sweetheart_table_2",
+    "wedding_sweetheart_table_2_off",
+    "wedding_sweetheart_table_3",
+    "wedding_sweetheart_table_3_off",
+    "wedding_sweetheart_table_4",
+    "wedding_sweetheart_table_4_off",
+    "wedding_table_bare_long",
+    "wedding_table_bare_round",
+    "wedding_table_card_stand_1",
+    "wedding_table_card_stand_2",
+    "wedding_table_card_stand_3",
+    "wedding_table_card_stand_4",
+    "wedding_table_long_1",
+    "wedding_table_long_2",
+    "wedding_table_long_2_off",
+    "wedding_table_long_3",
+    "wedding_table_long_3_off",
+    "wedding_table_long_4",
+    "wedding_table_long_4_off",
+    "wedding_table_long_dressed_blush",
+    "wedding_table_long_dressed_garden",
+    "wedding_table_long_dressed_royal",
+    "wedding_table_round_1",
+    "wedding_table_round_2",
+    "wedding_table_round_2_off",
+    "wedding_table_round_3",
+    "wedding_table_round_3_off",
+    "wedding_table_round_4",
+    "wedding_table_round_4_off",
+    "wedding_table_round_dressed_blush",
+    "wedding_table_round_dressed_garden",
+    "wedding_table_round_dressed_royal",
+    "wedding_tablecloth_stack",
+    "wedding_tent_1",
+    "wedding_tent_1_off",
+    "wedding_tent_2",
+    "wedding_tent_2_off",
+    "wedding_tent_3",
+    "wedding_tent_3_off",
+    "wedding_tent_4",
+    "wedding_tent_4_off",
+    "wedding_tiara",
+    "wedding_toast_flutes",
+    "wedding_topper_couple",
+    "wedding_topper_doves",
+    "wedding_topper_floral",
+    "wedding_topper_hearts",
+    "wedding_topper_rings",
+    "wedding_veil_short",
+    "wedding_water_carafe"
+   ]
+  },
+  {
+   "name": "Roman Empire, Stylized Low Poly (HALBERSTRAM ART) (the box's unitypackage is truncated, so this list is partial)",
+   "source": "~/work/unitypackages/Roman Empire - Stylized Low Poly.unitypackage",
+   "meshesListed": 174,
+   "notInTown": [
+    "M_cliff_grass_03",
+    "SM_Rock_003",
+    "SM_anvill",
+    "SM_arch_doorway_02",
+    "SM_arch_entrance_01",
+    "SM_arch_round_corner_01",
+    "SM_arch_triangle_temple",
+    "SM_attachment_building_02",
+    "SM_banner_01",
+    "SM_banner_02",
+    "SM_booth_b_1x1",
+    "SM_booth_b_2x1",
+    "SM_booth_c_1x1",
+    "SM_booth_c_2x1",
+    "SM_bowl_01",
+    "SM_bowl_02",
+    "SM_bread_04",
+    "SM_bread_long",
+    "SM_bread_slice",
+    "SM_bush_02",
+    "SM_bush_04",
+    "SM_bush_06",
+    "SM_bush_13",
+    "SM_carpet_rolled",
+    "SM_cart_farming",
+    "SM_catapult",
+    "SM_citycenter",
+    "SM_cliff_06",
+    "SM_cliff_07",
+    "SM_cliff_09",
+    "SM_cloth_rolled",
+    "SM_clothes_hanging",
+    "SM_column_simple_podest",
+    "SM_constructionsite_end",
+    "SM_constructionsite_large",
+    "SM_constructionsite_path",
+    "SM_constructionsite_pillar",
+    "SM_crate_market_03",
+    "SM_crate_wood_01",
+    "SM_cup_01",
+    "SM_cup_04",
+    "SM_cup_05",
+    "SM_cup_06",
+    "SM_cup_08",
+    "SM_door_01",
+    "SM_door_03",
+    "SM_edge_01",
+    "SM_edge_02",
+    "SM_edge_02_corner",
+    "SM_edge_corner_01",
+    "SM_entrance_broad",
+    "SM_fence_01",
+    "SM_fence_02",
+    "SM_fence_03",
+    "SM_fence_04",
+    "SM_fence_05",
+    "SM_firepit",
+    "SM_flower_04",
+    "SM_flower_mediterranean",
+    "SM_flower_small_01",
+    "SM_gate_pallisade",
+    "SM_grass_01",
+    "SM_grass_02",
+    "SM_grass_04",
+    "SM_grass_06",
+    "SM_grass_07",
+    "SM_grass_08",
+    "SM_grindingstone",
+    "SM_hayroll",
+    "SM_house_barbarian_01",
+    "SM_house_roman_upperclass",
+    "SM_knife_01",
+    "SM_ladder",
+    "SM_lilypad",
+    "SM_metalring",
+    "SM_mountain_01",
+    "SM_mountain_03",
+    "SM_mountain_04",
+    "SM_mountain_06",
+    "SM_mushroom_01",
+    "SM_mushroom_group",
+    "SM_path_pallisade",
+    "SM_peach",
+    "SM_platform_01",
+    "SM_platform_02",
+    "SM_podest_fancy",
+    "SM_podest_slim",
+    "SM_pottery_002",
+    "SM_pottery_003",
+    "SM_pottery_004",
+    "SM_pottery_008",
+    "SM_pottery_010",
+    "SM_pottery_012",
+    "SM_pottery_013",
+    "SM_pottery_014",
+    "SM_pottery_015",
+    "SM_road_01_curve",
+    "SM_rock_001",
+    "SM_rock_004",
+    "SM_rock_006",
+    "SM_rock_011",
+    "SM_rock_012",
+    "SM_rock_017",
+    "SM_rock_019",
+    "SM_rock_020",
+    "SM_rock_14",
+    "SM_roof_corner_outwards_01",
+    "SM_roof_straight_01",
+    "SM_rope_ground_01",
+    "SM_rope_ground_02",
+    "SM_rope_hanging_01",
+    "SM_scythe",
+    "SM_shelf_03",
+    "SM_shelf_04",
+    "SM_shield_auxillary",
+    "SM_shield_gladiator",
+    "SM_ship_trading",
+    "SM_sickle",
+    "SM_sign_02",
+    "SM_stairs_fancy",
+    "SM_stairs_platform",
+    "SM_stone_01",
+    "SM_stone_02",
+    "SM_stoneblock_01",
+    "SM_table_01",
+    "SM_table_02",
+    "SM_table_03",
+    "SM_table_04",
+    "SM_table_market_01",
+    "SM_tool_hammer_03",
+    "SM_tool_pliers_01",
+    "SM_tower_citywalls",
+    "SM_tree_a_01",
+    "SM_tree_a_03",
+    "SM_tree_c_01",
+    "SM_tree_c_02",
+    "SM_tree_c_03",
+    "SM_tree_conifer_03",
+    "SM_tree_conifer_07",
+    "SM_tree_cypress_02",
+    "SM_tree_d_01",
+    "SM_tree_d_06",
+    "SM_trunk_dead_01",
+    "SM_trunk_dead_02",
+    "SM_trunk_dead_03",
+    "SM_trunk_dead_moss_02",
+    "SM_villa_roman_03",
+    "SM_wall_3x3",
+    "SM_wall_3x3_window_02",
+    "SM_wall_doublewindow_3x3",
+    "SM_wall_pit_3x3",
+    "SM_wall_window_3x3_01",
+    "SM_watchtower_wooden",
+    "SM_weapon_axe",
+    "SM_weapon_bow",
+    "SM_weapon_curvedaxe",
+    "SM_weapon_curvedsword",
+    "SM_weapon_longsword",
+    "SM_weapon_pilum",
+    "SM_weapon_trident",
+    "SM_window_1x1_01",
+    "SM_window_1x2_02",
+    "SM_windowframe_1x1"
+   ]
+  },
+  {
+   "name": "Greek Low Poly pack",
+   "source": "~/work/unitypackages/Greek Low Poly Pack.unitypackage",
+   "meshesListed": 82,
+   "notInTown": [
+    "greek_awning_1",
+    "greek_awning_2",
+    "greek_awning_3",
+    "greek_beam",
+    "greek_block_1",
+    "greek_bush_1",
+    "greek_bush_2",
+    "greek_bush_3",
+    "greek_column_1",
+    "greek_column_2",
+    "greek_decorative_post",
+    "greek_door_1",
+    "greek_doorway_1",
+    "greek_fence_1",
+    "greek_fence_2",
+    "greek_floor_stone_1",
+    "greek_floor_stone_2",
+    "greek_floor_stone_3",
+    "greek_floor_wood",
+    "greek_flower_1",
+    "greek_flower_2",
+    "greek_hanging_rack",
+    "greek_ladder",
+    "greek_parchment",
+    "greek_roof_1",
+    "greek_roof_1_square",
+    "greek_roof_end",
+    "greek_roof_support_1",
+    "greek_roof_support_1_square",
+    "greek_roof_tile",
+    "greek_rope",
+    "greek_stairs_stone",
+    "greek_stairs_stone_corner",
+    "greek_stairs_wood",
+    "greek_stairs_wood_support",
+    "greek_statue_base_1",
+    "greek_step_1",
+    "greek_tree_1",
+    "greek_tree_2",
+    "greek_tree_3",
+    "greek_vines_1",
+    "greek_wall_1",
+    "greek_wall_1_door",
+    "greek_wall_1_door_single_sided",
+    "greek_wall_1_med",
+    "greek_wall_1_short",
+    "greek_wall_1_single_sided",
+    "greek_wall_1_window",
+    "greek_wall_1_window_single_sided",
+    "greek_wall_2",
+    "greek_wall_2_corner",
+    "greek_wall_2_door",
+    "greek_wall_2_window",
+    "greek_wall_3",
+    "greek_wall_3_corner",
+    "greek_wall_3_door",
+    "greek_wall_3_short",
+    "greek_wall_3_top",
+    "greek_wall_3_top_corner",
+    "greek_wall_3_window",
+    "greek_wall_column_1",
+    "greek_wall_column_2",
+    "greek_wall_divider_1",
+    "greek_wall_divider_1_corner",
+    "greek_wall_divider_2",
+    "greek_wall_divider_2_corner",
+    "greek_wall_divider_3",
+    "greek_wall_divider_4",
+    "greek_window_1"
+   ]
+  },
+  {
+   "name": "Animated Pets & Farm Animals",
+   "source": "~/work/unitypackages/Animated Pets and Farm Animals Pack.unitypackage",
+   "meshesListed": 6,
+   "notInTown": [
+    "cow",
+    "dog"
+   ]
+  }
+ ]
+}

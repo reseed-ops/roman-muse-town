@@ -1,0 +1,97 @@
+{
+ "greek/greek_bench_1.fbx": {
+  "materials": 1,
+  "meshes": 1,
+  "triangles": 192
+ },
+ "greek/greek_bench_2.fbx": {
+  "materials": 1,
+  "meshes": 1,
+  "triangles": 288
+ },
+ "greek/greek_bowl.fbx": {
+  "materials": 1,
+  "meshes": 1,
+  "triangles": 100
+ },
+ "greek/greek_bucket.fbx": {
+  "materials": 1,
+  "meshes": 1,
+  "triangles": 92
+ },
+ "greek/greek_decorative_bowl.fbx": {
+  "materials": 1,
+  "meshes": 1,
+  "triangles": 238
+ },
+ "greek/greek_dock.fbx": {
+  "materials": 1,
+  "meshes": 1,
+  "triangles": 900
+ },
+ "greek/greek_drying_rack.fbx": {
+  "materials": 3,
+  "meshes": 3,
+  "triangles": 972
+ },
+ "greek/greek_garden_1.fbx": {
+  "materials": 2,
+  "meshes": 2,
+  "triangles": 124
+ },
+ "greek/greek_pool_1.fbx": {
+  "materials": 2,
+  "meshes": 2,
+  "triangles": 208
+ },
+ "greek/greek_pot_1.fbx": {
+  "materials": 2,
+  "meshes": 1,
+  "triangles": 754
+ },
+ "greek/greek_pot_2.fbx": {
+  "materials": 2,
+  "meshes": 1,
+  "triangles": 348
+ },
+ "greek/greek_table_1.fbx": {
+  "materials": 1,
+  "meshes": 1,
+  "triangles": 548
+ },
+ "greek/greek_wood_pile.fbx": {
+  "materials": 1,
+  "meshes": 1,
+  "triangles": 122
+ },
+ "pets/cat.fbx": {
+  "materials": 1,
+  "meshes": 1,
+  "triangles": 390
+ },
+ "pets/chicken.fbx": {
+  "materials": 1,
+  "meshes": 1,
+  "triangles": 598
+ },
+ "pets/pig.fbx": {
+  "materials": 1,
+  "meshes": 1,
+  "triangles": 454
+ },
+ "pets/sheep.fbx": {
+  "materials": 1,
+  "meshes": 1,
+  "triangles": 744
+ },
+ "phoenix.fbx": {
+  "materials": 3,
+  "meshes": 1,
+  "triangles": 2241
+ },
+ "roman/torch.fbx": {
+  "materials": 1,
+  "meshes": 1,
+  "triangles": 80
+ }
+}
