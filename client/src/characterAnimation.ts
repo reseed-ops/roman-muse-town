@@ -20,6 +20,8 @@ export interface VrmRig {
   rHand: THREE.Object3D | null;
   lHand: THREE.Object3D | null;
   head: THREE.Object3D | null;
+  neck: THREE.Object3D | null;
+  chest: THREE.Object3D | null;
   rest: Map<THREE.Object3D, THREE.Quaternion>;
 }
 
@@ -36,11 +38,13 @@ export function collectRig(root: THREE.Object3D): VrmRig {
     rHand: root.getObjectByName("J_Bip_R_Hand") ?? null,
     lHand: root.getObjectByName("J_Bip_L_Hand") ?? null,
     head: root.getObjectByName("J_Bip_Head") ?? null,
+    neck: root.getObjectByName("J_Bip_C_Neck") ?? null,
+    chest: root.getObjectByName("J_Bip_C_Chest") ?? null,
     rest: new Map(),
   };
   for (const bone of [
     rig.lUpperArm, rig.rUpperArm, rig.lLowerArm, rig.rLowerArm,
-    rig.lUpperLeg, rig.rUpperLeg, rig.lLowerLeg, rig.rLowerLeg, rig.rHand, rig.lHand, rig.head,
+    rig.lUpperLeg, rig.rUpperLeg, rig.lLowerLeg, rig.rLowerLeg, rig.rHand, rig.lHand, rig.head, rig.neck, rig.chest,
   ]) {
     if (bone) rig.rest.set(bone, bone.quaternion.clone());
   }

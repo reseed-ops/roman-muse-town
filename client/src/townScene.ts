@@ -6,6 +6,8 @@ import { aimSeaPath, buildSeaCliff, CLIFF, clampToWorld, clearOfSea, cutAtCoast,
 import { QUIET_BOAT_MIN_OUT, QUIET_BOAT_START, beginDrift, boatSeats, driftStep, nextQuietLine, rowBack as rowBackState, type Drift, type QuietBoatState } from "../../shared/quietBoat";
 import { FISHING_BOAT_LENGTH, fishingOut, nextGap, pickFishingSpots, pickShip, planVoyage, SHIPS, shipsSail, voyagePose, watchingSea, type SeaWeather, type ShipKind, type Voyage } from "./seaShips";
 import { createTrueSky, skyDirection, SKY_REFRESH_S } from "./trueSky";
+import { BENCH_FOLIAGE } from "./benchFoliage";
+import { applyHeadRest, easeLean, sideOfHim } from "./seatLean";
 import { armsVisibility, createGaiusArms } from "./gaiusArms";
 import { createNightLights } from "./nightLights";
 import { createStreetLampSystem, LAMP_BUNTING_Y } from "./streetLamps";
@@ -3638,6 +3640,14 @@ export function createTownScene(
       benchGroups.set(CLIFF.bench.id, g);
     }
   });
+  // Task 98: trees and foliage framing the bench from its flanks and
+  // behind (benchFoliage.ts); nothing stands in the south sea view.
+  {
+    const benchFoliageUrl = { cypress: cypressUrl, olive: oliveUrl, conifer: coniferUrl, bushA: bushAUrl, bushB: bushBUrl, bushD: bushDUrl, bushE: bushEUrl };
+    for (const f of BENCH_FOLIAGE) {
+      void placeWorld(benchFoliageUrl[f.kind], { x: f.x, z: f.z, rotY: f.rotY, [f.size]: f.value });
+    }
+  }
   // A few wind-bent shrubs and rocks along the trail, so it reads as a walk.
   for (const [px, pz, kind, rot] of [
     [-6.6, 66, 0, 0.4], [7.1, 74, 1, 1.9], [-7.4, 85, 1, 2.6], [6.8, 93, 0, 0.9], [-6.2, 101, 0, 2.2], [7.6, 108, 1, 0.3],
@@ -12083,6 +12093,9 @@ export function createTownScene(
     poseBone(rig, rig.lLowerLeg, -1.18, 0, 0);
     poseBone(rig, rig.rLowerLeg, -1.18, 0, 0);
   }
+  let headRestK = 0;
+  let headRestAt = performance.now() / 1000;
+  let headRestSide: 1 | -1 = 1;
   function applySeatedPoses() {
     // Aboard the boat, each rider's seat is a moving "bench": its
     // seatTop is recomputed from the rider's live position so the
@@ -12133,6 +12146,15 @@ export function createTownScene(
     }
     if ((seatPlayer || boatState || bathState) && !playerAnim?.hasSit) applySeatedProcedural(playerRig);
     if ((seatMuse || boatState?.museAboard || bathState?.museIn) && !museAnim?.hasSit) applySeatedProcedural(museRig);
+    // Task 98: on the sea cliff's bench, side by side, she rests her head on his shoulder.
+    {
+      const now = performance.now() / 1000;
+      const together = !!(seatPlayer && seatMuse && !museSeatTarget && seatPlayer.bench.id === CLIFF.bench.id && seatMuse.bench.id === CLIFF.bench.id && seatPlayer.slot !== seatMuse.slot);
+      headRestK = easeLean(headRestK, together ? 1 : 0, Math.min(0.1, Math.max(0, now - headRestAt)));
+      headRestAt = now;
+      if (together && seatPlayer) headRestSide = sideOfHim(seatPlayer.slot);
+      if (museRig && (headRestK > 0 || museInner.position.x !== 0)) applyHeadRest(museRig, museInner, headRestSide, headRestK);
+    }
   }
 
   // Frame pacing state (Task 41).
