@@ -1,5 +1,6 @@
 import { distanceToPaths, samplePath } from "./pathGeometry";
 import { villaGround } from "./layout";
+import { shoulderRise } from "./shoulder";
 import { BED as HOME_PLAN_BED, FLOOR_RECTS as HOME_FLOOR_RECTS } from "./homePlan";
 // Muse Town content: the five places around the town-tree plaza, their
 // residents, the hidden collectibles, and the great tree in the middle of
@@ -587,7 +588,10 @@ export function terrainHeight(x: number, z: number): number {
   const fn = forestNorm(x, z);
   const forestEdge = fn < 0.8 ? 1 : Math.max(0, 1 - (fn - 0.8) / 0.45);
   const edge = Math.max(townEdge, forestEdge);
-  const ground = villaGround(h * forum * edge, x, z);
+  // The coastal shoulder (Task 99): zero outside its footprint, so every
+  // consumer of the ground (plane, camera, feet, props, trail, grass)
+  // sees the same hill.
+  const ground = villaGround(h * forum * edge, x, z) + shoulderRise(x, z);
   const b = COLOSSEUM_BASIN;
   const fromBasin = Math.hypot(x - b.x, z - b.z);
   if (fromBasin >= b.riseTo) return ground;

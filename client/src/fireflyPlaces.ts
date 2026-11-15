@@ -84,8 +84,9 @@ export function fireflyPlaceAt(
       y = ground(x, z) + 0.5 + wob(9, 0.75 + s) * 0.35 + s * 0.8;
     } else {
       // Over the water: a slow arc round the headland, a few metres out
-      // from its foot, low over the swell.
-      const a = Math.PI * (-0.15 + s * 1.3) + Math.sin(t * 0.04 + s * 6) * 0.25;
+      // from its foot, low over the swell. It ends due west of the head:
+      // beyond that, north of z 107, lies the shoulder's land (Task 99).
+      const a = Math.PI * (-0.15 + s * 1.15) + Math.sin(t * 0.04 + s * 6) * 0.25;
       const r = CLIFF.head.r + 4 + s * 8;
       x = CLIFF.head.x + Math.cos(a) * r + wob(20, 0.5) * 0.7;
       z = CLIFF.head.z + Math.sin(a) * r + wob(14, 0.45) * 0.7;

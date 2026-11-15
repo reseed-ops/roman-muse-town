@@ -3631,7 +3631,7 @@ export function createTownScene(
     tex.wrapT = THREE.RepeatWrapping;
     return tex;
   })();
-  const seaCliff = buildSeaCliff({ terrainHeight, waterNormal: waterTex, foamTexture, pathTexture: glitterMap });
+  const seaCliff = buildSeaCliff({ terrainHeight, waterNormal: waterTex, foamTexture, pathTexture: glitterMap, groundMaterial: groundMat });
   scene.add(seaCliff.group);
   void placeWorld(benchStoneUrl, { x: CLIFF.bench.x, z: CLIFF.bench.z, rotY: CLIFF.bench.rotY, width: 1.9 }).then((g) => {
     if (disposed) return null;

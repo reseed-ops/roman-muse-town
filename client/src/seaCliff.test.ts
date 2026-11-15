@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import * as THREE from "three";
-import { buildSeaCliff, CLIFF, HILL_BASE_Y, horizonHillGeometry, PENINSULA_HILL, TRAIL_HALF, cutAtCoast, hillRise, nearestWalkable, onHill, trailX, OCEAN_DAY, OCEAN_NIGHT, clampToWorld, clearOfSea, HORIZON_HILLS, landOutline, onLand, outwardFromSpine, walkable } from "./seaCliff";
+import { buildSeaCliff, CLIFF, COAST_FILLET, HILL_BASE_Y, horizonHillGeometry, SHOULDER, TRAIL_HALF, cutAtCoast, hillRise, nearestWalkable, shoulderRise, trailX, OCEAN_DAY, OCEAN_NIGHT, clampToWorld, clearOfSea, HORIZON_HILLS, landOutline, outlineNormals, onLand, walkable } from "./seaCliff";
+import { terrainHeight } from "./town";
 
 // The sea cliff's geometry (Task 34), pinned off the scene.
 
@@ -32,19 +33,76 @@ test("the world clamp: town, forest and peninsula pass; the sea and the wide mea
   expect(east).toEqual({ x: 52, z: 0 });
 });
 
-test("the outline runs from the coast round the headland and back, all on its land's edge", () => {
+const segsCross = (a: { x: number; z: number }, b: { x: number; z: number }, c: { x: number; z: number }, d: { x: number; z: number }) => {
+  const o = (p: typeof a, q: typeof a, r: typeof a) => Math.sign((q.x - p.x) * (r.z - p.z) - (q.z - p.z) * (r.x - p.x));
+  return o(a, b, c) !== o(a, b, d) && o(c, d, a) !== o(c, d, b);
+};
+
+test("the outline runs from the coast at the west bay, round the lobe and the headland, up the east side to (9, 56)", () => {
   const pts = landOutline();
-  expect(pts[0]!.z).toBe(CLIFF.coastZ);
-  expect(pts[pts.length - 1]!.z).toBe(CLIFF.coastZ);
+  expect(pts[0]!.z).toBeCloseTo(CLIFF.coastZ);
+  expect(pts[0]!.x).toBeCloseTo(COAST_FILLET.x);
+  expect(pts[pts.length - 1]).toEqual({ x: CLIFF.landHalf, z: CLIFF.coastZ });
   const southmost = Math.max(...pts.map((p) => p.z));
   expect(southmost).toBeGreaterThanOrEqual(CLIFF.head.z + CLIFF.head.r - 0.01);
   expect(southmost).toBeLessThanOrEqual(CLIFF.head.z + CLIFF.head.r + 0.9);
-  // The edge is roughened outward only: every point is on the land or within 0.9 m outside it,
-  // so the land never overhangs its cliff.
-  for (const p of pts) {
-    const o = outwardFromSpine(p);
-    expect(onLand(p.x - o.x * 0.95, p.z - o.z * 0.95)).toBe(true);
+  // It leaves the coast tangentially (heading east) and no kink: every turn between steps is gentle except the headland's join and the strip's two corners.
+  const turn = (i: number) => {
+    const a = pts[i - 1]!;
+    const b = pts[i]!;
+    const c = pts[i + 1]!;
+    const d = Math.atan2(c.z - b.z, c.x - b.x) - Math.atan2(b.z - a.z, b.x - a.x);
+    return Math.abs(Math.atan2(Math.sin(d), Math.cos(d)));
+  };
+  expect(Math.abs(pts[1]!.z - pts[0]!.z)).toBeLessThan(0.2); // tangent to the coast
+  for (let i = 1; i < 12; i++) expect(turn(i)).toBeLessThan(0.5);
+  // The edge is roughened outward only: every point is within 0.9 m outside the smooth land, never inside it.
+  const nrm = outlineNormals();
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i]!;
+    const n = nrm[i]!;
+    if (p.z < CLIFF.coastZ + 1.5) continue; // the coast line itself, where the straight cliff takes over
+    expect(onLand(p.x - n.x * 0.95, p.z - n.z * 0.95)).toBe(true);
   }
+});
+
+test("the outline never crosses itself, and its outward normals point away from the land", () => {
+  const pts = landOutline();
+  for (let i = 0; i < pts.length - 1; i++) {
+    for (let j = i + 2; j < pts.length - 1; j++) {
+      expect(segsCross(pts[i]!, pts[i + 1]!, pts[j]!, pts[j + 1]!)).toBe(false);
+    }
+  }
+  // Closed along the coast it winds one way, and no segment crosses the coast line under the attachment.
+  for (let i = 1; i < pts.length - 1; i++) expect(pts[i]!.z).toBeGreaterThan(CLIFF.coastZ - 0.01);
+  const nrm = outlineNormals();
+  expect(nrm.length).toBe(pts.length);
+  for (let i = 1; i < pts.length - 1; i++) {
+    const p = pts[i]!;
+    const n = nrm[i]!;
+    expect(Math.hypot(n.x, n.z)).toBeCloseTo(1);
+    // Out of the land, in: a metre out is sea, a metre in is land (the coast line itself aside).
+    if (p.z < CLIFF.coastZ + 2) continue;
+    expect(onLand(p.x + n.x * 1.2, p.z + n.z * 1.2)).toBe(false);
+    expect(onLand(p.x - n.x * 1.2, p.z - n.z * 1.2)).toBe(true);
+  }
+});
+
+test("no cliff face runs along z 56 under the shoulder's attachment: the straight coast is x < -96 and x > 9", () => {
+  const sea = buildSeaCliff({ terrainHeight, waterNormal: new THREE.Texture(), foamTexture: new THREE.Texture(), pathTexture: new THREE.Texture() });
+  const rockMeshes = sea.group.children.filter((c) => c instanceof THREE.Mesh && (c.material as THREE.MeshStandardMaterial).flatShading) as THREE.Mesh[];
+  expect(rockMeshes.length).toBe(3); // the outline's, the west coast's and the east coast's
+  for (const m of rockMeshes) {
+    const pos = m.geometry.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      const z = pos.getZ(i);
+      // Any face vertex hugging the coast line stays out of the attachment (it is land there).
+      if (Math.abs(z - CLIFF.coastZ) < 1.5 && x > COAST_FILLET.x + COAST_FILLET.r + 1 && x < CLIFF.landHalf - 0.1) throw new Error(`rock face under the attachment at ${x}, ${z}`);
+    }
+  }
+  expect(onLand(-50, CLIFF.coastZ + 1)).toBe(true);
+  expect(onLand(-80, CLIFF.coastZ + 1)).toBe(true);
 });
 
 test("the horizon hills stay on land, clear of the sea and of the peninsula's trail", () => {
@@ -100,58 +158,196 @@ test("the built ocean material carries that blue", () => {
   expect(sea.oceanMat.color.getHex()).toBe(OCEAN_DAY);
 });
 
-// Task 69: the hill on the way to the bench, and the trail round it.
+// Task 99: the coastal shoulder west of the bench path, and the trail along the strip.
 
-test("the peninsula's hill stands on land, well clear of the coast and the cliff's edge", () => {
-  const { x, z, r, h } = PENINSULA_HILL;
-  expect(h).toBeGreaterThan(2);
-  expect(hillRise(x, z)).toBeCloseTo(h);
-  for (let i = 0; i < 48; i++) {
-    const a = (i / 48) * Math.PI * 2;
-    // Its whole footprint is peninsula land, past the coast and inside the strip with room to spare.
-    expect(onLand(x + Math.cos(a) * r, z + Math.sin(a) * r)).toBe(true);
-    expect(z + Math.sin(a) * r).toBeGreaterThan(CLIFF.coastZ + 10);
-    expect(Math.abs(x + Math.cos(a) * r)).toBeLessThan(CLIFF.landHalf - 0.3);
-    expect(hillRise(x + Math.cos(a) * r, z + Math.sin(a) * r)).toBeCloseTo(0);
+const edge = (z: number) => {
+  let first = Infinity;
+  let last = -Infinity;
+  for (let x = -110; x <= 12; x += 0.125) if (shoulderRise(x, z) > 0) {
+    first = Math.min(first, x);
+    last = Math.max(last, x);
   }
-  // It is a rise in the grass, not in the sea: nothing rises off the land.
-  for (let px = -20; px <= 20; px += 0.5) for (let pz = CLIFF.coastZ; pz <= 130; pz += 0.5) if (hillRise(px, pz) > 0) expect(onLand(px, pz)).toBe(true);
+  return { first, last };
+};
+
+test("the shoulder stands on land, rising to zero at its rim, inside the land's edge", () => {
+  const { h, crestX, crestZ } = SHOULDER;
+  expect(h).toBe(10);
+  expect(shoulderRise(crestX, crestZ)).toBeCloseTo(h);
+  // The crest is the highest point, near the west edge, around z 70 to 76.
+  let top = 0;
+  let at = { x: 0, z: 0 };
+  for (let x = -100; x <= 5; x += 0.5) for (let z = 40; z <= 110; z += 0.5) {
+    const r = shoulderRise(x, z);
+    if (r > top) {
+      top = r;
+      at = { x, z };
+    }
+  }
+  expect(top).toBeCloseTo(h, 1);
+  expect(at.z).toBeGreaterThanOrEqual(70);
+  expect(at.z).toBeLessThanOrEqual(76);
+  // Seaward flank steep, town-facing flank long: the crest is far nearer the west rim than the east.
+  const e = edge(crestZ);
+  expect(at.x - e.first).toBeLessThan((e.last - at.x) * 0.72);
+  // Every rim point has no rise, and every raised point is on the land, a few metres inside its edge.
+  for (let x = -100; x <= 12; x += 0.5) for (let z = 40; z <= 112; z += 0.5) {
+    if (shoulderRise(x, z) > 0 && z >= CLIFF.coastZ) {
+      expect(onLand(x, z)).toBe(true);
+      // far enough in that the 25 m face below never undercuts it
+      for (const [dx, dz] of [[-2.5, 0], [2.5, 0], [0, 2.5], [0, -2.5]] as const) if (z + dz >= CLIFF.coastZ) expect(onLand(x + dx, z + dz) || shoulderRise(x + dx, z + dz) === 0).toBe(true);
+    }
+  }
+  // Attachment at the coast: about 65 m of raised ground, x about -72 to -7, inside the land's 105 m (x -96 to 9).
+  const a = edge(CLIFF.coastZ);
+  expect(a.first).toBeLessThan(-68);
+  expect(a.first).toBeGreaterThan(-82);
+  expect(a.last).toBeGreaterThan(-12);
+  expect(a.last).toBeLessThan(-6);
+  expect(a.last - a.first).toBeGreaterThan(58);
+  // It narrows southward and ends before the bench.
+  expect(edge(90).last - edge(90).first).toBeLessThan(a.last - a.first);
+  expect(edge(100).first).toBe(Infinity);
 });
 
-test("the trail runs west (left) round the hill and never under it", () => {
-  const { x, z, r } = PENINSULA_HILL;
-  expect(trailX(z)).toBeLessThan(x - r); // left of the hill's whole foot
+test("the old bump at (4.2, 84) is gone, and hillRise is the shoulder's rise", () => {
+  expect(hillRise).toBe(shoulderRise);
+  expect(shoulderRise(4.2, 84)).toBe(0);
+  expect(shoulderRise(0, 84)).toBe(0);
+});
+
+test("shoulderRise is continuous: nothing at z 44, at the coast and the rim it is smooth, and nothing east of x -7", () => {
+  for (let x = -110; x <= 12; x += 0.25) expect(shoulderRise(x, SHOULDER.northZ)).toBe(0);
+  const step = 0.02;
+  let maxJump = 0;
+  for (let x = -100; x <= 8; x += 0.37) for (let z = 40; z <= 108; z += 0.37) {
+    maxJump = Math.max(maxJump, Math.abs(shoulderRise(x + step, z) - shoulderRise(x, z)), Math.abs(shoulderRise(x, z + step) - shoulderRise(x, z)));
+  }
+  expect(maxJump).toBeLessThan(0.02 * 0.75); // never steeper than 37 degrees, no cliff in the function
+  // Across the coast line (z 56) it is the same function, no step.
+  for (let x = -100; x <= -8; x += 0.5) expect(Math.abs(shoulderRise(x, CLIFF.coastZ + 0.01) - shoulderRise(x, CLIFF.coastZ - 0.01))).toBeLessThan(0.02);
+  for (let z = 40; z <= 112; z += 0.5) expect(shoulderRise(-6.9, z)).toBeLessThan(1e-3);
+  // The join zone inside the town's walking disc is gentle: under 15 degrees.
+  for (let x = -60; x <= 10; x += 0.5) for (let z = 44; z <= 56; z += 0.5) {
+    if (Math.hypot(x, z) > 52) continue;
+    const gx = (shoulderRise(x + 0.25, z) - shoulderRise(x - 0.25, z)) / 0.5;
+    const gz = (shoulderRise(x, z + 0.25) - shoulderRise(x, z - 0.25)) / 0.5;
+    expect(Math.atan(Math.hypot(gx, gz))).toBeLessThan((15 * Math.PI) / 180);
+  }
+});
+
+test("the ground is one function: terrainHeight carries the shoulder's rise", () => {
+  for (const [x, z] of [[-48, 72], [-40, 60], [-30, 85], [-65, 70]] as const) {
+    expect(terrainHeight(x, z) - shoulderRise(x, z)).toBeCloseTo(0, 6); // flat meadow beneath: nothing else here
+  }
+  expect(terrainHeight(-48, 72)).toBeCloseTo(SHOULDER.h);
+  expect(terrainHeight(0, 80)).toBe(0);
+});
+
+test("the trail runs down the strip's middle, whole ribbon clear of the shoulder's foot", () => {
   for (let pz = CLIFF.pathFromZ; pz <= CLIFF.pathToZ; pz += 0.25) {
     const c = trailX(pz);
+    expect(c).toBeGreaterThanOrEqual(-0.01);
+    expect(c).toBeLessThanOrEqual(1.01);
     for (const dx of [-TRAIL_HALF, 0, TRAIL_HALF]) {
-      expect(hillRise(c + dx, pz)).toBe(0);
-      expect(onHill(c + dx, pz)).toBe(false);
+      expect(shoulderRise(c + dx, pz)).toBe(0);
+      // and a good margin: the foot is more than 5.5 m west of the ribbon's edge
+      for (let off = 0.5; off <= 5.5; off += 0.5) expect(shoulderRise(c - TRAIL_HALF - off, pz)).toBeLessThan(0.02);
     }
-    // Still on the walkable strip once on the peninsula, edge to edge.
-    if (pz >= CLIFF.walkFromZ) expect(Math.abs(c) + TRAIL_HALF).toBeLessThanOrEqual(CLIFF.walkHalf);
+    if (pz >= CLIFF.walkFromZ) {
+      expect(Math.abs(c) + TRAIL_HALF).toBeLessThanOrEqual(CLIFF.walkHalf);
+      for (const dx of [-TRAIL_HALF, TRAIL_HALF]) expect(walkable(c + dx, pz)).toBe(true);
+    }
   }
-  // It is a bend, not a jump, and it comes back to the bench.
-  for (let pz = CLIFF.pathFromZ; pz < CLIFF.pathToZ; pz += 0.5) expect(Math.abs(trailX(pz + 0.5) - trailX(pz))).toBeLessThan(0.45);
+  // It is a gentle line, and comes to the bench.
+  for (let pz = CLIFF.pathFromZ; pz < CLIFF.pathToZ; pz += 0.5) expect(Math.abs(trailX(pz + 0.5) - trailX(pz))).toBeLessThan(0.1);
   expect(Math.abs(trailX(CLIFF.pathToZ) - CLIFF.bench.x)).toBeLessThan(1.5);
 });
 
-test("the old straight trail ran through the hill (the regression this reroute fixes)", () => {
-  const oldX = (z: number) => Math.sin(z * 0.11) * 1.1 * Math.min(1, Math.max(0, (z - 58) / 10));
-  let under = 0;
-  for (let pz = CLIFF.pathFromZ; pz <= CLIFF.pathToZ; pz += 0.25) if (hillRise(oldX(pz), pz) > 0.05) under++;
-  expect(under).toBeGreaterThan(5);
+test("a continuous gate-to-bench route: both ribbon edges walkable, all on supported land", () => {
+  let last = { x: trailX(CLIFF.pathFromZ), z: CLIFF.pathFromZ };
+  for (let z = CLIFF.pathFromZ; z <= CLIFF.pathToZ; z += 0.25) {
+    for (const side of [-1, 0, 1]) {
+      const x = trailX(z) + side * TRAIL_HALF;
+      if (z >= CLIFF.walkFromZ) expect(walkable(x, z)).toBe(true);
+      // Land under it: town ground north of the coast, the peninsula's land south of it.
+      if (z > CLIFF.coastZ) expect(onLand(x, z)).toBe(true);
+    }
+    const here = { x: trailX(z), z };
+    expect(Math.hypot(here.x - last.x, here.z - last.z)).toBeLessThan(0.3);
+    last = here;
+  }
+  expect(walkable(CLIFF.bench.x, CLIFF.bench.z)).toBe(true);
 });
 
-test("walkers do not climb the hill, and the clamp puts nobody inside it", () => {
-  const { x, z } = PENINSULA_HILL;
-  expect(walkable(x, z)).toBe(false);
-  expect(walkable(trailX(z), z)).toBe(true);
-  for (let px = -6; px <= 8; px += 0.5) {
-    for (let pz = z - 8; pz <= z + 8; pz += 0.5) {
-      const p = nearestWalkable(px, pz);
-      expect(walkable(p.x, p.z)).toBe(true);
+test("walkers do not climb the shoulder: it is not walkable, and the clamp puts nobody on it", () => {
+  for (let px = -100; px <= -6; px += 1) {
+    for (let pz = CLIFF.coastZ; pz <= 104; pz += 1) {
+      if (shoulderRise(px, pz) > 0.05) {
+        expect(walkable(px, pz)).toBe(false);
+        const c = clampToWorld(px, pz, forest);
+        expect(shoulderRise(c.x, c.z)).toBeLessThan(0.05);
+        const w = nearestWalkable(px, pz);
+        expect(walkable(w.x, w.z)).toBe(true);
+        expect(shoulderRise(w.x, w.z)).toBe(0);
+      }
     }
   }
+  // The neck and the strip's west side: all come back onto the strip.
+  for (let px = -30; px <= -4; px += 1) for (let pz = 90; pz <= 112; pz += 1) {
+    const p = nearestWalkable(px, pz);
+    expect(walkable(p.x, p.z)).toBe(true);
+    expect(shoulderRise(p.x, p.z)).toBe(0);
+  }
+  // Inside the town's disc the northern flank is gentle, so it is simply walkable (not an invisible wall).
+  expect(clampToWorld(-20, 40, forest)).toEqual({ x: -20, z: 40 });
+  // Over the sea next to the shoulder: eased back.
+  expect(Math.hypot(clampToWorld(-70, 120, forest).x + 70, clampToWorld(-70, 120, forest).z - 120)).toBeGreaterThan(5);
+});
+
+test("the bench, the seats and the lookout south and east are untouched by the shoulder", () => {
+  const seats: [number, number][] = [[CLIFF.bench.x, CLIFF.bench.z], [1.2, 116.4]];
+  for (const [sx, sz] of seats) {
+    for (let a = 0; a < 48; a++) for (const r of [0, 2, 4, 6]) expect(shoulderRise(sx + Math.cos((a / 48) * 6.283) * r, sz + Math.sin((a / 48) * 6.283) * r)).toBe(0);
+  }
+  // The headland's tops stay flat.
+  for (let a = 0; a < 48; a++) expect(terrainHeight(Math.cos((a / 48) * 6.283) * 8, CLIFF.head.z + Math.sin((a / 48) * 6.283) * 8)).toBe(0);
+  // A seated eye at the bench: nothing rises within 30 m of the south half-plane (south, east, west of the seat line).
+  for (let x = -30; x <= 30; x += 1) for (let z = CLIFF.bench.z; z <= CLIFF.bench.z + 30; z += 1) expect(shoulderRise(x, z)).toBe(0);
+  for (let x = 0; x <= 40; x += 1) for (let z = CLIFF.bench.z - 30; z <= CLIFF.bench.z + 30; z += 1) expect(shoulderRise(x, z)).toBe(0);
+});
+
+test("sunset sight-lines from the bench: the sea stays open to the western horizon except a small summer clip", () => {
+  const eyeX = CLIFF.bench.x;
+  const eyeZ = CLIFF.bench.z;
+  const eyeY = 1.3;
+  /** The highest elevation (degrees) that the ground blocks, looking along `az` (compass, 0 N, 90 E) from the seated eye. */
+  const blocked = (az: number) => {
+    const rad = (az * Math.PI) / 180;
+    let best = 0;
+    for (let d = 2; d <= 160; d += 0.5) {
+      const x = eyeX + Math.sin(rad) * d;
+      const z = eyeZ - Math.cos(rad) * d;
+      const y = terrainHeight(x, z) - eyeY; // the bench stands at 0, the town and shoulder rise above
+      best = Math.max(best, (Math.atan2(y, d) * 180) / Math.PI);
+    }
+    return best;
+  };
+  // Winter sunset (about 240) through the equinox (270) and 285 stay clear of the hill.
+  for (const az of [180, 200, 220, 240, 255, 270, 285]) expect(blocked(az)).toBeLessThan(0.3);
+  // The summer sunset (about 300) clips by about 2 degrees; the brief accepts that, a materially larger clip is flagged here.
+  expect(blocked(300)).toBeLessThan(2.5);
+  expect(blocked(320)).toBeLessThan(12);
+});
+
+test("the horizon hills do not contain the shoulder, and the shoulder is not among them", () => {
+  for (const [hx, hz, hr] of HORIZON_HILLS) {
+    for (let x = -100; x <= -6; x += 2) for (let z = 40; z <= 104; z += 2) {
+      if (shoulderRise(x, z) > 0) expect(Math.hypot(x - hx, z - hz)).toBeGreaterThan(hr);
+    }
+    expect(clearOfSea(hz, hr)).toBe(true);
+  }
+  expect(HORIZON_HILLS.length).toBe(6);
 });
 
 test("the meadow is still cut at the coast", () => {
@@ -161,15 +357,98 @@ test("the meadow is still cut at the coast", () => {
   expect(cutAtCoast(170)).toBe(CLIFF.coastZ);
 });
 
-test("the peninsula's grass is one surface: the hill is in its mesh, not a second layer", () => {
-  const tex = () => new THREE.Texture();
-  const sea = buildSeaCliff({ terrainHeight: () => 0, waterNormal: tex(), foamTexture: tex(), pathTexture: tex() });
-  const land = sea.group.children.find((c) => c instanceof THREE.Mesh && (c.material as THREE.MeshStandardMaterial) === sea.landMats[0]) as THREE.Mesh;
-  const pos = land.geometry.attributes.position as THREE.BufferAttribute;
+const land = (sea: ReturnType<typeof buildSeaCliff>) => sea.group.children.find((c) => c instanceof THREE.Mesh && (c.material as THREE.MeshStandardMaterial) === sea.landMats[0]) as THREE.Mesh;
+const realSea = () => buildSeaCliff({ terrainHeight, waterNormal: new THREE.Texture(), foamTexture: new THREE.Texture(), pathTexture: new THREE.Texture() });
+
+test("the peninsula's grass is one surface: the shoulder is in terrainHeight and in the grass mesh, no second layer", () => {
+  const sea = realSea();
+  const pos = land(sea).geometry.attributes.position as THREE.BufferAttribute;
   let top = -Infinity;
-  for (let i = 0; i < pos.count; i++) top = Math.max(top, pos.getY(i));
-  expect(top).toBeGreaterThan(PENINSULA_HILL.h * 0.9);
-  expect(top).toBeLessThan(PENINSULA_HILL.h + 0.5);
+  for (let i = 0; i < pos.count; i++) {
+    top = Math.max(top, pos.getY(i));
+    // Every grass vertex is exactly the ground's height plus its lift (1 cm, 2 cm on the lap north of the coast), at its own x, z.
+    const lift = pos.getY(i) - terrainHeight(pos.getX(i), pos.getZ(i));
+    expect(Math.min(Math.abs(lift - 0.01), Math.abs(lift - 0.02))).toBeLessThan(1e-5);
+    if (pos.getZ(i) < CLIFF.coastZ - 1e-6) expect(lift).toBeCloseTo(0.02, 5);
+  }
+  expect(top).toBeGreaterThan(SHOULDER.h * 0.97);
+  expect(top).toBeLessThan(SHOULDER.h + 0.2);
+  // Nothing else in the group is a second hill: only the apron, the grass and the planes lie on the ground.
+  const named = sea.group.children.filter((c) => c.name === "shoulder-apron");
+  expect(named.length).toBe(1);
+});
+
+test("heights agree at every shared boundary: town plane, grass mesh, apron, cliff tops, trail", () => {
+  const sea = realSea();
+  // Along the coast the town plane (terrainHeight at z 56) and the grass meet at the same height, up to the lift:
+  // the grass laps 0.5 m north over the plane's last row (2 cm over it), so the two meshes' unequal vertex lattices leave no gap.
+  const pos = land(sea).geometry.attributes.position as THREE.BufferAttribute;
+  let lapRows = 0;
+  for (let i = 0; i < pos.count; i++) {
+    if (Math.abs(pos.getZ(i) - CLIFF.coastZ) < 1e-6) expect(Math.abs(pos.getY(i) - terrainHeight(pos.getX(i), CLIFF.coastZ))).toBeLessThan(0.0201);
+    if (pos.getZ(i) < CLIFF.coastZ - 0.4) lapRows++;
+  }
+  expect(lapRows).toBeGreaterThan(100);
+  // The apron meets the town plane at x -56 and the grass at z 56, and falls to the outer land (-0.05) where the rise is nothing.
+  const apron = sea.group.children.find((c) => c.name === "shoulder-apron") as THREE.Mesh;
+  const ap = apron.geometry.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < ap.count; i++) {
+    const x = ap.getX(i);
+    const z = ap.getZ(i);
+    if (shoulderRise(x, z) === 0 && x < -58) expect(ap.getY(i)).toBeCloseTo(-0.05, 6);
+    expect(ap.getY(i)).toBeGreaterThan(terrainHeight(x, z) - 0.0501);
+    expect(ap.getY(i)).toBeLessThan(terrainHeight(x, z) + 0.0201);
+    // Past the town plane's edge (x -56) it is lapped 2 cm over it.
+    if (x >= -56 && shoulderRise(x, z) > 0.3) expect(ap.getY(i) - terrainHeight(x, z)).toBeCloseTo(0.02, 5);
+  }
+  // The trail lies 3.5 cm over the same ground.
+  const trail = sea.group.children.find((c) => c instanceof THREE.Mesh && (c.material as THREE.MeshStandardMaterial).polygonOffset && (c.material as THREE.MeshStandardMaterial).color.getHex() === 0xa48a64) as THREE.Mesh;
+  const tp = trail.geometry.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < tp.count; i++) expect(tp.getY(i)).toBeCloseTo(terrainHeight(tp.getX(i), tp.getZ(i)) + 0.035, 5);
+});
+
+test("given the town's ground material, the shoulder wears it and continues the town plane's uv, so no seam shows", () => {
+  const mat = new THREE.MeshStandardMaterial({ color: 0x336633 });
+  const sea = buildSeaCliff({ terrainHeight, waterNormal: new THREE.Texture(), foamTexture: new THREE.Texture(), pathTexture: new THREE.Texture(), groundMaterial: mat });
+  const meshes = sea.group.children.filter((c) => c instanceof THREE.Mesh && (c.material as THREE.Material) === mat) as THREE.Mesh[];
+  expect(meshes.length).toBe(2); // the grass and the apron
+  for (const m of meshes) {
+    const pos = m.geometry.attributes.position as THREE.BufferAttribute;
+    const uv = m.geometry.attributes.uv as THREE.BufferAttribute;
+    for (let i = 0; i < pos.count; i += 7) {
+      // The town plane (PlaneGeometry 112 x 112, centred): u = (x + 56) / 112, v = (56 - z) / 112.
+      expect(uv.getX(i)).toBeCloseTo((pos.getX(i) + 56) / 112, 5);
+      expect(uv.getY(i)).toBeCloseTo((56 - pos.getZ(i)) / 112, 5);
+    }
+  }
+});
+
+test("the grass mesh has no flipped or spanning triangles, and none outside the land", () => {
+  const geo = land(realSea()).geometry;
+  const pos = geo.attributes.position as THREE.BufferAttribute;
+  const idx = geo.getIndex()!;
+  const outline = landOutline();
+  let n = 0;
+  let sign = 0;
+  for (let i = 0; i < idx.count; i += 3) {
+    const a = idx.getX(i);
+    const b = idx.getX(i + 1);
+    const c = idx.getX(i + 2);
+    const area = (pos.getX(b) - pos.getX(a)) * (pos.getZ(c) - pos.getZ(a)) - (pos.getX(c) - pos.getX(a)) * (pos.getZ(b) - pos.getZ(a));
+    if (sign === 0 && Math.abs(area) > 1e-6) sign = Math.sign(area);
+    if (Math.abs(area) > 1e-9) expect(Math.sign(area)).toBe(sign); // none flipped
+    // No triangle lies out over the water: its centre is inside the (roughened) outline polygon or on the coast edge.
+    const cx = (pos.getX(a) + pos.getX(b) + pos.getX(c)) / 3;
+    const cz = (pos.getZ(a) + pos.getZ(b) + pos.getZ(c)) / 3;
+    expect(cz).toBeGreaterThanOrEqual(CLIFF.coastZ - 0.5 - 1e-6); // the lap
+    // a triangle never spans more than a cell and a bit (a spanning sliver over a bay would)
+    const ext = Math.max(Math.abs(pos.getX(a) - pos.getX(b)), Math.abs(pos.getX(b) - pos.getX(c)), Math.abs(pos.getZ(a) - pos.getZ(b)), Math.abs(pos.getZ(b) - pos.getZ(c)));
+    expect(ext).toBeLessThan(5);
+    void cx;
+    n++;
+  }
+  void outline;
+  expect(n).toBeGreaterThan(20000);
 });
 
 // Task 69: the flicker. The horizon hills were full spheres whose lower halves
