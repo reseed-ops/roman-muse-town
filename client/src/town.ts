@@ -1,6 +1,7 @@
 import { distanceToPaths, samplePath } from "./pathGeometry";
 import { villaGround } from "./layout";
 import { shoulderRise } from "./shoulder";
+import { shoreStairY } from "./shoreStair";
 import { BED as HOME_PLAN_BED, FLOOR_RECTS as HOME_FLOOR_RECTS } from "./homePlan";
 // Muse Town content: the five places around the town-tree plaza, their
 // residents, the hidden collectibles, and the great tree in the middle of
@@ -1038,6 +1039,9 @@ export const WALK_SURFACES: WalkSurface[] = (() => {
  *  +0.055) are ground dressing, not structure, they stay inside the
  *  tolerance every footstep already lives with. */
 export function groundHeightAt(x: number, z: number): number {
+  // Task 100: the stair down to the sea falls away below the terrain.
+  const stair = shoreStairY(x, z);
+  if (stair !== null) return stair;
   let h = terrainHeight(x, z);
   for (const s of WALK_SURFACES) {
     const dx = x - s.cx;

@@ -39,6 +39,9 @@ import { ESTATE_AREAS, weedStands, type EstateArea, type EstateCare } from "./es
 import { footingAt, strideStep, type Footing } from "./footing";
 import { airborne, newJump, stepJump } from "./jump";
 import { endSlide, newSlide, slideSpeed, sliding, startSlide, wasMovingRecently } from "./slide";
+import { buildSwimWorld } from "./swimScene";
+import { nearestStairPoint, SEA_Y, shoreStairY, STAIR } from "./shoreStair";
+import { confine as swimConfine, depthWish, edgeEase, shouldSwim, shouldWalk, surfaceY, SWIM, SWIM_EXIT, companionPace, swimCompanionSpot, swimFloor, swimMove, swimPoseAngles, swimWish, underwaterColor, underwaterFog, underwaterLightScale, underwaterMix } from "./swim";
 import { FOLLOW_CAM, followCamSustain, followCamYawStep, type FollowCamGate } from "./followCam";
 import {
   driverStep,
@@ -314,6 +317,10 @@ export interface TownSceneHandle {
   setWalkMove: (x: number, y: number) => void;
   /** Hop, if he is on foot and free to. */
   jump: () => void;
+  /** Task 100: the depth buttons while swimming, held: A rises, B sinks. */
+  setSwimKey: (which: "rise" | "sink", down: boolean) => void;
+  /** Task 100: whether he is swimming, and how deep he and the camera are (for the shell's hint and the tests). */
+  swimState: () => { swimming: boolean; museSwimming: boolean; underwater: number; depth: number };
   /** Slide, if he is on the move. False if he's standing, so B can mean back. */
   slide: () => boolean;
   /** Player 2 (Task 3, Nov 3 2026): the second channel that drives
@@ -3633,6 +3640,9 @@ export function createTownScene(
   })();
   const seaCliff = buildSeaCliff({ terrainHeight, waterNormal: waterTex, foamTexture, pathTexture: glitterMap, groundMaterial: groundMat });
   scene.add(seaCliff.group);
+  // Task 100: the sea floor, the stair down to the water and the surface seen from below.
+  const swimWorld = buildSwimWorld({ waterNormal: waterTex });
+  scene.add(swimWorld.group);
   void placeWorld(benchStoneUrl, { x: CLIFF.bench.x, z: CLIFF.bench.z, rotY: CLIFF.bench.rotY, width: 1.9 }).then((g) => {
     if (disposed) return null;
     if (g) {
@@ -6755,6 +6765,64 @@ export function createTownScene(
     lastFlourishAt = t;
     showMuseBubbleInternal(pickPooled("flourish", FLOURISH_LINES), t);
   }
+  // --- Swimming (Task 100) ---------------------------------------------
+  // He walks down the stair into the sea and, past his chest, swims: the
+  // stick moves him camera-relative, A rises and B sinks while held, and
+  // the sea floor, the surface and the sea's bounds hold him (swim.ts).
+  // Aelia, when she is walking with him, follows him in. Both lie out in
+  // a simple crawl (applySwimPoses).
+  let swimming: { y: number; phase: number } | null = null;
+  let swimRise = false;
+  let swimSink = false;
+  let playerSwimK = 0;
+  let museSwimK = 0;
+  let museSwim: { y: number; phase: number; speed: number } | null = null;
+  let uwMix = 0;
+  let camSwimGround = Number.NaN;
+  let swimPace = 0;
+  /** The body's axis above the group's origin when lying out (feet at the origin, standing). */
+  const STAND_HIP = 0.95;
+  function beginSwim(t: number) {
+    if (swimming) return;
+    if (sliding(run)) endSlide(run, t);
+    hop.queuedAt = -Infinity;
+    swimming = { y: surfaceY(), phase: 0 };
+    camSwimGround = Number.NaN;
+  }
+  function endSwim() {
+    if (!swimming) return;
+    swimming = null;
+    swimRise = false;
+    swimSink = false;
+    playerGroundSm = groundHeightAt(walkPos.x, walkPos.z);
+    camSwimGround = Number.NaN;
+  }
+  function stepSwim(dt: number, ix: number, iy: number, mag: number) {
+    const sw = swimming!;
+    const moving = mag > 0.12 && !secretMoment;
+    const wish = swimWish(ix, iy, inputYawRef);
+    let dx = 0;
+    let dz = 0;
+    let pace = 0;
+    if (moving) {
+      pace = SWIM.speed * wish.tilt;
+      const stepX = wish.dirX * pace * dt;
+      const stepZ = wish.dirZ * pace * dt;
+      // The sea's soft edge: pushing outward the last metres, the water holds him back.
+      const hold = edgeEase(walkPos.x + stepX, walkPos.z + stepZ) < edgeEase(walkPos.x, walkPos.z) ? edgeEase(walkPos.x, walkPos.z) : 1;
+      dx = stepX * hold;
+      dz = stepZ * hold;
+      const turnT = opts.reducedMotion ? 1 : 1 - Math.pow(1 - 0.12, dt * 60);
+      walkHeading = angleLerp(walkHeading, Math.atan2(wish.dirX, wish.dirZ), turnT);
+    }
+    const next = swimMove({ x: walkPos.x, y: sw.y, z: walkPos.z }, dx, dz, depthWish(swimRise, swimSink) * SWIM.vSpeed * dt);
+    walkPos.x = next.x;
+    walkPos.z = next.z;
+    sw.y = next.y;
+    sw.phase += dt * (2.4 + pace * 1.6);
+    swimPace += (pace - swimPace) * (1 - Math.exp(-dt * 6));
+    if (shouldWalk(walkPos.x, walkPos.z)) endSwim();
+  }
   function updateWalk(dt: number, t: number) {
     if (!walking) return;
     let ix = padX;
@@ -6935,7 +7003,8 @@ export function createTownScene(
     // block below) without bending a held direction into a curve.
     if (!isMoving || walkDrag) inputYawRef = camYawSmooth;
     if (!isMoving) wishX = wishZ = 0;
-    if (isMoving) {
+    if (swimming) stepSwim(dt, ix, iy, mag);
+    if (isMoving && !swimming) {
       const prevX = walkPos.x;
       const prevZ = walkPos.z;
       const nx = ix / (mag > 1 ? mag : 1);
@@ -7091,10 +7160,17 @@ export function createTownScene(
         playerSidestep.until = t + 0.45;
       }
     }
+    // Down the stair and into water above his chest: he swims.
+    if (!swimming && !boatState && !seatPlayer && !bathState && shouldSwim(walkPos.x, walkPos.z)) beginSwim(t);
     // Feet on the ground he actually stands on: terrain raised by
     // any walkable platform/dock/rim under him (groundHeightAt),
     // eased so stepping onto a platform is a step, not a pop.
-    {
+    if (swimming) {
+      // Lying out on the water: the body's axis is the swimmer's place.
+      avatar.position.set(walkPos.x, swimming.y - STAND_HIP * (1 - playerSwimK), walkPos.z);
+      stepX = walkPos.x;
+      stepZ = walkPos.z;
+    } else {
       const targetGY = groundHeightAt(walkPos.x, walkPos.z);
       if (!Number.isFinite(playerGroundSm)) playerGroundSm = targetGY;
       const dy = targetGY - playerGroundSm;
@@ -7409,12 +7485,23 @@ export function createTownScene(
       camFollowX += (walkPos.x - camFollowX) * followT;
       camFollowZ += (walkPos.z - camFollowZ) * followT;
     }
-    const camGroundY = terrainHeight(camFollowX, camFollowZ);
+    // Task 100: on the stair and in the water the ground is not the terrain. On the
+    // stair it is his own feet; swimming, his body's axis less a stride, eased so a
+    // depth button is a glide.
+    const onShore = swimming !== null || shoreStairY(walkPos.x, walkPos.z) !== null;
+    let camGroundY = terrainHeight(camFollowX, camFollowZ);
+    if (onShore) {
+      const want = swimming ? swimming.y - 0.35 : playerGroundSm;
+      camSwimGround = !Number.isFinite(camSwimGround) || opts.reducedMotion ? want : camSwimGround + (want - camSwimGround) * (1 - Math.exp(-dt * 7));
+      camGroundY = camSwimGround;
+    } else {
+      camSwimGround = Number.NaN;
+    }
     let camX = camFollowX - fx * camDistSmooth;
     let camZ = camFollowZ - fz * camDistSmooth;
     // Keep the camera inside the town's sensible range and off the ground.
     const camRad = Math.hypot(camX, camZ);
-    if (camRad > 62 && !onCliffPath(walkPos.x, walkPos.z)) {
+    if (camRad > 62 && !swimming && !onCliffPath(walkPos.x, walkPos.z)) {
       camX = (camX / camRad) * 62;
       camZ = (camZ / camRad) * 62;
     }
@@ -7422,7 +7509,19 @@ export function createTownScene(
     const holdHeight = (holdKind ? PAIR_CAM[holdKind].height : null) ?? PAIR_CAM.hug.height ?? framing.height;
     const lookUp = THREE.MathUtils.clamp((CAM_LOOK_UP_FROM - camPitchSmooth) / (CAM_LOOK_UP_FROM - CAM_PITCH_MIN), 0, 1);
     let camY = camGroundY + THREE.MathUtils.lerp(framing.height, holdHeight, pairCamMix) + Math.max(camPitchSmooth, CAM_LOOK_UP_FROM);
-    const minCamY = terrainHeight(camX, camZ) + 0.55;
+    let minCamY = terrainHeight(camX, camZ) + 0.55;
+    if (onShore) {
+      // Down the stair the terrain is far above him: the camera's floor is the steps (behind him they climb)
+      // or, swimming, the sea floor, and it keeps out of the rock at the cliff's foot.
+      const st = shoreStairY(camX, camZ);
+      minCamY = st !== null ? st + 0.6 : Number.NEGATIVE_INFINITY;
+      if (swimming) {
+        const c = swimConfine(camX, camZ);
+        camX = c.x;
+        camZ = c.z;
+        minCamY = Math.max(minCamY, swimFloor(camX, camZ) + 0.4);
+      }
+    }
     if (camY < minCamY) camY = minCamY;
     camera.position.set(camX, camY, camZ);
     controls.target.set(camFollowX + fx * 1.2, camGroundY + 1.15 + lookUp * lookUp * CAM_LOOK_UP_HEIGHT * (1 - pairCamMix), camFollowZ + fz * 1.2);
@@ -8000,6 +8099,104 @@ export function createTownScene(
     }
   }
 
+  /**
+   * Aelia in the water (Task 100). Walking with him, she follows him down the
+   * stair; past her chest she swims, to his side, at his depth, and when he is
+   * out she swims to the steps and walks out before him. Returns true when she
+   * owns this frame.
+   */
+  function stepMuseSwim(dt: number): boolean {
+    const here = museGroup.position;
+    const busy = !!(seatMuse || museSeatTarget || boatState || bathState || pairState || danceState || dreamMode);
+    if (!museSwim) {
+      if (busy || !followMode || !walking || !swimming) {
+        if (!(walking && followMode) || busy || !shouldSwim(here.x, here.z)) return false;
+      }
+      if (shouldSwim(here.x, here.z)) {
+        museSwim = { y: surfaceY(), phase: 0, speed: 0 };
+        return true;
+      }
+      // He is in the water and she is near the shore: down the stair after him, nothing in the way.
+      if (!(here.z > 48 && here.x > -8 && here.x < 15)) return false;
+      const onSteps = here.z >= STAIR.topZ - 0.5 && here.x >= STAIR.x0 - 0.2;
+      const gx = (STAIR.x0 + STAIR.x1) / 2;
+      const gz = onSteps ? STAIR.endZ + 4 : STAIR.landing.z0 + 1;
+      const dist = Math.hypot(gx - here.x, gz - here.z) || 1;
+      const step = Math.min(3.6 * dt, dist);
+      const bounded = clampToWorld(here.x + ((gx - here.x) / dist) * step, here.z + ((gz - here.z) / dist) * step, { norm: forestNorm, cx: FOREST.cx, cz: FOREST.cz });
+      const targetGY = groundHeightAt(bounded.x, bounded.z);
+      if (!Number.isFinite(museGroundSm) || Math.abs(targetGY - museGroundSm) > 1.1) museGroundSm = targetGY;
+      else museGroundSm += THREE.MathUtils.clamp(targetGY - museGroundSm, -5 * dt, 5 * dt);
+      museGroup.rotation.y = angleLerp(museGroup.rotation.y, Math.atan2(gx - here.x, gz - here.z), 0.15);
+      museGroup.position.set(bounded.x, museGroundSm, bounded.z);
+      museWalkPhase += dt * (2.2 + 3.6 * 1.55);
+      museIsMoving = true;
+      return true;
+    }
+    const ms = museSwim;
+    const withHim = swimming !== null && followMode && walking;
+    const target = withHim ? swimCompanionSpot({ x: walkPos.x, z: walkPos.z, heading: walkHeading }) : { x: SWIM_EXIT.x, z: SWIM_EXIT.z };
+    const dx = target.x - here.x;
+    const dz = target.z - here.z;
+    const dist = Math.hypot(dx, dz);
+    // A glide that lands beside him, a little quicker the further behind she is.
+    const want = companionPace(dist, withHim ? swimPace : 0);
+    ms.speed += (want - ms.speed) * (1 - Math.exp(-dt * 5));
+    const sx = dist > 1e-6 ? (dx / dist) * ms.speed * dt : 0;
+    const sz = dist > 1e-6 ? (dz / dist) * ms.speed * dt : 0;
+    const wantY = withHim ? swimming!.y : surfaceY();
+    const dy = THREE.MathUtils.clamp(wantY - ms.y, -SWIM.vSpeed * dt, SWIM.vSpeed * dt);
+    const next = swimMove({ x: here.x, y: ms.y, z: here.z }, sx, sz, dy);
+    ms.y = next.y;
+    ms.phase += dt * (2.4 + ms.speed * 1.6);
+    if (ms.speed > 0.3) museGroup.rotation.y = angleLerp(museGroup.rotation.y, Math.atan2(dx, dz), opts.reducedMotion ? 1 : 0.12);
+    else if (withHim) museGroup.rotation.y = angleLerp(museGroup.rotation.y, walkHeading, 0.05);
+    museIsMoving = ms.speed > 0.3;
+    if (shouldWalk(next.x, next.z) && (!withHim || shouldWalk(walkPos.x, walkPos.z) || dist < 0.6)) {
+      // Shallow enough to stand: she walks out.
+      museSwim = null;
+      museGroundSm = groundHeightAt(next.x, next.z);
+      museGroup.position.set(next.x, museGroundSm, next.z);
+      return true;
+    }
+    museGroup.position.set(next.x, ms.y - STAND_HIP * (1 - museSwimK), next.z);
+    return true;
+  }
+  let swimLying = { player: false, muse: false };
+  /** Lie each swimmer out in a simple crawl, after every clip has written (called last in the pose pass). */
+  function applySwimPoses(dt: number) {
+    const ease = Math.min(1, dt * 6);
+    playerSwimK += ((swimming ? 1 : 0) - playerSwimK) * ease;
+    museSwimK += ((museSwim ? 1 : 0) - museSwimK) * ease;
+    if (playerSwimK < 0.01 && !swimming) playerSwimK = 0;
+    if (museSwimK < 0.01 && !museSwim) museSwimK = 0;
+    const lie = (who: "player" | "muse", k: number, phase: number, pace: number, inner: THREE.Group, rig: VrmRig | null) => {
+      if (k <= 0) {
+        if (swimLying[who]) {
+          inner.rotation.x = 0;
+          inner.position.z = 0;
+          swimLying[who] = false;
+        }
+        return;
+      }
+      swimLying[who] = true;
+      const a = swimPoseAngles(phase, Math.min(1, pace / 2.3));
+      inner.rotation.x = k * a.bodyPitch;
+      inner.position.z = k * a.bodyBack;
+      if (!rig || k < 0.4) return;
+      poseBone(rig, rig.lUpperArm, a.lArmX, 0, a.lArmZ);
+      poseBone(rig, rig.rUpperArm, a.rArmX, 0, a.rArmZ);
+      poseBone(rig, rig.lLowerArm, a.lForeX, 0, 0);
+      poseBone(rig, rig.rLowerArm, a.rForeX, 0, 0);
+      poseBone(rig, rig.lUpperLeg, a.lLegX, 0, 0.04);
+      poseBone(rig, rig.rUpperLeg, a.rLegX, 0, -0.04);
+      poseBone(rig, rig.lLowerLeg, a.lKneeX, 0, 0);
+      poseBone(rig, rig.rLowerLeg, a.rKneeX, 0, 0);
+      poseBone(rig, rig.head, a.headX, 0, 0);
+    };
+    lie("player", playerSwimK, swimming?.phase ?? 0, swimming ? (isMoving ? SWIM.speed : 0.4) : 0, playerInner, playerRig);
+    lie("muse", museSwimK, museSwim?.phase ?? 0, museSwim ? Math.max(0.4, museSwim.speed) : 0, museInner, museRig);
+  }
   function updateMuseCompanion(dt: number, t: number) {
     if (secretMoment) {
       museIsMoving = false;
@@ -8013,6 +8210,7 @@ export function createTownScene(
       return;
     }
     if (museGroup && !museGroup.visible) museGroup.visible = true;
+    if (stepMuseSwim(dt)) return;
     // Seeking bookkeeping: how long this walk has run, and the
     // closest he has come to her while not following her.
     if (walking) {
@@ -11348,6 +11546,38 @@ export function createTownScene(
     }
     hemi.intensity = (HEMI_DAY - nightMix * 0.55) * wCur.hemiMul + lightningFlash * 0.7;
     sun.intensity = (SUN_DAY - nightMix * 1.55) * wCur.sunMul;
+    // Task 100: under the sea. Blue fog that closes in, dimmed light, the sky put away
+    // (the surface above him is the sky), all eased over a half metre either side of the surface.
+    {
+      uwMix = camera.position.z > 50 ? underwaterMix(camera.position.y) : 0;
+      skyAnchor.visible = uwMix < 0.5;
+      if (uwMix > 0.001) {
+        const [r, g, b] = underwaterColor(Math.max(0, SEA_Y - camera.position.y), nightMix);
+        const wf = underwaterFog(nightMix);
+        tmpColorB.setRGB(r, g, b);
+        if (scene.fog instanceof THREE.Fog) {
+          scene.fog.color.lerp(tmpColorB, uwMix);
+          scene.fog.near = THREE.MathUtils.lerp(scene.fog.near, wf.near, uwMix);
+          scene.fog.far = THREE.MathUtils.lerp(scene.fog.far, wf.far, uwMix);
+        }
+        skyColor.lerp(tmpColorB, uwMix);
+        scene.background = skyColor;
+        const light = underwaterLightScale(uwMix);
+        sun.intensity *= light.sun;
+        hemi.intensity *= light.hemi;
+      }
+      // The surface from below: bright by day, dark by night.
+      {
+        const [r, g, b] = underwaterColor(0, nightMix);
+        const boost = 1.7 - 1.0 * nightMix; // a bright sheet by day, a dim one by night
+        swimWorld.undersideMat.color.setRGB(Math.min(1, r * boost), Math.min(1, g * boost), Math.min(1, b * boost));
+        const sea = swimWorld.undersideMat.map;
+        if (sea) {
+          sea.offset.x = clockTime * 0.0035;
+          sea.offset.y = clockTime * 0.0021;
+        }
+      }
+    }
     rim.intensity = 0.55 - nightMix * 0.3;
     scene.environmentIntensity = (ENV_DAY - nightMix * 0.22) * (0.55 + wCur.sunMul * 0.45);
     sun.color.copy(sunWarm).lerp(tmpColorB.setHex(0x8fb4ff), nightMix);
@@ -12013,6 +12243,7 @@ export function createTownScene(
       if (phase >= 0 && phase < 1) poseThrowArm(playerRig, phase, !playerAnim?.ready);
     }
     applySeatedPoses();
+    applySwimPoses(dt);
   }
 
   // --- Seated poses -----------------------------------------------------
@@ -13426,6 +13657,14 @@ export function createTownScene(
       if (!walking) return;
       // Sitting ends with walk mode: up from the bench first.
       standUpFromBench();
+      // So does swimming: he is lifted out onto the stair's foot.
+      if (swimming) {
+        const out = nearestStairPoint(walkPos.x, walkPos.z);
+        walkPos.x = out.x;
+        walkPos.z = Math.min(out.z, SWIM_EXIT.z);
+        endSwim();
+      }
+      museSwim = null;
       // Rowing ends with walk mode too: ashore at the dock bank,
       // wherever on the lake the boat currently is.
       if (boatState) disembarkBoat(true);
@@ -13457,6 +13696,7 @@ export function createTownScene(
       }
     },
     jump: () => {
+      if (swimming) return; // A rises in the water (setSwimKey), it does not hop
       if (!sliding(run)) hop.queuedAt = performance.now() / 1000;
     },
     slide: () => {
@@ -13466,7 +13706,7 @@ export function createTownScene(
       // instant refused every touch slide and let the press fall
       // through to the overview.
       const now = clock.getElapsedTime();
-      if (!walking || !(isMoving || wasMovingRecently(lastMovingAt, now)) || boatState || airborne(hop) || (handInHand && followMode)) return false;
+      if (!walking || swimming || !(isMoving || wasMovingRecently(lastMovingAt, now)) || boatState || airborne(hop) || (handInHand && followMode)) return false;
       if (!sliding(run) && startSlide(run, wishX || Math.sin(walkHeading), wishZ || Math.cos(walkHeading), now)) {
         if (stepSounds) playSlide(footingHere());
         puffDust(walkPos.x, playerGroundSm, walkPos.z);
@@ -13474,6 +13714,16 @@ export function createTownScene(
       }
       return true;
     },
+    setSwimKey: (which, down) => {
+      if (which === "rise") swimRise = down;
+      else swimSink = down;
+    },
+    swimState: () => ({
+      swimming: swimming !== null,
+      museSwimming: museSwim !== null,
+      underwater: uwMix,
+      depth: swimming ? SEA_Y - swimming.y : 0,
+    }),
     setRhythm: ({ anchor, marketOpen: open, marketBusy }) => {
       rhythmAnchor = anchor;
       marketOpen = open;

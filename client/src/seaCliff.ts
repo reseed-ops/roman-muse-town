@@ -13,6 +13,7 @@
 // clamp) plus the meshes, built once; townScene places and animates.
 import * as THREE from "three";
 import { hillRise, SHOULDER, shoulderRise } from "./shoulder";
+import { nearestStairPoint, stairWalkable } from "./shoreStair";
 
 export { hillRise, SHOULDER, shoulderRise };
 
@@ -298,6 +299,7 @@ export function onLand(x: number, z: number): boolean {
  * nothing here needs to know where it is.
  */
 export function walkable(x: number, z: number): boolean {
+  if (stairWalkable(x, z)) return true; // Task 100: the landing and the stair down to the sea
   if (z >= CLIFF.walkFromZ && z <= CLIFF.head.z && Math.abs(x) <= CLIFF.walkHalf) return true;
   return Math.hypot(x - CLIFF.head.x, z - CLIFF.head.z) <= CLIFF.walkHeadR;
 }
@@ -311,7 +313,9 @@ export function nearestWalkable(x: number, z: number): Pt {
   const d = Math.hypot(dx, dz) || 1;
   const hr = CLIFF.walkHeadR - 1e-6; // a hair inside, so rounding never lands it outside
   const head = { x: CLIFF.head.x + (dx / d) * hr, z: CLIFF.head.z + (dz / d) * hr };
-  return Math.hypot(x - strip.x, z - strip.z) <= Math.hypot(x - head.x, z - head.z) ? strip : head;
+  const stair = nearestStairPoint(x, z);
+  const away = (p: Pt) => Math.hypot(x - p.x, z - p.z);
+  return [strip, head, stair].reduce((best, p) => (away(p) < away(best) ? p : best));
 }
 
 /**
@@ -333,6 +337,11 @@ export function clampToWorld(
   const cape = nearestWalkable(x, z);
   const d = (p: { x: number; z: number }) => Math.hypot(x - p.x, z - p.z);
   return [rim, wood, cape].reduce((best, p) => (d(p) < d(best) ? p : best));
+}
+
+/** The nearest point on the peninsula's smooth outline (the swimmer's wall, Task 100). */
+export function nearestOnLandEdge(x: number, z: number): Pt {
+  return nearestOnOutline(smoothOutline(), x, z);
 }
 
 function nearestOnOutline(outline: { x: number; z: number }[], x: number, z: number): { x: number; z: number } {
@@ -397,6 +406,35 @@ function cliffFace(points: { x: number; z: number }[], top: (x: number, z: numbe
   mesh.receiveShadow = true;
   return mesh;
 }
+
+/**
+ * The rock below the sea (Task 100): the cliff's own foot (the face ends
+ * 1.5 m under the surface) carried straight down to below the sea floor,
+ * so a swimmer sees rock where the cliff goes on, never a gap under the
+ * land. The same points, normals and push as `cliffFace`'s last row.
+ */
+function cliffSkirt(points: { x: number; z: number }[], outwards: { x: number; z: number }[], mat: THREE.Material): THREE.Mesh {
+  const rows = 4;
+  const positions: number[] = [];
+  const index: number[] = [];
+  points.forEach((p, i) => {
+    const o = outwards[i]!;
+    const push = 0.4 + jitter(i, rows) * 0.9;
+    const x = p.x + o.x * push;
+    const z = p.z + o.z * push;
+    positions.push(x, CLIFF.seaY - 1.5, z, x, SKIRT_BOTTOM, z);
+    if (i < points.length - 1) index.push(i * 2, i * 2 + 2, i * 2 + 1, i * 2 + 1, i * 2 + 2, i * 2 + 3);
+  });
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geo.setIndex(index);
+  geo.computeVertexNormals();
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.name = "cliff-skirt";
+  return mesh;
+}
+/** Below the deepest sea floor (about 20 m under the sea): the skirt ends here, out of sight. */
+const SKIRT_BOTTOM = CLIFF.seaY - 30;
 
 /**
  * The town plane is 112 m square, centred on the origin: its uv is the
@@ -540,11 +578,13 @@ export function buildSeaCliff(opts: {
   const normals = outlineNormals();
   {
     group.add(cliffFace(outline, (x, z) => h(x, z), rock, normals));
+    group.add(cliffSkirt(outline, normals, rock));
     for (const side of [-1, 1]) {
       const pts: { x: number; z: number }[] = [];
       const from = side < 0 ? -COAST_FILLET.x : CLIFF.landHalf;
       for (let x = from; x <= 600; x += x < 70 ? 3 : 20) pts.push({ x: side * x, z: coastZ });
       group.add(cliffFace(pts, (x, z) => (Math.abs(x) <= 56 ? h(x, z) : -0.05), rock, pts.map(() => ({ x: 0, z: 1 }))));
+      group.add(cliffSkirt(pts, pts.map(() => ({ x: 0, z: 1 })), rock));
     }
   }
   // Land beyond the town's ground, so its edges meet meadow, not sky:

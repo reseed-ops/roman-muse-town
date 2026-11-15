@@ -21,16 +21,20 @@ test("the trail and the headland are walkable, the sea is not", () => {
 test("the world clamp: town, forest and peninsula pass; the sea and the wide meadow ease back", () => {
   expect(clampToWorld(10, 10, forest)).toEqual({ x: 10, z: 10 });
   expect(clampToWorld(0, 90, forest)).toEqual({ x: 0, z: 90 });
-  // Off the peninsula's side, over the sea: back onto the trail.
-  const off = clampToWorld(12, 90, forest);
-  expect(off.x).toBeCloseTo(CLIFF.walkHalf);
+  // Off the peninsula's side, over the sea: back onto the trail ...
+  const off = clampToWorld(-12, 90, forest);
+  expect(off.x).toBeCloseTo(-CLIFF.walkHalf);
   expect(off.z).toBeCloseTo(90);
+  // ... or, east of the strip, onto the stair down to the sea (Task 100), whose outer edge is x 12.9.
+  const east = clampToWorld(16, 90, forest);
+  expect(east.x).toBeCloseTo(12.9);
+  expect(east.z).toBeCloseTo(90);
   // Past the headland's edge: back onto the headland.
   const edge = clampToWorld(0, 130, forest);
   expect(Math.hypot(edge.x - CLIFF.head.x, edge.z - CLIFF.head.z)).toBeCloseTo(CLIFF.walkHeadR);
   // East of town, no peninsula: back to the town's rim.
-  const east = clampToWorld(60, 0, forest);
-  expect(east).toEqual({ x: 52, z: 0 });
+  const rim = clampToWorld(60, 0, forest);
+  expect(rim).toEqual({ x: 52, z: 0 });
 });
 
 const segsCross = (a: { x: number; z: number }, b: { x: number; z: number }, c: { x: number; z: number }, d: { x: number; z: number }) => {
@@ -90,7 +94,7 @@ test("the outline never crosses itself, and its outward normals point away from 
 
 test("no cliff face runs along z 56 under the shoulder's attachment: the straight coast is x < -96 and x > 9", () => {
   const sea = buildSeaCliff({ terrainHeight, waterNormal: new THREE.Texture(), foamTexture: new THREE.Texture(), pathTexture: new THREE.Texture() });
-  const rockMeshes = sea.group.children.filter((c) => c instanceof THREE.Mesh && (c.material as THREE.MeshStandardMaterial).flatShading) as THREE.Mesh[];
+  const rockMeshes = sea.group.children.filter((c) => c instanceof THREE.Mesh && c.name !== "cliff-skirt" && (c.material as THREE.MeshStandardMaterial).flatShading) as THREE.Mesh[]; // (the skirts carry the faces on below the sea, Task 100)
   expect(rockMeshes.length).toBe(3); // the outline's, the west coast's and the east coast's
   for (const m of rockMeshes) {
     const pos = m.geometry.attributes.position as THREE.BufferAttribute;

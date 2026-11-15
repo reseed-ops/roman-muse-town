@@ -5088,6 +5088,40 @@ export function App() {
     sceneRef.current?.setWalkMove(x, y);
   }, []);
 
+  // Task 100: in the water A rises and B sinks, held. Each source (keyboard,
+  // pad, on-screen) keeps its own state and the scene is told their union.
+  const swimHeld = useRef({ kb: [false, false], pad: [false, false], touch: [false, false] });
+  const holdSwim = useCallback((src: "kb" | "pad" | "touch", i: 0 | 1, down: boolean) => {
+    const h = swimHeld.current;
+    if (h[src][i] === down) return;
+    h[src][i] = down;
+    sceneRef.current?.setSwimKey(i === 0 ? "rise" : "sink", h.kb[i]! || h.pad[i]! || h.touch[i]!);
+  }, []);
+  const swimTouch = (release: typeof PAD_PRESS_RELEASE, i: 0 | 1) => {
+    const up = (k: keyof typeof PAD_PRESS_RELEASE) => (e: React.PointerEvent<HTMLElement>) => {
+      release[k](e);
+      holdSwim("touch", i, false);
+    };
+    return { onPointerUp: up("onPointerUp"), onPointerCancel: up("onPointerCancel"), onPointerLeave: up("onPointerLeave"), onLostPointerCapture: up("onLostPointerCapture") };
+  };
+
+  // Task 100: the first time he swims, a short hint for the two depth buttons.
+  useEffect(() => {
+    if (!walking) return;
+    let was = false;
+    let shown = false;
+    const id = window.setInterval(() => {
+      const swimming = sceneRef.current?.swimState().swimming ?? false;
+      if (swimming && !was && !shown) {
+        shown = true;
+        setHintText("Swimming: hold A to rise, B to sink.");
+        window.setTimeout(() => setHintText((cur) => (cur?.startsWith("Swimming") ? null : cur)), 5000);
+      }
+      was = swimming;
+    }, 400);
+    return () => window.clearInterval(id);
+  }, [walking]);
+
   // Joystick geometry: a 34px travel radius inside the base. Dragging the
   // thumbstick maps to the same pad vector the keyboard produces (up is
   // forward), with partial tilt giving partial speed.
@@ -6060,13 +6094,23 @@ export function App() {
       }
       if (e.code === "Space") {
         e.preventDefault();
+        holdSwim("kb", 0, true);
         if (!e.repeat) sceneRef.current?.jump();
       }
+      if (e.key === "c" || e.key === "C") holdSwim("kb", 1, true);
       if ((e.key === "c" || e.key === "C") && !e.repeat) sceneRef.current?.slide();
     };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.code === "Space") holdSwim("kb", 0, false);
+      if (e.key === "c" || e.key === "C") holdSwim("kb", 1, false);
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, [holdSwim]);
 
   // The way back from the overview to Gaius (owner prescription,
   // Nov 2): the overview is not B's anymore, it lives in the town
@@ -6237,6 +6281,10 @@ export function App() {
       seats = routePads(seats, pads.map((pad) => ({ index: pad.index, id: pad.id })));
       const padFor = (seat: PadSeats["p1"]) => (seat ? pads.find((pad) => pad.index === seat.index) ?? null : null);
       const g1 = padFor(seats.p1);
+      if (!g1) {
+        holdSwim("pad", 0, false);
+        holdSwim("pad", 1, false);
+      }
       if (g1) {
         const stick = stickVector(g1.axes[0] ?? 0, g1.axes[1] ?? 0);
         const live = stick.x !== 0 || stick.y !== 0;
@@ -6247,6 +6295,8 @@ export function App() {
         p1Live = live;
         const now = buttonsDown(g1.buttons);
         const was = prevButtons.get(g1.index) ?? [];
+        holdSwim("pad", 0, !!now[0]);
+        holdSwim("pad", 1, !!now[1]);
         for (const button of pressedButtons(was, now)) {
           if (!walkingRef.current) continue;
           if (button === "a") scene.jump();
@@ -6315,7 +6365,7 @@ export function App() {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, [setPad]);
+  }, [setPad, holdSwim]);
 
   // The follow harness toggle cycles off, beside, behind.
   const cycleDriverFollow = () => {
@@ -10408,7 +10458,7 @@ export function App() {
                   : "B button, close a panel or dismiss what is open"
               }
               className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#e74856]/90 bg-[#1b1b1b]/55 text-lg font-black text-[#ff7a85] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8),1px_0_0_rgba(0,0,0,0.6),-1px_0_0_rgba(0,0,0,0.6)] transition active:scale-90 data-[pressed]:scale-90 active:bg-[#e74856] data-[pressed]:bg-[#e74856] active:text-white data-[pressed]:text-white"
-              {...PAD_PRESS_RELEASE}
+              {...swimTouch(PAD_PRESS_RELEASE, 1)}
               onPointerDown={(e) => {
                 // B acts on the press, like A: on release (the old
                 // click) the same gesture had already centred the
@@ -10416,6 +10466,7 @@ export function App() {
                 // every touch slide was refused.
                 padPressOn(e);
                 e.preventDefault();
+                holdSwim("touch", 1, true);
                 xboxBack();
               }}
               onClick={(e) => {
@@ -10430,10 +10481,11 @@ export function App() {
               type="button"
               aria-label="A button, jump"
               className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#52b043]/90 bg-[#1b1b1b]/55 text-lg font-black text-[#7ed37a] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur [text-shadow:0_1px_2px_rgba(0,0,0,0.95),0_0_5px_rgba(0,0,0,0.8),1px_0_0_rgba(0,0,0,0.6),-1px_0_0_rgba(0,0,0,0.6)] transition active:scale-90 data-[pressed]:scale-90 active:bg-[#107c10] data-[pressed]:bg-[#107c10] active:text-white data-[pressed]:text-white"
-              {...PAD_PRESS_RELEASE}
+              {...swimTouch(PAD_PRESS_RELEASE, 0)}
               onPointerDown={(e) => {
                 padPressOn(e);
                 e.preventDefault();
+                holdSwim("touch", 0, true);
                 sceneRef.current?.jump();
               }}
               onClick={(e) => {
