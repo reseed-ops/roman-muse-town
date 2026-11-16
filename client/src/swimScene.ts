@@ -9,6 +9,7 @@
 import * as THREE from "three";
 import { SEA_Y, STAIR, STAIR_STEPS, treadTop } from "./shoreStair";
 import { seabedHeight, SWIM } from "./swim";
+import { installSeaWaves, seaGridGeometry } from "./seaSurface";
 
 /** The floor is built to this much beyond the swim bounds, so its edge is always out in the fog. */
 export const SEABED_EXTENT = { xMin: -150, xMax: 150, zMin: 50, zMax: 245, cell: 2 } as const;
@@ -118,9 +119,9 @@ export function buildSwimWorld(opts: { waterNormal: THREE.Texture }): SwimWorld 
   tex.repeat.set(70, 70);
   tex.needsUpdate = true;
   const undersideMat = new THREE.MeshBasicMaterial({ color: 0xa5d8ff, map: tex, side: THREE.BackSide, fog: true });
-  const underside = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400), undersideMat);
-  underside.rotation.x = -Math.PI / 2;
-  underside.position.set(0, SEA_Y, 300);
+  installSeaWaves(undersideMat, { shadeFromBelow: true });
+  const underside = new THREE.Mesh(seaGridGeometry(0), undersideMat);
+  underside.position.y = SEA_Y;
   underside.name = "sea-underside";
   group.add(seabed, stair, underside);
   return { group, underside, undersideMat, seabed, stair };

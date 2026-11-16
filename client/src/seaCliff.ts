@@ -11,6 +11,7 @@
 // the water, hidden from inside the town by its own edge, open from the
 // headland. Pure geometry here (the outline, what is walkable, the world
 // clamp) plus the meshes, built once; townScene places and animates.
+import { installSeaWaves, seaGridGeometry } from "./seaSurface";
 import * as THREE from "three";
 import { hillRise, SHOULDER, shoulderRise } from "./shoulder";
 import { nearestStairPoint, stairWalkable } from "./shoreStair";
@@ -608,13 +609,16 @@ export function buildSeaCliff(opts: {
   oceanTex.wrapT = THREE.RepeatWrapping;
   oceanTex.repeat.set(160, 160);
   oceanTex.needsUpdate = true;
-  const oceanMat = new THREE.MeshStandardMaterial({ color: OCEAN_DAY, roughness: 0.22, metalness: 0.15, normalMap: oceanTex, normalScale: new THREE.Vector2(0.9, 0.9) });
-  const ocean = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400), oceanMat);
-  ocean.rotation.x = -Math.PI / 2;
-  ocean.position.set(0, seaY, 300);
+  // Task 102: the waves carry the big shapes now; the normal map keeps only the fine ripple on them.
+  const oceanMat = new THREE.MeshStandardMaterial({ color: OCEAN_DAY, roughness: 0.22, metalness: 0.15, normalMap: oceanTex, normalScale: new THREE.Vector2(0.55, 0.55) });
+  installSeaWaves(oceanMat);
+  const ocean = new THREE.Mesh(seaGridGeometry(0), oceanMat);
+  ocean.position.y = seaY;
+  ocean.name = "ocean";
   group.add(ocean);
   // Surf at the cliff's foot: a pale band that swells and falls.
   const foamMat = new THREE.MeshBasicMaterial({ color: 0xf2f6f8, map: opts.foamTexture, transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  installSeaWaves(foamMat); // the surf rides the swell with the water
   {
     const band = (pts: { x: number; z: number }[], outs: { x: number; z: number }[]) => {
       const positions: number[] = [];
@@ -645,17 +649,20 @@ export function buildSeaCliff(opts: {
   // Light on the water: the moon's silver path and, low in the sky, the sun's gold.
   const pathTex = opts.pathTexture;
   const moonPath = new THREE.Mesh(
-    new THREE.PlaneGeometry(14, 150),
+    new THREE.PlaneGeometry(14, 150, 6, 60),
     new THREE.MeshBasicMaterial({ color: 0xdceaff, map: pathTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }),
   );
   moonPath.rotation.x = -Math.PI / 2;
   moonPath.position.y = seaY + 0.1;
   const sunPath = new THREE.Mesh(
-    new THREE.PlaneGeometry(18, 170),
+    new THREE.PlaneGeometry(18, 170, 8, 68),
     new THREE.MeshBasicMaterial({ color: 0xffb46a, map: pathTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }),
   );
   sunPath.rotation.x = -Math.PI / 2;
   sunPath.position.y = seaY + 0.09;
+  // The light paths lie on the waves too (their vertices ride the same surface).
+  installSeaWaves(moonPath.material as THREE.Material);
+  installSeaWaves(sunPath.material as THREE.Material);
   group.add(moonPath, sunPath);
   return { group, oceanMat, foamMat, moonPath, sunPath, landMats: [grass, meadow] };
 }

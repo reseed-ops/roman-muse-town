@@ -4,6 +4,8 @@ import { buildHomeHouse, splashRingY } from "./homeHouse";
 import { seaFogColor, warmStone, ENV_DAY, HEMI_DAY, SEA_NIGHT_BLEND, SUN_DAY, TONE_EXPOSURE } from "./skyLook";
 import { aimSeaPath, buildSeaCliff, CLIFF, clampToWorld, clearOfSea, cutAtCoast, HILL_BASE_Y, HORIZON_HILLS, horizonHillGeometry, OCEAN_DAY, OCEAN_NIGHT, walkable as onCliffPath } from "./seaCliff";
 import { QUIET_BOAT_MIN_OUT, QUIET_BOAT_START, beginDrift, boatSeats, driftStep, nextQuietLine, rowBack as rowBackState, type Drift, type QuietBoatState } from "../../shared/quietBoat";
+import { seaHeight, shipRide } from "./seaWaves";
+import { setSeaTime } from "./seaSurface";
 import { FISHING_BOAT_LENGTH, fishingOut, nextGap, pickFishingSpots, pickShip, planVoyage, SHIPS, shipsSail, voyagePose, watchingSea, type SeaWeather, type ShipKind, type Voyage } from "./seaShips";
 import { createTrueSky, skyDirection, SKY_REFRESH_S } from "./trueSky";
 import { BENCH_FOLIAGE } from "./benchFoliage";
@@ -3808,12 +3810,12 @@ export function createTownScene(
       for (const f of fishing) {
         f.boat.visible = fishers && f.anchored;
         if (!f.boat.visible) continue;
-        f.boat.position.set(f.x, CLIFF.seaY - 0.15 + Math.sin(t * 0.8 + f.phase) * 0.12, f.z);
-        f.boat.rotation.set(
-          Math.sin(t * 0.9 + f.phase) * 0.04,
-          f.heading + Math.sin(t * 0.04 + f.phase) * 0.5,
-          Math.sin(t * 0.7 + f.phase) * 0.06,
-        );
+        // Task 102: the boat sits on the wave under it (heave, pitch and roll from the surface), the slow swing at anchor kept.
+        const heading = f.heading + Math.sin(t * 0.04 + f.phase) * 0.5;
+        const ride = shipRide(f.x, f.z, heading, FISHING_BOAT_LENGTH, t);
+        f.boat.position.set(f.x, CLIFF.seaY - 0.15 + ride.dy, f.z);
+        f.boat.rotation.order = "YZX";
+        f.boat.rotation.set(ride.roll, heading, ride.pitch);
       }
       if (voyage) {
         voyage.elapsed += dt;
@@ -3828,9 +3830,11 @@ export function createTownScene(
         if (!hull) return; // still loading; the pass goes on unseen
         if (voyage.kind === "trade" && tradeSail) tradeSail.color.setHex(voyage.dye);
         const pose = voyagePose(voyage, p);
-        const swell = Math.sin(t * 0.55 + voyage.laneZ);
-        hull.position.set(pose.x, CLIFF.seaY - SHIPS[voyage.kind].sink + swell * 0.22, pose.z);
-        hull.rotation.set(Math.sin(t * 0.42) * 0.025, pose.heading, Math.sin(t * 0.37 + 1.1) * 0.035);
+        // Task 102: the hull rides the waves at its position (heave, pitch, roll); route and speed untouched.
+        const ride = shipRide(pose.x, pose.z, pose.heading, SHIPS[voyage.kind].length, t);
+        hull.position.set(pose.x, CLIFF.seaY - SHIPS[voyage.kind].sink + ride.dy, pose.z);
+        hull.rotation.order = "YZX";
+        hull.rotation.set(ride.roll, pose.heading, ride.pitch);
         hull.visible = true;
         return;
       }
@@ -11549,7 +11553,8 @@ export function createTownScene(
     // Task 100: under the sea. Blue fog that closes in, dimmed light, the sky put away
     // (the surface above him is the sky), all eased over a half metre either side of the surface.
     {
-      uwMix = camera.position.z > 50 ? underwaterMix(camera.position.y) : 0;
+      // Task 102: the surface is where the wave is, so the camera is under it when below that.
+      uwMix = camera.position.z > 50 ? underwaterMix(camera.position.y - seaHeight(camera.position.x, camera.position.z, clockTime)) : 0;
       skyAnchor.visible = uwMix < 0.5;
       if (uwMix > 0.001) {
         const [r, g, b] = underwaterColor(Math.max(0, SEA_Y - camera.position.y), nightMix);
@@ -13032,6 +13037,7 @@ export function createTownScene(
         // foot, the moon's silver path and the low sun's gold laid toward
         // their true bearings from wherever he stands.
         {
+          setSeaTime(t);
           const sea = seaCliff.oceanMat.normalMap;
           if (sea) {
             sea.offset.x = t * 0.0021;
