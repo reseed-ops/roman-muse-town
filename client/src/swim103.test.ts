@@ -61,10 +61,10 @@ test("Aelia, walking from before the landing, reaches the stair, goes down it, s
     expect(out).toBe(true);
   }
   // The waypoint before the steps is inside the region that counts as being on them.
-  const g = museStairGoal(8, 55)!;
+  const g = museStairGoal(8, 57.1)!; // on the landing (Task 104: from the trail, the goal is the landing gate first)
   expect(g.z).toBeGreaterThanOrEqual(STAIR.topZ - 0.5);
   expect(museStairGoal(-20, 55)).toBeNull();
-  expect(src).toContain("museStairGoal(here.x, here.z)");
+  expect(src).toContain("museStairStep(here.x, here.z, dt");
 });
 
 // ---- 2. hand in hand

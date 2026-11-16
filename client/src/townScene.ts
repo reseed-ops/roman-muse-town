@@ -43,7 +43,7 @@ import { airborne, newJump, stepJump } from "./jump";
 import { endSlide, newSlide, slideSpeed, sliding, startSlide, wasMovingRecently } from "./slide";
 import { buildSwimWorld } from "./swimScene";
 import { nearestStairPoint, SEA_Y, shoreStairY } from "./shoreStair";
-import { confine as swimConfine, museStairGoal, depthWish, edgeEase, shouldSwim, shouldWalk, surfaceY, SWIM, SWIM_EXIT, companionPace, swimCompanionSpot, swimFloor, swimMove, swimPoseAngles, swimWish, underwaterColor, underwaterFog, underwaterLightScale, underwaterMix } from "./swim";
+import { confine as swimConfine, moonOpacity, museStairStep, depthWish, edgeEase, shouldSwim, shouldWalk, surfaceY, SWIM, SWIM_EXIT, companionPace, swimCompanionSpot, swimFloor, swimMove, swimPoseAngles, swimWish, underwaterColor, underwaterFog, underwaterLightScale, underwaterMix } from "./swim";
 import { FOLLOW_CAM, followCamSustain, followCamYawStep, type FollowCamGate } from "./followCam";
 import {
   driverStep,
@@ -322,7 +322,7 @@ export interface TownSceneHandle {
   /** Task 100: the depth buttons while swimming, held: A rises, B sinks. */
   setSwimKey: (which: "rise" | "sink", down: boolean) => void;
   /** Task 100: whether he is swimming, and how deep he and the camera are (for the shell's hint and the tests). */
-  swimState: () => { swimming: boolean; museSwimming: boolean; underwater: number; depth: number; museDepth: number; museY: number; sunOpacity: number; hands: number; handsOn: boolean };
+  swimState: () => { swimming: boolean; museSwimming: boolean; underwater: number; depth: number; museDepth: number; museY: number; sunOpacity: number; moonOpacity: number; hands: number; handsOn: boolean };
   /** Slide, if he is on the move. False if he's standing, so B can mean back. */
   slide: () => boolean;
   /** Player 2 (Task 3, Nov 3 2026): the second channel that drives
@@ -8123,13 +8123,11 @@ export function createTownScene(
         return true;
       }
       // He is in the water and she is near the shore: down the stair after him, nothing in the way.
-      const goal = museStairGoal(here.x, here.z);
-      if (!goal) return false;
-      const gx = goal.x;
-      const gz = goal.z;
-      const dist = Math.hypot(gx - here.x, gz - here.z) || 1;
-      const step = Math.min(3.6 * dt, dist);
-      const bounded = clampToWorld(here.x + ((gx - here.x) / dist) * step, here.z + ((gz - here.z) / dist) * step, { norm: forestNorm, cx: FOREST.cx, cz: FOREST.cz });
+      const stepped = museStairStep(here.x, here.z, dt, (nx, nz) => clampToWorld(nx, nz, { norm: forestNorm, cx: FOREST.cx, cz: FOREST.cz }));
+      if (!stepped) return false;
+      const gx = stepped.goal.x;
+      const gz = stepped.goal.z;
+      const bounded = stepped;
       const targetGY = groundHeightAt(bounded.x, bounded.z);
       if (!Number.isFinite(museGroundSm) || Math.abs(targetGY - museGroundSm) > 1.1) museGroundSm = targetGY;
       else museGroundSm += THREE.MathUtils.clamp(targetGY - museGroundSm, -5 * dt, 5 * dt);
@@ -13100,7 +13098,7 @@ export function createTownScene(
           }
         }
         // The moon shows by night, faintly by day when it is up (as it does).
-        trueSky.moonMaterial.opacity = moonUp * (nightMix * 0.95 + (1 - nightMix) * 0.22);
+        trueSky.moonMaterial.opacity = moonOpacity(moonUp, nightMix, uwMix);
         waterMat.emissive.setHex(0x0a2e4a);
         waterMat.emissiveIntensity = nightMix * 0.55;
         for (const s of willowStrands) {
@@ -13745,6 +13743,7 @@ export function createTownScene(
       museDepth: museSwim ? SEA_Y - museSwim.y : 0,
       museY: museGroup.position.y,
       sunOpacity: sunDiscMat.opacity,
+      moonOpacity: trueSky.moonMaterial.opacity,
       hands: handBlend,
       handsOn: handInHand,
     }),

@@ -13,7 +13,7 @@
 // the floor. Neutral buoyancy: with no depth button held he stays at the
 // depth he is at.
 import { CLIFF, COAST_FILLET, nearestOnLandEdge, onLand } from "./seaCliff";
-import { insideStairMass, SEA_Y, shoreStairY, STAIR, stairY } from "./shoreStair";
+import { insideStairMass, onLanding, SEA_Y, shoreStairY, STAIR, stairY } from "./shoreStair";
 
 export const SWIM = {
   seaY: SEA_Y,
@@ -69,18 +69,52 @@ export const surfaceY = () => SEA_Y - SWIM.carry;
 /** Where she heads to climb out, on the stair in the shallows. */
 export const SWIM_EXIT = { x: (STAIR.x0 + STAIR.x1) / 2, z: 100.2 } as const;
 
+/** The point on both the trail's east edge (|x| <= 5.4) and the landing (x from 5), where she steps from the trail onto the landing. */
+export const LANDING_GATE = { x: 5.2, z: 57.1 } as const;
+
 /**
  * Where Aelia walks to, to follow him down the stair, or null when she is
- * not near its head. Until she stands on the stair the goal is a point
- * just inside it (a hair past the head), never short of the line that
- * counts as being on the steps, so she cannot arrive and stand there; on
- * the steps it is the foot, into the water.
+ * not near its head. The route has three legs (Task 104; the one-leg
+ * version died on the trail's edge from any start south of the landing,
+ * because the world's clamp keeps a walker on the strip's x <= 5.4):
+ *  1. not yet on the landing: the gate, the point that is on the trail and
+ *     the landing both, so the next frame she is on the landing;
+ *  2. on the landing: a point just inside the stair (a hair past its head),
+ *     never short of the line that counts as being on the steps;
+ *  3. on the steps: the foot, into the water.
  */
 export function museStairGoal(x: number, z: number): { x: number; z: number } | null {
   if (!(z > 48 && x > -8 && x < 15)) return null;
+  const mid = (STAIR.x0 + STAIR.x1) / 2;
   const onSteps = z >= STAIR.topZ - 0.5 && x >= STAIR.x0 - 0.2;
-  return { x: (STAIR.x0 + STAIR.x1) / 2, z: onSteps ? STAIR.endZ + 4 : STAIR.topZ + 0.3 };
+  if (onSteps) return { x: mid, z: STAIR.endZ + 4 };
+  if (onLanding(x, z)) return { x: mid, z: STAIR.topZ + 0.3 };
+  return { x: LANDING_GATE.x, z: LANDING_GATE.z };
 }
+
+/**
+ * One frame of her walk to the stair: from (x, z) a step of `speed * dt`
+ * toward the goal, through `clamp` (the world's walking bounds). Returns
+ * the new point, or null when she has no business at the stair. The scene
+ * and the tests both walk her with this.
+ */
+export function museStairStep(
+  x: number,
+  z: number,
+  dt: number,
+  clamp: (x: number, z: number) => { x: number; z: number },
+  speed = 3.6,
+): { x: number; z: number; goal: { x: number; z: number } } | null {
+  const goal = museStairGoal(x, z);
+  if (!goal) return null;
+  const dist = Math.hypot(goal.x - x, goal.z - z) || 1;
+  const step = Math.min(speed * dt, dist);
+  const b = clamp(x + ((goal.x - x) / dist) * step, z + ((goal.z - z) / dist) * step);
+  return { x: b.x, z: b.z, goal };
+}
+
+/** The moon's final opacity (Task 104): its own curve, faded to nothing with the rest of the sky as he goes under. */
+export const moonOpacity = (moonUp: number, nightMix: number, uwMix: number): number => moonUp * (nightMix * 0.95 + (1 - nightMix) * 0.22) * (1 - uwMix);
 
 // ---------------------------------------------------------------- floor
 

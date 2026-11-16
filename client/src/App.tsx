@@ -271,7 +271,7 @@ const NIGHT_AFTERGLOW_KEY = "muse-town-night-afterglow";
 const TENDER_MEMORY_KEY = "muse-town-tender-memory";
 const pickOne = <T,>(pool: readonly T[]): T => pool[Math.floor(Math.random() * pool.length)]!;
 import { useVisitNotice } from "./useVisitNotice";
-import { holdSwimKey, newSwimHeld, releaseAllSwimKeys, resyncSwimKeys, type SwimSrc } from "./swimHeld";
+import { holdSwimKey, newPadGate, newSwimHeld, pollPadDepth, releaseAllSwimKeys, resyncSwimKeys, type SwimSrc } from "./swimHeld";
 import { LAPSE_WARN_MS, UNREACHABLE_AFTER_FAILS, composingVisible, hostOf, visitChipLine, visitClosedLine, visitStatusLine, type VisitCloseReason, type VisitDirectorState, type VisitRoute } from "./visitStatus";
 import {
 playChime,
@@ -5092,11 +5092,12 @@ export function App() {
   // Task 100: in the water A rises and B sinks, held. Each source (keyboard,
   // pad, on-screen) keeps its own state and the scene is told their union.
   const swimHeld = useRef(newSwimHeld());
+  const padGate = useRef(newPadGate());
   const sendSwimKey = useCallback((which: "rise" | "sink", down: boolean) => sceneRef.current?.setSwimKey(which, down), []);
   const holdSwim = useCallback((src: SwimSrc, i: 0 | 1, down: boolean) => holdSwimKey(swimHeld.current, src, i, down, sendSwimKey), [sendSwimKey]);
   // Focus lost or the tab hidden while a key is down: the keyup goes to another window, so let everything go.
   useEffect(() => {
-    const letGo = () => releaseAllSwimKeys(swimHeld.current, sendSwimKey);
+    const letGo = () => releaseAllSwimKeys(swimHeld.current, sendSwimKey, padGate.current);
     const onVis = () => {
       if (document.visibilityState === "hidden") letGo();
     };
@@ -6306,8 +6307,7 @@ export function App() {
         p1Live = live;
         const now = buttonsDown(g1.buttons);
         const was = prevButtons.get(g1.index) ?? [];
-        holdSwim("pad", 0, !!now[0]);
-        holdSwim("pad", 1, !!now[1]);
+        pollPadDepth(swimHeld.current, padGate.current, document.hasFocus() && document.visibilityState !== "hidden", [!!now[0], !!now[1]], sendSwimKey);
         for (const button of pressedButtons(was, now)) {
           if (!walkingRef.current) continue;
           if (button === "a") scene.jump();
@@ -6376,7 +6376,7 @@ export function App() {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, [setPad, holdSwim]);
+  }, [setPad, holdSwim, sendSwimKey]);
 
   // The follow harness toggle cycles off, beside, behind.
   const cycleDriverFollow = () => {

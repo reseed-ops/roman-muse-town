@@ -14,11 +14,11 @@ Search it with `bun tools/assets/search.ts <words>` (see `tools/assets/README.md
 | `centurion.vrm` | character | owner-built in VRoid Studio (Gaius) | 16201 | 37737 | used | townScene.ts:5886 `loadModelScene(centurionUrl)` |
 | `greek_atlas.png` | texture | Greek Low Poly pack: `Textures/Greek_Combined.png` | 1 | 128x128 | unused | unused |
 | `muse-avatar.vrm` | character | pixiv VRoid sample model (AvatarSample_M) | 16774 | 52389 | used | townScene.ts:5386 `loadModelScene(museAvatarUrl)` |
-| `phoenix.fbx` | animal | Low Poly Legend Phoenix (PULSAR BYTES) | 858 | 2241 | used | townScene.ts:10086 `void runtime.streaming.request(() => assetUrl(phoenixUrl).then((resolved) => fbxLoader2.lo` |
-| `phoenix_tex.png` | texture | Low Poly Legend Phoenix (PULSAR BYTES) | 0 | 32x32 | used | townScene.ts:10090 `const tex = loadAssetTexture(phoenixTexUrl);` |
+| `phoenix.fbx` | animal | Low Poly Legend Phoenix (PULSAR BYTES) | 858 | 2241 | used | townScene.ts:10084 `void runtime.streaming.request(() => assetUrl(phoenixUrl).then((resolved) => fbxLoader2.lo` |
+| `phoenix_tex.png` | texture | Low Poly Legend Phoenix (PULSAR BYTES) | 0 | 32x32 | used | townScene.ts:10088 `const tex = loadAssetTexture(phoenixTexUrl);` |
 | `stars-fall-song.mp3` | audio | the project's own song for the summit scene | 157 |  | used | App.tsx:2763 `songAudioRef.current = new Audio(assetUrlSync(summitSongUrl));` |
-| `trees_pack.glb` | nature | Low Poly Trees (itch.io) | 3512 | 7215 | used | townScene.ts:9350 `void assetUrl(treesPackUrl)` |
-| `wolf.glb` | animal | Dire Wolf Lite: `Dire_Wolf_Lite.glb (unchanged)` | 12146 | 9991 | used | townScene.ts:10413 `void runtime.streaming.request(() => assetUrl(wolfUrl).then((resolved) => gltfLoader.loadA` |
+| `trees_pack.glb` | nature | Low Poly Trees (itch.io) | 3512 | 7215 | used | townScene.ts:9348 `void assetUrl(treesPackUrl)` |
+| `wolf.glb` | animal | Dire Wolf Lite: `Dire_Wolf_Lite.glb (unchanged)` | 12146 | 9991 | used | townScene.ts:10411 `void runtime.streaming.request(() => assetUrl(wolfUrl).then((resolved) => gltfLoader.loadA` |
 
 ## anim/
 
@@ -65,19 +65,19 @@ Search it with `bun tools/assets/search.ts <words>` (see `tools/assets/README.md
 
 | File | Kind | Pack / made from | KB | Tris | Status | Where it is placed |
 | --- | --- | --- | ---: | ---: | --- | --- |
-| `greek/greek_bench_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 16 | 192 | used | townScene.ts:9516 `greekBench(greekBench1Url, "bench-greek-stone", 12.2, -15, Math.PI / 2);` — Turned on Nov 6, 2026 (Task 18): both sat with their backs to the peristyle; sitters now face it (no backrest  |
-| `greek/greek_bench_2.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 19 | 288 | used | townScene.ts:9517 `greekBench(greekBench2Url, "bench-greek-wood", -12.2, -15, -Math.PI / 2);` |
-| `greek/greek_bowl.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 17 | 100 | used | (6.9, 38.4) [townScene.ts:9490] |
-| `greek/greek_bucket.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 15 | 92 | used | (21.3, 26.9) [townScene.ts:9494] |
-| `greek/greek_decorative_bowl.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 17 | 238 | used | (6.9, 39.6) [townScene.ts:9491] |
+| `greek/greek_bench_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 16 | 192 | used | townScene.ts:9514 `greekBench(greekBench1Url, "bench-greek-stone", 12.2, -15, Math.PI / 2);` — Turned on Nov 6, 2026 (Task 18): both sat with their backs to the peristyle; sitters now face it (no backrest  |
+| `greek/greek_bench_2.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 19 | 288 | used | townScene.ts:9515 `greekBench(greekBench2Url, "bench-greek-wood", -12.2, -15, -Math.PI / 2);` |
+| `greek/greek_bowl.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 17 | 100 | used | (6.9, 38.4) [townScene.ts:9488] |
+| `greek/greek_bucket.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 15 | 92 | used | (21.3, 26.9) [townScene.ts:9492] |
+| `greek/greek_decorative_bowl.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 17 | 238 | used | (6.9, 39.6) [townScene.ts:9489] |
 | `greek/greek_dock.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 30 | 900 | unused | unused |
-| `greek/greek_drying_rack.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 42 | 972 | used | (-22.6, 25.4) [townScene.ts:9497] |
-| `greek/greek_garden_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 19 | 124 | used | (9.8, 25.2) [townScene.ts:9495]; (13.4, 25.2) [townScene.ts:9496] |
+| `greek/greek_drying_rack.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 42 | 972 | used | (-22.6, 25.4) [townScene.ts:9495] |
+| `greek/greek_garden_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 19 | 124 | used | (9.8, 25.2) [townScene.ts:9493]; (13.4, 25.2) [townScene.ts:9494] |
 | `greek/greek_pool_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 20 | 208 | unused | unused |
-| `greek/greek_pot_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 25 | 754 | used | (-25, 23) [townScene.ts:9492] |
-| `greek/greek_pot_2.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 19 | 348 | used | (-20.8, 24.0) [townScene.ts:9493] |
-| `greek/greek_table_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 22 | 548 | used | (-27.0, 9.6) [townScene.ts:9488]; (24.8, -1.6) [townScene.ts:9489] — --- Greek dressing: furniture and small goods at the houses' doorsteps and terraces (the town has no interiors |
-| `greek/greek_wood_pile.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 16 | 122 | used | (27.9, 27.6) [townScene.ts:9498]; (-24.6, 20.2) [townScene.ts:9499] |
+| `greek/greek_pot_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 25 | 754 | used | (-25, 23) [townScene.ts:9490] |
+| `greek/greek_pot_2.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 19 | 348 | used | (-20.8, 24.0) [townScene.ts:9491] |
+| `greek/greek_table_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 22 | 548 | used | (-27.0, 9.6) [townScene.ts:9486]; (24.8, -1.6) [townScene.ts:9487] — --- Greek dressing: furniture and small goods at the houses' doorsteps and terraces (the town has no interiors |
+| `greek/greek_wood_pile.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 16 | 122 | used | (27.9, 27.6) [townScene.ts:9496]; (-24.6, 20.2) [townScene.ts:9497] |
 
 ## idyllic/
 
@@ -114,14 +114,14 @@ Search it with `bun tools/assets/search.ts <words>` (see `tools/assets/README.md
 
 | File | Kind | Pack / made from | KB | Tris | Status | Where it is placed |
 | --- | --- | --- | ---: | ---: | --- | --- |
-| `pets/cat.fbx` | animal | Animated Pets & Farm Animals (HONETi) | 767 | 390 | used | (6.4, 17.8) [townScene.ts:9799] |
-| `pets/cat_05.png` | texture | Animated Pets & Farm Animals (HONETi) | 92 | 512x512 | used | townScene.ts:9696 `: kind === "cat" ? catTexUrl` |
-| `pets/chicken.fbx` | animal | Animated Pets & Farm Animals (HONETi) | 584 | 598 | used | (11.4, 27) [townScene.ts:9779]; (12.6, 26.8) [townScene.ts:9780]; (10.2, 27.2) [townScene.ts:9781] — Two chickens and a rooster at the market (the pack has one chicken; the third wears a slightly larger scale an |
-| `pets/chicken_01.png` | texture | Animated Pets & Farm Animals (HONETi) | 191 | 512x512 | used | townScene.ts:9695 `kind === "chicken" ? chickenTexUrl` |
-| `pets/pig.fbx` | animal | Animated Pets & Farm Animals (HONETi) | 690 | 454 | used | (-20, 28) [townScene.ts:9792] |
-| `pets/pig_01.png` | texture | Animated Pets & Farm Animals (HONETi) | 159 | 512x512 | used | townScene.ts:9697 `: kind === "pig" ? pigTexUrl` |
-| `pets/sheep.fbx` | animal | Animated Pets & Farm Animals (HONETi) | 567 | 744 | used | (-15, 28.2) [townScene.ts:9791] |
-| `pets/sheep_05.png` | texture | Animated Pets & Farm Animals (HONETi) | 163 | 512x512 | used | townScene.ts:9698 `: kind === "sheep" ? sheepTexUrl` |
+| `pets/cat.fbx` | animal | Animated Pets & Farm Animals (HONETi) | 767 | 390 | used | (6.4, 17.8) [townScene.ts:9797] |
+| `pets/cat_05.png` | texture | Animated Pets & Farm Animals (HONETi) | 92 | 512x512 | used | townScene.ts:9694 `: kind === "cat" ? catTexUrl` |
+| `pets/chicken.fbx` | animal | Animated Pets & Farm Animals (HONETi) | 584 | 598 | used | (11.4, 27) [townScene.ts:9777]; (12.6, 26.8) [townScene.ts:9778]; (10.2, 27.2) [townScene.ts:9779] — Two chickens and a rooster at the market (the pack has one chicken; the third wears a slightly larger scale an |
+| `pets/chicken_01.png` | texture | Animated Pets & Farm Animals (HONETi) | 191 | 512x512 | used | townScene.ts:9693 `kind === "chicken" ? chickenTexUrl` |
+| `pets/pig.fbx` | animal | Animated Pets & Farm Animals (HONETi) | 690 | 454 | used | (-20, 28) [townScene.ts:9790] |
+| `pets/pig_01.png` | texture | Animated Pets & Farm Animals (HONETi) | 159 | 512x512 | used | townScene.ts:9695 `: kind === "pig" ? pigTexUrl` |
+| `pets/sheep.fbx` | animal | Animated Pets & Farm Animals (HONETi) | 567 | 744 | used | (-15, 28.2) [townScene.ts:9789] |
+| `pets/sheep_05.png` | texture | Animated Pets & Farm Animals (HONETi) | 163 | 512x512 | used | townScene.ts:9696 `: kind === "sheep" ? sheepTexUrl` |
 
 ## roman/
 
@@ -176,7 +176,7 @@ Search it with `bun tools/assets/search.ts <words>` (see `tools/assets/README.md
 | `roman/shield_legionaire.glb` | weapon | Roman Empire, Stylized Low Poly: `SM_shield_legionaire` | 22 | 354 | used | townScene.ts:5870 `const gaiusArms = createGaiusArms({ frame: avatar, place: placeModel, gladiusUrl, shieldUr` — Gaius's arms: the gladius at his right hip, the scutum on his back (gaiusArms.ts). |
 | `roman/statue_mars.glb` | statue | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 129 | 1368 | used | townScene.ts:3142 `void placeWorld(statueMarsUrl, { x: VILLA.statueMars[0], z: VILLA.statueMars[1], rotY: Mat` |
 | `roman/temple.glb` | building | Roman Empire, Stylized Low Poly: `SM_temple` | 900 | 15558 | used | (31, -27) [townScene.ts:3136] — --- Roman landmarks, market, and dressing ------------------------- The temple keeps its own hill to the north |
-| `roman/torch.fbx` | prop | Roman Empire, Stylized Low Poly: `SM_torch` | 28 | 80 | used | townScene.ts:9300 `void placeFbx(torchUrl, { x, z, rotY, height: 1.7 }).then((g) => {` |
+| `roman/torch.fbx` | prop | Roman Empire, Stylized Low Poly: `SM_torch` | 28 | 80 | used | townScene.ts:9298 `void placeFbx(torchUrl, { x, z, rotY, height: 1.7 }).then((g) => {` |
 | `roman/tree_a.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 39 | 408 | used | townScene.ts:2898 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];` |
 | `roman/tree_b.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 98 | 1226 | used | townScene.ts:2898 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];` |
 | `roman/tree_c.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 43 | 500 | used | townScene.ts:2898 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];` |
