@@ -1,7 +1,7 @@
 import { createPlaceFootprints } from "./buildingFootprints";
 import { readArrangement } from "../../shared/homeDecor";
 import { buildHomeHouse, splashRingY } from "./homeHouse";
-import { seaFogColor, warmStone, ENV_DAY, HEMI_DAY, SEA_NIGHT_BLEND, SUN_DAY, TONE_EXPOSURE } from "./skyLook";
+import { applyLakeRipple, seaFogColor, warmStone, ENV_DAY, HEMI_DAY, SEA_NIGHT_BLEND, SUN_DAY, TONE_EXPOSURE } from "./skyLook";
 import { aimSeaPath, buildSeaCliff, CLIFF, clampToWorld, clearOfSea, cutAtCoast, HILL_BASE_Y, HORIZON_HILLS, horizonHillGeometry, OCEAN_DAY, OCEAN_NIGHT, walkable as onCliffPath } from "./seaCliff";
 import { QUIET_BOAT_MIN_OUT, QUIET_BOAT_START, beginDrift, boatSeats, driftStep, nextQuietLine, rowBack as rowBackState, type Drift, type QuietBoatState } from "../../shared/quietBoat";
 import { seaHeight, shipRide } from "./seaWaves";
@@ -13101,6 +13101,7 @@ export function createTownScene(
         trueSky.moonMaterial.opacity = moonOpacity(moonUp, nightMix, uwMix);
         waterMat.emissive.setHex(0x0a2e4a);
         waterMat.emissiveIntensity = nightMix * 0.55;
+        applyLakeRipple(waterMat, nightMix); // Task 105: ripples flatten at night
         for (const s of willowStrands) {
           s.mesh.rotation.x = Math.PI + Math.sin(t * 0.85 + s.phase) * 0.045;
         }

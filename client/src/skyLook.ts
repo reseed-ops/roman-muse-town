@@ -64,3 +64,30 @@ export function warmStone(root: THREE.Object3D, tint = WARM_STONE_TINT): number 
   });
   return n;
 }
+
+/** Task 105: the lake's day ripple strength and roughness (unchanged), and what they ease to at full night. */
+export const LAKE_RIPPLE_DAY = 0.4;
+export const LAKE_RIPPLE_NIGHT = 0.1;
+export const LAKE_ROUGH_DAY = 0.14;
+export const LAKE_ROUGH_NIGHT = 0.4;
+
+/**
+ * Task 105: the lake's ripples flatten as night falls. Against a dark sky the
+ * moonlit ripple facets read as bold parallel bands on a bright phone GPU;
+ * a weaker normal and a rougher surface spread the specular instead.
+ * nightMix 0 (day) returns exactly the original 0.4 / 0.14.
+ */
+export function lakeRipple(nightMix: number): { normalScale: number; roughness: number } {
+  const k = Math.min(1, Math.max(0, nightMix));
+  return {
+    normalScale: LAKE_RIPPLE_DAY + (LAKE_RIPPLE_NIGHT - LAKE_RIPPLE_DAY) * k,
+    roughness: LAKE_ROUGH_DAY + (LAKE_ROUGH_NIGHT - LAKE_ROUGH_DAY) * k,
+  };
+}
+
+/** Applies lakeRipple to the lake's material (the one owner of its ripple strength). */
+export function applyLakeRipple(m: { normalScale: { set(x: number, y: number): unknown }; roughness: number }, nightMix: number): void {
+  const r = lakeRipple(nightMix);
+  m.normalScale.set(r.normalScale, r.normalScale);
+  m.roughness = r.roughness;
+}
