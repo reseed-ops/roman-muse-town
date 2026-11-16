@@ -42,8 +42,8 @@ import { footingAt, strideStep, type Footing } from "./footing";
 import { airborne, newJump, stepJump } from "./jump";
 import { endSlide, newSlide, slideSpeed, sliding, startSlide, wasMovingRecently } from "./slide";
 import { buildSwimWorld } from "./swimScene";
-import { nearestStairPoint, SEA_Y, shoreStairY, STAIR } from "./shoreStair";
-import { confine as swimConfine, depthWish, edgeEase, shouldSwim, shouldWalk, surfaceY, SWIM, SWIM_EXIT, companionPace, swimCompanionSpot, swimFloor, swimMove, swimPoseAngles, swimWish, underwaterColor, underwaterFog, underwaterLightScale, underwaterMix } from "./swim";
+import { nearestStairPoint, SEA_Y, shoreStairY } from "./shoreStair";
+import { confine as swimConfine, museStairGoal, depthWish, edgeEase, shouldSwim, shouldWalk, surfaceY, SWIM, SWIM_EXIT, companionPace, swimCompanionSpot, swimFloor, swimMove, swimPoseAngles, swimWish, underwaterColor, underwaterFog, underwaterLightScale, underwaterMix } from "./swim";
 import { FOLLOW_CAM, followCamSustain, followCamYawStep, type FollowCamGate } from "./followCam";
 import {
   driverStep,
@@ -322,7 +322,7 @@ export interface TownSceneHandle {
   /** Task 100: the depth buttons while swimming, held: A rises, B sinks. */
   setSwimKey: (which: "rise" | "sink", down: boolean) => void;
   /** Task 100: whether he is swimming, and how deep he and the camera are (for the shell's hint and the tests). */
-  swimState: () => { swimming: boolean; museSwimming: boolean; underwater: number; depth: number };
+  swimState: () => { swimming: boolean; museSwimming: boolean; underwater: number; depth: number; museDepth: number; museY: number; sunOpacity: number; hands: number; handsOn: boolean };
   /** Slide, if he is on the move. False if he's standing, so B can mean back. */
   slide: () => boolean;
   /** Player 2 (Task 3, Nov 3 2026): the second channel that drives
@@ -6786,6 +6786,8 @@ export function createTownScene(
   let swimPace = 0;
   /** The body's axis above the group's origin when lying out (feet at the origin, standing). */
   const STAND_HIP = 0.95;
+  /** Either of them swimming, or still easing into or out of the stroke: joined hands are suspended (not cleared), they resume on land. */
+  const swimTouched = () => swimming !== null || museSwim !== null || playerSwimK > 0.02 || museSwimK > 0.02;
   function beginSwim(t: number) {
     if (swimming) return;
     if (sliding(run)) endSlide(run, t);
@@ -6796,8 +6798,8 @@ export function createTownScene(
   function endSwim() {
     if (!swimming) return;
     swimming = null;
-    swimRise = false;
-    swimSink = false;
+    // swimRise / swimSink mirror the shell's held buttons (setSwimKey) and are not ours to clear:
+    // a button held through the exit is still held on re-entry.
     playerGroundSm = groundHeightAt(walkPos.x, walkPos.z);
     camSwimGround = Number.NaN;
   }
@@ -6849,7 +6851,7 @@ export function createTownScene(
     // against that cap for several seconds is a hurry, she lets
     // go, once, amused rather than scolding, and the shell is told
     // so its own hand state follows hers.
-    if (handInHand && followMode && !boatState && !seatPlayer) {
+    if (handInHand && followMode && !boatState && !seatPlayer && !swimming) {
       if (mag > 0.95) {
         handHurryTime += dt;
         if (handHurryTime >= 3.5) {
@@ -7212,7 +7214,7 @@ export function createTownScene(
     // becomes the point. (She already faces him while she waits,
     // see the follow steering's arrived branch.) His heading itself
     // is untouched, so walking off again is seamless.
-    if (handInHand && followMode && !isMoving && !boatState && !seatPlayer) {
+    if (handInHand && followMode && !isMoving && !boatState && !seatPlayer && !swimming) {
       const toMuse = Math.atan2(
         museGroup.position.x - walkPos.x,
         museGroup.position.z - walkPos.z,
@@ -8121,10 +8123,10 @@ export function createTownScene(
         return true;
       }
       // He is in the water and she is near the shore: down the stair after him, nothing in the way.
-      if (!(here.z > 48 && here.x > -8 && here.x < 15)) return false;
-      const onSteps = here.z >= STAIR.topZ - 0.5 && here.x >= STAIR.x0 - 0.2;
-      const gx = (STAIR.x0 + STAIR.x1) / 2;
-      const gz = onSteps ? STAIR.endZ + 4 : STAIR.landing.z0 + 1;
+      const goal = museStairGoal(here.x, here.z);
+      if (!goal) return false;
+      const gx = goal.x;
+      const gz = goal.z;
       const dist = Math.hypot(gx - here.x, gz - here.z) || 1;
       const step = Math.min(3.6 * dt, dist);
       const bounded = clampToWorld(here.x + ((gx - here.x) / dist) * step, here.z + ((gz - here.z) / dist) * step, { norm: forestNorm, cx: FOREST.cx, cz: FOREST.cz });
@@ -8607,8 +8609,8 @@ export function createTownScene(
       // step behind, instead of the usual companionable offset. Rain
       // changes nothing here any more (umbrellas removed, Nov 1): the
       // offsets are the dry-weather ones in every weather.
-      const backOff = handInHand ? 0.9 : 1.45;
-      const sideOff = handInHand ? 0.68 : 1.1;
+      const backOff = handInHand && !swimTouched() ? 0.9 : 1.45;
+      const sideOff = handInHand && !swimTouched() ? 0.68 : 1.1;
       targetX = walkPos.x - fx * backOff + rx * sideOff;
       targetZ = walkPos.z - fz * backOff + rz * sideOff;
       // Prefer the paths: when the Centurion is on or near a street,
@@ -8773,7 +8775,7 @@ export function createTownScene(
     // Matched stride: hands joined, she keeps his stroll pace,
     // a brief extra turn of speed only while she regains his side
     // from a real distance, then she settles back to wandering.
-    if (followMode && handInHand) speed = Math.min(speed, dist > 2.4 ? 3.3 : 2.45);
+    if (followMode && handInHand && !swimTouched()) speed = Math.min(speed, dist > 2.4 ? 3.3 : 2.45);
     if (dist < 1.1) speed = Math.min(speed, 1.5);
     // Orbit fix, the other half: while he stands still, her pace
     // eases with the remaining distance instead of holding the
@@ -11508,6 +11510,7 @@ export function createTownScene(
     }
   }
   const sunWarm = new THREE.Color();
+  const uwTint = new THREE.Color();
   function applyDayNight() {
     // The sun rides to its direction; its light warms as it lowers,
     // and the sky gradient follows its elevation, then a lightning
@@ -11517,11 +11520,20 @@ export function createTownScene(
     if (skyElevDeg < 16) sunWarm.lerp(tmpColorB.setHex(0xffc98a), Math.min(1, Math.max(0, (16 - skyElevDeg) / 13)));
     if (skyElevDeg < 4) sunWarm.lerp(tmpColorB.setHex(0xff9a4d), Math.min(1, Math.max(0, (4 - skyElevDeg) / 6)));
     skyAnchor.position.set(camera.position.x, 0, camera.position.z);
+    // Task 103: the sky is blended away with the water, never switched. The camera's mix under the
+    // surface (Task 102: where the wave is) takes the dome to the water's own colour and fades the
+    // sun, its glow, the moon and the stars to nothing, all on the one curve as the fog and the light.
+    uwMix = camera.position.z > 50 ? underwaterMix(camera.position.y - seaHeight(camera.position.x, camera.position.z, clockTime)) : 0;
+    const skyKeep = 1 - uwMix;
+    if (uwMix > 0.001) {
+      const [r, g, b] = underwaterColor(Math.max(0, SEA_Y - camera.position.y), nightMix);
+      uwTint.setRGB(r, g, b);
+    }
     sunDisc.position.copy(sunDirCur).multiplyScalar(118);
     sunGlow.position.copy(sunDirCur).multiplyScalar(116);
     const discVis = THREE.MathUtils.clamp((skyElevDeg + 1.5) / 2.5, 0, 1) * (1 - Math.min(1, wCur.rain + wCur.snow)) * (weatherId === "fog" ? 0.3 : 1);
-    sunDiscMat.opacity = discVis * 0.95;
-    sunGlowMat.opacity = discVis * 0.4;
+    sunDiscMat.opacity = discVis * 0.95 * skyKeep;
+    sunGlowMat.opacity = discVis * 0.4 * skyKeep;
     sunDiscMat.color.copy(sunWarm);
     skyGradient(skyElevDeg);
     tmpColorA.copy(gradTop);
@@ -11530,6 +11542,10 @@ export function createTownScene(
     tmpColorA.copy(gradHor);
     if (lightningFlash > 0.01) tmpColorA.lerp(tmpColorB.setHex(0xdfe9ff), lightningFlash * 0.45);
     skyUniforms.horizonColor.value.copy(tmpColorA);
+    if (uwMix > 0.001) {
+      skyUniforms.topColor.value.lerp(uwTint, uwMix);
+      skyUniforms.horizonColor.value.lerp(uwTint, uwMix);
+    }
     skyColor.copy(gradTop).lerp(gradHor, 0.4);
     if (lightningFlash > 0.01) skyColor.lerp(tmpColorB.setHex(0xcfdcff), lightningFlash * 0.5);
     scene.background = skyColor;
@@ -11553,13 +11569,10 @@ export function createTownScene(
     // Task 100: under the sea. Blue fog that closes in, dimmed light, the sky put away
     // (the surface above him is the sky), all eased over a half metre either side of the surface.
     {
-      // Task 102: the surface is where the wave is, so the camera is under it when below that.
-      uwMix = camera.position.z > 50 ? underwaterMix(camera.position.y - seaHeight(camera.position.x, camera.position.z, clockTime)) : 0;
-      skyAnchor.visible = uwMix < 0.5;
+      // uwMix and uwTint were set at the top (the sky blends on the same curve); nothing is switched off.
       if (uwMix > 0.001) {
-        const [r, g, b] = underwaterColor(Math.max(0, SEA_Y - camera.position.y), nightMix);
         const wf = underwaterFog(nightMix);
-        tmpColorB.setRGB(r, g, b);
+        tmpColorB.copy(uwTint);
         if (scene.fog instanceof THREE.Fog) {
           scene.fog.color.lerp(tmpColorB, uwMix);
           scene.fog.near = THREE.MathUtils.lerp(scene.fog.near, wf.near, uwMix);
@@ -11604,7 +11617,7 @@ export function createTownScene(
       camera: camera.position,
       moon: trueSky.moon(),
     });
-    trueSky.setOpacity(nightMix * 0.95 * (1 - Math.min(1, wCur.rain + wCur.snow)) * (weatherId === "fog" ? 0.25 : 1));
+    trueSky.setOpacity(nightMix * 0.95 * (1 - Math.min(1, wCur.rain + wCur.snow)) * (weatherId === "fog" ? 0.25 : 1) * (1 - uwMix));
     // Fireflies belong to warm-season nights, and they keep to the
     // lake and its willows.
     fireflyMat.opacity = nightMix * 0.9 * (1 - Math.min(1, wCur.rain)) * fireflyShare(currentTreeSeason);
@@ -12184,7 +12197,7 @@ export function createTownScene(
     // every weather, exactly as in dry weather. Seated, rowing, and
     // terrace moments own their own poses and are untouched by this.
     const wantHold =
-      handInHand && followMode && !secretMoment && !boatState && !seatPlayer && !seatMuse
+      handInHand && followMode && !secretMoment && !boatState && !seatPlayer && !seatMuse && !swimTouched()
         ? 1
         : 0;
     handBlend += (wantHold - handBlend) * Math.min(1, dt * 3.5);
@@ -12198,7 +12211,7 @@ export function createTownScene(
       }
       museInner.rotation.z = 0.05 * handBlend;
       playerInner.rotation.z = -0.035 * handBlend;
-      if (walking && playerRig?.rHand && museRig?.lHand) {
+      if (walking && !swimTouched() && playerRig?.rHand && museRig?.lHand) {
         playerRig.rHand.getWorldPosition(umbElbowW);
         museRig.lHand.getWorldPosition(umbHandW);
         const dx = umbElbowW.x - umbHandW.x;
@@ -13729,6 +13742,11 @@ export function createTownScene(
       museSwimming: museSwim !== null,
       underwater: uwMix,
       depth: swimming ? SEA_Y - swimming.y : 0,
+      museDepth: museSwim ? SEA_Y - museSwim.y : 0,
+      museY: museGroup.position.y,
+      sunOpacity: sunDiscMat.opacity,
+      hands: handBlend,
+      handsOn: handInHand,
     }),
     setRhythm: ({ anchor, marketOpen: open, marketBusy }) => {
       rhythmAnchor = anchor;

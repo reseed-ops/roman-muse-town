@@ -8,11 +8,10 @@
 // fish, no props, no lights.
 import * as THREE from "three";
 import { SEA_Y, STAIR, STAIR_STEPS, treadTop } from "./shoreStair";
-import { seabedHeight, SWIM } from "./swim";
+import { SEABED_EXTENT, seabedHeight, SWIM } from "./swim";
 import { installSeaWaves, seaGridGeometry } from "./seaSurface";
 
-/** The floor is built to this much beyond the swim bounds, so its edge is always out in the fog. */
-export const SEABED_EXTENT = { xMin: -150, xMax: 150, zMin: 50, zMax: 245, cell: 2 } as const;
+export { SEABED_EXTENT };
 
 const SAND_SHALLOW = new THREE.Color(0xd8c590);
 const SAND_DEEP = new THREE.Color(0x7d8f8c);

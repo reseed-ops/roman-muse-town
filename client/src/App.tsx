@@ -271,6 +271,7 @@ const NIGHT_AFTERGLOW_KEY = "muse-town-night-afterglow";
 const TENDER_MEMORY_KEY = "muse-town-tender-memory";
 const pickOne = <T,>(pool: readonly T[]): T => pool[Math.floor(Math.random() * pool.length)]!;
 import { useVisitNotice } from "./useVisitNotice";
+import { holdSwimKey, newSwimHeld, releaseAllSwimKeys, resyncSwimKeys, type SwimSrc } from "./swimHeld";
 import { LAPSE_WARN_MS, UNREACHABLE_AFTER_FAILS, composingVisible, hostOf, visitChipLine, visitClosedLine, visitStatusLine, type VisitCloseReason, type VisitDirectorState, type VisitRoute } from "./visitStatus";
 import {
 playChime,
@@ -5090,13 +5091,22 @@ export function App() {
 
   // Task 100: in the water A rises and B sinks, held. Each source (keyboard,
   // pad, on-screen) keeps its own state and the scene is told their union.
-  const swimHeld = useRef({ kb: [false, false], pad: [false, false], touch: [false, false] });
-  const holdSwim = useCallback((src: "kb" | "pad" | "touch", i: 0 | 1, down: boolean) => {
-    const h = swimHeld.current;
-    if (h[src][i] === down) return;
-    h[src][i] = down;
-    sceneRef.current?.setSwimKey(i === 0 ? "rise" : "sink", h.kb[i]! || h.pad[i]! || h.touch[i]!);
-  }, []);
+  const swimHeld = useRef(newSwimHeld());
+  const sendSwimKey = useCallback((which: "rise" | "sink", down: boolean) => sceneRef.current?.setSwimKey(which, down), []);
+  const holdSwim = useCallback((src: SwimSrc, i: 0 | 1, down: boolean) => holdSwimKey(swimHeld.current, src, i, down, sendSwimKey), [sendSwimKey]);
+  // Focus lost or the tab hidden while a key is down: the keyup goes to another window, so let everything go.
+  useEffect(() => {
+    const letGo = () => releaseAllSwimKeys(swimHeld.current, sendSwimKey);
+    const onVis = () => {
+      if (document.visibilityState === "hidden") letGo();
+    };
+    window.addEventListener("blur", letGo);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.removeEventListener("blur", letGo);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [sendSwimKey]);
   const swimTouch = (release: typeof PAD_PRESS_RELEASE, i: 0 | 1) => {
     const up = (k: keyof typeof PAD_PRESS_RELEASE) => (e: React.PointerEvent<HTMLElement>) => {
       release[k](e);
@@ -5529,6 +5539,7 @@ export function App() {
         }
       }
       sceneRef.current = handle;
+      resyncSwimKeys(swimHeld.current, sendSwimKey); // a rebuilt scene hears the buttons as they stand
       exposeTour(handle); // the walkthrough's hook, only under ?tour (Task 90)
       // Walk-together from frame one (see the following state): she
       // starts as his companion, so no greeting wave fires on load

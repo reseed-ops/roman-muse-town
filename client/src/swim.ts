@@ -69,6 +69,19 @@ export const surfaceY = () => SEA_Y - SWIM.carry;
 /** Where she heads to climb out, on the stair in the shallows. */
 export const SWIM_EXIT = { x: (STAIR.x0 + STAIR.x1) / 2, z: 100.2 } as const;
 
+/**
+ * Where Aelia walks to, to follow him down the stair, or null when she is
+ * not near its head. Until she stands on the stair the goal is a point
+ * just inside it (a hair past the head), never short of the line that
+ * counts as being on the steps, so she cannot arrive and stand there; on
+ * the steps it is the foot, into the water.
+ */
+export function museStairGoal(x: number, z: number): { x: number; z: number } | null {
+  if (!(z > 48 && x > -8 && x < 15)) return null;
+  const onSteps = z >= STAIR.topZ - 0.5 && x >= STAIR.x0 - 0.2;
+  return { x: (STAIR.x0 + STAIR.x1) / 2, z: onSteps ? STAIR.endZ + 4 : STAIR.topZ + 0.3 };
+}
+
 // ---------------------------------------------------------------- floor
 
 /** The straight coast, east and west of the land: distance south of it, else Infinity. */
@@ -117,15 +130,50 @@ export function seabedHeight(x: number, z: number): number {
   return SEA_Y - depth + (dunes + bump) * calm;
 }
 
+/** The floor is built to this much beyond the swim bounds, so its edge is always out in the fog. */
+export const SEABED_EXTENT = { xMin: -150, xMax: 150, zMin: 50, zMax: 245, cell: 2 } as const;
+
+/**
+ * The floor as it is DRAWN (Task 103): the mesh is two-metre cells split
+ * into planar triangles on seabedHeight's samples, so between vertices it
+ * differs from the continuous function (by 0.15 m or more over the dunes).
+ * This is the mesh's own height: the same cell, the same diagonal as
+ * three's PlaneGeometry (each cell's a=(i,j) b=(i,j+1) c=(i+1,j+1)
+ * d=(i+1,j) makes triangles a-b-d and b-c-d, so the diagonal is b-d),
+ * interpolated on the triangle. Off the mesh, the function.
+ */
+export function seabedMeshHeight(x: number, z: number): number {
+  const E = SEABED_EXTENT;
+  if (x < E.xMin || x > E.xMax || z < E.zMin || z > E.zMax) return seabedHeight(x, z);
+  const nx = Math.round((E.xMax - E.xMin) / E.cell);
+  const nz = Math.round((E.zMax - E.zMin) / E.cell);
+  // The cell counts are rounded, so the z spacing is 195 / 98, not exactly the nominal two metres.
+  const dx = (E.xMax - E.xMin) / nx;
+  const dz = (E.zMax - E.zMin) / nz;
+  const gx = (x - E.xMin) / dx;
+  const gz = (z - E.zMin) / dz;
+  const i = Math.min(nx - 1, Math.floor(gx));
+  const j = Math.min(nz - 1, Math.floor(gz));
+  const u = gx - i;
+  const v = gz - j;
+  const h = (a: number, b: number) => seabedHeight(E.xMin + a * dx, E.zMin + b * dz);
+  const ha = h(i, j);
+  const hb = h(i, j + 1);
+  const hd = h(i + 1, j);
+  if (u + v <= 1) return ha + u * (hd - ha) + v * (hb - ha);
+  const hc = h(i + 1, j + 1);
+  return hc + (1 - u) * (hb - hc) + (1 - v) * (hd - hc);
+}
+
 /** The submerged steps under (x, z), or -Infinity off them. */
 export function stairFloor(x: number, z: number): number {
   if (x < STAIR.meshX0 || x > STAIR.meshX1 || z < STAIR.topZ || z > STAIR.endZ) return -Infinity;
   return stairY(z) + STAIR.rise / 2;
 }
 
-/** What a swimmer cannot sink through: the sea floor, or the steps over it. */
+/** What a swimmer cannot sink through: the sea floor as drawn, or the steps over it. */
 export function swimFloor(x: number, z: number): number {
-  return Math.max(seabedHeight(x, z), stairFloor(x, z));
+  return Math.max(seabedMeshHeight(x, z), stairFloor(x, z));
 }
 
 /** The highest a swimmer's axis goes. */
@@ -248,9 +296,9 @@ export function depthWish(rise: boolean, sink: boolean): number {
 
 // ----------------------------------------------------------------- view
 
-/** Fraction under the surface the camera is: 0 more than 0.25 m above it, 1 more than 0.25 m below. */
+/** Fraction under the surface the camera is: 0 more than 0.5 m above it, 1 more than 0.5 m below (the spec's half metre either side). */
 export function underwaterMix(camY: number): number {
-  return smooth((SEA_Y + 0.25 - camY) / 0.5);
+  return smooth((SEA_Y + 0.5 - camY) / 1.0);
 }
 
 export type RGB = readonly [number, number, number];

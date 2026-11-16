@@ -12,6 +12,7 @@ import {
   edgeEase,
   inSwimBounds,
   seabedHeight,
+  seabedMeshHeight,
   shouldSwim,
   shouldWalk,
   surfaceY,
@@ -162,8 +163,9 @@ test("he cannot pass above the surface nor through the sea floor", () => {
   expect(p.y).toBeLessThan(SEA_Y);
   // Sink for good: he stops half a metre over the floor.
   for (let i = 0; i < 200; i++) p = swimMove(p, 0, 0, -0.3);
-  expect(p.y).toBeCloseTo(seabedHeight(40, 140) + SWIM.floorClear, 5);
-  expect(p.y).toBeGreaterThan(seabedHeight(40, 140));
+  // (the floor as drawn, Task 103: the mesh's triangle, not the continuous function)
+  expect(p.y).toBeCloseTo(seabedMeshHeight(40, 140) + SWIM.floorClear, 5);
+  expect(p.y).toBeGreaterThan(seabedMeshHeight(40, 140));
   // Swimming along the bottom he rides up and over a rise of the floor, never into it.
   for (let x = -100; x <= 100; x += 0.7) {
     p = swimMove({ ...p, x }, 0, 0, -1);
@@ -228,16 +230,19 @@ test("the surface seen from below is the sea plane's back face only, so above an
 
 test("the underwater view: none above the surface, full below it, a short ease across it", () => {
   expect(underwaterMix(SEA_Y + 3)).toBe(0);
-  expect(underwaterMix(SEA_Y + 0.3)).toBe(0);
+  // Task 103: the spec's half metre either side of the surface (it had been a quarter).
+  expect(underwaterMix(SEA_Y + 0.5)).toBe(0);
+  expect(underwaterMix(SEA_Y + 0.4)).toBeGreaterThan(0);
   expect(underwaterMix(SEA_Y)).toBeCloseTo(0.5, 6);
-  expect(underwaterMix(SEA_Y - 0.3)).toBe(1);
+  expect(underwaterMix(SEA_Y - 0.4)).toBeLessThan(1);
+  expect(underwaterMix(SEA_Y - 0.5)).toBe(1);
   expect(underwaterMix(SEA_Y - 12)).toBe(1);
   // Monotone across the surface: no flash, no pop (each step a small change).
-  let last = underwaterMix(SEA_Y + 0.4);
-  for (let y = SEA_Y + 0.4; y >= SEA_Y - 0.4; y -= 0.01) {
+  let last = underwaterMix(SEA_Y + 0.6);
+  for (let y = SEA_Y + 0.6; y >= SEA_Y - 0.6; y -= 0.01) {
     const m = underwaterMix(y);
     expect(m).toBeGreaterThanOrEqual(last);
-    expect(m - last).toBeLessThan(0.05);
+    expect(m - last).toBeLessThan(0.03);
     last = m;
   }
   // Blue fog that closes in, dimmed light.
