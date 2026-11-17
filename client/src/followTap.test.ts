@@ -49,7 +49,7 @@ describe("Task 48: the follow switch is on Aelia", () => {
     expect(app).not.toContain("Tap to ask Aelia to stay");
     expect(app).not.toContain("onClick={() => toggleFollow()}");
     expect(app).toContain("Tap Aelia to walk together, tap again to let her stay");
-    expect(app).toContain("{followToast && walking && sceneReady && !hintText && (");
+    expect(app).toContain("if (followToast && walking && sceneReady && !hintText) {");
     expect(app).toContain('localStorage.setItem(FOLLOW_TOAST_KEY, "1")');
     expect(app).toContain("<strong className=\"text-[#ffd34e]\">tap Aelia</strong> (or press Y near her)");
   });

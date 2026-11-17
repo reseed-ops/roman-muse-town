@@ -1,7 +1,7 @@
 import { exposeTour } from "./tourPlaces";
 import { TownMap } from "./TownMap";
 import { PAD_PRESS_ALL, PAD_PRESS_RELEASE, padPressOn } from "./padPress";
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTownState } from "./useTownState";
 import { TownUtilities } from "./TownUtilities";
@@ -10293,15 +10293,6 @@ export function App() {
         </section>
       )}
 
-      {/* Tour caption */}
-      {tourStop && (
-        <div className="absolute inset-x-0 bottom-[104px] z-10 flex justify-center px-4">
-          <div className="rounded-2xl bg-[#22332b]/85 px-4 py-2 text-center text-sm font-semibold shadow-lg backdrop-blur">
-            {tourStop.label}
-          </div>
-        </div>
-      )}
-
       {/* No on-screen camera toggle button (owner ask, Nov 1), and
           since Nov 2 the overview is not on B either: it lives in
           the town menu (View & weather), both ways. The cluster
@@ -10709,89 +10700,120 @@ export function App() {
           </button>
         </div>
       )}
-      {followToast && walking && sceneReady && !hintText && (
-        <div className="absolute inset-x-0 bottom-[18px] z-20 flex justify-center px-4 pb-safe" data-mt-follow-toast="1">
-          <div className="pointer-events-auto flex max-w-[92vw] items-center gap-2 rounded-2xl bg-[#22332b]/92 px-4 py-2 text-sm font-medium shadow-xl backdrop-blur">
-            <p>Tap Aelia to walk together, tap again to let her stay</p>
-            <button
-              type="button"
-              className="shrink-0 rounded-full bg-white/12 px-2 py-0.5 text-[13px] font-bold transition active:scale-95"
-              aria-label="Dismiss this hint. It will not be shown again"
-              onClick={dismissFollowToast}
-            >
-              ✕
-            </button>
+      {/* Task 107: the one thin message box. Instructional and
+          non-conversational text (hints, the follow and rejoin tips,
+          the tour caption, the focus sitting bar, the place line) rides
+          here, under the top bar, never over the middle of the screen
+          or the controls. At most two rows at a time, in priority
+          order, each one slim; Aelia's talk and the action prompts
+          (X, letter, boat) are not part of it. It steps aside for her
+          bubble and the summit scene, which own the upper half. */}
+      {!museBubble && !summitScene && (() => {
+        const rows: { key: string; node: ReactNode }[] = [];
+        const row = "pointer-events-auto flex max-w-full items-center gap-2 rounded-xl bg-[#22332b]/88 px-3 py-1 text-[12px] leading-snug font-semibold text-white shadow-md backdrop-blur";
+        if (hintText) {
+          rows.push({ key: "hint", node: <p data-mt-note="hint" className={`${row} pointer-events-none line-clamp-2 text-center`}>{hintText}</p> });
+        }
+        if (followToast && walking && sceneReady && !hintText) {
+          rows.push({
+            key: "follow-tip",
+            node: (
+              <div className={row} data-mt-follow-toast="1" data-mt-note="follow">
+                <p>Tap Aelia to walk together, tap again to let her stay</p>
+                <button
+                  type="button"
+                  className="shrink-0 rounded-full bg-white/12 px-2 py-0.5 text-[12px] font-bold transition active:scale-95"
+                  aria-label="Dismiss this hint. It will not be shown again"
+                  onClick={dismissFollowToast}
+                >
+                  ✕
+                </button>
+              </div>
+            ),
+          });
+        }
+        if (rejoinHint && !following) {
+          rows.push({
+            key: "rejoin",
+            node: (
+              <div className={row} data-mt-note="rejoin">
+                <p>
+                  Aelia will keep her own day from here. To walk together again,{" "}
+                  <strong className="text-[#ffd34e]">tap Aelia</strong> (or press Y near her).
+                </p>
+                <button
+                  type="button"
+                  className="shrink-0 rounded-full bg-white/12 px-2 py-0.5 text-[12px] font-bold transition active:scale-95"
+                  aria-label="Dismiss the rejoin hint. It will not be shown again"
+                  onClick={() => {
+                    rejoinHintDismissedRef.current = true;
+                    try {
+                      localStorage.setItem("muse-town-rejoin-hint-dismissed", "1");
+                    } catch {
+                      /* the session still honours the dismissal */
+                    }
+                    setRejoinHint(false);
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            ),
+          });
+        }
+        if (tourStop) {
+          rows.push({ key: "tour", node: <p data-mt-note="tour" className={`${row} pointer-events-none text-center`}>{tourStop.label}</p> });
+        }
+        if (focusSitting) {
+          rows.push({
+            key: "focus",
+            node: (
+              <div className={row} data-mt-note="focus">
+                <span>📖 Sitting with Aelia, about {focusLeft} min of quiet left</span>
+                <button
+                  type="button"
+                  aria-label="End the focus sitting early"
+                  className="shrink-0 rounded-full bg-white/15 px-2.5 py-0.5 text-[12px] font-bold transition active:scale-95"
+                  onClick={() => {
+                    setFocusSitting(null);
+                    sceneRef.current?.setQuietMode(false);
+                    setMuseBubble({
+                      lines: paginateLines([pickPooled("focus-early", FOCUS_EARLY_LINES)]),
+                      index: 0,
+                      cycle: false,
+                      invite: false,
+                      choice: null,
+                    });
+                  }}
+                >
+                  End
+                </button>
+              </div>
+            ),
+          });
+        }
+        if (walking && !anyFullPanelOpen && (firstTask || rhythm)) {
+          rows.push({
+            key: "place",
+            node: (
+              <p aria-live="off" data-mt-note="place" className={`${row} pointer-events-none truncate bg-[#22332b]/60 text-white/90`}>
+                {firstTask ? FIRST_TASK : `${rhythm!.title} · ${rhythm!.where}`}
+              </p>
+            ),
+          });
+        }
+        if (rows.length === 0) return null;
+        return (
+          <div
+            className="pointer-events-none absolute top-[calc(env(safe-area-inset-top,0px)+60px)] right-3 left-3 z-10 flex flex-col items-center gap-1"
+            data-mt-top-notes="1"
+          >
+            {rows.slice(0, 2).map((r) => (
+              <Fragment key={r.key}>{r.node}</Fragment>
+            ))}
           </div>
-        </div>
-      )}
-      {/* One-time rejoin hint: shown only after the first parking of
-          Aelia, until dismissed, never again after. */}
-      {rejoinHint && !following && (
-        <div className="absolute inset-x-0 bottom-[64px] z-20 flex justify-center px-4 pb-safe">
-          <div className="pointer-events-auto flex max-w-[92vw] items-start gap-2 rounded-2xl bg-[#22332b]/92 px-4 py-2.5 text-sm font-medium shadow-xl backdrop-blur">
-            <p className="leading-relaxed">
-              Aelia will keep her own day from here. To walk together again,{" "}
-              <strong className="text-[#ffd34e]">tap Aelia</strong> (or press Y near her).
-            </p>
-            <button
-              type="button"
-              className="shrink-0 rounded-full bg-white/12 px-2 py-0.5 text-[13px] font-bold transition active:scale-95"
-              aria-label="Dismiss the rejoin hint. It will not be shown again"
-              onClick={() => {
-                rejoinHintDismissedRef.current = true;
-                try {
-                  localStorage.setItem("muse-town-rejoin-hint-dismissed", "1");
-                } catch {
-                  /* the session still honours the dismissal */
-                }
-                setRejoinHint(false);
-              }}
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
-
-      {focusSitting && !museBubble && (
-        <div className="absolute inset-x-0 bottom-[18px] z-10 flex justify-center px-4 pb-safe">
-          <div className="flex items-center gap-2 rounded-2xl bg-[#22332b]/85 px-4 py-2 text-sm font-medium shadow-lg backdrop-blur">
-            <span>📖 Sitting with Aelia, about {focusLeft} min of quiet left</span>
-            <button
-              type="button"
-              aria-label="End the focus sitting early"
-              className="rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-bold transition active:scale-95"
-              onClick={() => {
-                setFocusSitting(null);
-                sceneRef.current?.setQuietMode(false);
-                setMuseBubble({
-                  lines: paginateLines([pickPooled("focus-early", FOCUS_EARLY_LINES)]),
-                  index: 0,
-                  cycle: false,
-                  invite: false,
-                  choice: null,
-                });
-              }}
-            >
-              End
-            </button>
-          </div>
-        </div>
-      )}
-      {walking && !anyFullPanelOpen && !museBubble && (firstTask || rhythm) && (
-        <div className="pointer-events-none absolute top-[calc(env(safe-area-inset-top,0px)+60px)] right-3 left-3 z-10 flex justify-center">
-          <p aria-live="off" className="max-w-full truncate rounded-full bg-[#22332b]/60 px-3 py-1 text-[12px] font-semibold text-white/90 backdrop-blur">
-            {firstTask ? FIRST_TASK : `${rhythm!.title} · ${rhythm!.where}`}
-          </p>
-        </div>
-      )}
-      {hintText && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-[18px] z-10 flex justify-center px-4 pb-safe">
-          <div className="max-w-[92vw] rounded-2xl bg-[#22332b]/85 px-4 py-2 text-center text-sm font-medium shadow-lg backdrop-blur">
-            {hintText}
-          </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
