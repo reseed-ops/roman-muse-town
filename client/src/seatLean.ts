@@ -2,6 +2,10 @@ import type * as THREE from "three";
 import { poseBone, type VrmRig } from "./characterAnimation";
 
 /**
+ * Task 106: she now slides 0.44 m (centres 0.40 m apart, shoulders meet) and rolls
+ * 0.3 / 0.4 / 0.5 rad through chest, neck and head with a 0.12 nod, so the head lies on his
+ * shoulder (Task 98's 0.32 m and 0.2 / 0.25 / 0.3 left a 0.52 m gap and an upright head).
+ *
  * Aelia rests her head on Gaius's shoulder when the two sit together on
  * the sea cliff's bench (Task 98). A pose only: a small slide along the
  * seat toward him, a roll through chest, neck and head, a touch of nod. His
@@ -12,12 +16,12 @@ import { poseBone, type VrmRig } from "./characterAnimation";
  */
 export const LEAN = {
   /** Slide toward him along the seat, metres (the seats are 0.84 apart). */
-  shift: 0.32,
-  chestRoll: 0.2,
-  neckRoll: 0.25,
-  headRoll: 0.3,
+  shift: 0.44,
+  chestRoll: 0.3,
+  neckRoll: 0.4,
+  headRoll: 0.5,
   /** A slight nod, so the cheek meets the shoulder rather than the ear. */
-  headNod: 0.07,
+  headNod: 0.12,
   /** Seconds to settle into (and out of) the lean. */
   settle: 0.5,
 } as const;

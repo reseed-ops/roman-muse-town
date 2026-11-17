@@ -1120,3 +1120,5 @@ Two parts. (1) Remove the "Walking with you" / "Aelia is staying" follow chip en
 Tests: chip gone, tap/Y/T still toggle follow, lean closes the gap and rests the head from either slot, eases out on standing. Full suite and typecheck pass. Verify with Playwright renders from behind and from the side. The done file must name the bench, why the lean did not read before, and the new slide/angles.
 
 NO DEPLOY. Commit and push only. Tuan decides the deploy. No Codex review.
+
+Landing note (Task 106). The follow chip and the menu's "Walking with you" detail are gone (App.tsx); tap on her, Y and T still toggle, the toast stays. Tuan's bench was the sea cliff's: the old 0.32 m slide left 0.52 m between centres and 0.75 rad of roll left her head upright. Now `LEAN` (seatLean.ts) slides 0.44 m (0.40 m between centres) and rolls chest 0.3, neck 0.4, head 0.5, nod 0.12; cliff bench only. seatLean.test.ts bounds updated with reasons. Renders in ~/work/bench106-after. Summary: ~/work/town-build42-done.md. Not deployed; Tuan's call.

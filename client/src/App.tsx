@@ -2220,7 +2220,7 @@ export function App() {
   }, [releaseHandHold]);
 
   // Task 48: one switch for walking together, from a tap on her body,
-  // Y near her, T on the keyboard, or the status chip.
+  // Y near her, or T on the keyboard (the status chip was removed in Task 106).
   const toggleFollow = useCallback(() => {
     if (followingRef.current) {
       stopFollowing();
@@ -7365,7 +7365,6 @@ export function App() {
             icon: "✦",
             tint: "#ffd34e",
             label: "Aelia",
-            detail: following ? "Walking with you" : undefined,
             active: !!museBubble,
             action: selectMuse,
             aria: "Meet Aelia, your host in Muse Town",
@@ -10707,26 +10706,6 @@ export function App() {
             onClick={drifting ? rowBackHome : letBoatDrift}
           >
             {drifting ? ROW_BACK_PROMPT : DRIFT_PROMPT}
-          </button>
-        </div>
-      )}
-      {walking && sceneReady && !rowingBoat && !dreaming && (
-        <div
-          className={
-            isLandscape
-              ? "pointer-events-none absolute inset-x-0 bottom-[122px] z-10 flex justify-center px-4"
-              : "pointer-events-none absolute inset-x-0 bottom-[176px] z-10 flex justify-center px-4"
-          }
-          data-mt-follow-chip="1"
-        >
-          <button
-            type="button"
-            className="pointer-events-auto rounded-full bg-[#22332b]/80 px-3 py-1 text-xs font-bold text-white/90 shadow-md backdrop-blur transition active:scale-95"
-            aria-label={following ? "Walking with you. Tap to ask Aelia to stay here" : "Aelia is staying. Tap to walk together"}
-            aria-pressed={following}
-            onClick={() => toggleFollow()}
-          >
-            {following ? "🚶 Walking with you" : "✦ Aelia is staying"}
           </button>
         </div>
       )}

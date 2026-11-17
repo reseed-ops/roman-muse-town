@@ -38,15 +38,25 @@ describe("Task 48: the follow switch is on Aelia", () => {
     expect(app).toContain("near Aelia, Y or T asks her to walk with you or to stay");
   });
 
-  test("the menu has no follow row; the chip shows her state and toggles it; the toast shows once", () => {
+  test("the menu has no follow row and the chip is gone (Task 106); the toast still teaches the switch", () => {
     expect(app).not.toContain('key: "follow"');
     expect(app).not.toContain('"Walk with Aelia"');
-    expect(app).toContain('data-mt-follow-chip="1"');
-    expect(app).toContain('{following ? "🚶 Walking with you" : "✦ Aelia is staying"}');
-    expect(app).toContain("onClick={() => toggleFollow()}");
+    // No visible state text, no chip, no orphaned aria-label, and no menu detail for it.
+    expect(app).not.toContain("data-mt-follow-chip");
+    expect(app).not.toContain("Walking with you");
+    expect(app).not.toContain("Aelia is staying");
+    expect(app).not.toContain("Tap to walk together");
+    expect(app).not.toContain("Tap to ask Aelia to stay");
+    expect(app).not.toContain("onClick={() => toggleFollow()}");
     expect(app).toContain("Tap Aelia to walk together, tap again to let her stay");
+    expect(app).toContain("{followToast && walking && sceneReady && !hintText && (");
     expect(app).toContain('localStorage.setItem(FOLLOW_TOAST_KEY, "1")');
     expect(app).toContain("<strong className=\"text-[#ffd34e]\">tap Aelia</strong> (or press Y near her)");
+  });
+
+  test("the three remaining paths all reach the one toggle", () => {
+    // Body tap on foot, Y near her, T: each calls toggleFollowRef; nothing else calls it with the chip gone.
+    expect(app.match(/toggleFollowRef\.current\(\)/g)?.length).toBe(3);
   });
 
   test("a drag still orbits and a double tap on the open view still recenters", () => {
