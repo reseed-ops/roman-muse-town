@@ -18,7 +18,7 @@ import { samplePath } from "./pathGeometry";
 import { streetWidth } from "./town";
 import { repairRomanMaterials } from "./romanMaterials";
 import { TreePlacement } from "./treePlacement";
-import { type VrmRig, collectRig, poseBone, poseWave, poseWaveStill, poseUmbrellaArm, poseThrowArm, poseLinkArm, poseHoldHandPlayer, poseHoldHandMuse,
+import { type VrmRig, collectRig, seatedClipOwnsLegs, poseBone, poseWave, poseWaveStill, poseUmbrellaArm, poseThrowArm, poseLinkArm, poseHoldHandPlayer, poseHoldHandMuse,
   poseFlirtLift, type CharAnimator, createCharAnimator, prepareVrm, litVrmMaterials, MUSE_TINTS, PLAYER_TINTS, collectBlinkMorphs, setBlink } from "./characterAnimation";
 // The Muse Town diorama: a low-poly three.js scene with a plaza around
 // the great town tree, five clickable houses, lamp posts, smaller trees,
@@ -372,6 +372,9 @@ export interface TownSceneHandle {
   /** The slate's telemetry: zones, seated flags, day phase, headings,
    *  her bearing and distance to him, who holds pad2. */
   visitTelemetry: () => VisitTelemetry;
+  /** Dev probe (Task 108): his seated legs (local quaternions), the
+   *  sword's lowest world Y against his bench's seat top. */
+  seatProbe: () => { seated: boolean; seatY: number | null; swordVisible: boolean; swordMinY: number; legs: Record<string, number[]>; museLegs: Record<string, number[]> };
   /** A still of the renderer's canvas only (never a page element),
    *  scaled to maxEdge on the long edge, JPEG at quality. */
   captureVisitFrame: (maxEdge: number, quality: number) => { dataUrl: string; width: number; height: number } | null;
@@ -7310,10 +7313,17 @@ export function createTownScene(
       playerInner.rotation.z = playerPose.sway;
     }
     if (playerRig) {
-      poseBone(playerRig, playerRig.lUpperLeg, playerPose.legL, playerPose.footYaw, 0.015);
-      poseBone(playerRig, playerRig.rUpperLeg, playerPose.legR, -playerPose.footYaw, -0.015);
-      poseBone(playerRig, playerRig.lLowerLeg, playerPose.kneeL, 0, 0);
-      poseBone(playerRig, playerRig.rLowerLeg, playerPose.kneeR, 0, 0);
+      // Task 108: seated, the sit clip owns his legs and this procedural stride/idle must leave
+      // them alone. The mixer only writes a bone when its blended value CHANGED since the last
+      // frame, and the sit legs hold still: a write here every frame stood the legs up again
+      // whenever the clip's value did not move (the legs "switching" between sitting and
+      // standing). Not written, the legs keep what the mixer last put there.
+      if (!seatedClipOwnsLegs(playerAnim, !!seatPlayer || !!boatState || !!bathState)) {
+        poseBone(playerRig, playerRig.lUpperLeg, playerPose.legL, playerPose.footYaw, 0.015);
+        poseBone(playerRig, playerRig.rUpperLeg, playerPose.legR, -playerPose.footYaw, -0.015);
+        poseBone(playerRig, playerRig.lLowerLeg, playerPose.kneeL, 0, 0);
+        poseBone(playerRig, playerRig.rLowerLeg, playerPose.kneeR, 0, 0);
+      }
       poseBone(playerRig, playerRig.lUpperArm, playerPose.armL, 0, -1.22);
       poseBone(playerRig, playerRig.lLowerArm, 0, 0, playerPose.elbowL);
       if (!secretMoment) poseBone(playerRig, playerRig.head, 0, playerPose.headYaw, playerPose.sway * 0.8);
@@ -12139,6 +12149,8 @@ export function createTownScene(
       {
         const embracing = !!pairState && pairState.kind === "hug";
         gaiusArms.setVisible(armsVisibility({ bathing: !!bathState, embracing, seated: !!seatPlayer, shieldOut, swordWorn }), dt);
+        // Seated on a bench or in the boat, the sheathed gladius rests along his thigh, clear of the seat (Task 108).
+        gaiusArms.setSeated(!!seatPlayer || !!boatState, dt);
       }
       playerAnim.update(dt, walking ? playerSpeedSm : 0, playerAnim.hasWave && playerSpeedSm < 0.4 && playerWaveAge >= 0 && playerWaveAge < WAVE_LEN, !!seatPlayer || !!boatState || !!bathState, hopMode ?? (pairState && !pairState.glide ? pairState.kind : danceState ? "dance" : talkAnimOpen ? "talk" : null), !!seatPlayer);
       playerInner.position.y = 0;
@@ -12883,10 +12895,13 @@ export function createTownScene(
           museInner.rotation.z = musePose.sway;
         }
         if (museRig) {
-          poseBone(museRig, museRig.lUpperLeg, musePose.legL, musePose.footYaw, -0.015);
-          poseBone(museRig, museRig.rUpperLeg, musePose.legR, -musePose.footYaw, 0.015);
-          poseBone(museRig, museRig.lLowerLeg, musePose.kneeL, 0, 0);
-          poseBone(museRig, museRig.rLowerLeg, musePose.kneeR, 0, 0);
+          // Task 108: seated, her sit clip owns her legs (see his, above).
+          if (!seatedClipOwnsLegs(museAnim, !!seatMuse || !!boatState?.museAboard || !!bathState?.museIn)) {
+            poseBone(museRig, museRig.lUpperLeg, musePose.legL, musePose.footYaw, -0.015);
+            poseBone(museRig, museRig.rUpperLeg, musePose.legR, -musePose.footYaw, 0.015);
+            poseBone(museRig, museRig.lLowerLeg, musePose.kneeL, 0, 0);
+            poseBone(museRig, museRig.rLowerLeg, musePose.kneeR, 0, 0);
+          }
           if (!secretMoment) poseBone(museRig, museRig.head, 0, musePose.headYaw, musePose.sway * 0.8);
           if (museWaving) {
             // The softened wave (see poseWave): the shoulder peak is
@@ -13888,6 +13903,27 @@ export function createTownScene(
         default:
           return false;
       }
+    },
+    seatProbe: () => {
+      const legsOf = (body: THREE.Object3D | null) => {
+        const out: Record<string, number[]> = {};
+        for (const n of ["J_Bip_L_UpperLeg", "J_Bip_R_UpperLeg", "J_Bip_L_LowerLeg", "J_Bip_R_LowerLeg", "J_Bip_L_Foot", "J_Bip_R_Foot"]) {
+          const o = body?.getObjectByName(n);
+          if (o) out[n] = [o.quaternion.x, o.quaternion.y, o.quaternion.z, o.quaternion.w];
+        }
+        return out;
+      };
+      const legs = legsOf(playerBody);
+      scene.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(gaiusArms.sword);
+      return {
+        seated: !!seatPlayer,
+        seatY: seatPlayer ? benchSeatWorldY(seatPlayer.bench) : null,
+        swordVisible: gaiusArms.sword.visible,
+        swordMinY: box.min.y,
+        legs,
+        museLegs: legsOf(museBody),
+      };
     },
     visitTelemetry: () => {
       const mx = museGroup.position.x;

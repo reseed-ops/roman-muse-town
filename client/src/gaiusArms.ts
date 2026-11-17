@@ -39,7 +39,17 @@ export type GaiusArms = {
   attach(model: THREE.Object3D): void;
   /** Show or hide each piece; `dt` (s) eases the shield's raise. */
   setVisible(v: ArmsVisibility, dt?: number): void;
+  /** Task 108: while he sits, the sheathed gladius lies along his right thigh, clear of the
+   *  seat, instead of hanging blade-down through it; eased over about a quarter second. */
+  setSeated(seated: boolean, dt?: number): void;
+  /** How far the sword has swung to its seated rest (0 hanging, 1 along the thigh). */
+  seatedAmount(): number;
 };
+
+/** The seated rest: from hanging (tip down) the blade swings forward about his own X axis
+ *  until it points along the thigh and a touch down (radians, about his X axis). */
+export const SWORD_SEATED_PITCH = -1.7;
+export const SWORD_SEATED_EASE_S = 0.25;
 
 export function createGaiusArms(opts: {
   /** His facing frame (the avatar group: forward +Z, up +Y, his right -X). */
@@ -55,6 +65,9 @@ export function createGaiusArms(opts: {
   shield.visible = false;
   let shieldInner: THREE.Group | null = null;
   let raise = 0;
+  let seatedK = 0;
+  const bindQ = new THREE.Quaternion();
+  const seatedQ = new THREE.Quaternion();
   return {
     sword,
     shield,
@@ -104,6 +117,17 @@ export function createGaiusArms(opts: {
         new THREE.Vector3(-0.21, 0.17, 0.08),
         new THREE.Quaternion().setFromEuler(new THREE.Euler(0.35, 0, -0.12, "XYZ")),
       );
+      // The seated rest, in the hips bone's own frame: the same world swing about his X axis
+      // applied to the worn orientation (hipsRel is the bone's bind orientation in his frame).
+      {
+        frame.updateWorldMatrix(true, true);
+        const frameInv = frame.getWorldQuaternion(new THREE.Quaternion()).invert();
+        const hipsRel = frameInv.clone().multiply(hips.getWorldQuaternion(new THREE.Quaternion()));
+        const swordRel = frameInv.clone().multiply(sword.getWorldQuaternion(new THREE.Quaternion()));
+        const swing = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), SWORD_SEATED_PITCH);
+        bindQ.copy(sword.quaternion);
+        seatedQ.copy(hipsRel).invert().multiply(swing).multiply(swordRel);
+      }
       // The scutum: centred on the holder, face (boss) turned backward,
       // its curve hugging his back, hung a touch askew like a sling.
       const SHIELD_H = 1.0;
@@ -118,6 +142,14 @@ export function createGaiusArms(opts: {
         new THREE.Vector3(0, -0.22, -0.22),
         new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), 0.1)),
       );
+    },
+    setSeated(seated, dt = 1) {
+      seatedK = seated ? Math.min(1, seatedK + dt / SWORD_SEATED_EASE_S) : Math.max(0, seatedK - dt / SWORD_SEATED_EASE_S);
+      const e = seatedK * seatedK * (3 - 2 * seatedK);
+      sword.quaternion.copy(bindQ).slerp(seatedQ, e);
+    },
+    seatedAmount() {
+      return seatedK;
     },
     setVisible(v, dt = 1) {
       sword.visible = v.sword;

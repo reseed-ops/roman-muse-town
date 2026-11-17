@@ -829,7 +829,27 @@ const LEG_TRACK_BONES = new Set([
 export function graftLegTracks(from: THREE.AnimationClip, to: THREE.AnimationClip) {
   const legs = from.tracks.filter((t) => LEG_TRACK_BONES.has(t.name.split(".")[0] ?? ""));
   if (legs.length === 0) return;
-  to.tracks = [...to.tracks.filter((t) => !LEG_TRACK_BONES.has(t.name.split(".")[0] ?? "")), ...legs.map((t) => t.clone())];
+  // Task 108: HOLD the sit legs over the target's whole length. The sit clip is 2.0 s and the
+  // bench and seated-talk takes 3.33 s: grafted as they were, the legs' tracks ended at 1.97 s,
+  // and for the last 1.4 s of every pass of the take the legs fell out of the sit pose to the
+  // standing idle ("his legs keep switching"). One key per end, the first frame's pose: steady.
+  const held = legs.map((t) => {
+    const c = t.clone();
+    const size = t.getValueSize();
+    const first = Array.from(t.values.slice(0, size));
+    c.times = new Float32Array([0, Math.max(to.duration, 0.001)]);
+    c.values = new Float32Array([...first, ...first]);
+    return c;
+  });
+  to.tracks = [...to.tracks.filter((t) => !LEG_TRACK_BONES.has(t.name.split(".")[0] ?? "")), ...held];
+}
+
+/** Task 108: while a character sits with a gated sit clip, the clip owns the legs and the
+ *  scene's procedural stride/idle must not write them. (The mixer only writes a bone whose
+ *  blended value changed since the last frame; the sit legs hold still, so a procedural
+ *  write every frame stood them up again between mixer writes.) */
+export function seatedClipOwnsLegs(anim: { ready: boolean; hasSit: boolean } | null | undefined, seated: boolean): boolean {
+  return seated && !!anim && anim.ready && anim.hasSit;
 }
 
 /** Turn a retargeted clip so its body faces the rig's own forward
