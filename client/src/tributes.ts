@@ -3,6 +3,7 @@
 // Mars, and its one temple is already the town's). Pure meshes and
 // colliders here; townScene places them, picks them and seats them.
 import * as THREE from "three";
+import { applySurfaceVariation } from "./surfaceVariation";
 import { ATHENA_LAMP_STANDS } from "./athenaTemple";
 import { ATHENA_TEMPLE, LUCRETIA } from "./town";
 
@@ -160,8 +161,8 @@ export function buildAthenaTemple(ground: number): Tribute {
   const len = halfX + backX; // the podium's length
   const xc = (halfX - backX) / 2; // its centre in x
   const group = new THREE.Group();
-  const trav = m(TRAVERTINE, 0.9);
-  const marble = m(MARBLE, 0.65);
+  const trav = applySurfaceVariation(m(TRAVERTINE, 0.9), "stone"); // Task 109
+  const marble = applySurfaceVariation(m(MARBLE, 0.65), "stone");
   const podium = new THREE.Mesh(new THREE.BoxGeometry(len, podiumY, halfZ * 2), trav);
   podium.position.set(xc, podiumY / 2, 0);
   const step = new THREE.Mesh(new THREE.BoxGeometry(stepDepth, stepY, stepHalfZ * 2), trav);
@@ -182,7 +183,7 @@ export function buildAthenaTemple(ground: number): Tribute {
   // podium's top, walls a hand thick, and a real doorway in the front wall.
   const C = ATHENA_TEMPLE.cella;
   const cellaH = C.height;
-  const plaster = m(PLASTER, 0.95);
+  const plaster = applySurfaceVariation(m(PLASTER, 0.95), "stone");
   const wallBox = (x0: number, x1: number, z0: number, z1: number, y0: number, y1: number, mat: THREE.Material = plaster) => {
     const w = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), mat);
     w.position.set((x0 + x1) / 2, podiumY + (y0 + y1) / 2, (z0 + z1) / 2);

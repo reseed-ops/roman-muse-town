@@ -13,6 +13,7 @@
 // clamp) plus the meshes, built once; townScene places and animates.
 import { installSeaWaves, seaGridGeometry } from "./seaSurface";
 import * as THREE from "three";
+import { applySurfaceVariation } from "./surfaceVariation";
 import { hillRise, SHOULDER, shoulderRise } from "./shoulder";
 import { nearestStairPoint, stairWalkable } from "./shoreStair";
 
@@ -456,8 +457,8 @@ export function buildSeaCliff(opts: {
   const { coastZ, seaY } = CLIFF;
   const h = opts.terrainHeight;
   const grass = opts.groundMaterial ?? new THREE.MeshStandardMaterial({ color: 0x7f9a58, roughness: 0.95 });
-  const meadow = new THREE.MeshStandardMaterial({ color: 0x7a9554, roughness: 1 });
-  const rock = new THREE.MeshStandardMaterial({ color: 0x8b7f6c, roughness: 0.95, flatShading: true, side: THREE.DoubleSide });
+  const meadow = applySurfaceVariation(new THREE.MeshStandardMaterial({ color: 0x7a9554, roughness: 1 }), "grass"); // Task 109
+  const rock = applySurfaceVariation(new THREE.MeshStandardMaterial({ color: 0x8b7f6c, roughness: 0.95, flatShading: true, side: THREE.DoubleSide }), "rock"); // Task 109
   const outline = landOutline();
 
   // The peninsula's grass (the shoulder, the strip and the headland): a
@@ -569,7 +570,7 @@ export function buildSeaCliff(opts: {
       pos.setXYZ(i, x, h(x, z) + 0.035, z);
     }
     geo.computeVertexNormals();
-    const trail = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xa48a64, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2 }));
+    const trail = new THREE.Mesh(geo, applySurfaceVariation(new THREE.MeshStandardMaterial({ color: 0xa48a64, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2 }), "dirt")); // Task 109
     trail.receiveShadow = true;
     group.add(trail);
   }

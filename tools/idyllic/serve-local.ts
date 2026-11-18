@@ -1,5 +1,5 @@
 // Task 85: serve the real web build locally against an in-process Postgres (pglite), for a
-// Playwright screenshot of the whole town. Dev only; never deployed. Usage: bun tools/idyllic/serve-local.ts [port]
+// Playwright screenshot of the whole town. Dev only; never deployed. Usage: bun tools/idyllic/serve-local.ts [port] [distDir]
 process.env.TOWN_DIALECT = "postgres";
 import { plugin } from "bun";
 import { z } from "zod";
@@ -16,7 +16,7 @@ const server = createTownServer({
   door: visitActions,
   directorToken: null,
   blobSecret: "local-only",
-  distDir: new URL("../../web/dist/client", import.meta.url).pathname,
+  distDir: process.argv[3] ?? new URL("../../web/dist/client", import.meta.url).pathname,
   log: () => {},
 });
 const port = Number(process.argv[2]) || 8099;

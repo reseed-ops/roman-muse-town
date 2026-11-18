@@ -1,6 +1,8 @@
 import { createPlaceFootprints } from "./buildingFootprints";
 import { readArrangement } from "../../shared/homeDecor";
 import { buildHomeHouse, splashRingY } from "./homeHouse";
+import { installAtmosphere } from "./atmosphere";
+import { applySurfaceVariation, varyModel, type SurfaceKind } from "./surfaceVariation";
 import { applyLakeRipple, seaFogColor, warmStone, ENV_DAY, HEMI_DAY, SEA_NIGHT_BLEND, SUN_DAY, TONE_EXPOSURE } from "./skyLook";
 import { aimSeaPath, buildSeaCliff, CLIFF, clampToWorld, clearOfSea, cutAtCoast, HILL_BASE_Y, HORIZON_HILLS, horizonHillGeometry, OCEAN_DAY, OCEAN_NIGHT, walkable as onCliffPath } from "./seaCliff";
 import { QUIET_BOAT_MIN_OUT, QUIET_BOAT_START, beginDrift, boatSeats, driftStep, nextQuietLine, rowBack as rowBackState, type Drift, type QuietBoatState } from "../../shared/quietBoat";
@@ -1316,6 +1318,8 @@ export function createTownScene(
     Math.min(window.innerWidth || 9999, window.innerHeight || 9999) <= 430 ||
     (window.innerWidth || 9999) <= 540;
   const phone = !!opts.safeMode || smallScreen || (typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches);
+  // Task 109: sun-aware haze and the filmic grade, as shader-chunk overrides, before any material compiles.
+  installAtmosphere();
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: !phone });
   const FULL_PIXEL_RATIO = phone ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
   renderer.setPixelRatio(FULL_PIXEL_RATIO);
@@ -1534,6 +1538,9 @@ export function createTownScene(
   const treeUrls = new Set([treeAUrl, treeBUrl, treeCUrl, treeDUrl, cypressUrl, coniferUrl, oliveUrl]);
   const buildingUrls = new Set([templeUrl, colosseumUrl, settingStairsUrl, settingHouseAUrl, settingHouseBUrl, settingInsulaUrl, aqueductUrl, aqueductConnectorUrl, triumphalArchUrl, boothAUrl, boothBUrl, boothCUrl]);
 
+  /** Task 109: pack models that get procedural variation (each mesh on its own material copy). */
+  const VARIED_MODELS = new Map<string, SurfaceKind>([[templeUrl, "stone"], [columnIonicUrl, "stone"], [columnSimpleUrl, "stone"]]);
+
   /** placeModel, standing the model on the terrain at (x, z). */
   const placeWorld = (
     url: string,
@@ -1543,6 +1550,8 @@ export function createTownScene(
       if (group && !disposed) {
         if (treeUrls.has(url)) treePlacement.addTree(group, opts.x, opts.z);
         if (buildingUrls.has(url)) treePlacement.addBuilding(group, url);
+        const stoneKind = VARIED_MODELS.get(url);
+        if (stoneKind) varyModel(group, stoneKind); // Task 109: the temple and the columns are not one flat colour
         // Static scenery freeze (v44): a placed model that is not a
         // tree never moves again (TreePlacement may still shift a
         // tree clear of a late-arriving building, so trees keep
@@ -1693,6 +1702,7 @@ export function createTownScene(
     color: DAY_GROUND.getHex(),
     roughness: 0.95,
   });
+  applySurfaceVariation(groundMat, "grass"); // Task 109
   // Rolling terrain: a subdivided plane displaced by the town's
   // heightfield, hills, the basilica rise, the temple hill, and the
   // aqueduct's valley fold, settling to the meadow at the edges.
@@ -1717,7 +1727,7 @@ export function createTownScene(
     const p = meadowGeo.attributes.position as THREE.BufferAttribute;
     for (let i = 0; i < p.count; i++) p.setZ(i, cutAtCoast(p.getZ(i)));
   }
-  const meadow = new THREE.Mesh(meadowGeo, mat(0x5d9a48, { rough: 1 }));
+  const meadow = new THREE.Mesh(meadowGeo, applySurfaceVariation(mat(0x5d9a48, { rough: 1 }), "grass"));
   // Below the lowest ground the town mesh reaches, the gate and the basin.
   meadow.position.y = -0.6;
   world.add(meadow);
@@ -1748,7 +1758,7 @@ export function createTownScene(
   // the renderer's anisotropy so the stones hold at a grazing angle.
   const groundAniso = groundAnisotropy(renderer.capabilities.getMaxAnisotropy());
   const cobbleMaps = loadGroundMaps("cobbles", groundAniso);
-  const streetMat = groundMaterial(cobbleMaps);
+  const streetMat = applySurfaceVariation(groundMaterial(cobbleMaps), "cobbles"); // Task 109
   function buildStreet(points: [number, number][], width = 2.7, mat: THREE.Material = streetMat) {
     const { points: centreline, length } = samplePath(points);
     const segs = centreline.length - 1;
@@ -1787,13 +1797,13 @@ export function createTownScene(
   // The forest trails: dirt, not cobbles: the same draped ribbon,
   // narrower and browner, from the one trailhead at the aqueduct
   // lane's end to the glade and its landmarks.
-  const dirtMat = new THREE.MeshStandardMaterial({ color: 0x8a6f4d, roughness: 1 });
+  const dirtMat = applySurfaceVariation(new THREE.MeshStandardMaterial({ color: 0x8a6f4d, roughness: 1 }), "dirt"); // Task 109
   for (const trail of FOREST_TRAILS) buildStreet(trail, 1.7, dirtMat);
   // The east lane ends outside the solid Colosseum; its endpoint apron is below.
 
   // The peristyle: a cobbled disc draped over the (nearly level) heart of
   // town, where all the streets meet around the Town Tree.
-  const plazaMat = groundMaterial(repeatedMaps(cobbleMaps, 11.2 / GROUND_TILE_METRES.cobbles));
+  const plazaMat = applySurfaceVariation(groundMaterial(repeatedMaps(cobbleMaps, 11.2 / GROUND_TILE_METRES.cobbles)), "cobbles");
   const plazaGeo = new THREE.CircleGeometry(5.6, 44);
   plazaGeo.rotateX(-Math.PI / 2);
   {
@@ -3249,7 +3259,7 @@ export function createTownScene(
       paving.push(block(2.4, 0.4, halfZ * 2 - 2.4, side * halfX, lawnY - 0.18, 0));
     }
     // Task 93: travertine slabs (loom), UVs in world metres so a tile is 4 m on every block.
-    const pavingMat = groundMaterial(loadGroundMaps("paving", groundAnisotropy(renderer.capabilities.getMaxAnisotropy())));
+    const pavingMat = applySurfaceVariation(groundMaterial(loadGroundMaps("paving", groundAnisotropy(renderer.capabilities.getMaxAnisotropy()))), "paving");
     merged(paving.map((g) => worldMetricUVs(g, GROUND_TILE_METRES.paving)), pavingMat, false);
     // Entablature and a tiled portico over the colonnade.
     const beams: THREE.BufferGeometry[] = [];

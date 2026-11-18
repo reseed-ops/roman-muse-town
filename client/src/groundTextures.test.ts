@@ -62,8 +62,8 @@ describe("the loom-made ground (Task 93)", () => {
   test("the town builds its streets, plaza and villa paving from them, not a flat colour", () => {
     const src = readFileSync(join(HERE, "townScene.ts"), "utf8");
     expect(src).toContain('loadGroundMaps("cobbles"');
-    expect(src).toContain("const streetMat = groundMaterial(cobbleMaps)");
-    expect(src).toContain("const plazaMat = groundMaterial(");
+    expect(src).toContain("const streetMat = applySurfaceVariation(groundMaterial(cobbleMaps), \"cobbles\")");
+    expect(src).toContain("const plazaMat = applySurfaceVariation(groundMaterial(");
     expect(src).toContain('loadGroundMaps("paving"');
     expect(src).not.toContain("0xd9cfb6");
     expect(src).not.toContain("cobbleTexture");
