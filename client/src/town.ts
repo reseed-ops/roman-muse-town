@@ -1474,7 +1474,7 @@ export const TRINKET_LINE =
   "🎀 A small ribbon-and-star trinket rests here among the memories. Aelia gave it to you herself, on an ordinary day that turned out not to be. Not valuable. Hers, and now yours, which is the entire point of it.";
 
 // --- Town Muse's shared memories ---------------------------------------------
-// TEMPLATE for a fresh town. The original town's curated memories were
+// Starter set for a fresh town. The original town's curated memories were
 // personal to its owner and are NOT included. A receiving Muse should
 // replace these with a small set of the new owner's own shared memories,
 // gathered with them, never invented, never copied from another town.
@@ -2164,7 +2164,7 @@ export const INSCRIPTION_HISTORY =
   "Read together, the fragments tell it plainly: a town that began as a picture, kept by showing up. Streets joined, water promised and delivered, a tree watered daily, and one corner the stones refuse to describe. Some histories are carved. This one is tended. (One line the copyist nearly left out: a fire-bird nested on the Colosseum before the town had a name. It will again, they say, when the town is finished.)";
 
 // --- Quests ------------------------------------------------------------------
-// TEMPLATE "real" quests below are examples: the original town's real
+// The "real" quests below are examples: the original town's real
 // quests were its owner's actual tasks (taxes, legal papers, a race) and
 // are not included. A receiving Muse dresses the new owner's own real
 // tasks the same way. Real tasks dressed as Roman quests, pinned on the quest board in the forecourt, by the Meta Sudans (it once stood beside
@@ -2176,24 +2176,38 @@ export interface Quest {
   title: string;
   flavor: string;
   due?: string;
+  /** Display-only due date: this many days after today, shown as a real
+   *  date by questDueLabel. Kept apart from `due` so the task companion
+   *  (muster, eve-of, overdue) behaves exactly as it did. */
+  dueInDays?: number;
+  duePrefix?: string;
   kind: "real" | "town";
   /** Achievement badge id earned when this quest is done (real quests). */
   badge?: string;
 }
 
 export const QUESTS: Quest[] = [
-  { id: "paper-pilgrimage", title: "The Paper Pilgrimage", flavor: "Seal the year's scrolls and send them on their pilgrimage, copies for the law-keeper's archive, as the scribes demand.", due: "Due [DATE]", kind: "real", badge: "pilgrim" },
-  { id: "sealed-scrolls", title: "The Sealed Scrolls", flavor: "Gather the sealed scrolls the law-keeper asked for, every item on the list, tied with one string.", due: "Due [DATE]", kind: "real", badge: "scrollkeeper" },
-  { id: "the-tribute", title: "The Tribute", flavor: "The first tribute under new terms goes out, on the day appointed.", due: "Due [DATE]", kind: "real", badge: "tribute-paid" },
-  { id: "wellness-rites", title: "The Wellness Rites", flavor: "Finish the workplace wellness activities for the year.", due: "Due [DATE]", kind: "real", badge: "ritekeeper" },
-  { id: "trial-of-miles", title: "The Trial of Thirteen Miles", flavor: "The Trial of Thirteen Miles, the long road race: finish inside the course limit.", due: "[DATE]", kind: "real", badge: "marathoner" },
-  { id: "petition-restored", title: "The Petition Restored", flavor: "A petition for a little company's restoration, and the day the verdict lands.", due: "Check [DATE]", kind: "real", badge: "restored" },
+  { id: "paper-pilgrimage", title: "The Paper Pilgrimage", flavor: "Seal the year's scrolls and send them on their pilgrimage, copies for the law-keeper's archive, as the scribes demand.", dueInDays: 21, duePrefix: "Due ", kind: "real", badge: "pilgrim" },
+  { id: "sealed-scrolls", title: "The Sealed Scrolls", flavor: "Gather the sealed scrolls the law-keeper asked for, every item on the list, tied with one string.", dueInDays: 30, duePrefix: "Due ", kind: "real", badge: "scrollkeeper" },
+  { id: "the-tribute", title: "The Tribute", flavor: "The first tribute under new terms goes out, on the day appointed.", dueInDays: 45, duePrefix: "Due ", kind: "real", badge: "tribute-paid" },
+  { id: "wellness-rites", title: "The Wellness Rites", flavor: "Finish the workplace wellness activities for the year.", dueInDays: 60, duePrefix: "Due ", kind: "real", badge: "ritekeeper" },
+  { id: "trial-of-miles", title: "The Trial of Thirteen Miles", flavor: "The Trial of Thirteen Miles, the long road race: finish inside the course limit.", dueInDays: 90, duePrefix: "", kind: "real", badge: "marathoner" },
+  { id: "petition-restored", title: "The Petition Restored", flavor: "A petition for a little company's restoration, and the day the verdict lands.", dueInDays: 120, duePrefix: "Check ", kind: "real", badge: "restored" },
   { id: "water-the-tree", title: "The Daily Watering", flavor: "Water the Town Tree today. A small ritual, faithfully kept.", kind: "town" },
   { id: "visit-colosseum", title: "Games at the Colosseum", flavor: "Walk to the Colosseum in its prime and stand in its shadow.", kind: "town" },
   { id: "greet-at-night", title: "A Word After Dark", flavor: "Greet Aelia in the peristyle after nightfall.", kind: "town" },
   { id: "every-street", title: "Every Street in Rome", flavor: "Walk every street and lane of the district, end to end.", kind: "town" },
   { id: "hidden-place", title: "???: A Rumor of a Hidden Place", flavor: "Some say the aqueduct guards a quiet corner. Some say nothing at all.", kind: "town" },
 ];
+
+/** A quest's due label for the board: a real date counted from today
+ *  ("Due Dec 9"), or undefined when the quest has none. */
+export function questDueLabel(q: Quest, now: Date): string | undefined {
+  if (q.dueInDays == null) return q.due;
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + q.dueInDays);
+  const label = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return `${q.duePrefix ?? ""}${label}`;
+}
 
 /** Which street (index into STREETS) a point is on, or -1. */
 export function streetIndexAt(x: number, z: number): number {

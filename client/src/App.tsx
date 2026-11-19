@@ -150,6 +150,7 @@ SEEK_HINT_LINE,
 SEEK_SPOTS,
 musterLine,
 musterPicks,
+questDueLabel,
 questDueOffset,
 seekClueLine,
 BOAT_LINE,
@@ -9370,9 +9371,9 @@ export function App() {
                 <article key={q.id} className="rounded-2xl bg-white/8 px-3 py-2.5">
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="text-sm font-bold text-white">{q.title}</h3>
-                    {q.due && (
+                    {questDueLabel(q, new Date()) && (
                       <span className="shrink-0 rounded-full bg-[#a03d2d]/70 px-2 py-0.5 text-[11px] font-bold text-white">
-                        {q.due}
+                        {questDueLabel(q, new Date())}
                       </span>
                     )}
                   </div>

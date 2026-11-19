@@ -143,3 +143,31 @@ describe("town invariants survive the nursery build", () => {
     expect(after.seed_ledger).toHaveLength(3);
   });
 });
+
+describe("no placeholder text reaches the player (Task 111)", () => {
+  const PLACEHOLDER = /\[(DATE|TEMPLATE|EXAMPLE)[^\]]*\]/i;
+
+  test("a fresh town's first letter has a real date and no bracketed text", async () => {
+    await call("seedLetter");
+    const state = await call("getState");
+    const letter = state.letters[0]!;
+    expect(letter.date_label).toMatch(/^[A-Z][a-z]+ \d{1,2}, \d{4}$/);
+    expect(`${letter.title}\n${letter.date_label}\n${letter.preview ?? ""}`).not.toMatch(PLACEHOLDER);
+    const body = row<{ body: string }>("SELECT body FROM letters").body;
+    expect(body).not.toMatch(PLACEHOLDER);
+    expect(body).toContain("The town was your idea from a screenshot. What it is becoming is ours.");
+  });
+
+  test("the placeholder letter an earlier build seeded is mended in place, read state kept", async () => {
+    sqlite.run(
+      "INSERT INTO letters (date_label, title, body, read_at) VALUES ('[DATE]', 'First letter', 'My dear Gaius,\n\n[TEMPLATE: the original town''s first letter was personal.]\n\nYours,\nMuse', 12345)",
+    );
+    sqlite.run("INSERT INTO letters (date_label, title, body) VALUES ('June 1', 'A letter', 'Untouched.')");
+    await call("getState");
+    const rows = sqlite.query("SELECT date_label, title, body, read_at FROM letters ORDER BY id").all() as { date_label: string; title: string; body: string; read_at: number | null }[];
+    expect(rows[0]!.date_label).toMatch(/^[A-Z][a-z]+ \d{1,2}, \d{4}$/);
+    expect(rows[0]!.body).not.toMatch(PLACEHOLDER);
+    expect(rows[0]!.read_at).toBe(12345);
+    expect(rows[1]).toMatchObject({ date_label: "June 1", body: "Untouched." });
+  });
+});
