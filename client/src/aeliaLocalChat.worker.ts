@@ -7,6 +7,7 @@ import {
   type Processor,
   type Tensor,
 } from "@huggingface/transformers";
+import { createLoadProgress } from "./aeliaLoadProgress";
 import type { AeliaChatContext, AeliaChatTurn, LocalChatStatus, LocalModelName } from "./aeliaLocalChat";
 
 type WorkerScope = {
@@ -81,12 +82,8 @@ async function loadModel(id: number, name: LocalModelName): Promise<void> {
   const modelId = MODEL_IDS[name];
   status(id, "loading", `Preparing ${name}. The first download may take a while…`);
   env.useBrowserCache = true;
-  const progress = (info: ProgressInfo) => {
-    if (info.status === "progress" && typeof info.progress === "number") {
-      const percent = Math.max(0, Math.min(100, Math.round(info.progress)));
-      if (percent % 10 === 0) status(id, "loading", `Downloading ${name}: ${percent}%…`);
-    }
-  };
+  const tracker = createLoadProgress(name, (message) => status(id, "loading", message));
+  const progress = (info: ProgressInfo) => tracker.onProgress(info);
   const [nextProcessor, nextModel] = await Promise.all([
     AutoProcessor.from_pretrained(modelId, { progress_callback: progress }),
     Gemma4ForConditionalGeneration.from_pretrained(modelId, {
@@ -95,6 +92,7 @@ async function loadModel(id: number, name: LocalModelName): Promise<void> {
       progress_callback: progress,
     }) as Promise<Gemma4ForConditionalGeneration>,
   ]);
+  tracker.finishDownload();
   processor = nextProcessor;
   model = nextModel;
   selectedModel = name;

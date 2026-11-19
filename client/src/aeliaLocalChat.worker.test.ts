@@ -31,6 +31,7 @@ type Setup = {
   failLoad?: string[];
   deviceMemory?: number;
   cachesBroken?: boolean;
+  emitProgress?: boolean;
 };
 
 const scenario = {
@@ -39,6 +40,7 @@ const scenario = {
   failLoad: new Set<string>(),
   deviceMemory: undefined as number | undefined,
   cachesBroken: false,
+  emitProgress: false,
 };
 const calls: string[] = [];
 const posted: WorkerReply[] = [];
@@ -62,13 +64,24 @@ mock.module("@huggingface/transformers", () => {
     batch_decode: () => ["Salve, Gaius."],
   });
   class AutoProcessor {
-    static async from_pretrained() {
+    static async from_pretrained(_id: string, opts?: { progress_callback?: (i: unknown) => void }) {
+      const cb = opts?.progress_callback;
+      if (scenario.emitProgress && cb) {
+        cb({ status: "progress", name: "m", file: "tokenizer.json", loaded: 5, total: 5, progress: 100 });
+      }
       return processor;
     }
   }
   class Gemma4ForConditionalGeneration {
-    static async from_pretrained(modelId: string) {
+    static async from_pretrained(modelId: string, opts?: { progress_callback?: (i: unknown) => void }) {
       calls.push(`load:${modelId}`);
+      const cb = opts?.progress_callback;
+      if (scenario.emitProgress && cb) {
+        for (const loaded of [1e7, 5e7, 9e7, 1e8]) {
+          cb({ status: "progress", name: "m", file: "model.onnx_data", loaded, total: 1e8, progress: loaded / 1e6 });
+        }
+        cb({ status: "progress", name: "m", file: "other.onnx_data", loaded: 10, total: 1e8, progress: 1 });
+      }
       if (scenario.failLoad.has(modelId)) throw new Error(`${modelId} ran out of memory`);
       return { generate: async () => ({ slice: () => ({}) }), dispose: async () => {} };
     }
@@ -130,6 +143,7 @@ async function chat(setup: Setup) {
   scenario.failLoad = new Set(setup.failLoad ?? []);
   scenario.deviceMemory = setup.deviceMemory;
   scenario.cachesBroken = setup.cachesBroken ?? false;
+  scenario.emitProgress = setup.emitProgress ?? false;
   calls.length = 0;
   posted.length = 0;
 
@@ -215,4 +229,18 @@ test("a cache probe that throws counts as not cached and keeps the device prefer
   const { final, loads } = await chat({ cached: [E2B], deviceMemory: 8, cachesBroken: true });
   expect(loads).toEqual([E4B]);
   expect(final).toMatchObject({ type: "reply", model: "Gemma 4 E4B" });
+});
+
+// Task 115: per-file 0-100 numbers used to reach the panel raw, so the bar
+// hit 100% on a small file and fell to 10% on the next.
+test("download percentages never decrease, are labelled, and the reply follows the download", async () => {
+  const { final, statuses } = await chat({ deviceMemory: 8, emitProgress: true });
+  const pcts = statuses.filter((m) => m.startsWith("Downloading")).map((m: string) => Number(/(\d+)%/.exec(m)![1]));
+  expect(pcts.length).toBeGreaterThan(1);
+  for (let i = 1; i < pcts.length; i++) expect(pcts[i]).toBeGreaterThan(pcts[i - 1]!);
+  expect(statuses.filter((m) => /\d+%/.test(m)).every((m) => m.includes("Gemma 4 E4B"))).toBe(true);
+  const lastProgress = statuses.map((m) => /\d+%/.test(m)).lastIndexOf(true);
+  const thinking = statuses.findIndex((m) => m.startsWith("Aelia is thinking"));
+  expect(thinking).toBeGreaterThan(lastProgress);
+  expect(final).toMatchObject({ type: "reply", reply: "Salve, Gaius." });
 });
