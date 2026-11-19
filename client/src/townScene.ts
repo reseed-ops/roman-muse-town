@@ -16,7 +16,7 @@ import { applyHeadRest, easeLean, sideOfHim } from "./seatLean";
 import { armsVisibility, createGaiusArms } from "./gaiusArms";
 import { createNightLights } from "./nightLights";
 import { createStreetLampSystem, LAMP_BUNTING_Y } from "./streetLamps";
-import { BUBBLE_SPEAKERS, bubblePageDuration, drawBubblePlate, paginateBubbleText, type BubbleSpeaker } from "./bubblePlate";
+import { BUBBLE_SPEAKERS, bubbleTargetPx, bubblePageDuration, drawBubblePlate, paginateBubbleText, type BubbleSpeaker } from "./bubblePlate";
 import { samplePath } from "./pathGeometry";
 import { streetWidth } from "./town";
 import { repairRomanMaterials } from "./romanMaterials";
@@ -5319,6 +5319,22 @@ export function createTownScene(
   const bubblePx = new THREE.Vector3();
   const bubblePy = new THREE.Vector3();
   const sharedTmpV = new THREE.Vector3();
+  /** Task 114: top clearance for a bubble, in CSS px from the canvas top: the fixed chip row,
+   *  or the foot of the stacked hint rows (data-mt-note) when those reach lower, so the stay
+   *  note's own hint ("Aelia will keep her own day...") never sits over the bubble. */
+  function bubbleTopClearPx(ch: number): number {
+    const base = isLandscapeView ? 54 : 100;
+    let low = base;
+    if (typeof document !== "undefined") {
+      const top = canvas.getBoundingClientRect().top;
+      document.querySelectorAll("[data-mt-note]").forEach((el) => {
+        const r = (el as HTMLElement).getBoundingClientRect();
+        if (r.height > 0) low = Math.max(low, r.bottom - top + 6);
+      });
+    }
+    // Never so low that under ~90 px is left for the bubble.
+    return Math.min(low, Math.max(base, ch - (isLandscapeView ? 212 : 252) - 90));
+  }
   /** Clamp a visible bubble into the safe viewport, in screen space:
    *  wherever its speaker stands, even at a screen edge, the whole
    *  bubble stays readable, below the top chips and above the walk
@@ -5346,11 +5362,13 @@ export function createTownScene(
     // camera's distance. (A world-size floor used to win here when
     // the camera sat close to her, and the bubble filled the view.)
     // Longer lines page on inside the bubble, never grow it.
-    const targetPxH = Math.min(
-      isLandscapeView ? THREE.MathUtils.clamp(ch * 0.34, 132, 200) : THREE.MathUtils.clamp(ch * 0.155, 104, 168),
-      ch * 0.36,
-      cw * 0.45,
-    );
+    const topPx = bubbleTopClearPx(ch);
+    // Above the walk controls, which sit at the screen's foot (Task 38).
+    const bottomPx = isLandscapeView ? 212 : 252;
+    // Task 114: the bubble is never taller than the free band between the top notes and the
+    // walk controls (a short landscape phone leaves ~124 px), or the clamp below has no room
+    // and lets it ride off the screen edge.
+    const targetPxH = bubbleTargetPx(cw, ch, isLandscapeView, topPx, bottomPx);
     const distToCam = Math.max(0.05, camera.position.distanceTo(bubbleTmpV));
     const worldH = 2 * distToCam * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * (targetPxH / ch);
     b.sprite.scale.set(worldH * 2 * b.pop, worldH * b.pop, 1);
@@ -5363,15 +5381,13 @@ export function createTownScene(
     const hx = Math.min(0.92, Math.abs(px.x - bubbleTmpV2.x));
     const hy = Math.min(0.45, Math.abs(py.y - bubbleTmpV2.y));
     const marginX = (10 / cw) * 2;
-    const topPx = isLandscapeView ? 54 : 100;
-    // Above the walk controls, which sit at the screen's foot (Task 38).
-    const bottomPx = isLandscapeView ? 212 : 252;
     const xLo = -1 + marginX + hx;
     const xHi = 1 - marginX - hx;
     const yLo = -1 + (bottomPx / ch) * 2 + hy;
     const yHi = 1 - (topPx / ch) * 2 - hy;
     const cx = xLo <= xHi ? THREE.MathUtils.clamp(bubbleTmpV2.x, xLo, xHi) : 0;
-    const cy = yLo <= yHi ? THREE.MathUtils.clamp(bubbleTmpV2.y, yLo, yHi) : bubbleTmpV2.y;
+    // Task 114: with no room to spare, sit in the middle of the free band, never at the head (off the top edge).
+    const cy = yLo <= yHi ? THREE.MathUtils.clamp(bubbleTmpV2.y, yLo, yHi) : (yLo + yHi) / 2;
     // Tail target: where the speaker's head sits, relative to the
     // (possibly moved) bubble.
     const tailTarget =

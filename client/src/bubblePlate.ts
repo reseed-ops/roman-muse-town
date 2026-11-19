@@ -184,3 +184,13 @@ export function drawBubblePlate(ctx: CanvasRenderingContext2D, b: BubblePlateVie
     ctx.fill();
   }
 }
+
+/** Task 114: the bubble's on-screen height in CSS px. A share of the stage (generous in landscape,
+ *  modest in portrait), floored for legibility, never more than 36% of the height or a width over
+ *  90% of the stage, and never taller than the free band between the top notes and the walk
+ *  controls (a short landscape phone leaves ~124 px), so the screen clamp always has room. */
+export function bubbleTargetPx(cw: number, ch: number, landscape: boolean, topPx: number, bottomPx: number): number {
+  const share = landscape ? Math.min(Math.max(ch * 0.34, 132), 200) : Math.min(Math.max(ch * 0.155, 104), 168);
+  const freeBand = Math.max(64, ch - topPx - bottomPx);
+  return Math.min(share, ch * 0.36, cw * 0.45, freeBand);
+}
