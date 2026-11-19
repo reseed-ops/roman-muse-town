@@ -119,6 +119,7 @@ import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { assetBytes, assetUrl, loadAssetTexture } from "./assetPack";
 import { clone as cloneSkeleton } from "three/addons/utils/SkeletonUtils.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+import { aimNudge, boomAlong as guardBoomAlong, capLookTargetY, newCamAvoidState, stepCamAvoid, turnAim } from "./walkCamGuard";
 import { AVENUE_CYPRESSES, DISH_TABLE, GARDEN_BEDS, MARKET_BOOTHS, VILLA, VILLA_WALLS, resumeSpot, routeBetween, stairHeight } from "./layout";
 import { retainSharedModel, SceneResources } from "./sceneResources";
 import { SceneRuntime } from "./sceneRuntime";
@@ -6270,45 +6271,6 @@ export function createTownScene(
     return -Math.min(ob.halfW - Math.abs(lx), ob.halfD - Math.abs(lz));
   }
 
-  /** Entry distance of a ray into an obstacle expanded by `expand`,
-   *  or Infinity when it misses, the follow camera's boom test, so
-   *  buildings shorten the boom exactly as the old circles did. */
-  function rayObstacleEntry(ox: number, oz: number, dx: number, dz: number, ob: Obstacle, expand: number): number {
-    if (ob.kind === "circle") {
-      if (ob.r < 0.8) return Infinity; // structures only; thin props never move the camera
-      const relX = ob.x - ox;
-      const relZ = ob.z - oz;
-      const along = relX * dx + relZ * dz;
-      if (along <= 0.5) return Infinity;
-      const rr = ob.r + expand;
-      const perp2 = relX * relX + relZ * relZ - along * along;
-      if (perp2 >= rr * rr) return Infinity;
-      const hit = along - Math.sqrt(rr * rr - perp2);
-      return hit > 0.5 ? hit : Infinity;
-    }
-    // OBB: slab test in the box's local frame, box grown by `expand`.
-    const o = obbLocal(ob, ox, oz);
-    const c = Math.cos(ob.rot);
-    const s = Math.sin(ob.rot);
-    const ldx = dx * c - dz * s;
-    const ldz = dx * s + dz * c;
-    let tEnter = -Infinity;
-    let tExit = Infinity;
-    for (const [lo, ld, half] of [[o.lx, ldx, ob.halfW + expand], [o.lz, ldz, ob.halfD + expand]] as [number, number, number][]) {
-      if (Math.abs(ld) < 1e-6) {
-        if (Math.abs(lo) > half) return Infinity;
-      } else {
-        let t1 = (-half - lo) / ld;
-        let t2 = (half - lo) / ld;
-        if (t1 > t2) { const tmp = t1; t1 = t2; t2 = tmp; }
-        tEnter = Math.max(tEnter, t1);
-        tExit = Math.min(tExit, t2);
-      }
-    }
-    if (tExit < 0 || tEnter > tExit) return Infinity;
-    return tEnter > 0.5 ? tEnter : Infinity;
-  }
-
   let walking = false;
   let walkHeading = Math.atan2(-PLAYER.spawn[0], -PLAYER.spawn[1]); // face the town tree from spawn
   const walkPos = new THREE.Vector3(PLAYER.spawn[0], 0, PLAYER.spawn[1]);
@@ -6381,6 +6343,9 @@ export function createTownScene(
   let camPrevZ = PLAYER.spawn[1];
   let camPitchSmooth = 0;
   let camDistSmooth = 10.5;
+  // Task 113: the swing round an obstacle (view only) and the eased aim turn that holds Aelia in frame.
+  const camAvoid = newCamAvoidState();
+  let camAimTurn = 0;
   let isMoving = false;
   // The last frame he was truly on the move, kept for the slide's
   // latch (see slide.ts): a B press lands in the same gesture that
@@ -6429,10 +6394,11 @@ export function createTownScene(
   // (The overview's distance is OrbitControls' own dolly, with its
   // own 7–78 clamps, the same gesture, the same feel.)
   let userZoom = 1;
-  // From close beside her (about 2.2 m) out to a wide town view (about 28 m).
-  const ZOOM_MIN = 0.55;
+  // From close behind him (3 m, Task 113: nearer put his back across the
+  // whole frame and Aelia out of it) out to a wide town view (about 28 m).
+  const ZOOM_MIN = 0.75;
   const ZOOM_MAX = 7;
-  const walkRestDist = () => THREE.MathUtils.clamp(walkCamFraming().dist * userZoom, 2.2, 30);
+  const walkRestDist = () => THREE.MathUtils.clamp(walkCamFraming().dist * userZoom, 3.0, 30);
   const nearCollectibles = new Set<string>();
   // The last nearby prompt target reported to the shell ("kind:id", or
   // "" when none), prompts are reported on change only, never per frame.
@@ -7432,22 +7398,14 @@ export function createTownScene(
     // building. Computed on the pre-recenter yaw; the recenter moves
     // at most a third of a degree per frame, so the boom is never
     // meaningfully stale, and it is recomputed next frame anyway.
-    // The boom along a direction: the nearest structure on the camera's
-    // line shortens it. On the walk, rocks, posts and saplings pass the
-    // lens (lensR 0.9): a dolly for each one would pump the camera all
-    // the way down a street. A pair hold's camera stands still at the
-    // side, so there every trunk counts (Task 16: the 5.5 m side boom
-    // settled inside the avenue's cypresses, r 0.3).
-    const boomAlong = (dirX: number, dirZ: number, lensR: number, max: number): number => {
-      let b = max;
-      for (const ob of obstacles) {
-        if (ob.ghost || (ob.kind === "circle" && ob.r < lensR)) continue;
-        const hit = rayObstacleEntry(walkPos.x, walkPos.z, dirX, dirZ, ob, 0.55);
-        if (hit < b) b = hit;
-      }
-      return THREE.MathUtils.clamp(b, 1.7, max);
-    };
-    let boom = boomAlong(-fx, -fz, 0.9, walkRestDist());
+    // The boom along a direction: the nearest solid on the camera's line
+    // shortens it (walkCamGuard.ts, Task 113: walls and the Town Tree's ring
+    // he stands against count, and so do trunks; posts and stalks pass the
+    // lens). A pair hold's camera stands still at the side, so there every
+    // trunk counts (Task 16).
+    const boomAlong = (dirX: number, dirZ: number, max: number): number =>
+      guardBoomAlong(obstacles, walkPos.x, walkPos.z, dirX, dirZ, max);
+    let boom = boomAlong(-fx, -fz, walkRestDist());
     // Loose follow recenter (followCam.ts holds the numbers and the
     // unit-tested decision): the target is his heading, the gates
     // are genuine sustained displacement, no recent drag, no screen
@@ -7504,14 +7462,26 @@ export function createTownScene(
       camYaw: camYawSmooth,
       camFree,
       reducedMotion: opts.reducedMotion,
-      sideBoom: (yaw) => boomAlong(-Math.sin(yaw), -Math.cos(yaw), 0.25, walkRestDist()),
+      sideBoom: (yaw) => boomAlong(-Math.sin(yaw), -Math.cos(yaw), walkRestDist()),
     });
     if (pairStep.camYaw !== camYawSmooth) {
       camYawSmooth = pairStep.camYaw;
       fx = Math.sin(camYawSmooth);
       fz = Math.cos(camYawSmooth);
     }
-    if (pairStep.boom !== null) boom = pairStep.boom;
+    if (pairStep.boom !== null) {
+      boom = pairStep.boom;
+      // The pair hold owns the yaw: the swing eases home meanwhile.
+      stepCamAvoid(camAvoid, { dt, reducedMotion: opts.reducedMotion, obstacles, px: walkPos.x, pz: walkPos.z, yaw: camYawSmooth, rest: walkRestDist(), suspended: true });
+    } else {
+      // Task 113: a camera blocked close behind him swings round (view only: the
+      // player's yaw and the movement reference stay put) instead of sitting in a
+      // wall or behind a trunk; otherwise the boom is the plain collision boom.
+      const g = stepCamAvoid(camAvoid, { dt, reducedMotion: opts.reducedMotion, obstacles, px: walkPos.x, pz: walkPos.z, yaw: camYawSmooth, rest: walkRestDist(), suspended: pairCamState.home > 0 });
+      fx = Math.sin(g.yaw);
+      fz = Math.cos(g.yaw);
+      boom = g.boom;
+    }
     if (pairState && !pairState.glide) {
       if (pairStep.framing && !pairState.framed) {
         pairState.framed = true;
@@ -7585,7 +7555,25 @@ export function createTownScene(
     }
     if (camY < minCamY) camY = minCamY;
     camera.position.set(camX, camY, camZ);
-    controls.target.set(camFollowX + fx * 1.2, camGroundY + 1.15 + lookUp * lookUp * CAM_LOOK_UP_HEIGHT * (1 - pairCamMix), camFollowZ + fz * 1.2);
+    // Task 113: the look-up is capped where his head still sits in frame, so a full
+    // drag up shows the sky above and beyond him, never empty sky with nobody in it.
+    const aimRaw = camGroundY + 1.15 + lookUp * lookUp * CAM_LOOK_UP_HEIGHT * (1 - pairCamMix);
+    const aimY = capLookTargetY(aimRaw, { camY, camDist: Math.hypot(camFollowX - camX, camFollowZ - camZ), aimDist: Math.hypot(camFollowX + fx * 1.2 - camX, camFollowZ + fz * 1.2 - camZ), headY: camGroundY + 1.85, fovDeg: camera.fov });
+    controls.target.set(camFollowX + fx * 1.2, Math.max(aimY, camGroundY + 1.15), camFollowZ + fz * 1.2);
+    {
+      // Task 113: hold Aelia in frame beside him: the aim turns sideways, no further than
+      // keeps him in frame too (the camera's place and the player's yaw are untouched).
+      const museIn = museGroup.visible && !seatPlayer && !boatState && pairCamMix === 0;
+      const want = museIn
+        ? aimNudge({ camX, camZ, aimX: controls.target.x, aimZ: controls.target.z, gaius: { x: camFollowX, z: camFollowZ }, aelia: { x: museGroup.position.x, z: museGroup.position.z }, fovDeg: camera.fov, aspect: viewAspect })
+        : 0;
+      camAimTurn = opts.reducedMotion ? want : camAimTurn + (want - camAimTurn) * (1 - Math.exp(-dt * 4));
+      if (Math.abs(camAimTurn) > 1e-4) {
+        const a = turnAim(camX, camZ, controls.target.x, controls.target.z, camAimTurn);
+        controls.target.x = a.x;
+        controls.target.z = a.z;
+      }
+    }
     if (pairCamMix > 0) {
       // The hold's aim: the pair's midpoint at chest height.
       const midX = (walkPos.x + museGroup.position.x) / 2;
