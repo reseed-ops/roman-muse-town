@@ -1263,6 +1263,9 @@ export function App() {
   // anything off falls back to the normal spawn, silently.
   useEffect(() => {
     const save = () => {
+      // The restart button has just cleared the snapshot: the page's
+      // own hide on the way to the reload must not write it back.
+      if ((window as unknown as { __mtRestarting?: boolean }).__mtRestarting) return;
       const scene = sceneRef.current;
       if (!scene) return;
       const snap = scene.resumeState();
@@ -7609,6 +7612,7 @@ export function App() {
               // The fresh start: forget the resume
               // snapshot and begin again at the
               // forum spawn, as a first visit does.
+              (window as unknown as { __mtRestarting?: boolean }).__mtRestarting = true;
               try { localStorage.removeItem("muse-town-resume-v1"); } catch { /* storage unavailable */ }
               window.location.reload();
             },

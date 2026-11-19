@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { assetUrlSync, createPackStore, isPackUrl, packPath, type PackManifest } from "./assetPack";
+import { assetUrlSync, createPackStore, fetchBytesWithStallRetry, isPackUrl, packPath, type PackManifest } from "./assetPack";
 
 // The hosted build's packed assets: one fetch per pack, byte ranges
 // sliced per file, the pack let go once every file in it is taken, and
@@ -80,5 +80,49 @@ describe("asset packs", () => {
     expect(isPackUrl("pack:anim/x.fbx")).toBe(true);
     expect(packPath("pack:anim/x.fbx")).toBe("anim/x.fbx");
     expect(assetUrlSync("./assets/x-abc.fbx")).toBe("./assets/x-abc.fbx");
+  });
+});
+
+// Task 112: a restart left the loader at 0/4 behind a download that never moved.
+describe("a pack that stops arriving is asked for again", () => {
+  const hangingResponse = (signal: AbortSignal) =>
+    new Response(new ReadableStream({ start(c) { signal.addEventListener("abort", () => c.error(new Error("aborted"))); } }));
+  test("a stalled first attempt is dropped and the second one completes", async () => {
+    let calls = 0;
+    const fetchImpl = ((_: unknown, init?: RequestInit) => {
+      calls++;
+      if (calls === 1) return Promise.resolve(hangingResponse(init!.signal!));
+      expect(init?.cache).toBe("reload");
+      return Promise.resolve(new Response(new Uint8Array([1, 2, 3])));
+    }) as unknown as typeof fetch;
+    const out = await fetchBytesWithStallRetry("packs/x.pack", { fetchImpl, stallMs: 30 });
+    expect(new Uint8Array(out)).toEqual(new Uint8Array([1, 2, 3]));
+    expect(calls).toBe(2);
+  });
+  test("a request that never answers does not hang forever: it fails after the attempts", async () => {
+    const fetchImpl = ((_: unknown, init?: RequestInit) =>
+      new Promise((_res, rej) => init!.signal!.addEventListener("abort", () => rej(new Error("aborted"))))) as unknown as typeof fetch;
+    await expect(fetchBytesWithStallRetry("packs/x.pack", { fetchImpl, stallMs: 20, attempts: 2 })).rejects.toThrow(/stalled/);
+  });
+  test("a 404 is final, not retried", async () => {
+    let calls = 0;
+    const fetchImpl = (() => { calls++; return Promise.resolve(new Response("no", { status: 404 })); }) as unknown as typeof fetch;
+    await expect(fetchBytesWithStallRetry("packs/x.pack", { fetchImpl })).rejects.toThrow(/404/);
+    expect(calls).toBe(1);
+  });
+  test("a failed pack fetch is not remembered: the next asker fetches again", async () => {
+    const { manifest, packs } = manifestAndPacks();
+    let tries = 0;
+    const store = createPackStore({
+      manifestUrl: "m",
+      fetchJson: async () => manifest,
+      fetchBytes: async (url) => {
+        tries++;
+        if (tries === 1) throw new Error("dropped");
+        return packs[url]!;
+      },
+    });
+    await expect(store.bytes("pack:roman/temple.glb")).rejects.toThrow();
+    expect(new TextDecoder().decode(await store.bytes("pack:roman/temple.glb"))).toBe("a temple");
   });
 });

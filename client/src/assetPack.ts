@@ -44,6 +44,70 @@ export interface PackStore {
   fetched(): string[];
 }
 
+/** A pack that stops arriving is not a pack that is slow: after STALL_MS with no bytes the
+ *  request is dropped and made again (Task 112, a restart left the loader at 0/4 behind a
+ *  download that never moved). Each attempt after the first goes to the network, past any
+ *  half-written cache entry. */
+export const PACK_STALL_MS = 15000;
+export const PACK_ATTEMPTS = 3;
+
+export interface StallFetchOptions {
+  fetchImpl?: typeof fetch;
+  stallMs?: number;
+  attempts?: number;
+}
+
+export async function fetchBytesWithStallRetry(url: string, opts: StallFetchOptions = {}): Promise<ArrayBuffer> {
+  const doFetch = opts.fetchImpl ?? ((input: RequestInfo | URL, init?: RequestInit) => fetch(input, init));
+  const stallMs = opts.stallMs ?? PACK_STALL_MS;
+  const attempts = opts.attempts ?? PACK_ATTEMPTS;
+  let lastError: unknown = new Error(`asset pack fetch failed: ${url}`);
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const controller = new AbortController();
+    let stalled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const arm = () => {
+      if (timer !== undefined) clearTimeout(timer);
+      timer = setTimeout(() => { stalled = true; controller.abort(); }, stallMs);
+    };
+    arm();
+    try {
+      const res = await doFetch(url, attempt === 0 ? { signal: controller.signal } : { signal: controller.signal, cache: "reload" });
+      if (!res.ok) {
+        // A real answer, not a stall: a missing pack will not appear by asking again.
+        if (timer !== undefined) clearTimeout(timer);
+        throw Object.assign(new Error(`asset pack fetch failed (${res.status}): ${url}`), { final: true });
+      }
+      arm();
+      if (!res.body) {
+        const whole = await res.arrayBuffer();
+        if (timer !== undefined) clearTimeout(timer);
+        return whole;
+      }
+      const reader = res.body.getReader();
+      const chunks: Uint8Array[] = [];
+      let total = 0;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        total += value.byteLength;
+        arm();
+      }
+      if (timer !== undefined) clearTimeout(timer);
+      const out = new Uint8Array(total);
+      let at = 0;
+      for (const chunk of chunks) { out.set(chunk, at); at += chunk.byteLength; }
+      return out.buffer as ArrayBuffer;
+    } catch (err) {
+      if (timer !== undefined) clearTimeout(timer);
+      if ((err as { final?: boolean }).final) throw err;
+      lastError = stalled ? new Error(`asset pack stalled for ${stallMs} ms: ${url}`) : err;
+    }
+  }
+  throw lastError;
+}
+
 export function createPackStore(opts: PackStoreOptions): PackStore {
   let manifest: Promise<PackManifest> | null = null;
   const packs = new Map<string, Promise<ArrayBuffer>>();
@@ -59,6 +123,8 @@ export function createPackStore(opts: PackStoreOptions): PackStore {
         if (!m || typeof m !== "object" || !m.packs || !m.entries) throw new Error("asset pack manifest is malformed");
         return m;
       });
+      // A failed manifest is asked for again, not remembered.
+      manifest.catch(() => { manifest = null; });
     }
     return manifest;
   };
@@ -73,6 +139,8 @@ export function createPackStore(opts: PackStoreOptions): PackStore {
         return buf;
       });
       packs.set(name, pending);
+      // A failed or short pack is fetched again by the next asker, not remembered as a failure.
+      pending.catch(() => { if (packs.get(name) === pending) packs.delete(name); });
     }
     return pending;
   };
@@ -127,11 +195,7 @@ function store(): PackStore {
   if (!defaultStore) {
     defaultStore = createPackStore({
       manifestUrl: PACK_MANIFEST_PATH,
-      fetchBytes: (url) =>
-        fetch(url).then((res) => {
-          if (!res.ok) throw new Error(`asset pack fetch failed (${res.status}): ${url}`);
-          return res.arrayBuffer();
-        }),
+      fetchBytes: (url) => fetchBytesWithStallRetry(url),
       fetchJson: (url) =>
         fetch(url, { cache: "no-cache" }).then((res) => {
           if (!res.ok) throw new Error(`asset pack manifest fetch failed (${res.status}): ${url}`);
