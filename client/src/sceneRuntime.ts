@@ -74,6 +74,8 @@ export class SceneRuntime {
     // A phone steps up (shadows on) only after sustained work-time headroom (Task 41).
     if (visible && this.automatic && !this.light && !this.software && this.adaptive.noteWork(cpuMs, performance.now())) this.applyQuality(true);
   }
+  /** Task 110: bloom (the post chain) runs only at the full tier, with the light-graphics setting off and a real GPU. */
+  get bloomOn(): boolean { return !this.light && !this.software && this.adaptive.tier === 2; }
   /** The tier the town has settled on (0 light, 1 balanced, 2 full), for the perf line and the report. */
   get tier(): number { return this.adaptive.tier; }
   get grassHz(): number { return this.adaptive.tier === 2 ? 30 : this.adaptive.tier === 1 ? 15 : 0; }

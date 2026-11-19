@@ -2,6 +2,7 @@ import { createPlaceFootprints } from "./buildingFootprints";
 import { readArrangement } from "../../shared/homeDecor";
 import { buildHomeHouse, splashRingY } from "./homeHouse";
 import { installAtmosphere } from "./atmosphere";
+import { OVERLAY_LAYER, PostFx } from "./postFx";
 import { applySurfaceVariation, varyModel, type SurfaceKind } from "./surfaceVariation";
 import { applyLakeRipple, seaFogColor, warmStone, ENV_DAY, HEMI_DAY, SEA_NIGHT_BLEND, SUN_DAY, TONE_EXPOSURE } from "./skyLook";
 import { aimSeaPath, buildSeaCliff, CLIFF, clampToWorld, clearOfSea, cutAtCoast, HILL_BASE_Y, HORIZON_HILLS, horizonHillGeometry, OCEAN_DAY, OCEAN_NIGHT, walkable as onCliffPath } from "./seaCliff";
@@ -576,6 +577,11 @@ export interface TownSceneHandle {
    *  shadow rendering. The town keeps every feature; it just asks
    *  less of the GPU. */
   setLowGraphics: (on: boolean) => void;
+  /** Task 110 (tour and tests): force the post chain "off" (direct render), "pipeline" (chain, no bloom),
+   *  "bloom" (chain with bloom), or "auto" (bloom when graphics allow it). Returns the mode now in effect. */
+  setPostMode: (mode: "auto" | "off" | "pipeline" | "bloom") => string;
+  /** Task 110: average milliseconds per frame over n renders in the current post mode (GPU-synced). */
+  timeRender: (frames: number) => number;
   /** The festival dance: the pair take their places in front of the
    *  Atrium of Sounds and dance one full step sequence together.
    *  False when it can't start (not walking, not together, a clip
@@ -1387,6 +1393,29 @@ export function createTownScene(
   const runtime = new SceneRuntime(renderer, scene, FULL_PIXEL_RATIO, softwareGl, () => {
     if (sceneSized) resize();
   }, phone);
+  // Task 110: the post chain (HDR render, bloom, tone-mapped output; see postFx.ts). It exists only while
+  // bloom is wanted: low graphics, software GL and the light tiers render directly, as before, with no
+  // render target allocated. The debug modes let the tour compare the chain with and without bloom.
+  let post: PostFx | null = null;
+  let postMode: "auto" | "off" | "pipeline" | "bloom" = "auto";
+  const wantPost = () => (postMode === "off" ? false : postMode === "auto" ? runtime.bloomOn : true);
+  function renderFrame(dt: number) {
+    const usePost = wantPost();
+    skyUniforms.maskAlpha.value = usePost ? 0 : 1;
+    if (!usePost) {
+      if (post) { post.dispose(); post = null; }
+      camera.layers.enable(OVERLAY_LAYER);
+      renderer.render(scene, camera);
+      return;
+    }
+    if (!post) {
+      post = new PostFx(renderer, scene, camera, { samples: phone || softwareGl ? 0 : 4 });
+      post.overlayActive = () => bubbleSprites.some((sp) => sp.visible);
+    }
+    post.setBloomEnabled(postMode !== "pipeline");
+    post.setLook(nightMix);
+    post.render(dt);
+  }
   resources.adopt(scene);
   scene.background = new THREE.Color().copy(DAY_SKY);
   scene.fog = new THREE.Fog(DAY_SKY.getHex(), 95, 235);
@@ -1415,6 +1444,8 @@ export function createTownScene(
     horizonColor: { value: new THREE.Color(0xd8f0e2) },
     offset: { value: 8 },
     exponent: { value: 0.85 },
+    // Task 110: alpha is the "tone-mapped" mask in the post chain (0 = leave raw); the direct render wants it opaque.
+    maskAlpha: { value: 1 },
   };
   const skyDome = new THREE.Mesh(
     new THREE.SphereGeometry(180, 24, 14),
@@ -1426,11 +1457,11 @@ export function createTownScene(
       vertexShader: `varying vec3 vWorldPosition;
         void main(){ vec4 wp = modelMatrix * vec4(position,1.0); vWorldPosition = wp.xyz;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
-      fragmentShader: `uniform vec3 topColor; uniform vec3 horizonColor; uniform float offset; uniform float exponent;
+      fragmentShader: `uniform vec3 topColor; uniform vec3 horizonColor; uniform float offset; uniform float exponent; uniform float maskAlpha;
         varying vec3 vWorldPosition;
         void main(){ float h = normalize(vWorldPosition + vec3(0.0, offset, 0.0)).y;
         float k = pow(max(h, 0.0), exponent);
-        gl_FragColor = vec4(mix(horizonColor, topColor, k), 1.0); }`,
+        gl_FragColor = vec4(mix(horizonColor, topColor, k), maskAlpha); }`,
     }),
   );
   // The sky's own anchor (Task 34): the dome, the sun, the moon and the
@@ -5227,6 +5258,7 @@ export function createTownScene(
     /** 0..1 pop-in scale ease, set each frame in updateBubbles. */
     pop: number;
   }
+  const bubbleSprites: THREE.Sprite[] = [];
   function makeBubble(parent: THREE.Object3D, y: number, speaker: BubbleSpeaker): BubbleState {
     const canvas = document.createElement("canvas");
     canvas.width = 1024;
@@ -5246,6 +5278,9 @@ export function createTownScene(
     sprite.position.set(0, y, 0);
     sprite.renderOrder = 9999;
     sprite.visible = false;
+    // Task 110: not tone-mapped, so it is drawn straight to the screen after the post chain (see postFx.ts).
+    sprite.layers.set(OVERLAY_LAYER);
+    bubbleSprites.push(sprite);
     parent.add(sprite);
     return {
       sprite, ctx, tex, showAt: -1, hideAt: -1,
@@ -11944,6 +11979,7 @@ export function createTownScene(
       h = window.innerHeight || h || 1;
     }
     renderer.setSize(w, h, false);
+    post?.setSize(w, h, renderer.getPixelRatio());
     viewAspect = w / h;
     isLandscapeView = viewAspect > 1.05 && h <= 860;
     camera.aspect = viewAspect;
@@ -13153,7 +13189,7 @@ export function createTownScene(
       driveClipAnims(dt, t);
       updateSecretMoment(t);
       updateNewSystems(dt, t);
-      renderer.render(scene, camera);
+      renderFrame(dt);
       runtime.afterFrame(rawDtMs, performance.now() - nowMs, document.visibilityState !== "hidden");
       noteStillness(nowMs);
       frameErrorStreak = 0;
@@ -13962,7 +13998,7 @@ export function createTownScene(
     },
     captureVisitFrame: (maxEdge, quality) => {
       try {
-        renderer.render(scene, camera);
+        renderFrame(0);
         const srcCanvas = renderer.domElement;
         const dims = frameDimensions(srcCanvas.width, srcCanvas.height, maxEdge);
         const out = document.createElement("canvas");
@@ -13991,7 +14027,7 @@ export function createTownScene(
     isWalking: () => walking,
     capturePostcard: () => {
       try {
-        renderer.render(scene, camera);
+        renderFrame(0);
         const srcCanvas = renderer.domElement;
         const maxW = 880;
         const scale = Math.min(1, maxW / srcCanvas.width);
@@ -14029,6 +14065,19 @@ export function createTownScene(
       buntingFlagMats.forEach((m, i) => m.color.copy(parsed[i % parsed.length]!));
       wreathBerryMat.color.copy(parsed[0]!);
       wreathGroup.visible = true;
+    },
+    setPostMode: (mode) => {
+      postMode = mode;
+      return wantPost() ? (postMode === "pipeline" ? "pipeline" : "bloom") : "direct";
+    },
+    timeRender: (frames) => {
+      const gl = renderer.getContext();
+      renderFrame(0.016);
+      gl.finish();
+      const t0 = performance.now();
+      for (let i = 0; i < frames; i++) renderFrame(0.016);
+      gl.finish();
+      return (performance.now() - t0) / frames;
     },
     setLowGraphics: (on) => {
       // Software GL never gets the heavy settings back, whatever the
@@ -14098,6 +14147,8 @@ export function createTownScene(
       canvas.removeEventListener("touchstart", blockTouchGesture);
       canvas.removeEventListener("touchmove", blockTouchGesture);
       canvas.removeEventListener("contextmenu", blockContextMenu);
+      post?.dispose();
+      post = null;
       controls.dispose();
       critters.dispose();
       setBeeHumLevel(0);
