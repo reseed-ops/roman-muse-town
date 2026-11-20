@@ -1496,7 +1496,42 @@ export function createCharAnimator(args: {
  *  materials that take the town's light, tinted per part; the eyes
  *  stay unlit, as drawn eyes do. The tint multiplies the texture, so
  *  white keeps a part exactly as painted. */
-export const MUSE_TINTS: Record<string, number> = { SKIN: 0xf7e6d8, HAIR: 0xf1e6d6, CLOTH: 0xdcc28e, FACE: 0xffffff };
+// Task 123: Aelia's body is Tuan's VRoid model (Courtesan.vrm). Its hair texture is a pale cream, so
+// HAIR carries the strawberry-blonde of the Mariel Sienne spec as a tint over it.
+export const MUSE_TINTS: Record<string, number> = { SKIN: 0xf7e6d8, HAIR: 0xf0bd9f, CLOTH: 0xdcc28e, FACE: 0xffffff };
+/** Task 123: the one small mole on the left side of Aelia's neck (the spec's mark; the VRM's skin
+ *  texture has none). Painted on the body-skin texture at the neck's left side, UV (0.514, 0.078) in
+ *  Courtesan.vrm's merged Body mesh; a no-op on a model whose skin map is missing. */
+export function paintNeckMole(root: THREE.Object3D, u = 0.514, v = 0.078, radiusFrac = 0.0058) {
+  try {
+    const done = new Set<THREE.Material>();
+    root.traverse((o) => {
+      if (!(o instanceof THREE.Mesh)) return;
+      for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+        const std = m as THREE.MeshToonMaterial;
+        if (done.has(m) || !/_Body_00_SKIN/.test(m.name) || !std.map) continue;
+        done.add(m);
+        const img = std.map.image as { width?: number; height?: number } | undefined;
+        if (!img?.width || !img?.height) continue;
+        const c = document.createElement("canvas");
+        c.width = img.width; c.height = img.height;
+        const g = c.getContext("2d");
+        if (!g) continue;
+        g.drawImage(img as CanvasImageSource, 0, 0);
+        const r = radiusFrac * c.width, x = u * c.width, y = v * c.height;
+        const grad = g.createRadialGradient(x, y, 0, x, y, r);
+        grad.addColorStop(0, "rgba(70,38,26,1)"); grad.addColorStop(0.65, "rgba(84,48,34,0.95)"); grad.addColorStop(1, "rgba(100,60,44,0)");
+        g.fillStyle = grad; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+        const tex = new THREE.CanvasTexture(c);
+        tex.colorSpace = std.map.colorSpace; tex.flipY = std.map.flipY; tex.wrapS = std.map.wrapS; tex.wrapT = std.map.wrapT;
+        tex.anisotropy = std.map.anisotropy;
+        std.map = tex; std.needsUpdate = true;
+      }
+    });
+  } catch {
+    /* the mole is cosmetic; the model stands without it */
+  }
+}
 export const PLAYER_TINTS: Record<string, number> = { SKIN: 0xf4ddc9, HAIR: 0xffffff, CLOTH: 0xffffff, FACE: 0xffffff };
 export function litVrmMaterials(root: THREE.Object3D, tints: Record<string, number>) {
   const made = new Map<THREE.Material, THREE.Material>();

@@ -22,7 +22,7 @@ import { streetWidth } from "./town";
 import { repairRomanMaterials } from "./romanMaterials";
 import { TreePlacement } from "./treePlacement";
 import { type VrmRig, collectRig, seatedClipOwnsLegs, poseBone, poseWave, poseWaveStill, poseUmbrellaArm, poseThrowArm, poseLinkArm, poseHoldHandPlayer, poseHoldHandMuse,
-  poseFlirtLift, type CharAnimator, createCharAnimator, prepareVrm, litVrmMaterials, MUSE_TINTS, PLAYER_TINTS, collectBlinkMorphs, setBlink } from "./characterAnimation";
+  poseFlirtLift, type CharAnimator, createCharAnimator, prepareVrm, litVrmMaterials, MUSE_TINTS, paintNeckMole, PLAYER_TINTS, collectBlinkMorphs, setBlink } from "./characterAnimation";
 // The Muse Town diorama: a low-poly three.js scene with a plaza around
 // the great town tree, five clickable houses, lamp posts, smaller trees,
 // a day/night cycle, and two hidden collectibles (the pointy hat and the
@@ -5455,6 +5455,7 @@ export function createTownScene(
       resources.adopt(model);
       downscaleModelTextures(model);
       litVrmMaterials(model, MUSE_TINTS);
+      paintNeckMole(model);
       collectNightSkin(model);
       prepareVrm(model);
       const body = groundModel(model, { height: 1.8 });

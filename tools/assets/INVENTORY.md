@@ -5,79 +5,79 @@ Search it with `bun tools/assets/search.ts <words>` (see `tools/assets/README.md
 
 - 157 files in `client/src/assets/` plus 6 loom ground textures in `client/src/textures/` = 163.
 - 156 are imported by the town source; 7 are in the folder but unused: `greek/greek_dock.fbx`, `greek/greek_pool_1.fbx`, `greek_atlas.png`, `roman/apple.glb`, `roman/bowl.glb`, `roman/bush_roman.glb`, `roman/platform_wooden.glb`.
-- 105.3 MB in all. Triangles are read from the GLB/VRM accessors (counted once per node that instances a mesh) and, for FBX, from Blender (`fbx-stats.json`); animation clips and images have none.
+- 107.7 MB in all. Triangles are read from the GLB/VRM accessors (counted once per node that instances a mesh) and, for FBX, from Blender (`fbx-stats.json`); animation clips and images have none.
 
 ## client/src/assets/ (root)
 
 | File | Kind | Pack / made from | KB | Tris | Status | Where it is placed |
 | --- | --- | --- | ---: | ---: | --- | --- |
-| `centurion.vrm` | character | owner-built in VRoid Studio (Gaius) | 16201 | 37737 | used | townScene.ts:5951 `loadModelScene(centurionUrl)` |
+| `centurion.vrm` | character | owner-built in VRoid Studio (Gaius) | 16201 | 37737 | used | townScene.ts:5952 `loadModelScene(centurionUrl)` |
 | `greek_atlas.png` | texture | Greek Low Poly pack: `Textures/Greek_Combined.png` | 1 | 128x128 | unused | unused |
-| `muse-avatar.vrm` | character | pixiv VRoid sample model (AvatarSample_M) | 16774 | 52389 | used | townScene.ts:5451 `loadModelScene(museAvatarUrl)` |
-| `phoenix.fbx` | animal | Low Poly Legend Phoenix (PULSAR BYTES) | 858 | 2241 | used | townScene.ts:10143 `void runtime.streaming.request(() => assetUrl(phoenixUrl).then((resolved) => fbxLoader2.lo` |
-| `phoenix_tex.png` | texture | Low Poly Legend Phoenix (PULSAR BYTES) | 0 | 32x32 | used | townScene.ts:10147 `const tex = loadAssetTexture(phoenixTexUrl);` |
+| `muse-avatar.vrm` | character | pixiv VRoid sample model (AvatarSample_M) | 19130 | 51838 | used | townScene.ts:5451 `loadModelScene(museAvatarUrl)` |
+| `phoenix.fbx` | animal | Low Poly Legend Phoenix (PULSAR BYTES) | 858 | 2241 | used | townScene.ts:10144 `void runtime.streaming.request(() => assetUrl(phoenixUrl).then((resolved) => fbxLoader2.lo` |
+| `phoenix_tex.png` | texture | Low Poly Legend Phoenix (PULSAR BYTES) | 0 | 32x32 | used | townScene.ts:10148 `const tex = loadAssetTexture(phoenixTexUrl);` |
 | `stars-fall-song.mp3` | audio | the project's own song for the summit scene | 157 |  | used | App.tsx:2767 `songAudioRef.current = new Audio(assetUrlSync(summitSongUrl));` |
-| `trees_pack.glb` | nature | Low Poly Trees (itch.io) | 3512 | 7215 | used | townScene.ts:9407 `void assetUrl(treesPackUrl)` |
-| `wolf.glb` | animal | Dire Wolf Lite: `Dire_Wolf_Lite.glb (unchanged)` | 12146 | 9991 | used | townScene.ts:10470 `void runtime.streaming.request(() => assetUrl(wolfUrl).then((resolved) => gltfLoader.loadA` |
+| `trees_pack.glb` | nature | Low Poly Trees (itch.io) | 3512 | 7215 | used | townScene.ts:9408 `void assetUrl(treesPackUrl)` |
+| `wolf.glb` | animal | Dire Wolf Lite: `Dire_Wolf_Lite.glb (unchanged)` | 12146 | 9991 | used | townScene.ts:10471 `void runtime.streaming.request(() => assetUrl(wolfUrl).then((resolved) => gltfLoader.loadA` |
 
 ## anim/
 
 | File | Kind | Pack / made from | KB | Tris | Status | Where it is placed |
 | --- | --- | --- | ---: | ---: | --- | --- |
-| `anim/f_dance.fbx` | animation | Human Dance Animations (Kevin Iglesias) | 1047 |  | used | townScene.ts:5486 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
-| `anim/f_idle.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 812 |  | used | townScene.ts:5486 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
-| `anim/f_pose_a.fbx` | animation | Human Dance Animations (Kevin Iglesias) | 686 |  | used | townScene.ts:5486 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
-| `anim/f_pose_b.fbx` | animation | Human Dance Animations (Kevin Iglesias) | 560 |  | used | townScene.ts:5486 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
-| `anim/f_run.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 434 |  | used | townScene.ts:5486 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
-| `anim/f_sit.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 686 |  | used | townScene.ts:5486 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
-| `anim/f_walk.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 470 |  | used | townScene.ts:5486 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
-| `anim/f_wave.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 782 |  | used | townScene.ts:5486 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
-| `anim/m_dance.fbx` | animation | Human Dance Animations (Kevin Iglesias) | 1047 |  | used | townScene.ts:5995 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU` |
-| `anim/m_idle.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 812 |  | used | townScene.ts:5995 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU` |
-| `anim/m_jump_air.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 506 |  | used | townScene.ts:5996 `jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },` |
-| `anim/m_jump_end.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 446 |  | used | townScene.ts:5996 `jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },` |
-| `anim/m_jump_start.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 446 |  | used | townScene.ts:5996 `jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },` |
-| `anim/m_run.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 434 |  | used | townScene.ts:5995 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU` |
-| `anim/m_sit.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 686 |  | used | townScene.ts:5995 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU` |
-| `anim/m_slide.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 578 |  | used | townScene.ts:5997 `slide: mSlideUrl,` |
-| `anim/m_walk.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 470 |  | used | townScene.ts:5995 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU` |
-| `anim/m_wave.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 782 |  | used | townScene.ts:5995 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU` |
-| `anim/outdoor/f_bench1.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 818 |  | used | townScene.ts:5490 `benchSit: [fBench1Url, fBench2Url],` |
-| `anim/outdoor/f_bench2.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 813 |  | used | townScene.ts:5490 `benchSit: [fBench1Url, fBench2Url],` |
-| `anim/outdoor/f_flirt.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 816 |  | used | townScene.ts:5491 `flirt: fFlirtUrl,` |
-| `anim/outdoor/f_hug.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 813 |  | used | townScene.ts:5492 `hug: fHugUrl,` |
-| `anim/outdoor/f_sittalk1.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 893 |  | used | townScene.ts:5489 `sitTalk: [fSitTalk1Url, fSitTalk2Url],` |
-| `anim/outdoor/f_sittalk2.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 828 |  | used | townScene.ts:5489 `sitTalk: [fSitTalk1Url, fSitTalk2Url],` |
-| `anim/outdoor/f_talk1.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 821 |  | used | townScene.ts:5488 `talk: [fTalk1Url, fTalk2Url, fTalk3Url],` |
-| `anim/outdoor/f_talk2.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 829 |  | used | townScene.ts:5488 `talk: [fTalk1Url, fTalk2Url, fTalk3Url],` |
-| `anim/outdoor/f_talk3.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 841 |  | used | townScene.ts:5488 `talk: [fTalk1Url, fTalk2Url, fTalk3Url],` |
-| `anim/outdoor/m_bench1.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 831 |  | used | townScene.ts:6001 `benchSit: [mBench1Url, mBench2Url],` |
-| `anim/outdoor/m_bench2.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 833 |  | used | townScene.ts:6001 `benchSit: [mBench1Url, mBench2Url],` |
-| `anim/outdoor/m_flirt.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 816 |  | used | townScene.ts:6002 `flirt: mFlirtUrl,` |
-| `anim/outdoor/m_hug.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 814 |  | used | townScene.ts:6003 `hug: mHugUrl,` |
-| `anim/outdoor/m_sittalk1.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 825 |  | used | townScene.ts:6000 `sitTalk: [mSitTalk1Url, mSitTalk2Url],` |
-| `anim/outdoor/m_sittalk2.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 815 |  | used | townScene.ts:6000 `sitTalk: [mSitTalk1Url, mSitTalk2Url],` |
-| `anim/outdoor/m_talk1.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 826 |  | used | townScene.ts:5999 `talk: [mTalk1Url, mTalk2Url, mTalk3Url],` |
-| `anim/outdoor/m_talk2.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 833 |  | used | townScene.ts:5999 `talk: [mTalk1Url, mTalk2Url, mTalk3Url],` |
-| `anim/outdoor/m_talk3.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 836 |  | used | townScene.ts:5999 `talk: [mTalk1Url, mTalk2Url, mTalk3Url],` |
+| `anim/f_dance.fbx` | animation | Human Dance Animations (Kevin Iglesias) | 1047 |  | used | townScene.ts:5487 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
+| `anim/f_idle.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 812 |  | used | townScene.ts:5487 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
+| `anim/f_pose_a.fbx` | animation | Human Dance Animations (Kevin Iglesias) | 686 |  | used | townScene.ts:5487 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
+| `anim/f_pose_b.fbx` | animation | Human Dance Animations (Kevin Iglesias) | 560 |  | used | townScene.ts:5487 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
+| `anim/f_run.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 434 |  | used | townScene.ts:5487 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
+| `anim/f_sit.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 686 |  | used | townScene.ts:5487 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
+| `anim/f_walk.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 470 |  | used | townScene.ts:5487 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
+| `anim/f_wave.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 782 |  | used | townScene.ts:5487 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
+| `anim/m_dance.fbx` | animation | Human Dance Animations (Kevin Iglesias) | 1047 |  | used | townScene.ts:5996 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU` |
+| `anim/m_idle.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 812 |  | used | townScene.ts:5996 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU` |
+| `anim/m_jump_air.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 506 |  | used | townScene.ts:5997 `jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },` |
+| `anim/m_jump_end.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 446 |  | used | townScene.ts:5997 `jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },` |
+| `anim/m_jump_start.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 446 |  | used | townScene.ts:5997 `jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },` |
+| `anim/m_run.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 434 |  | used | townScene.ts:5996 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU` |
+| `anim/m_sit.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 686 |  | used | townScene.ts:5996 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU` |
+| `anim/m_slide.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 578 |  | used | townScene.ts:5998 `slide: mSlideUrl,` |
+| `anim/m_walk.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 470 |  | used | townScene.ts:5996 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU` |
+| `anim/m_wave.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 782 |  | used | townScene.ts:5996 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU` |
+| `anim/outdoor/f_bench1.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 818 |  | used | townScene.ts:5491 `benchSit: [fBench1Url, fBench2Url],` |
+| `anim/outdoor/f_bench2.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 813 |  | used | townScene.ts:5491 `benchSit: [fBench1Url, fBench2Url],` |
+| `anim/outdoor/f_flirt.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 816 |  | used | townScene.ts:5492 `flirt: fFlirtUrl,` |
+| `anim/outdoor/f_hug.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 813 |  | used | townScene.ts:5493 `hug: fHugUrl,` |
+| `anim/outdoor/f_sittalk1.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 893 |  | used | townScene.ts:5490 `sitTalk: [fSitTalk1Url, fSitTalk2Url],` |
+| `anim/outdoor/f_sittalk2.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 828 |  | used | townScene.ts:5490 `sitTalk: [fSitTalk1Url, fSitTalk2Url],` |
+| `anim/outdoor/f_talk1.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 821 |  | used | townScene.ts:5489 `talk: [fTalk1Url, fTalk2Url, fTalk3Url],` |
+| `anim/outdoor/f_talk2.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 829 |  | used | townScene.ts:5489 `talk: [fTalk1Url, fTalk2Url, fTalk3Url],` |
+| `anim/outdoor/f_talk3.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 841 |  | used | townScene.ts:5489 `talk: [fTalk1Url, fTalk2Url, fTalk3Url],` |
+| `anim/outdoor/m_bench1.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 831 |  | used | townScene.ts:6002 `benchSit: [mBench1Url, mBench2Url],` |
+| `anim/outdoor/m_bench2.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 833 |  | used | townScene.ts:6002 `benchSit: [mBench1Url, mBench2Url],` |
+| `anim/outdoor/m_flirt.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 816 |  | used | townScene.ts:6003 `flirt: mFlirtUrl,` |
+| `anim/outdoor/m_hug.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 814 |  | used | townScene.ts:6004 `hug: mHugUrl,` |
+| `anim/outdoor/m_sittalk1.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 825 |  | used | townScene.ts:6001 `sitTalk: [mSitTalk1Url, mSitTalk2Url],` |
+| `anim/outdoor/m_sittalk2.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 815 |  | used | townScene.ts:6001 `sitTalk: [mSitTalk1Url, mSitTalk2Url],` |
+| `anim/outdoor/m_talk1.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 826 |  | used | townScene.ts:6000 `talk: [mTalk1Url, mTalk2Url, mTalk3Url],` |
+| `anim/outdoor/m_talk2.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 833 |  | used | townScene.ts:6000 `talk: [mTalk1Url, mTalk2Url, mTalk3Url],` |
+| `anim/outdoor/m_talk3.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 836 |  | used | townScene.ts:6000 `talk: [mTalk1Url, mTalk2Url, mTalk3Url],` |
 
 ## greek/
 
 | File | Kind | Pack / made from | KB | Tris | Status | Where it is placed |
 | --- | --- | --- | ---: | ---: | --- | --- |
-| `greek/greek_bench_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 16 | 192 | used | townScene.ts:9573 `greekBench(greekBench1Url, "bench-greek-stone", 12.2, -15, Math.PI / 2);` — Turned on Nov 6, 2026 (Task 18): both sat with their backs to the peristyle; sitters now face it (no backrest  |
-| `greek/greek_bench_2.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 19 | 288 | used | townScene.ts:9574 `greekBench(greekBench2Url, "bench-greek-wood", -12.2, -15, -Math.PI / 2);` |
-| `greek/greek_bowl.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 17 | 100 | used | (6.9, 38.4) [townScene.ts:9547] |
-| `greek/greek_bucket.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 15 | 92 | used | (21.3, 26.9) [townScene.ts:9551] |
-| `greek/greek_decorative_bowl.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 17 | 238 | used | (6.9, 39.6) [townScene.ts:9548] |
+| `greek/greek_bench_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 16 | 192 | used | townScene.ts:9574 `greekBench(greekBench1Url, "bench-greek-stone", 12.2, -15, Math.PI / 2);` — Turned on Nov 6, 2026 (Task 18): both sat with their backs to the peristyle; sitters now face it (no backrest  |
+| `greek/greek_bench_2.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 19 | 288 | used | townScene.ts:9575 `greekBench(greekBench2Url, "bench-greek-wood", -12.2, -15, -Math.PI / 2);` |
+| `greek/greek_bowl.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 17 | 100 | used | (6.9, 38.4) [townScene.ts:9548] |
+| `greek/greek_bucket.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 15 | 92 | used | (21.3, 26.9) [townScene.ts:9552] |
+| `greek/greek_decorative_bowl.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 17 | 238 | used | (6.9, 39.6) [townScene.ts:9549] |
 | `greek/greek_dock.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 30 | 900 | unused | unused |
-| `greek/greek_drying_rack.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 42 | 972 | used | (-22.6, 25.4) [townScene.ts:9554] |
-| `greek/greek_garden_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 19 | 124 | used | (9.8, 25.2) [townScene.ts:9552]; (13.4, 25.2) [townScene.ts:9553] |
+| `greek/greek_drying_rack.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 42 | 972 | used | (-22.6, 25.4) [townScene.ts:9555] |
+| `greek/greek_garden_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 19 | 124 | used | (9.8, 25.2) [townScene.ts:9553]; (13.4, 25.2) [townScene.ts:9554] |
 | `greek/greek_pool_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 20 | 208 | unused | unused |
-| `greek/greek_pot_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 25 | 754 | used | (-25, 23) [townScene.ts:9549] |
-| `greek/greek_pot_2.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 19 | 348 | used | (-20.8, 24.0) [townScene.ts:9550] |
-| `greek/greek_table_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 22 | 548 | used | (-27.0, 9.6) [townScene.ts:9545]; (24.8, -1.6) [townScene.ts:9546] — --- Greek dressing: furniture and small goods at the houses' doorsteps and terraces (the town has no interiors |
-| `greek/greek_wood_pile.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 16 | 122 | used | (27.9, 27.6) [townScene.ts:9555]; (-24.6, 20.2) [townScene.ts:9556] |
+| `greek/greek_pot_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 25 | 754 | used | (-25, 23) [townScene.ts:9550] |
+| `greek/greek_pot_2.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 19 | 348 | used | (-20.8, 24.0) [townScene.ts:9551] |
+| `greek/greek_table_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 22 | 548 | used | (-27.0, 9.6) [townScene.ts:9546]; (24.8, -1.6) [townScene.ts:9547] — --- Greek dressing: furniture and small goods at the houses' doorsteps and terraces (the town has no interiors |
+| `greek/greek_wood_pile.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 16 | 122 | used | (27.9, 27.6) [townScene.ts:9556]; (-24.6, 20.2) [townScene.ts:9557] |
 
 ## idyllic/
 
@@ -114,14 +114,14 @@ Search it with `bun tools/assets/search.ts <words>` (see `tools/assets/README.md
 
 | File | Kind | Pack / made from | KB | Tris | Status | Where it is placed |
 | --- | --- | --- | ---: | ---: | --- | --- |
-| `pets/cat.fbx` | animal | Animated Pets & Farm Animals (HONETi) | 767 | 390 | used | (6.4, 17.8) [townScene.ts:9856] |
-| `pets/cat_05.png` | texture | Animated Pets & Farm Animals (HONETi) | 92 | 512x512 | used | townScene.ts:9753 `: kind === "cat" ? catTexUrl` |
-| `pets/chicken.fbx` | animal | Animated Pets & Farm Animals (HONETi) | 584 | 598 | used | (11.4, 27) [townScene.ts:9836]; (12.6, 26.8) [townScene.ts:9837]; (10.2, 27.2) [townScene.ts:9838] — Two chickens and a rooster at the market (the pack has one chicken; the third wears a slightly larger scale an |
-| `pets/chicken_01.png` | texture | Animated Pets & Farm Animals (HONETi) | 191 | 512x512 | used | townScene.ts:9752 `kind === "chicken" ? chickenTexUrl` |
-| `pets/pig.fbx` | animal | Animated Pets & Farm Animals (HONETi) | 690 | 454 | used | (-20, 28) [townScene.ts:9849] |
-| `pets/pig_01.png` | texture | Animated Pets & Farm Animals (HONETi) | 159 | 512x512 | used | townScene.ts:9754 `: kind === "pig" ? pigTexUrl` |
-| `pets/sheep.fbx` | animal | Animated Pets & Farm Animals (HONETi) | 567 | 744 | used | (-15, 28.2) [townScene.ts:9848] |
-| `pets/sheep_05.png` | texture | Animated Pets & Farm Animals (HONETi) | 163 | 512x512 | used | townScene.ts:9755 `: kind === "sheep" ? sheepTexUrl` |
+| `pets/cat.fbx` | animal | Animated Pets & Farm Animals (HONETi) | 767 | 390 | used | (6.4, 17.8) [townScene.ts:9857] |
+| `pets/cat_05.png` | texture | Animated Pets & Farm Animals (HONETi) | 92 | 512x512 | used | townScene.ts:9754 `: kind === "cat" ? catTexUrl` |
+| `pets/chicken.fbx` | animal | Animated Pets & Farm Animals (HONETi) | 584 | 598 | used | (11.4, 27) [townScene.ts:9837]; (12.6, 26.8) [townScene.ts:9838]; (10.2, 27.2) [townScene.ts:9839] — Two chickens and a rooster at the market (the pack has one chicken; the third wears a slightly larger scale an |
+| `pets/chicken_01.png` | texture | Animated Pets & Farm Animals (HONETi) | 191 | 512x512 | used | townScene.ts:9753 `kind === "chicken" ? chickenTexUrl` |
+| `pets/pig.fbx` | animal | Animated Pets & Farm Animals (HONETi) | 690 | 454 | used | (-20, 28) [townScene.ts:9850] |
+| `pets/pig_01.png` | texture | Animated Pets & Farm Animals (HONETi) | 159 | 512x512 | used | townScene.ts:9755 `: kind === "pig" ? pigTexUrl` |
+| `pets/sheep.fbx` | animal | Animated Pets & Farm Animals (HONETi) | 567 | 744 | used | (-15, 28.2) [townScene.ts:9849] |
+| `pets/sheep_05.png` | texture | Animated Pets & Farm Animals (HONETi) | 163 | 512x512 | used | townScene.ts:9756 `: kind === "sheep" ? sheepTexUrl` |
 
 ## roman/
 
@@ -156,9 +156,9 @@ Search it with `bun tools/assets/search.ts <words>` (see `tools/assets/README.md
 | `roman/crate.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 42 | 468 | used | (6.9, 33.6) [townScene.ts:3534]; (-6.9, 33.6) [townScene.ts:3535] |
 | `roman/cypress.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 12 | 103 | used | (31.5, 33) [townScene.ts:3543]; (-27.2, 30.6) [townScene.ts:3544]; (34, -10.2) [townScene.ts:3545] (+3) |
 | `roman/flower_a.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 8 | 118 | used | townScene.ts:2944 `const PACK_FLOWERS = [flowerAUrl, flowerMedUrl, flowerGroupUrl];` |
-| `roman/flower_group.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 52 | 704 | used | townScene.ts:5619 `height: flowerUrl === flowerGroupUrl ? 0.5 : 0.62,` |
+| `roman/flower_group.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 52 | 704 | used | townScene.ts:5620 `height: flowerUrl === flowerGroupUrl ? 0.5 : 0.62,` |
 | `roman/flower_med.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 55 | 770 | used | townScene.ts:2944 `const PACK_FLOWERS = [flowerAUrl, flowerMedUrl, flowerGroupUrl];` |
-| `roman/gladius.glb` | weapon | Roman Empire, Stylized Low Poly: `SM_weapon_gladius` | 8 | 104 | used | townScene.ts:5935 `const gaiusArms = createGaiusArms({ frame: avatar, place: placeModel, gladiusUrl, shieldUr` — Gaius's arms: the gladius at his right hip, the scutum on his back (gaiusArms.ts). |
+| `roman/gladius.glb` | weapon | Roman Empire, Stylized Low Poly: `SM_weapon_gladius` | 8 | 104 | used | townScene.ts:5936 `const gaiusArms = createGaiusArms({ frame: avatar, place: placeModel, gladiusUrl, shieldUr` — Gaius's arms: the gladius at his right hip, the scutum on his back (gaiusArms.ts). |
 | `roman/grapes.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 22 | 220 | used | (-6.9, 33.6) [townScene.ts:3537] |
 | `roman/grass_patch.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 3 | 24 | used | (-9.6, -29.2) [townScene.ts:4082]; (-11.8, -34.6) [townScene.ts:4083]; (-19.8, -25.9) [townScene.ts:4084] |
 | `roman/house_garden.glb` | building | Roman Empire, Stylized Low Poly: `SM_house_roman_02` | 459 | 7506 | used | townScene.ts:3054 `garden: houseGardenUrl,` |
@@ -173,10 +173,10 @@ Search it with `bun tools/assets/search.ts <words>` (see `tools/assets/README.md
 | `roman/pottery2.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 17 | 236 | used | (-7, 36.6) [townScene.ts:3540] |
 | `roman/rock_pack.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 12 | 144 | used | (-10.9, -28.4) [townScene.ts:4080]; (-20.4, -31.8) [townScene.ts:4081] |
 | `roman/senate.glb` | building | Roman Empire, Stylized Low Poly: `SM_senate` | 1769 | 31096 | used | townScene.ts:3057 `mainchat: senateUrl,` |
-| `roman/shield_legionaire.glb` | weapon | Roman Empire, Stylized Low Poly: `SM_shield_legionaire` | 22 | 354 | used | townScene.ts:5935 `const gaiusArms = createGaiusArms({ frame: avatar, place: placeModel, gladiusUrl, shieldUr` — Gaius's arms: the gladius at his right hip, the scutum on his back (gaiusArms.ts). |
+| `roman/shield_legionaire.glb` | weapon | Roman Empire, Stylized Low Poly: `SM_shield_legionaire` | 22 | 354 | used | townScene.ts:5936 `const gaiusArms = createGaiusArms({ frame: avatar, place: placeModel, gladiusUrl, shieldUr` — Gaius's arms: the gladius at his right hip, the scutum on his back (gaiusArms.ts). |
 | `roman/statue_mars.glb` | statue | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 129 | 1368 | used | townScene.ts:3187 `void placeWorld(statueMarsUrl, { x: VILLA.statueMars[0], z: VILLA.statueMars[1], rotY: Mat` |
 | `roman/temple.glb` | building | Roman Empire, Stylized Low Poly: `SM_temple` | 900 | 15558 | used | (31, -27) [townScene.ts:3181] — --- Roman landmarks, market, and dressing ------------------------- The temple keeps its own hill to the north |
-| `roman/torch.fbx` | prop | Roman Empire, Stylized Low Poly: `SM_torch` | 28 | 80 | used | townScene.ts:9357 `void placeFbx(torchUrl, { x, z, rotY, height: 1.7 }).then((g) => {` |
+| `roman/torch.fbx` | prop | Roman Empire, Stylized Low Poly: `SM_torch` | 28 | 80 | used | townScene.ts:9358 `void placeFbx(torchUrl, { x, z, rotY, height: 1.7 }).then((g) => {` |
 | `roman/tree_a.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 39 | 408 | used | townScene.ts:2943 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];` |
 | `roman/tree_b.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 98 | 1226 | used | townScene.ts:2943 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];` |
 | `roman/tree_c.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 43 | 500 | used | townScene.ts:2943 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];` |

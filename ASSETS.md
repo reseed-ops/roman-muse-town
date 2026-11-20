@@ -34,7 +34,7 @@ Drop at: `client/src/assets/`
 
 | File | What it is | Source / terms |
 | --- | --- | --- |
-| `muse-avatar.vrm` | Aelia's body: AvatarSample_M (silver-blonde hair, plain white one-piece dress), VRM 1.0 sample model supplied by the owner | pixiv VRoid sample-model terms, verified by the owner (Nov 1, 2026): usable even commercially; the file may sit in a *free* public repo but may never be sold as a file or relabelled CC0. INCLUDED in the repo as of Nov 1, 2026, by the owner's decision (flag F5 resolved); embedded metadata verified clean (author: pixiv VRoid Project; redistribution allowed). |
+| `muse-avatar.vrm` | Aelia's body: `Courtesan.vrm`, Tuan's VRoid Studio 2.14 model (VRM 1.0, green gown, pale hair texture that the town tints strawberry-blonde, hazel-olive eyes; the neck mole is painted at load by `paintNeckMole`, the file has none). Replaced the pixiv AvatarSample_M on Nov 20, 2026 (Task 123); the filename is kept so the pack mapping and the code are unchanged. | Owner-created in VRoid Studio from pixiv's VRoid sample base: embedded metadata names pixiv VRoid Project as author, redistribution and modification allowed, no credit needed (checked in the file's VRMC_vrm meta, Nov 20, 2026). Tracked in the repo like its predecessor; Tuan decides whether it should stay public. |
 | `centurion.vrm` | Gaius's body: a centurion built by the owner in VRoid Studio | Owner-created. A receiving town needs its *own* player body; do not reuse the owner's. |
 
 A receiving town supplies two VRM 1.0 bodies of its own (see
