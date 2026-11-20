@@ -1277,8 +1277,10 @@ async function loadState(ctx: Ctx): Promise<z.infer<typeof stateResponse>> {
   // Mend the placeholder first letter an earlier build seeded ("[DATE]" and a
   // bracketed template note). Only that exact letter is touched; its read
   // state is kept, and anything the player or Muse wrote is left alone.
-  for (const row of await db.select().from(schema.letters)) {
-    const staleDate = row.dateLabel === "[DATE]";
+  // The mended values are also written into letterRows, which was read above,
+  // so the very response that mends the letter already carries the real date.
+  for (const row of letterRows) {
+    const staleDate = /\[[^\]]*\]|^\s*$/.test(row.dateLabel);
     const staleBody = row.title === FIRST_LETTER.title && row.body.includes(FIRST_LETTER_OLD_TEMPLATE_MARK);
     if (staleDate || staleBody) {
       await db
@@ -1288,6 +1290,8 @@ async function loadState(ctx: Ctx): Promise<z.infer<typeof stateResponse>> {
           ...(staleBody ? { body: FIRST_LETTER.body } : {}),
         })
         .where(eq(schema.letters.id, row.id));
+      if (staleDate) row.dateLabel = letterDateLabel(now);
+      if (staleBody) row.body = FIRST_LETTER.body;
     }
   }
   // The morning-after letter: it only appears the NEXT real day after

@@ -163,11 +163,18 @@ describe("no placeholder text reaches the player (Task 111)", () => {
       "INSERT INTO letters (date_label, title, body, read_at) VALUES ('[DATE]', 'First letter', 'My dear Gaius,\n\n[TEMPLATE: the original town''s first letter was personal.]\n\nYours,\nMuse', 12345)",
     );
     sqlite.run("INSERT INTO letters (date_label, title, body) VALUES ('June 1', 'A letter', 'Untouched.')");
-    await call("getState");
+    sqlite.run("INSERT INTO letters (date_label, title, body) VALUES ('[DATE] ', 'Odd label', 'Fine.')");
+    const first = await call("getState");
+    // The response that mends the letter must already show the real date.
+    const listed = first.letters.find((l: { title: string }) => l.title === "First letter")!;
+    expect(listed.date_label).toMatch(/^[A-Z][a-z]+ \d{1,2}, \d{4}$/);
+    expect(listed.preview).not.toMatch(PLACEHOLDER);
     const rows = sqlite.query("SELECT date_label, title, body, read_at FROM letters ORDER BY id").all() as { date_label: string; title: string; body: string; read_at: number | null }[];
     expect(rows[0]!.date_label).toMatch(/^[A-Z][a-z]+ \d{1,2}, \d{4}$/);
     expect(rows[0]!.body).not.toMatch(PLACEHOLDER);
     expect(rows[0]!.read_at).toBe(12345);
     expect(rows[1]).toMatchObject({ date_label: "June 1", body: "Untouched." });
+    expect(rows[2]!.date_label).toMatch(/^[A-Z][a-z]+ \d{1,2}, \d{4}$/);
+    expect(first.letters.map((l: { date_label: string }) => l.date_label).join("|")).not.toMatch(PLACEHOLDER);
   });
 });
