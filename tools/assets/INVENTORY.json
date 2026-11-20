@@ -13,7 +13,7 @@
    "roman/bush_roman.glb",
    "roman/platform_wooden.glb"
   ],
-  "bytes": 107840123
+  "bytes": 106284563
  },
  "assets": [
   {
@@ -1666,7 +1666,7 @@
    "pack": "pixiv VRoid sample model (AvatarSample_M)",
    "origin": "pack",
    "licence": "VRoid terms; tracked in git",
-   "bytes": 19703028,
+   "bytes": 18147468,
    "status": "used",
    "where": [
     "townScene.ts:5451 `loadModelScene(museAvatarUrl)`"
@@ -1689,8 +1689,8 @@
      "text": "loadModelScene(museAvatarUrl)"
     }
    ],
-   "triangles": 52712,
-   "materials": 15
+   "triangles": 44115,
+   "materials": 14
   },
   {
    "file": "pets/cat.fbx",

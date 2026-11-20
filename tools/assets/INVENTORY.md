@@ -5,7 +5,7 @@ Search it with `bun tools/assets/search.ts <words>` (see `tools/assets/README.md
 
 - 157 files in `client/src/assets/` plus 6 loom ground textures in `client/src/textures/` = 163.
 - 156 are imported by the town source; 7 are in the folder but unused: `greek/greek_dock.fbx`, `greek/greek_pool_1.fbx`, `greek_atlas.png`, `roman/apple.glb`, `roman/bowl.glb`, `roman/bush_roman.glb`, `roman/platform_wooden.glb`.
-- 107.8 MB in all. Triangles are read from the GLB/VRM accessors (counted once per node that instances a mesh) and, for FBX, from Blender (`fbx-stats.json`); animation clips and images have none.
+- 106.3 MB in all. Triangles are read from the GLB/VRM accessors (counted once per node that instances a mesh) and, for FBX, from Blender (`fbx-stats.json`); animation clips and images have none.
 
 ## client/src/assets/ (root)
 
@@ -13,7 +13,7 @@ Search it with `bun tools/assets/search.ts <words>` (see `tools/assets/README.md
 | --- | --- | --- | ---: | ---: | --- | --- |
 | `centurion.vrm` | character | owner-built in VRoid Studio (Gaius) | 16201 | 37737 | used | townScene.ts:5951 `loadModelScene(centurionUrl)` |
 | `greek_atlas.png` | texture | Greek Low Poly pack: `Textures/Greek_Combined.png` | 1 | 128x128 | unused | unused |
-| `muse-avatar.vrm` | character | pixiv VRoid sample model (AvatarSample_M) | 19241 | 52712 | used | townScene.ts:5451 `loadModelScene(museAvatarUrl)` |
+| `muse-avatar.vrm` | character | pixiv VRoid sample model (AvatarSample_M) | 17722 | 44115 | used | townScene.ts:5451 `loadModelScene(museAvatarUrl)` |
 | `phoenix.fbx` | animal | Low Poly Legend Phoenix (PULSAR BYTES) | 858 | 2241 | used | townScene.ts:10143 `void runtime.streaming.request(() => assetUrl(phoenixUrl).then((resolved) => fbxLoader2.lo` |
 | `phoenix_tex.png` | texture | Low Poly Legend Phoenix (PULSAR BYTES) | 0 | 32x32 | used | townScene.ts:10147 `const tex = loadAssetTexture(phoenixTexUrl);` |
 | `stars-fall-song.mp3` | audio | the project's own song for the summit scene | 157 |  | used | App.tsx:2767 `songAudioRef.current = new Audio(assetUrlSync(summitSongUrl));` |
