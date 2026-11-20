@@ -1,6 +1,7 @@
 import { createPlaceFootprints } from "./buildingFootprints";
 import { readArrangement } from "../../shared/homeDecor";
 import { buildHomeHouse, splashRingY } from "./homeHouse";
+import { animateIncendiary, buildIncendiary, INCENDIARY_SPOT, type HullTarget } from "./incendiary";
 import { installAtmosphere } from "./atmosphere";
 import { OVERLAY_LAYER, PostFx } from "./postFx";
 import { applySurfaceVariation, varyModel, type SurfaceKind } from "./surfaceVariation";
@@ -9,7 +10,7 @@ import { aimSeaPath, buildSeaCliff, CLIFF, clampToWorld, clearOfSea, cutAtCoast,
 import { QUIET_BOAT_MIN_OUT, QUIET_BOAT_START, beginDrift, boatSeats, driftStep, nextQuietLine, rowBack as rowBackState, type Drift, type QuietBoatState } from "../../shared/quietBoat";
 import { seaHeight, shipRide } from "./seaWaves";
 import { setSeaTime } from "./seaSurface";
-import { FISHING_BOAT_LENGTH, fishingOut, nextGap, pickFishingSpots, pickShip, planVoyage, SHIPS, shipsSail, voyagePose, watchingSea, type SeaWeather, type ShipKind, type Voyage } from "./seaShips";
+import { busyGap, busyKind, manningBallista, FISHING_BOAT_LENGTH, fishingOut, nextGap, pickFishingSpots, pickShip, planVoyage, SHIPS, shipsSail, voyagePose, watchingSea, type SeaWeather, type ShipKind, type Voyage } from "./seaShips";
 import { createTrueSky, skyDirection, SKY_REFRESH_S } from "./trueSky";
 import { BENCH_FOLIAGE } from "./benchFoliage";
 import { applyHeadRest, easeLean, sideOfHim } from "./seatLean";
@@ -282,7 +283,7 @@ import triremeSail2Url from "./assets/ships/trireme_sail2.png";
 import waterNormalUrl from "./assets/roman/water_normal.png";
 import { GROUND_TILE_METRES, groundAnisotropy, groundMaterial, loadGroundMaps, repeatedMaps, worldMetricUVs } from "./groundTextures";
 
-export type PickKind = "place" | "collectible" | "tree" | "muse" | "board" | "secret" | "landmark" | "questboard" | "letters" | "goals" | "market" | "bench" | "dock" | "inscription" | "summit" | "piscina" | "baths" | "cat" | "phoenix" | "sky" | "stone" | "rest" | "forage" | "history" | "home";
+export type PickKind = "place" | "collectible" | "tree" | "muse" | "board" | "secret" | "landmark" | "questboard" | "letters" | "goals" | "market" | "bench" | "dock" | "inscription" | "summit" | "piscina" | "baths" | "cat" | "phoenix" | "sky" | "incendiary" | "stone" | "rest" | "forage" | "history" | "home";
 
 /** The nearest walk-mode interactable, reported by the scene so the
  *  shell can show a small "A, …" prompt. Panels open only when the
@@ -476,6 +477,7 @@ export interface TownSceneHandle {
   /** Throw the carried stone in his facing direction, a composed
    *  overarm throw; the stone arcs, bounces, and rests where it
    *  fell (or splashes, and sometimes skips, on the water). */
+  looseIncendiary: () => void;
   throwStone: () => void;
   /** Gifts: is he carrying a smooth stone right now, and give it
    *  away (the stone leaves his hand for her keepsakes shelf). */
@@ -3830,14 +3832,17 @@ export function createTownScene(
     let voyage: Voyage | null = null;
     let waitUntil = -1;
     let wasWatching = false;
+    let target: HullTarget | null = null;
     let arriving = false;
     const update = (t: number, dt: number, view: { x: number; z: number }, w: SeaWeather, morning: boolean) => {
+      target = null;
       const watching = watchingSea(view.z);
       group.visible = watching;
       if (!watching) {
         wasWatching = false;
         return;
       }
+      const manning = manningBallista(view.x, view.z);
       if (!wasWatching) {
         wasWatching = true;
         // Arriving on the peninsula with the sea empty: a ship is soon in
@@ -3869,7 +3874,7 @@ export function createTownScene(
         if (p >= 1) {
           if (hull) hull.visible = false;
           voyage = null;
-          waitUntil = t + nextGap(w, Math.random());
+          waitUntil = t + (manning ? busyGap(Math.random) : nextGap(w, Math.random()));
           return;
         }
         if (!hull) return; // still loading; the pass goes on unseen
@@ -3880,6 +3885,13 @@ export function createTownScene(
         hull.position.set(pose.x, CLIFF.seaY - SHIPS[voyage.kind].sink + ride.dy, pose.z);
         hull.rotation.order = "YZX";
         hull.rotation.set(ride.roll, pose.heading, ride.pitch);
+        const spec = SHIPS[voyage.kind];
+        target = {
+          x: pose.x, y: hull.position.y, z: pose.z,
+          vx: voyage.dir * spec.speed,
+          vz: -spec.arc * Math.PI * Math.cos(Math.PI * p) / voyage.duration,
+          kind: voyage.kind, length: spec.length,
+        };
         hull.visible = true;
         return;
       }
@@ -3889,12 +3901,13 @@ export function createTownScene(
         waitUntil = t + 20;
         return;
       }
-      const kind = pickShip(Math.random());
-      voyage = planVoyage(kind, morning, Math.random, arriving ? 0.2 + Math.random() * 0.2 : 0);
+      const kind = manning ? busyKind(Math.random) : pickShip(Math.random());
+      const startAt = manning ? 0.3 + Math.random() * 0.15 : arriving ? 0.2 + Math.random() * 0.2 : 0;
+      voyage = planVoyage(kind, morning, Math.random, startAt);
       arriving = false;
       void load(kind);
     };
-    return { update };
+    return { update, currentTarget: () => target };
   })();
   /** Moon up (0..1) and its light share (phase), refreshed with the sky. */
   let moonUp = 0;
@@ -4987,6 +5000,15 @@ export function createTownScene(
   world.add(weddingScene.group);
   const homeHouse = buildHomeHouse(terrainHeight);
   world.add(homeHouse.group);
+  const machine = buildIncendiary();
+  machine.position.set(INCENDIARY_SPOT.x, terrainHeight(INCENDIARY_SPOT.x, INCENDIARY_SPOT.z), INCENDIARY_SPOT.z);
+  world.add(machine);
+  const fireEffects = new THREE.Group();
+  world.add(fireEffects);
+  const incendiary = animateIncendiary(machine, fireEffects, seaShips.currentTarget);
+  const fireTour = { loose: incendiary.loose, target: seaShips.currentTarget, state: incendiary.state };
+  const tourWindow = window as Window & { __incendiary?: typeof fireTour };
+  if (new URLSearchParams(window.location.search).get("tour") === "1") tourWindow.__incendiary = fireTour;
   // Task 86: the Idyllic Rome statues (Athena on her podium, Augustus on his, a putto in the domus
   // garden) and the market stalls' vases, amphorae, baskets, bread and hanging cloth. The stalls'
   // goods keep the market's hours (layOutGoods); the cloth is part of the canopy and stays up.
@@ -7710,6 +7732,10 @@ export function createTownScene(
     {
       const d = Math.hypot(walkPos.x, walkPos.z);
       if (d < 4.1) nearCandidates.push({ kind: "tree", id: "town-tree", d });
+    }
+    if (walking && !seatPlayer && !boatState) {
+      const d = Math.hypot(walkPos.x - machine.position.x, walkPos.z - machine.position.z);
+      if (d <= 2.2) nearCandidates.push({ kind: "incendiary", id: "loose", d });
     }
     // Throwable stones (Nov 1): a loose stone at his feet offers a
     // pickup; a carried stone offers a throw ONLY when nothing
@@ -13135,6 +13161,7 @@ export function createTownScene(
           (seaCliff.sunPath.material as THREE.MeshBasicMaterial).opacity = lowSun * 0.55 * (1 - Math.min(1, wCur.rain + wCur.snow));
           // Ships passing below the headland (Task 50): east before noon, west after.
           seaShips.update(t, dt, { x: vx, z: vz }, { nightMix, storm: weatherId === "storm", fog: weatherId === "fog" }, skyAzimDeg < 180);
+          incendiary.update(t, dt);
           // Their house: the door swings for whoever comes near, the lamp warms at night.
           questScene.update(dt, t);
           weddingScene.update(dt, t);
@@ -13366,6 +13393,7 @@ export function createTownScene(
       resize();
     },
     pickUpStone: () => pickUpStoneInternal(),
+    looseIncendiary: incendiary.loose,
     throwStone: () => throwStoneInternal(),
     hasCarriedStone: () => carriedRock != null,
     consumeCarriedStone: () => {
@@ -14120,6 +14148,8 @@ export function createTownScene(
     dispose: () => {
       if (disposed) return;
       disposed = true;
+      if (tourWindow.__incendiary === fireTour) delete tourWindow.__incendiary;
+      incendiary.dispose();
       for (const timer of timers) window.clearTimeout(timer);
       timers.clear();
       if (loadProgressHook === (opts.onLoadProgress ?? null)) loadProgressHook = null;

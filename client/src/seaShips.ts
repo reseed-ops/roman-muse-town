@@ -9,6 +9,7 @@
 // Pure planning here (which ship, which lane, where it is along it,
 // how long until the next), so the timing is testable off the scene;
 // townScene loads the models, places them and rocks them on the swell.
+import { INCENDIARY_SPOT } from "./incendiary";
 import { CLIFF } from "./seaCliff";
 
 export type ShipKind = "trade" | "trireme";
@@ -44,6 +45,18 @@ export const TRIREME_CHANCE = 0.25;
 
 export function pickShip(r: number): ShipKind {
   return r < TRIREME_CHANCE ? "trireme" : "trade";
+}
+
+export function manningBallista(x: number, z: number): boolean {
+  return Math.hypot(x - INCENDIARY_SPOT.x, z - INCENDIARY_SPOT.z) <= 22;
+}
+
+export function busyGap(rand: () => number): number {
+  return 12 + rand() * 8;
+}
+
+export function busyKind(rand: () => number): ShipKind {
+  return pickShip(rand());
 }
 
 /**

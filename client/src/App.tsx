@@ -5795,6 +5795,8 @@ export function App() {
         return "Take up the feather";
       case "sky":
         return "Stop watching";
+      case "incendiary":
+        return "Loose a fire pot";
       case "stone":
         return target.id === "pickup" ? "Pick up stone" : "Throw the stone";
       case "forage":
@@ -6053,6 +6055,10 @@ export function App() {
         // throws, so an X press facing a stone prompt does not
         // spend itself on the toy.
         if (target.kind === "stone") return;
+        if (target.kind === "incendiary") {
+          sceneRef.current?.looseIncendiary();
+          return;
+        }
         openInteractable(target.kind, target.id);
         return;
       }
