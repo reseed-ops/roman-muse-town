@@ -4,7 +4,7 @@ import { buildHomeHouse, splashRingY } from "./homeHouse";
 import { installAtmosphere } from "./atmosphere";
 import { OVERLAY_LAYER, PostFx } from "./postFx";
 import { applySurfaceVariation, varyModel, type SurfaceKind } from "./surfaceVariation";
-import { applyLakeRipple, seaFogColor, warmStone, ENV_DAY, HEMI_DAY, SEA_NIGHT_BLEND, SUN_DAY, TONE_EXPOSURE } from "./skyLook";
+import { applyLakeRipple, seaFogColor, warmStone, ENV_DAY, HEMI_DAY, HEMI_NIGHT_DROP, SEA_NIGHT_BLEND, SUN_DAY, TONE_EXPOSURE } from "./skyLook";
 import { aimSeaPath, buildSeaCliff, CLIFF, clampToWorld, clearOfSea, cutAtCoast, HILL_BASE_Y, HORIZON_HILLS, horizonHillGeometry, OCEAN_DAY, OCEAN_NIGHT, walkable as onCliffPath } from "./seaCliff";
 import { QUIET_BOAT_MIN_OUT, QUIET_BOAT_START, beginDrift, boatSeats, driftStep, nextQuietLine, rowBack as rowBackState, type Drift, type QuietBoatState } from "../../shared/quietBoat";
 import { seaHeight, shipRide } from "./seaWaves";
@@ -5508,7 +5508,9 @@ export function createTownScene(
   );
   museStar.position.set(0.46, 1.8, 0.1);
   museInner.add(museStar);
-  let museStarShow = 1;
+  // Task 126: the gold star no longer floats over her in ordinary play; it
+  // shows only (violet) while a Muse Visit is open.
+  let museStarShow = 0;
   // Muse's umbrella: navy with a gold tip, matching her star.
   {
     const museUmbrella = makeUmbrella(0x2b3a67);
@@ -11621,7 +11623,7 @@ export function createTownScene(
         scene.fog.color.lerp(tmpColorB.setHex(0xc78a4a), 0.38);
       }
     }
-    hemi.intensity = (HEMI_DAY - nightMix * 0.55) * wCur.hemiMul + lightningFlash * 0.7;
+    hemi.intensity = (HEMI_DAY - nightMix * HEMI_NIGHT_DROP) * wCur.hemiMul + lightningFlash * 0.7;
     sun.intensity = (SUN_DAY - nightMix * 1.55) * wCur.sunMul;
     // Task 100: under the sea. Blue fog that closes in, dimmed light, the sky put away
     // (the surface above him is the sky), all eased over a half metre either side of the surface.
@@ -12891,7 +12893,7 @@ export function createTownScene(
         // 0.46 m to her side at head height, which in the hug's profile
         // is exactly across her face. It shrinks away as the glide
         // starts and is back once the hold ends.
-        museStarShow += ((pairState ? 0 : 1) - museStarShow) * Math.min(1, dt * 6);
+        museStarShow += ((pairState || !visitActive ? 0 : 1) - museStarShow) * Math.min(1, dt * 6);
         museStar.scale.setScalar(Math.max(0.001, museStarShow));
         museStar.visible = museStarShow > 0.02;
         const sinceWave = t - museWaveStart;

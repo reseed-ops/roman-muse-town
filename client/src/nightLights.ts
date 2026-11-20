@@ -13,7 +13,9 @@
 import * as THREE from "three";
 
 export const MOON_LIGHT_POS = new THREE.Vector3(-50, 62, -97);
-export const MOON_LIGHT_MAX = 0.5;
+export const MOON_LIGHT_MAX = 1.6; // Task 126: was 0.5
+/** Task 126: the share of the moon light that stays whatever the moon does (new, or below the hills), the glow of a clear night sky. */
+export const MOON_GLOW_FLOOR = 0.5;
 export const FACE_FILL_MAX = 2.6;
 export const NIGHT_SKIN_WARM = 0xe8b48c;
 
@@ -77,7 +79,7 @@ export function createNightLights(scene: THREE.Object3D): NightLights {
       let moonFactor = 1;
       if (f.moon) {
         const up = Math.min(1, Math.max(0, (f.moon.elev + 2) / 6));
-        moonFactor = up * (0.3 + 0.7 * Math.min(1, Math.max(0, f.moon.illuminated)));
+        moonFactor = Math.max(MOON_GLOW_FLOOR, up * (0.3 + 0.7 * Math.min(1, Math.max(0, f.moon.illuminated))));
         // Raised to at least 15 degrees, so a low moon still reaches the ground.
         const el = (Math.max(15, f.moon.elev) * Math.PI) / 180;
         const az = (f.moon.azim * Math.PI) / 180;

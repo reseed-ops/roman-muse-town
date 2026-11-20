@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import * as THREE from "three";
-import { createNightLights, FACE_FILL_MAX, MOON_LIGHT_MAX, nightSkinColour } from "./nightLights";
+import { createNightLights, FACE_FILL_MAX, MOON_GLOW_FLOOR, MOON_LIGHT_MAX, nightSkinColour } from "./nightLights";
 
 const frame = (over: Partial<Parameters<ReturnType<typeof createNightLights>["update"]>[0]> = {}) => ({
   nightMix: 1,
@@ -68,7 +68,8 @@ test("the moonlight follows the true moon: from its bearing, by its phase, gone 
   expect(lights.moonLight.intensity).toBeCloseTo(MOON_LIGHT_MAX);
   expect(lights.moonLight.position.x).toBeGreaterThan(50); // east
   lights.update(frame({ moon: { elev: 40, azim: 90, illuminated: 0 } }));
-  expect(lights.moonLight.intensity).toBeCloseTo(MOON_LIGHT_MAX * 0.3);
+  expect(lights.moonLight.intensity).toBeCloseTo(MOON_LIGHT_MAX * MOON_GLOW_FLOOR);
+  // Task 126: a new or set moon still leaves the night's glow, never darkness.
   lights.update(frame({ moon: { elev: -10, azim: 90, illuminated: 1 } }));
-  expect(lights.moonLight.intensity).toBe(0);
+  expect(lights.moonLight.intensity).toBeCloseTo(MOON_LIGHT_MAX * MOON_GLOW_FLOOR);
 });

@@ -8,6 +8,8 @@ import { OCEAN_NIGHT } from "./seaCliff";
 export const TONE_EXPOSURE = 0.92;
 /** Day levels of the light rig (the night and weather terms are applied by the scene). Were 0.95 / 1.9 / 0.35. */
 export const HEMI_DAY = 0.74;
+/** Night takes this much off the day hemisphere light (Task 126: was 0.55, so night ambient was 0.19; now 0.54). */
+export const HEMI_NIGHT_DROP = 0.2;
 export const SUN_DAY = 1.7;
 export const ENV_DAY = 0.26;
 
