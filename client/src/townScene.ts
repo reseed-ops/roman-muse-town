@@ -49,7 +49,7 @@ import { endSlide, newSlide, slideSpeed, sliding, startSlide, wasMovingRecently 
 import { buildSwimWorld } from "./swimScene";
 import { nearestStairPoint, SEA_Y, shoreStairY } from "./shoreStair";
 import { confine as swimConfine, moonOpacity, museStairStep, depthWish, edgeEase, shouldSwim, shouldWalk, surfaceY, SWIM, SWIM_EXIT, companionPace, swimCompanionSpot, swimFloor, swimMove, swimPoseAngles, swimWish, underwaterColor, underwaterFog, underwaterLightScale, underwaterMix } from "./swim";
-import { FOLLOW_CAM, followCamSustain, followCamYawStep, type FollowCamGate } from "./followCam";
+import { FOLLOW_CAM, followCamSustain, followCamYawStep, inputRefNeedsResync, type FollowCamGate } from "./followCam";
 import {
   driverStep,
   followCommand,
@@ -6431,6 +6431,7 @@ export function createTownScene(
   // the last drag activity, the shell's camera hold, and the last
   // position the follow block measured (for genuine displacement).
   let followSustain = 0;
+  let stickRefAng: number | null = null;
   let lastDragT = -1000;
   let camHold = false;
   let camPrevX = PLAYER.spawn[0];
@@ -7116,6 +7117,19 @@ export function createTownScene(
     // what lets the follow camera ease around him (in the camera
     // block below) without bending a held direction into a curve.
     if (!isMoving || walkDrag) inputYawRef = camYawSmooth;
+    // Task 130: a new direction of push made without letting go is read
+    // against the view the player sees now (the follow camera has been
+    // easing behind him), so up stays up-screen. A steady hold keeps its
+    // frozen reference, so the easing camera still cannot spin him.
+    if (!isMoving || mag <= 0.12) {
+      stickRefAng = null;
+    } else {
+      const stickAng = Math.atan2(ix, iy);
+      if (inputRefNeedsResync(stickRefAng, stickAng)) {
+        inputYawRef = camYawSmooth;
+        stickRefAng = stickAng;
+      }
+    }
     if (!isMoving) wishX = wishZ = 0;
     if (swimming) stepSwim(dt, ix, iy, mag);
     if (isMoving && !swimming) {

@@ -12,15 +12,18 @@
  *
  * The chosen feel, in numbers (the owner can ask for tighter or
  * looser by these):
- *   deadZoneRad      0.14 rad (about 8 deg): misalignment at or
+ * Task 130 (Nov 21, 2026) tightened it so the camera keeps behind him
+ * (it used to lag: 1.1 s, 0.8/s, 17 deg/s, 8 deg dead zone):
+ *   deadZoneRad      0.08 rad (about 4.5 deg): misalignment at or
  *                    below this never recenters.
- *   sustainSec       1.1 s of continuous genuine walking before the
+ *   sustainSec       0.3 s of continuous genuine walking before the
  *                    recenter engages at all.
- *   ratePerSec       0.8: exponential approach rate toward his
+ *   ratePerSec       1.6: exponential approach rate toward his
  *                    heading once engaged.
- *   maxRateRadPerSec 0.30 rad/s (about 17 deg/s): hard cap on the
+ *   maxRateRadPerSec 1.0 rad/s (about 57 deg/s): hard cap on the
  *                    automatic rotation speed, however far behind
- *                    the camera has fallen.
+ *                    the camera has fallen (a turn-around takes
+ *                    about 3 s, an ease, never a snap).
  *   dragGraceSec     0.75 s of quiet after a drag ends before the
  *                    recenter may resume.
  *   minWalkSpeed     1.2 m/s of real displacement for a frame to
@@ -30,10 +33,10 @@
  */
 
 export const FOLLOW_CAM = {
-  deadZoneRad: 0.14,
-  sustainSec: 1.1,
-  ratePerSec: 0.8,
-  maxRateRadPerSec: 0.3,
+  deadZoneRad: 0.08,
+  sustainSec: 0.3,
+  ratePerSec: 1.6,
+  maxRateRadPerSec: 1.0,
   dragGraceSec: 0.75,
   minWalkSpeed: 1.2,
 } as const;
@@ -105,4 +108,20 @@ export function followCamYawStep(
   const step = diff * (1 - Math.exp(-dt * FOLLOW_CAM.ratePerSec));
   const cap = FOLLOW_CAM.maxRateRadPerSec * dt;
   return currentYaw + Math.max(-cap, Math.min(cap, step));
+}
+
+/** Stick direction change (rad) that re-reads the push against the live view. */
+export const INPUT_REF_RESYNC_RAD = 0.35;
+
+/**
+ * Task 130: while he walks, a held stick is read against a frozen input
+ * reference yaw (so the easing camera cannot bend a steady hold into a spin).
+ * But a NEW direction of push, made without letting go, must be read against
+ * the view the player sees now, or "up" would mean up on a stale screen.
+ * Returns true when the stick angle (atan2(x, y), up = 0) has moved far
+ * enough from the angle the reference was last synced at.
+ */
+export function inputRefNeedsResync(anchorAng: number | null, stickAng: number): boolean {
+  if (anchorAng === null) return true;
+  return Math.abs(wrapAngle(stickAng - anchorAng)) > INPUT_REF_RESYNC_RAD;
 }

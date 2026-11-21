@@ -6119,6 +6119,7 @@ export function App() {
         holdSwim("kb", 0, true);
         if (!e.repeat) sceneRef.current?.jump();
       }
+      if ((e.key === "r" || e.key === "R") && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) sceneRef.current?.recenterCamera();
       if (e.key === "c" || e.key === "C") holdSwim("kb", 1, true);
       if ((e.key === "c" || e.key === "C") && !e.repeat) sceneRef.current?.slide();
     };
@@ -10430,7 +10431,19 @@ export function App() {
             data-mt-controls="1"
             aria-label="Xbox controller action buttons"
           >
-            <span />
+            {walking ? (
+              <button
+                type="button"
+                aria-label="Recenter the camera behind you (also R on the keyboard, double-tap the view)"
+                data-mt-recenter="1"
+                className="pointer-events-auto flex h-9 w-9 items-center justify-center self-end justify-self-end rounded-full border border-white/40 bg-[#1b1b1b]/55 text-base font-black text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_3px_8px_rgba(0,0,0,0.35)] backdrop-blur transition active:scale-90 active:bg-white/30"
+                onClick={() => sceneRef.current?.recenterCamera()}
+              >
+                <span aria-hidden="true">⟲</span>
+              </button>
+            ) : (
+              <span />
+            )}
             <button
               type="button"
               aria-label={
