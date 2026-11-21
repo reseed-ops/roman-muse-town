@@ -1,3 +1,4 @@
+import { WEST_STAIR } from "./colosseumSetting";
 import { distanceToPaths, samplePath } from "./pathGeometry";
 import { villaGround } from "./layout";
 import { shoulderRise } from "./shoulder";
@@ -958,10 +959,23 @@ export interface WalkSurface {
   /** Absolute Y of the surface's top. */
   top: number;
   label: string;
+  radial?: boolean;
 }
 
 export const WALK_SURFACES: WalkSurface[] = (() => {
   const out: WalkSurface[] = [];
+  // Measured between the stair cheeks, the stone treads run 0.186 m
+  // and rise 0.12 m before the placed model's vertical squash.
+  for (let i = 0; i < 18; i++) {
+    const localZ = 1.57 - (i + 0.5) * 0.186;
+    out.push({
+      cx: WEST_STAIR.x + Math.sin(WEST_STAIR.rotY) * localZ,
+      cz: WEST_STAIR.z + Math.cos(WEST_STAIR.rotY) * localZ,
+      rotY: WEST_STAIR.rotY, halfW: 1.69, halfD: 0.093001,
+      top: terrainHeight(WEST_STAIR.x, WEST_STAIR.z) + (0.28 + i * 0.12) * WEST_STAIR.squashY,
+      label: `Colosseum west stair ${i + 1}`,
+    });
+  }
   // House platforms (dimensions mirror the house build in the scene:
   // platformW = buildingWidth + 1.3; lower slab (platformW+0.4) x
   // (platformW*0.92) top +0.14; upper slab platformW x
@@ -973,6 +987,15 @@ export const WALK_SURFACES: WalkSurface[] = (() => {
     const baseY = terrainHeight(hx, hz);
     const rotY = place.facing;
     const bw = place.buildingWidth ?? 7.6;
+    if (place.id === "stars") {
+      // Concentric steps and floor of pavilion_stars, above its 0.30 m placement.
+      const scale = bw / 7.6;
+      for (const [radius, rise] of [[3.8, 0.24], [3.42, 0.40], [3.08, 0.57], [2.8, 0.74]] as const) {
+        out.push({ cx: hx - 0.3 * Math.sin(rotY), cz: hz - 0.3 * Math.cos(rotY), rotY,
+          halfW: radius * scale, halfD: radius * scale, radial: true,
+          top: baseY + 0.30 + rise * scale, label: "stars pavilion tread" });
+      }
+    }
     const platformW = bw + 1.3;
     out.push({
       cx: hx, cz: hz, rotY,
@@ -1050,6 +1073,7 @@ export function groundHeightAt(x: number, z: number): number {
     const sin = Math.sin(s.rotY);
     const lx = dx * cos - dz * sin;
     const lz = dx * sin + dz * cos;
+    if (s.radial && dx * dx + dz * dz > s.halfW * s.halfW) continue;
     if (Math.abs(lx) <= s.halfW && Math.abs(lz) <= s.halfD && s.top > h) h = s.top;
   }
   return h;

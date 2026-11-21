@@ -1,3 +1,4 @@
+import { circ, obb } from "./collision";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { CLIFF } from "./seaCliff";
@@ -200,4 +201,11 @@ export function animateIncendiary(machine: THREE.Group, effects: THREE.Group, ta
     smoke.material.dispose();
     splashMaterial.dispose();
   } };
+}
+
+export function incendiaryFootprints() {
+  const { x, z } = INCENDIARY_SPOT;
+  const k = BOLD_SCALE;
+  // Two 2.2 m runners reach 0.52 m from centre. The adjacent iron foot flares to 0.21 m. Both at the bolder scale.
+  return [obb(x, z, 0.52 * k, 1.1 * k, 0), circ(x + 1.43 * k, z - 0.6 * k, 0.21 * k, 0.10)];
 }

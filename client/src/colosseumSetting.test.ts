@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { createPlaceFootprints } from "./buildingFootprints";
+import { movementFootprints } from "./buildingFootprints";
 import { circ, obb, obbLocal, type Obstacle } from "./collision";
 import {
   COLOSSEUM_BUDGET, COLOSSEUM_PLACEMENT, COLOSSEUM_RING_RADIUS, COLOSSEUM_ROOF_RATIO, COLOSSEUM_SOURCE, ROAD_END,
@@ -168,7 +168,7 @@ describe("the Colosseum and its setting (Task 85)", () => {
 
   test("no street, building, market booth or bath wall is touched, and the stair leaves the seek spot reachable", () => {
     const others: [string, Obstacle][] = [
-      ...createPlaceFootprints(PLACES).entries(),
+      ...PLACES.flatMap(p => movementFootprints([p]).map(shape => [p.id, shape] as [string, Obstacle])),
       ["Temple", obb(31, -27, 5.27, 12.86, -0.6)],
       ["Bath water", obb(BATHS.position[0], 23.4, 3.4, 1.5, 0)],
       ...MARKET_BOOTHS.map(([x, z, rot], i) => [`Market ${i}`, obb(x, z, 1.73, 0.86, rot)] as [string, Obstacle]),

@@ -5,8 +5,9 @@
 // baskets and sheaves by the doors, winter lanterns burning on posts. The
 // town tree's seasonal dress, the weather's snow and the critters' seasons
 // were already in place; this adds the rest. Everything is low-poly and
-// built here (no asset), has no collider, and is hidden, not rebuilt, when
+// built here. Only visible winter lantern posts block walkers. Each group hides when
 // its season is not the season.
+import { circ, whileVisible, type Obstacle } from "./collision";
 import * as THREE from "three";
 import type { Season } from "../../shared/seasons";
 
@@ -80,6 +81,7 @@ function haloTexture(): THREE.CanvasTexture {
 }
 
 export interface SeasonalTown {
+  lanternFootprints: Obstacle[];
   group: THREE.Group;
   setSeason: (season: Season) => void;
   season: () => Season | null;
@@ -223,6 +225,7 @@ export function createSeasonalTown(opts: { world: THREE.Object3D; terrainHeight:
 
   return {
     group,
+    lanternFootprints: WINTER_LANTERNS.map(([x, z]) => whileVisible(winter, circ(x, z, 0.06, 0.10))),
     season: () => current,
     setSeason(season) {
       current = season;

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { CLIFF, onLand } from "./seaCliff";
-import { FISHING_BOAT_LENGTH, FISHING_SPOTS, fishingOut, nextGap, pickFishingSpots, pickLivery, pickSailDye, pickShip, planVoyage, SAIL_DYES, SHIPS, shipsSail, TRIREME_CHANCE, voyagePose, watchingSea } from "./seaShips";
+import { busyGap, busyKind, manningBallista, FISHING_BOAT_LENGTH, FISHING_SPOTS, fishingOut, nextGap, pickFishingSpots, pickLivery, pickSailDye, pickShip, planVoyage, SAIL_DYES, SHIPS, shipsSail, TRIREME_CHANCE, voyagePose, watchingSea } from "./seaShips";
 
 // The ships on the sea (Task 50), pinned off the scene.
 
@@ -131,4 +131,25 @@ test("one or two fishing boats, at different spots, by day only", () => {
   expect(fishingOut({ nightMix: 0, storm: false, fog: false })).toBe(true);
   expect(fishingOut({ nightMix: 0.9, storm: false, fog: false })).toBe(false);
   expect(fishingOut({ nightMix: 0, storm: true, fog: false })).toBe(false);
+});
+
+test("manning includes the 22 m boundary around the ballista", () => {
+  expect(manningBallista(4.6, 115.5)).toBe(true);
+  expect(manningBallista(4.6, 137.5)).toBe(true);
+  expect(manningBallista(4.6, 137.51)).toBe(false);
+  expect(manningBallista(20.6, 131.5)).toBe(false);
+});
+
+test("busy gaps span 12 to 20 seconds", () => {
+  const gaps = Array.from({ length: 1001 }, (_, i) => busyGap(fixed(i / 1000)));
+  expect(Math.min(...gaps)).toBe(12);
+  expect(Math.max(...gaps)).toBe(20);
+});
+
+test("both busy ships sail, with about three quarters trade ships", () => {
+  const counts = { trade: 0, trireme: 0 };
+  for (let i = 0; i < 1000; i++) counts[busyKind(fixed((i + 0.5) / 1000))]++;
+  expect(counts.trireme).toBeGreaterThan(0);
+  expect(counts.trade / 1000).toBeGreaterThan(0.70);
+  expect(counts.trade / 1000).toBeLessThan(0.80);
 });

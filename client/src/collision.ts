@@ -216,3 +216,8 @@ export function stepEntersBox(obstacles: readonly Obstacle[], ax: number, az: nu
   }
   return false;
 }
+
+/** Hidden fixtures use the same ghost flag that all movement and camera queries skip. */
+export function whileVisible(owner: { visible: boolean }, shape: Obstacle): Obstacle {
+  return { ...shape, get ghost() { return !owner.visible; } };
+}

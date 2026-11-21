@@ -1,7 +1,9 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { createPlaceFootprints } from "./buildingFootprints";
+import { incendiaryFootprints } from "./incendiary";
+import { vineyardFootprints } from "./vineyard";
+import { movementFootprints, createPlaceReferences } from "./buildingFootprints";
 import { buildHomeHouse } from "./homeHouse";
 import { circ, obb, obbLocal, type Obstacle } from "./collision";
 import { samplePath } from "./pathGeometry";
@@ -38,12 +40,13 @@ function buildObstacles(): Obstacle[] {
     arrayLiteral("ROMAN_COLUMN_SPOTS"),
     arrayLiteral("treeSpots"),
     arrayLiteral("pineSpots"),
-    slice("  const placeFootprints = createPlaceFootprints(PLACES);", "  /** The lake: nobody wades."),
-    "return obstacles;",
+    slice("  const placeReferences = createPlaceReferences(PLACES);", "  /** The lake: nobody wades."),
+    "return [...obstacles, ...FOREST_TREES.map(t => circ(t.x, t.z, 0.34))];",
   ].join("\n");
   const js = new Bun.Transpiler({ loader: "ts" }).transformSync(`export function run() {\n${body}\n}`);
   const names = [
-    "circ", "obb", "createPlaceFootprints", "treePlacement", "pavilionColliders",
+    "movementFootprints", "vineyardFootprints", "incendiaryFootprints", "fixtureShapes",
+    "circ", "obb", "createPlaceReferences", "treePlacement", "pavilionColliders",
     "piscinaColliders", "bathColliders", "homeHouse", "settingFootprints", "dressingFootprints", "athenaColliders", ...Object.keys(town),
   ];
   const { BATHS, LAKE_PAVILION, PISCINA } = town;
@@ -54,7 +57,8 @@ function buildObstacles(): Obstacle[] {
   const bathColliders: unknown[] = [];
   new Function("bathColliders", "BATHS", bathSource)(bathColliders, BATHS);
   const values = [
-    circ, obb, createPlaceFootprints, { bindCollider: <T>(position: T) => position },
+    movementFootprints, vineyardFootprints, incendiaryFootprints, [],
+    circ, obb, createPlaceReferences, { bindCollider: <T>(position: T) => position },
     pavilionColliders, piscinaColliders, bathColliders, buildHomeHouse(town.terrainHeight), settingFootprints, dressingFootprints, athenaColliders, ...Object.values(town),
   ];
   const module = new Function(...names, `${js.replace(/export\s+function\s+run/, "return function run")}`)(...values);
@@ -201,11 +205,22 @@ test("the wolf's way round the north of the estate stays on open ground", () => 
 });
 
 test("no pocket of open ground is sealed off from the town", () => {
+  // All six gatehouse shapes enclose one intentionally inaccessible room.
+  // Exclude only cells inside its four walls, so a pocket outside still fails.
+  const insideGatehouse = (id: number) => {
+    if (id !== region[at(43) * SIZE + at(12)]) return false;
+    for (let k = 0; k < region.length; k++) {
+      if (region[k] !== id) continue;
+      const x = MIN + (k % SIZE) * STEP, z = MIN + Math.floor(k / SIZE) * STEP;
+      if (x < 11 || x > 13.7 || Math.abs(z - 43) > 2) return false;
+    }
+    return true;
+  };
   const cell = STEP * STEP;
   const pockets = sizes
     .map((size, id) => ({ id, area: size * cell }))
     // Under 2 square units is a sliver between trees, not a place.
-    .filter(({ id, area }) => id !== town_ && area >= 2)
+    .filter(({ id, area }) => id !== town_ && area >= 2 && !insideGatehouse(id))
     .map(({ id, area }) => {
       const k = region.indexOf(id);
       return `${area.toFixed(1)} at ${(MIN + (k % SIZE) * STEP).toFixed(1)},${(MIN + Math.floor(k / SIZE) * STEP).toFixed(1)}`;

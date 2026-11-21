@@ -1,7 +1,8 @@
-import { createPlaceFootprints } from "./buildingFootprints";
+import { movementFootprints, createPlaceReferences } from "./buildingFootprints";
+import { vineyardFootprints, vineyardStakes } from "./vineyard";
 import { readArrangement } from "../../shared/homeDecor";
 import { buildHomeHouse, splashRingY } from "./homeHouse";
-import { animateIncendiary, buildIncendiary, INCENDIARY_SPOT, type HullTarget } from "./incendiary";
+import { incendiaryFootprints, animateIncendiary, buildIncendiary, INCENDIARY_SPOT, type HullTarget } from "./incendiary";
 import { installAtmosphere } from "./atmosphere";
 import { OVERLAY_LAYER, PostFx } from "./postFx";
 import { applySurfaceVariation, varyModel, type SurfaceKind } from "./surfaceVariation";
@@ -97,6 +98,7 @@ import { rainIntensity, rainSwell, SHELTER_HINT_LINE, SHELTERED_LINES, shelterAm
 import { pickRomanPool, ROMAN_PLACE_LINES, romanDate, romanHour, romanPools } from "./romanDay";
 import {
   circ,
+  whileVisible,
   obb,
   obbLocal,
   obbWorld,
@@ -2668,6 +2670,20 @@ export function createTownScene(
   // Permanent fixtures, built once and shown when the saved purse says
   // they're bought. The fountain stands in the forecourt, on the axis;
   // its water disc turns slowly whenever it's restored.
+  // Ground-band centres relative to the canopy-centred wrapper. Olive ratios
+  // use placed width, conifer and cypress ratios use placed height.
+  function placeTrunk(url: string, opts: Parameters<typeof placeWorld>[1]) {
+    const { x, z, rotY = 0 } = opts;
+    const size = opts.width ?? opts.height!;
+    const u = size * (url === oliveUrl ? 0.01513 : url === coniferUrl ? 0.00408 : -0.00209);
+    const v = size * (url === oliveUrl ? 0.07659 : url === coniferUrl ? 0.00158 : 0);
+    void placeWorld(url, opts).then(group => {
+      if (!group || disposed) return;
+      const centre = obbWorld(obb(x, z, 0, 0, rotY), u, v);
+      obstacles.push(treePlacement.bindCollider(circ(centre.x, centre.z, 0.32), x, z));
+    });
+  }
+  const fixtureShapes: Obstacle[] = [];
   const upgradeGroups: Record<string, THREE.Group> = {};
   let fountainWater: THREE.Mesh | null = null;
   let metaSweat: THREE.Mesh | null = null;
@@ -2684,6 +2700,8 @@ export function createTownScene(
       });
       lamp.position.set(lx, terrainHeight(lx, lz), lz);
       lanternGroup.add(lamp);
+      const foot = i % 2 === 0 ? circ(lx, lz, 0.30, 0.14) : { ...obb(lx, lz, 0.22, 0.22, Math.PI/4), pad: 0.14 };
+      fixtureShapes.push(whileVisible(lanternGroup, foot));
     }
     lanternGroup.visible = false;
     world.add(lanternGroup);
@@ -2694,6 +2712,7 @@ export function createTownScene(
       const boxMesh = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.42, 0.6), mat(0x8a8d90, { rough: 0.9 }));
       boxMesh.position.set(px, terrainHeight(px, pz) + 0.21, pz);
       planterGroup.add(boxMesh);
+      fixtureShapes.push(whileVisible(planterGroup, obb(px, pz, 0.65, 0.30, 0)));
       for (let f = 0; f < 5; f++) {
         const flower = new THREE.Mesh(
           new THREE.SphereGeometry(0.13, 8, 6),
@@ -2730,8 +2749,9 @@ export function createTownScene(
     fountainGroup.visible = false;
     world.add(fountainGroup);
     upgradeGroups.fountain = fountainGroup;
+    fixtureShapes.push(whileVisible(fountainGroup, circ(fx, fz, 1.85, 0.12)));
   }
-  let fountainColliderAdded = false;
+
 
   // --- Garden growth (the Hortus beds, over real days) -----------------
   // Sprouts rise in the three beds by stage: a green whisper, a proper
@@ -3311,16 +3331,12 @@ export function createTownScene(
     // follow the ground.
     const leaves: THREE.BufferGeometry[] = [];
     const stakes: THREE.BufferGeometry[] = [];
-    for (const side of [-1, 1]) {
-      for (let row = 0; row < 6; row++) {
-        const x = side * (11.5 + row * 1.5);
-        for (let z = 31.8; z < 38.6; z += 1.4) {
-          const y = terrainHeight(x, z);
-          leaves.push(block(0.5, 0.72, 1.3, x, y + 0.62, z));
-          vineSpots.push([x, y, z]);
-          stakes.push(block(0.08, 1.1, 0.08, x, y + 0.5, z - 0.7));
-        }
-      }
+    for (const { x, z: stakeZ } of vineyardStakes()) {
+      const z = stakeZ + 0.7;
+      const y = terrainHeight(x, z);
+      leaves.push(block(0.5, 0.72, 1.3, x, y + 0.62, z));
+      vineSpots.push([x, y, z]);
+      stakes.push(block(0.08, 1.1, 0.08, x, y + 0.5, stakeZ));
     }
     merged(leaves, vineLeafMat);
     merged(stakes, mat(0x6e4a2f, { rough: 0.9 }), false);
@@ -3498,10 +3514,11 @@ export function createTownScene(
   // market day the country people's baskets along the avenue as well.
   const marketGoods: THREE.Object3D[] = [];
   let marketOpen = true;
-  const layOutGoods = (placing: Promise<THREE.Group | null>) => {
+  const layOutGoods = (placing: Promise<THREE.Group | null>, foot?: Obstacle) => {
     void placing.then((goods) => {
-      if (!goods) return;
+      if (!goods || disposed) return;
       goods.visible = marketOpen;
+      if (foot) obstacles.push(whileVisible(goods, foot));
       marketGoods.push(goods);
     });
   };
@@ -3528,18 +3545,23 @@ export function createTownScene(
       basket.position.set(bx!, y + 0.15, bz!);
       const heap = new THREE.Mesh(fruitGeo, fruit[i % 3]!);
       heap.position.set(bx!, y + 0.34, bz!);
+      fixtureShapes.push(whileVisible(countryBaskets, circ(bx!, bz!, 0.22, 0.10)));
       countryBaskets.add(basket, heap);
     });
   }
   countryBaskets.visible = false;
   world.add(countryBaskets);
-  layOutGoods(placeWorld(crateUrl, { x: 6.9, z: 33.6, rotY: 0.4, width: 0.62 }));
-  layOutGoods(placeWorld(crateUrl, { x: -6.9, z: 33.6, rotY: -0.5, width: 0.62 }));
+  // Crate GLB depth/width is 0.602/0.62. Round wares use their placed diameter.
+  for (const [url, x, z, rotY, width] of [
+    [crateUrl, 6.9, 33.6, 0.4, 0.62], [crateUrl, -6.9, 33.6, -0.5, 0.62],
+    [barrelUrl, 6.9, 35.8, 0, 0.72], [pottery1Url, -6.9, 35.6, 0, 0.55],
+    [pottery2Url, -7, 36.6, 0, 0.48],
+  ] as const) {
+    const foot = url === crateUrl ? obb(x, z, width / 2, width * 0.486, rotY) : circ(x, z, width / 2);
+    layOutGoods(placeWorld(url, { x, z, rotY, width }), foot);
+  }
   layOutGoods(placeWorld(breadUrl, { x: 6.9, z: 33.6, y: 0.6, rotY: 0.7, width: 0.5 }));
   layOutGoods(placeWorld(grapesUrl, { x: -6.9, z: 33.6, y: 0.6, rotY: 0.2, width: 0.42 }));
-  layOutGoods(placeWorld(barrelUrl, { x: 6.9, z: 35.8, width: 0.72 }));
-  layOutGoods(placeWorld(pottery1Url, { x: -6.9, z: 35.6, width: 0.55 }));
-  layOutGoods(placeWorld(pottery2Url, { x: -7, z: 36.6, width: 0.48 }));
   // Mediterranean trees at the estate's corners, all on the terrain
   // (placeWorld) and clear of the buildings.
   void placeWorld(cypressUrl, { x: 31.5, z: 33, height: 4.6 });
@@ -3704,7 +3726,11 @@ export function createTownScene(
   {
     const benchFoliageUrl = { cypress: cypressUrl, olive: oliveUrl, conifer: coniferUrl, bushA: bushAUrl, bushB: bushBUrl, bushD: bushDUrl, bushE: bushEUrl };
     for (const f of BENCH_FOLIAGE) {
-      void placeWorld(benchFoliageUrl[f.kind], { x: f.x, z: f.z, rotY: f.rotY, [f.size]: f.value });
+      if (f.kind === "olive" || f.kind === "cypress" || f.kind === "conifer") {
+        placeTrunk(benchFoliageUrl[f.kind], { x: f.x, z: f.z, rotY: f.rotY, [f.size]: f.value });
+      } else {
+        void placeWorld(benchFoliageUrl[f.kind], { x: f.x, z: f.z, rotY: f.rotY, [f.size]: f.value });
+      }
     }
   }
   // A few wind-bent shrubs and rocks along the trail, so it reads as a walk.
@@ -3944,6 +3970,7 @@ export function createTownScene(
     pole.position.set(-13.45, DOCK_TOP + 0.75, LAKE_CZ + 0.45);
     pole.castShadow = true;
     dockGroup.add(pole);
+    fixtureShapes.push(circ(pole.position.x, pole.position.z, 0.06, 0.10));
     const dockLamp = buildLanternCage(0.62, { groundOffset: 1.58, ignitionOrder: 0.58 });
     dockLamp.position.set(-13.45, DOCK_TOP + 1.58, LAKE_CZ + 0.45);
     dockGroup.add(dockLamp);
@@ -4077,11 +4104,11 @@ export function createTownScene(
   // Rome-native shore company: an olive and an umbrella pine (the
   // pack's conifer) on the east bank, cypresses standing off, rocks
   // and grass at the water's edge.
-  void placeWorld(oliveUrl, { x: -8.6, z: -26.4, width: 3.2 });
+  placeTrunk(oliveUrl, { x: -8.6, z: -26.4, width: 3.2 });
   // The temple road (Nov 6, 2026): an olive over the bend and a stone
   // bench on the outer side, facing the road, so the procession route
   // has a place to stop. The bench joins BENCHES below.
-  void placeWorld(oliveUrl, { x: 19.6, z: -25.4, width: 3.2 });
+  placeTrunk(oliveUrl, { x: 19.6, z: -25.4, width: 3.2 });
   void placeWorld(benchStoneUrl, { x: 17.3, z: -23.6, rotY: Math.PI / 2, width: 1.9 }).then((g) => {
     if (disposed) return null;
     if (g) {
@@ -4089,7 +4116,7 @@ export function createTownScene(
       benchGroups.set("bench-temple", g);
     }
   });
-  void placeWorld(coniferUrl, { x: -10.6, z: -35.9, height: 5.6 });
+  placeTrunk(coniferUrl, { x: -10.6, z: -35.9, height: 5.6 });
   void placeWorld(rockPackUrl, { x: -10.9, z: -28.4, rotY: 0.7, width: 0.8 });
   void placeWorld(rockPackUrl, { x: -20.4, z: -31.8, rotY: 2.1, width: 0.95 });
   void placeWorld(grassPatchUrl, { x: -9.6, z: -29.2, rotY: 0.4, width: 1.2 });
@@ -4411,6 +4438,13 @@ export function createTownScene(
   {
     const [sx, sz] = SECRET.position;
     const secretGroup = new THREE.Group();
+    const terrace = obb(sx, sz, 0, 0, Math.atan2(-sx, -sz));
+    const slab = (u: number, v: number, hw: number, hd: number, yaw = 0) => {
+      const { x, z } = obbWorld(terrace, u, v);
+      return obb(x, z, hw, hd, terrace.rot + yaw);
+    };
+    secretGroup.position.set(sx, terrainHeight(sx, sz), sz);
+    secretGroup.rotation.y = terrace.rot;
     const floor = new THREE.Mesh(new THREE.CircleGeometry(2.7, 22), mat(0xb8ab8a, { rough: 0.95 }));
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = 0.04;
@@ -4418,14 +4452,23 @@ export function createTownScene(
     secretGroup.add(floor);
     // Task 96: the arch's own near-white face glowed chalk under the lanterns at dusk; travertine instead.
     void placeModel(archRoundUrl, secretGroup, { x: 0, z: 2.1, width: 2.7 }).then((g) => {
-      if (g && !disposed) warmStone(g);
+      if (!g || disposed) return;
+      warmStone(g);
+      // Ground vertices terminate at local x ≈ ±0.91 inside and ±1.35 outside.
+      const { x, z } = g.position;
+      obstacles.push(slab(x - 1.13, z, 0.22, 0.192), slab(x + 1.135, z, 0.215, 0.192));
     });
     void placeModel(benchWoodenUrl, secretGroup, { x: 0, z: -0.7, rotY: 0, width: 1.7 }).then((g) => {
       if (disposed) return null;
       if (g) benchGroups.set("bench-terrace", g);
     });
-    void placeModel(cypressUrl, secretGroup, { x: -2.7, z: -1.3, height: 3.8 });
-    void placeModel(cypressUrl, secretGroup, { x: 2.7, z: -1.5, rotY: 1.1, height: 3.4 });
+    for (const opts of [{ x: -2.7, z: -1.3, height: 3.8 }, { x: 2.7, z: -1.5, rotY: 1.1, height: 3.4 }]) {
+      void placeModel(cypressUrl, secretGroup, opts).then(g => {
+        if (!g || disposed) return;
+        const { x, z } = obbWorld(terrace, opts.x, opts.z);
+        obstacles.push(circ(x, z, 0.32));
+      });
+    }
     void placeModel(bushBUrl, secretGroup, { x: -2.3, z: 1.5, height: 0.95 });
     void placeModel(bushDUrl, secretGroup, { x: 2.4, z: 1.3, rotY: 1.2, height: 0.9 });
     // The bond tablet: a small inscribed stone at the terrace's edge.
@@ -4443,6 +4486,7 @@ export function createTownScene(
       tablet.position.set(-1.55, 0, -1.5);
       tablet.rotation.y = 0.5;
       secretGroup.add(tablet);
+      fixtureShapes.push(slab(tablet.position.x, tablet.position.z, 0.425, 0.07, tablet.rotation.y));
     }
     // The carved initials: a small worn stone at the terrace's edge,
     // letters cut in a heartless Roman hand, "A · G" (her initial
@@ -4461,18 +4505,19 @@ export function createTownScene(
       stone.visible = false;
       terraceInitials = stone;
       secretGroup.add(stone);
+      fixtureShapes.push(whileVisible(stone, slab(stone.position.x, stone.position.z, 0.31, 0.05, stone.rotation.y)));
     }
     for (const lx of [-1.7, 1.7]) {
       const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.06, 1.6, 8), mat(0x2e2a26, { rough: 0.55, metal: 0.3 }));
       pole.position.set(lx, 0.8, 0.7);
       pole.castShadow = true;
       secretGroup.add(pole);
+      const { x, z } = obbWorld(terrace, pole.position.x, pole.position.z);
+      fixtureShapes.push(circ(x, z, 0.06, 0.10));
       const lampHead = buildLanternCage(0.68, { groundOffset: 1.68, ignitionOrder: 0.74 });
       lampHead.position.set(lx, 1.68, 0.7);
       secretGroup.add(lampHead);
     }
-    secretGroup.position.set(sx, terrainHeight(sx, sz), sz);
-    secretGroup.rotation.y = Math.atan2(-sx, -sz);
     world.add(secretGroup);
   }
 
@@ -4866,6 +4911,7 @@ export function createTownScene(
     for (const lx of [-4.6, 4.6]) {
       const post = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 1.6, 6), mat(0x5a4632, { rough: 1 }));
       post.position.set(lx, 0.8, 1.8);
+      fixtureShapes.push(circ(g.position.x + lx, g.position.z + 1.8, 0.05, 0.10));
       g.add(post);
       const lampHead = buildLanternCage(0.56, { groundOffset: 1.72, ignitionOrder: 0.46 });
       lampHead.position.set(lx, 1.72, 1.8);
@@ -5941,6 +5987,7 @@ export function createTownScene(
   }
   const seasonalTown = createSeasonalTown({ world, terrainHeight });
   seasonalTown.setSeason(currentTreeSeason);
+  fixtureShapes.push(...seasonalTown.lanternFootprints);
   let nextOliveCheckAt = 0;
 
   // --- Walk-around avatar: YOU (the player) ---
@@ -6097,9 +6144,8 @@ export function createTownScene(
   // still fires standing outside the wall, exactly as it did when
   // the trigger was a centre radius the walls now exceed.
 
-  // Per-place building footprints, keyed by place id so the prompt
-  // system can measure surface distance to the same shapes that
-  // block movement. A house's building sits at local (0, -0.3) in a
+  // The place prompt keeps one envelope per building. Movement fits the
+  // individual walls and feet at the gatehouse and the open pavilion. A house's building sits at local (0, -0.3) in a
   // group turned to its place.facing (exactly
   // the house group's own rotation), so the OBB shares that frame.
   //
@@ -6115,7 +6161,7 @@ export function createTownScene(
   // placed width (groundModel scales by bbox width), ox/oz = the
   // ground footprint's centre offset from the bbox centre, same
   // fraction (several ground plans sit off-centre under their roofs).
-  const placeFootprints = createPlaceFootprints(PLACES);
+  const placeReferences = createPlaceReferences(PLACES);
   // The temple: a long rectangular temple (11 wide × ~25.8 deep as
   // placed, rotY -0.6 to match placeWorld), an OBB, not the old
   // r 4.6 circle that covered barely a third of it. Sized to its
@@ -6178,7 +6224,7 @@ export function createTownScene(
     circ(VILLA.statueMars[0], VILLA.statueMars[1], 0.5), // statue of Mars (its pedestal, measured)
     circ(LUCRETIA.position[0], LUCRETIA.position[1], LUCRETIA.plinthHalf + 0.12), // Lucretia's plinth (Task 54)
     ...athenaColliders(), // Athena's temple (Task 88): the podium's rail, the seat step, the cella's walls, the columns, her and the lamps; the doorway and the two flights stay open
-    ...ATHENA_TEMPLE.olives.map(([x, z]) => circ(x, z, 0.3)), // its olive trees (trunks)
+    ...ATHENA_TEMPLE.olives.map(([x, z]) => treePlacement.bindCollider(circ(x, z, 0.3), x, z)), // its olive trees (trunks)
     ...YOUNG_OLIVES.map(([x, z]) => treePlacement.bindCollider(circ(x, z, 0.3), x, z)), // the young olives by their house and the cliff (Task 60)
     obb(VILLA.gate[0] + 2.55, VILLA.gate[1], 1.25, 1.8, 0), // triumphal arch, east pillar (the opening between the pillars stays walkable)
     obb(VILLA.gate[0] - 2.55, VILLA.gate[1], 1.25, 1.8, 0), // triumphal arch, west pillar
@@ -6187,7 +6233,7 @@ export function createTownScene(
     ...VILLA_WALLS.map(([x, z, hx, hz]) => obb(x, z, hx, hz, 0)), // terrace walls and the stair's balustrades
     ...AVENUE_CYPRESSES.map(([x, z]) => circ(x, z, 0.3, 0.15)),
     circ(COLOSSEUM.position[0], COLOSSEUM.position[1], 8), // the Colosseum, solid ring, blocked whole (placed width 16 → r 8)
-    ...settingFootprints().map((f) => ("r" in f ? circ(f.x, f.z, f.r) : obb(f.x, f.z, f.hx, f.hz, f.rot))), // the Colosseum's setting (Task 85): stair, podests, houses, vexilla
+    ...settingFootprints().map((f) => ("r" in f ? circ(f.x, f.z, f.r) : obb(f.x, f.z, f.hx, f.hz, f.rot))), // the Colosseum's podests, houses and vexilla
     ...dressingFootprints().map((f) => circ(f.x, f.z, f.r)), // Augustus's podest in the forum (Task 86); Athena stands on her podium, the stalls' goods inside the booths' own boxes
     boardObb, // project board
     questObb, // quest board
@@ -6210,14 +6256,13 @@ export function createTownScene(
     treePlacement.bindCollider(circ(-40, 10, 0.3), -40, 10), // the tall conifer on the west lawn, likewise uncollided until now
     circ(VILLA.ionicColumn[0], VILLA.ionicColumn[1], 0.38, 0.18), // ionic column with the pointy hat (its base, measured)
     ...ROMAN_COLUMN_SPOTS.map(([x, z]) => circ(x, z, 0.35, 0.18)),
-    ...placeFootprints.values(),
+    ...movementFootprints(PLACES, placeReferences),
+    ...vineyardFootprints(),
+    ...incendiaryFootprints(),
+    ...fixtureShapes,
     ...lampPositions.map(([x, z]) => circ(x, z, 0.3, 0.14)),
     ...packTreeColliders,
-    // The forest's stand: every scattered trunk (the stand is data
-    // in town.ts, so colliders and visuals cannot drift apart),
-    // plus its landmarks, shrine stone, hollow oak, the spring
-    // (nobody wades), and Lupa's den rocks.
-    ...FOREST_TREES.map((t) => circ(t.x, t.z, 0.34)),
+    // Forest landmarks. The scattered trunks join the list when the pack loads.
     circ(FOREST_SPOTS.shrine[0], FOREST_SPOTS.shrine[1], 0.62),
     circ(FOREST_SPOTS.hollow[0], FOREST_SPOTS.hollow[1], 0.85),
     circ(FOREST_SPOTS.spring[0], FOREST_SPOTS.spring[1], 1.55),
@@ -7643,7 +7688,7 @@ export function createTownScene(
       // basilica furniture the visitor is standing right at (the
       // obelisk, the desk) ahead of the basilica itself in the
       // nearest-prompt contest, as the old centre distances did.
-      const fp = placeFootprints.get(place.id);
+      const fp = placeReferences.get(place.id);
       if (!fp) continue;
       const dSurf = footprintSurfaceDistance(fp, walkPos.x, walkPos.z);
       if (dSurf < 2.6) nearCandidates.push({ kind: "place", id: place.id, d: dSurf + 1.2 });
@@ -9330,7 +9375,7 @@ export function createTownScene(
   }
   function placeFbx(
     url: string,
-    opts: { x: number; z: number; rotY?: number; width?: number; height?: number; greek?: boolean; y?: number },
+    opts: { x: number; z: number; rotY?: number; width?: number; height?: number; greek?: boolean; footprint?: "box" | "round"; y?: number },
   ): Promise<THREE.Group | null> {
     return runtime.streaming.request(
       () => loadFbxSource(url, (source) => repairModelMaterials(source, { label: "fbx prop" })),
@@ -9346,6 +9391,14 @@ export function createTownScene(
         else if (opts.height && size.y > 0) s = opts.height / size.y;
         g.scale.setScalar(s);
         g.rotation.y = opts.rotY ?? 0;
+        if (opts.footprint) {
+          // Some FBX origins are metres from their mesh centres. Use the same
+          // scale and yaw as the visual, including for the height-sized pots.
+          const centre = box.getCenter(new THREE.Vector3());
+          const frame = obb(opts.x, opts.z, size.x * s / 2, size.z * s / 2, g.rotation.y);
+          const { x, z } = obbWorld(frame, centre.x * s, centre.z * s);
+          obstacles.push(opts.footprint === "round" ? circ(x, z, frame.halfW) : { ...frame, x, z });
+        }
         g.position.set(opts.x, (opts.y ?? terrainHeight(opts.x, opts.z)) - box.min.y * s, opts.z);
         g.traverse((o) => {
           if (o instanceof THREE.Mesh) {
@@ -9364,8 +9417,7 @@ export function createTownScene(
   // basilica, temple, and baths doorways, its flame a small emissive
   // cone on the town lamp circuit (the existing lamp treatment: lit
   // after dark, dark by day). Two primitive tripod braziers flank the
-  // basilica steps on the peristyle side. Pure dressing: no colliders,
-  // no prompts, no new lights.
+  // basilica steps on the peristyle side.
   const flameMat = new THREE.MeshStandardMaterial({
     color: 0xff9a3c,
     roughness: 0.6,
@@ -9418,6 +9470,7 @@ export function createTownScene(
     const bz = -30.4;
     brazier.position.set(bx, terrainHeight(bx, bz), bz);
     world.add(brazier);
+    obstacles.push(circ(bx, bz, 0.35, 0.10)); // splayed leg tip plus its 0.03 m radius
     addFlame(bx, terrainHeight(bx, bz) + 1.12, bz, 1.5);
   }
 
@@ -9477,11 +9530,17 @@ export function createTownScene(
           world.add(node);
           return node;
         };
-        let willowsOk = 0;
+
         WILLOW_SPOTS.forEach(([wx, wz, ws], i) => {
           const node = placeTree("WillowTree", wx, wz, 5.6 * ws, i * 1.7 + 0.4);
           if (!node) return;
-          willowsOk++;
+          const fallback = willowGroups[i];
+          if (fallback) {
+            world.remove(fallback);
+            for (let j = willowStrands.length - 1; j >= 0; j--) {
+              if (willowStrands[j]!.mesh.parent === fallback) willowStrands.splice(j, 1);
+            }
+          }
           // Willows trail most of all: their clones wear the
           // willow wind kind, long and languid.
           node.traverse((o) => {
@@ -9493,23 +9552,22 @@ export function createTownScene(
             o.material = Array.isArray(o.material) ? wound : wound[0]!;
           });
         });
-        if (willowsOk >= 3) {
-          // The pack willows stand, retire the hand-built ones and
-          // their swaying strands.
-          for (const g of willowGroups) world.remove(g);
-          willowStrands.length = 0;
-        }
-        placeTree("CypressTree", -15.6, 26.3, 5.2, 0.3);
-        placeTree("CypressTree", -22.8, 26.8, 4.6, 2.1);
-        placeTree("AppleTree", -16.6, 20.8, 2.6, 1.2);
-        placeTree("AppleTree", -25.2, 21, 3.0, 2.6);
-        placeTree("CherryBlossom", -27.8, -13.8, 4.4, 0.9);
+        const gardenTree = (...args: Parameters<typeof placeTree>) => {
+          if (placeTree(...args)) obstacles.push(circ(args[1], args[2], 0.32));
+        };
+        gardenTree("CypressTree", -15.6, 26.3, 5.2, 0.3);
+        gardenTree("CypressTree", -22.8, 26.8, 4.6, 2.1);
+        gardenTree("AppleTree", -16.6, 20.8, 2.6, 1.2);
+        gardenTree("AppleTree", -25.2, 21, 3.0, 2.6);
+        gardenTree("CherryBlossom", -27.8, -13.8, 4.4, 0.9);
         // The forest stand (data in town.ts, the same list the
-        // colliders were built from): pines, oaks, birches, poplars
+        // colliders use): pines, oaks, birches, poplars
         // over the west lobe, the understorey, and the hollow
         // ancient oak at its named spot. All clones share the pack's
         // geometry and atlas materials, no new textures loaded.
-        for (const t of FOREST_TREES) placeTree(t.kind, t.x, t.z, t.h, t.rot);
+        for (const t of FOREST_TREES) {
+          if (placeTree(t.kind, t.x, t.z, t.h, t.rot)) obstacles.push(circ(t.x, t.z, 0.34));
+        }
         for (const b of FOREST_BUSHES) placeTree(b.kind, b.x, b.z, b.h, b.rot);
         placeTree("OakTree", FOREST_SPOTS.hollow[0], FOREST_SPOTS.hollow[1], 9.5, 1.1);
         // The Deep Glade's fallen log is a seat: place it by LENGTH
@@ -9570,18 +9628,18 @@ export function createTownScene(
   // outside), planters in the garden beds, a wood pile for the
   // caldarium's appetite, and two measured benches that join
   // BENCHES as true sittables once their seat height is known.
-  void placeFbx(greekTableUrl, { x: -27.0, z: 9.6, rotY: 0.6, width: 1.7, greek: true });
-  void placeFbx(greekTableUrl, { x: 24.8, z: -1.6, rotY: -0.4, width: 1.7, greek: true });
-  void placeFbx(greekBowlUrl, { x: 6.9, z: 38.4, width: 0.42, greek: true });
-  void placeFbx(greekDecoBowlUrl, { x: 6.9, z: 39.6, width: 0.5, greek: true });
-  void placeFbx(greekPot1Url, { x: -25, z: 23, height: 0.55, greek: true });
-  void placeFbx(greekPot2Url, { x: -20.8, z: 24.0, height: 0.7, greek: true });
-  void placeFbx(greekBucketUrl, { x: 21.3, z: 26.9, height: 0.42, greek: true });
-  void placeFbx(greekGardenUrl, { x: 9.8, z: 25.2, width: 2.3, greek: true });
-  void placeFbx(greekGardenUrl, { x: 13.4, z: 25.2, width: 2.3, greek: true });
-  void placeFbx(greekRackUrl, { x: -22.6, z: 25.4, rotY: 0.5, width: 1.8, greek: true });
-  void placeFbx(greekWoodPileUrl, { x: 27.9, z: 27.6, rotY: 0.8, width: 1.6, greek: true });
-  void placeFbx(greekWoodPileUrl, { x: -24.6, z: 20.2, rotY: 2.2, width: 1.4, greek: true });
+  void placeFbx(greekTableUrl, { x: -27.0, z: 9.6, rotY: 0.6, width: 1.7, greek: true, footprint: "box" });
+  void placeFbx(greekTableUrl, { x: 24.8, z: -1.6, rotY: -0.4, width: 1.7, greek: true, footprint: "box" });
+  void placeFbx(greekBowlUrl, { x: 6.9, z: 38.4, width: 0.42, greek: true, footprint: "round" });
+  void placeFbx(greekDecoBowlUrl, { x: 6.9, z: 39.6, width: 0.5, greek: true, footprint: "round" });
+  void placeFbx(greekPot1Url, { x: -25, z: 23, height: 0.55, greek: true, footprint: "round" });
+  void placeFbx(greekPot2Url, { x: -20.8, z: 24.0, height: 0.7, greek: true, footprint: "round" });
+  void placeFbx(greekBucketUrl, { x: 21.3, z: 26.9, height: 0.42, greek: true, footprint: "round" });
+  void placeFbx(greekGardenUrl, { x: 9.8, z: 25.2, width: 2.3, greek: true, footprint: "box" });
+  void placeFbx(greekGardenUrl, { x: 13.4, z: 25.2, width: 2.3, greek: true, footprint: "box" });
+  void placeFbx(greekRackUrl, { x: -22.6, z: 25.4, rotY: 0.5, width: 1.8, greek: true, footprint: "box" });
+  void placeFbx(greekWoodPileUrl, { x: 27.9, z: 27.6, rotY: 0.8, width: 1.6, greek: true, footprint: "box" });
+  void placeFbx(greekWoodPileUrl, { x: -24.6, z: 20.2, rotY: 2.2, width: 1.4, greek: true, footprint: "box" });
   {
     // Measured at load: a Greek bench is a flat-topped seat, so its
     // seat surface IS its bounding-box top (less a finger's width).
@@ -13682,10 +13740,6 @@ export function createTownScene(
         group.visible = ids.includes(id);
       }
       plazaMat.color.setHex(ids.includes("cobbles") ? 0xb59a7a : 0xffffff);
-      if (ids.includes("fountain") && !fountainColliderAdded) {
-        fountainColliderAdded = true;
-        obstacles.push(circ(VILLA.metaSudans[0], VILLA.metaSudans[1], 1.85, 0.12));
-      }
     },
     setGardenStage: (stage: number) => {
       gardenSprouts.visible = stage > 0;

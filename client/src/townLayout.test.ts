@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { createPlaceFootprints } from "./buildingFootprints";
+import { movementFootprints } from "./buildingFootprints";
 import { circ, obb, obbLocal, type Obstacle } from "./collision";
 import { distanceToPaths, samplePath } from "./pathGeometry";
 import { BATHS, COLOSSEUM, FOREST_TRAILS, GARDEN_BEDS, MARKET_BOOTHS, PISCINA, PLACES, STREETS, VILLA_WALLS, streetDistance, streetWidth } from "./town";
 
-const buildings = [...createPlaceFootprints(PLACES).entries()];
+const buildings = [...PLACES.flatMap(p => movementFootprints([p]).map(shape => [p.id, shape] as [string, Obstacle]))];
 const constraints: [string, Obstacle][] = [
   ...buildings,
   ["Temple", obb(31, -27, 5.27, 12.86, -0.6)],

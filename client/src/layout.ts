@@ -89,6 +89,7 @@ export function villaGround(natural: number, x: number, z: number): number {
  *  gaps, and steering alone can't plan for them. */
 const WALK_NODES: Record<string, [number, number]> = {
   gate: [1.8, 40],
+  gateWalk: [1.2, 38.4],
   stalls: [1.8, 35.2],
   avenue: [1.8, 31.8],
   ponds: [1.8, 25.9],
@@ -106,6 +107,7 @@ const WALK_NODES: Record<string, [number, number]> = {
   gardenNorthWest: [-2.8, -8],
   storiesWalk: [-12.6, -12.4],
   lakePath: [-9, -23.4],
+  bankOlive: [-9.35, -26.2],
   lakeBank: [-9, -30.2],
   bathsRoad: [2.4, 29.6],
   bathsGate: [24, 29.6],
@@ -120,11 +122,11 @@ const WALK_NODES: Record<string, [number, number]> = {
 };
 
 const WALK_EDGES: [string, string][] = [
-  ["gate", "stalls"], ["stalls", "avenue"], ["avenue", "bathsRoad"], ["bathsRoad", "ponds"], ["ponds", "courtEast"], ["ponds", "courtWest"],
+  ["gate", "gateWalk"], ["gateWalk", "stalls"], ["stalls", "avenue"], ["avenue", "bathsRoad"], ["bathsRoad", "ponds"], ["ponds", "courtEast"], ["ponds", "courtWest"],
   ["courtEast", "gardenEast"], ["courtWest", "gardenWest"], ["gardenEast", "roomEast"], ["gardenWest", "roomWest"],
   ["roomEast", "doorEast"], ["roomWest", "doorWest"], ["roomEast", "gardenNorthEast"], ["roomWest", "gardenNorthWest"],
   ["gardenNorthEast", "stairFootEast"], ["gardenNorthWest", "stairFootWest"], ["stairFootEast", "stairFoot"], ["stairFootWest", "stairFoot"],
-  ["stairFoot", "stairTop"], ["stairFootWest", "storiesWalk"], ["storiesWalk", "lakePath"], ["lakePath", "lakeBank"],
+  ["stairFoot", "stairTop"], ["stairFootWest", "storiesWalk"], ["storiesWalk", "lakePath"], ["lakePath", "bankOlive"], ["bankOlive", "lakeBank"],
   ["bathsRoad", "bathsGate"], ["bathsGate", "bathsInside"], ["doorWest", "storiesAlley"], ["storiesAlley", "storiesWalk"],
   ["ponds", "lawnWest"], ["lawnWest", "homeYard"], ["homeYard", "homeInside"],
 ];

@@ -90,8 +90,10 @@ const house = (id: string, asset: SettingAsset, r: number, deg: number, width: n
   return { id, asset, x, z, rotY: facingCentre(deg), width, footprint };
 };
 
+export const WEST_STAIR = { id: "stair", asset: "stairs", x: sx, z: sz, rotY: facingCentre(STAIR_BEARING) + Math.PI, width: 4.0, squashY: 0.55 } as const;
+
 export const SETTING_PIECES: SettingPiece[] = [
-  { id: "stair", asset: "stairs", x: sx, z: sz, rotY: facingCentre(STAIR_BEARING) + Math.PI, width: 4.0, squashY: 0.55, footprint: { hx: 2.0, hz: 1.7 } },
+  WEST_STAIR,
   { id: "podest-left", asset: "podest", x: lx, z: lz, rotY: facingOut(STAIR_BEARING), height: 0.9, footprint: { r: 0.5 } },
   { id: "podest-right", asset: "podest", x: rx, z: rz, rotY: facingOut(STAIR_BEARING), height: 0.9, footprint: { r: 0.5 } },
   { id: "statue-left", asset: "statue_soldier", x: lx, z: lz, rotY: facingOut(STAIR_BEARING), height: 2.2, lift: 0.9 },
