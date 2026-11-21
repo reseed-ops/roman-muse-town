@@ -10641,7 +10641,7 @@ export function App() {
                 : "absolute inset-x-0 bottom-[118px] z-30 flex justify-center px-4"
           }
         >
-          <div className="pointer-events-auto w-full max-w-md rounded-3xl bg-[#232c4a]/97 p-3.5 shadow-2xl backdrop-blur">
+          <div className="pointer-events-auto max-h-44 w-full max-w-md overflow-y-auto rounded-3xl bg-[#232c4a]/97 p-3.5 shadow-2xl backdrop-blur" data-mt-offer-card="1">
             <p className="text-sm leading-relaxed font-semibold text-white">
               <span aria-hidden="true" className="text-[#ffd34e]">✦ Aelia: </span>
               {followOffer.text}

@@ -23,3 +23,16 @@ describe("Task 114: the stay-note bubble fits the viewport", () => {
     expect(bubbleTargetPx(1280, 720, true, 54, 212)).toBeGreaterThanOrEqual(132);
   });
 });
+
+describe("Task 129: no message bubble ever fills the screen", () => {
+  test("the sprite bubble is capped in height and width at any viewport, even absurd ones", () => {
+    for (const [cw, ch] of [[320, 568], [390, 844], [844, 390], [1280, 720], [2560, 1440], [3000, 600], [600, 3000]] as [number, number][]) {
+      for (const land of [true, false]) {
+        const h = bubbleTargetPx(cw, ch, land, land ? 54 : 100, land ? 212 : 252);
+        expect(h).toBeLessThanOrEqual(200);
+        expect(h).toBeLessThanOrEqual(ch * 0.36 + 0.001);
+        expect(h * 2).toBeLessThanOrEqual(cw * 0.9 + 0.001);
+      }
+    }
+  });
+});

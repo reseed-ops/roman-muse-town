@@ -55,7 +55,7 @@ describe("post-processing pipeline and bloom (Task 110)", () => {
     const src = readFileSync(join(import.meta.dir, "townScene.ts"), "utf8");
     expect(src).toContain("gl_FragColor = vec4(mix(horizonColor, topColor, k), maskAlpha);");
     expect(src).toContain("skyUniforms.maskAlpha.value = usePost ? 0 : 1;");
-    expect(src).toContain("sprite.layers.set(OVERLAY_LAYER)");
+    expect(src).toContain("sprite.layers.set(BUBBLE_ANCHOR_LAYER)"); // Task 129: the bubble plate left the 3D scene for a DOM canvas
     expect(OVERLAY_LAYER).toBe(1);
   });
 

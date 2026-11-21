@@ -11,80 +11,80 @@ Search it with `bun tools/assets/search.ts <words>` (see `tools/assets/README.md
 
 | File | Kind | Pack / made from | KB | Tris | Status | Where it is placed |
 | --- | --- | --- | ---: | ---: | --- | --- |
-| `centurion.vrm` | character | owner-built in VRoid Studio (Gaius) | 16201 | 37737 | used | townScene.ts:6022 `loadModelScene(centurionUrl)` |
+| `centurion.vrm` | character | owner-built in VRoid Studio (Gaius) | 16201 | 37737 | used | townScene.ts:6031 `loadModelScene(centurionUrl)` |
 | `greek_atlas.png` | texture | Greek Low Poly pack: `Textures/Greek_Combined.png` | 1 | 128x128 | unused | unused |
-| `muse-avatar.vrm` | character | pixiv VRoid sample model (AvatarSample_M) | 17722 | 44115 | used | townScene.ts:5519 `loadModelScene(museAvatarUrl)` |
-| `phoenix.fbx` | animal | Low Poly Legend Phoenix (PULSAR BYTES) | 858 | 2241 | used | townScene.ts:10229 `void runtime.streaming.request(() => assetUrl(phoenixUrl).then((resolved) => fbxLoader2.lo` |
-| `phoenix_tex.png` | texture | Low Poly Legend Phoenix (PULSAR BYTES) | 0 | 32x32 | used | townScene.ts:10233 `const tex = loadAssetTexture(phoenixTexUrl);` |
+| `muse-avatar.vrm` | character | pixiv VRoid sample model (AvatarSample_M) | 17722 | 44115 | used | townScene.ts:5528 `loadModelScene(museAvatarUrl)` |
+| `phoenix.fbx` | animal | Low Poly Legend Phoenix (PULSAR BYTES) | 858 | 2241 | used | townScene.ts:10238 `void runtime.streaming.request(() => assetUrl(phoenixUrl).then((resolved) => fbxLoader2.lo` |
+| `phoenix_tex.png` | texture | Low Poly Legend Phoenix (PULSAR BYTES) | 0 | 32x32 | used | townScene.ts:10242 `const tex = loadAssetTexture(phoenixTexUrl);` |
 | `stars-fall-song.mp3` | audio | the project's own song for the summit scene | 157 |  | used | App.tsx:2767 `songAudioRef.current = new Audio(assetUrlSync(summitSongUrl));` |
-| `trees_pack.glb` | nature | Low Poly Trees (itch.io) | 3512 | 7215 | used | townScene.ts:9488 `void assetUrl(treesPackUrl)` |
-| `wolf.glb` | animal | Dire Wolf Lite: `Dire_Wolf_Lite.glb (unchanged)` | 12146 | 9991 | used | townScene.ts:10556 `void runtime.streaming.request(() => assetUrl(wolfUrl).then((resolved) => gltfLoader.loadA` |
+| `trees_pack.glb` | nature | Low Poly Trees (itch.io) | 3512 | 7215 | used | townScene.ts:9497 `void assetUrl(treesPackUrl)` |
+| `wolf.glb` | animal | Dire Wolf Lite: `Dire_Wolf_Lite.glb (unchanged)` | 12146 | 9991 | used | townScene.ts:10565 `void runtime.streaming.request(() => assetUrl(wolfUrl).then((resolved) => gltfLoader.loadA` |
 
 ## anim/
 
 | File | Kind | Pack / made from | KB | Tris | Status | Where it is placed |
 | --- | --- | --- | ---: | ---: | --- | --- |
-| `anim/f_dance.fbx` | animation | Human Dance Animations (Kevin Iglesias) | 1047 |  | used | townScene.ts:5554 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
-| `anim/f_idle.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 812 |  | used | townScene.ts:5554 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
-| `anim/f_pose_a.fbx` | animation | Human Dance Animations (Kevin Iglesias) | 686 |  | used | townScene.ts:5554 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
-| `anim/f_pose_b.fbx` | animation | Human Dance Animations (Kevin Iglesias) | 560 |  | used | townScene.ts:5554 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
-| `anim/f_run.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 434 |  | used | townScene.ts:5554 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
-| `anim/f_sit.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 686 |  | used | townScene.ts:5554 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
-| `anim/f_walk.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 470 |  | used | townScene.ts:5554 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
-| `anim/f_wave.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 782 |  | used | townScene.ts:5554 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
-| `anim/m_dance.fbx` | animation | Human Dance Animations (Kevin Iglesias) | 1047 |  | used | townScene.ts:6066 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU` |
-| `anim/m_idle.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 812 |  | used | townScene.ts:6066 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU` |
-| `anim/m_jump_air.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 506 |  | used | townScene.ts:6067 `jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },` |
-| `anim/m_jump_end.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 446 |  | used | townScene.ts:6067 `jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },` |
-| `anim/m_jump_start.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 446 |  | used | townScene.ts:6067 `jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },` |
-| `anim/m_run.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 434 |  | used | townScene.ts:6066 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU` |
-| `anim/m_sit.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 686 |  | used | townScene.ts:6066 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU` |
-| `anim/m_slide.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 578 |  | used | townScene.ts:6068 `slide: mSlideUrl,` |
-| `anim/m_walk.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 470 |  | used | townScene.ts:6066 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU` |
-| `anim/m_wave.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 782 |  | used | townScene.ts:6066 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU` |
-| `anim/outdoor/f_bench1.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 818 |  | used | townScene.ts:5558 `benchSit: [fBench1Url, fBench2Url],` |
-| `anim/outdoor/f_bench2.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 813 |  | used | townScene.ts:5558 `benchSit: [fBench1Url, fBench2Url],` |
-| `anim/outdoor/f_flirt.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 816 |  | used | townScene.ts:5559 `flirt: fFlirtUrl,` |
-| `anim/outdoor/f_hug.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 813 |  | used | townScene.ts:5560 `hug: fHugUrl,` |
-| `anim/outdoor/f_sittalk1.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 893 |  | used | townScene.ts:5557 `sitTalk: [fSitTalk1Url, fSitTalk2Url],` |
-| `anim/outdoor/f_sittalk2.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 828 |  | used | townScene.ts:5557 `sitTalk: [fSitTalk1Url, fSitTalk2Url],` |
-| `anim/outdoor/f_talk1.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 821 |  | used | townScene.ts:5556 `talk: [fTalk1Url, fTalk2Url, fTalk3Url],` |
-| `anim/outdoor/f_talk2.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 829 |  | used | townScene.ts:5556 `talk: [fTalk1Url, fTalk2Url, fTalk3Url],` |
-| `anim/outdoor/f_talk3.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 841 |  | used | townScene.ts:5556 `talk: [fTalk1Url, fTalk2Url, fTalk3Url],` |
-| `anim/outdoor/m_bench1.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 831 |  | used | townScene.ts:6072 `benchSit: [mBench1Url, mBench2Url],` |
-| `anim/outdoor/m_bench2.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 833 |  | used | townScene.ts:6072 `benchSit: [mBench1Url, mBench2Url],` |
-| `anim/outdoor/m_flirt.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 816 |  | used | townScene.ts:6073 `flirt: mFlirtUrl,` |
-| `anim/outdoor/m_hug.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 814 |  | used | townScene.ts:6074 `hug: mHugUrl,` |
-| `anim/outdoor/m_sittalk1.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 825 |  | used | townScene.ts:6071 `sitTalk: [mSitTalk1Url, mSitTalk2Url],` |
-| `anim/outdoor/m_sittalk2.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 815 |  | used | townScene.ts:6071 `sitTalk: [mSitTalk1Url, mSitTalk2Url],` |
-| `anim/outdoor/m_talk1.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 826 |  | used | townScene.ts:6070 `talk: [mTalk1Url, mTalk2Url, mTalk3Url],` |
-| `anim/outdoor/m_talk2.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 833 |  | used | townScene.ts:6070 `talk: [mTalk1Url, mTalk2Url, mTalk3Url],` |
-| `anim/outdoor/m_talk3.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 836 |  | used | townScene.ts:6070 `talk: [mTalk1Url, mTalk2Url, mTalk3Url],` |
+| `anim/f_dance.fbx` | animation | Human Dance Animations (Kevin Iglesias) | 1047 |  | used | townScene.ts:5563 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
+| `anim/f_idle.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 812 |  | used | townScene.ts:5563 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
+| `anim/f_pose_a.fbx` | animation | Human Dance Animations (Kevin Iglesias) | 686 |  | used | townScene.ts:5563 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
+| `anim/f_pose_b.fbx` | animation | Human Dance Animations (Kevin Iglesias) | 560 |  | used | townScene.ts:5563 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
+| `anim/f_run.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 434 |  | used | townScene.ts:5563 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
+| `anim/f_sit.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 686 |  | used | townScene.ts:5563 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
+| `anim/f_walk.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 470 |  | used | townScene.ts:5563 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
+| `anim/f_wave.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 782 |  | used | townScene.ts:5563 `idle: fIdleUrl, walk: fWalkUrl, run: fRunUrl, wave: fWaveUrl, sit: fSitUrl, dance: fDanceU` |
+| `anim/m_dance.fbx` | animation | Human Dance Animations (Kevin Iglesias) | 1047 |  | used | townScene.ts:6075 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU` |
+| `anim/m_idle.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 812 |  | used | townScene.ts:6075 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU` |
+| `anim/m_jump_air.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 506 |  | used | townScene.ts:6076 `jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },` |
+| `anim/m_jump_end.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 446 |  | used | townScene.ts:6076 `jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },` |
+| `anim/m_jump_start.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 446 |  | used | townScene.ts:6076 `jump: { start: mJumpStartUrl, air: mJumpAirUrl, end: mJumpEndUrl },` |
+| `anim/m_run.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 434 |  | used | townScene.ts:6075 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU` |
+| `anim/m_sit.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 686 |  | used | townScene.ts:6075 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU` |
+| `anim/m_slide.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 578 |  | used | townScene.ts:6077 `slide: mSlideUrl,` |
+| `anim/m_walk.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 470 |  | used | townScene.ts:6075 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU` |
+| `anim/m_wave.fbx` | animation | Human Basic Motions (Kevin Iglesias) | 782 |  | used | townScene.ts:6075 `idle: mIdleUrl, walk: mWalkUrl, run: mRunUrl, wave: mWaveUrl, sit: mSitUrl, dance: mDanceU` |
+| `anim/outdoor/f_bench1.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 818 |  | used | townScene.ts:5567 `benchSit: [fBench1Url, fBench2Url],` |
+| `anim/outdoor/f_bench2.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 813 |  | used | townScene.ts:5567 `benchSit: [fBench1Url, fBench2Url],` |
+| `anim/outdoor/f_flirt.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 816 |  | used | townScene.ts:5568 `flirt: fFlirtUrl,` |
+| `anim/outdoor/f_hug.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 813 |  | used | townScene.ts:5569 `hug: fHugUrl,` |
+| `anim/outdoor/f_sittalk1.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 893 |  | used | townScene.ts:5566 `sitTalk: [fSitTalk1Url, fSitTalk2Url],` |
+| `anim/outdoor/f_sittalk2.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 828 |  | used | townScene.ts:5566 `sitTalk: [fSitTalk1Url, fSitTalk2Url],` |
+| `anim/outdoor/f_talk1.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 821 |  | used | townScene.ts:5565 `talk: [fTalk1Url, fTalk2Url, fTalk3Url],` |
+| `anim/outdoor/f_talk2.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 829 |  | used | townScene.ts:5565 `talk: [fTalk1Url, fTalk2Url, fTalk3Url],` |
+| `anim/outdoor/f_talk3.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 841 |  | used | townScene.ts:5565 `talk: [fTalk1Url, fTalk2Url, fTalk3Url],` |
+| `anim/outdoor/m_bench1.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 831 |  | used | townScene.ts:6081 `benchSit: [mBench1Url, mBench2Url],` |
+| `anim/outdoor/m_bench2.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 833 |  | used | townScene.ts:6081 `benchSit: [mBench1Url, mBench2Url],` |
+| `anim/outdoor/m_flirt.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 816 |  | used | townScene.ts:6082 `flirt: mFlirtUrl,` |
+| `anim/outdoor/m_hug.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 814 |  | used | townScene.ts:6083 `hug: mHugUrl,` |
+| `anim/outdoor/m_sittalk1.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 825 |  | used | townScene.ts:6080 `sitTalk: [mSitTalk1Url, mSitTalk2Url],` |
+| `anim/outdoor/m_sittalk2.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 815 |  | used | townScene.ts:6080 `sitTalk: [mSitTalk1Url, mSitTalk2Url],` |
+| `anim/outdoor/m_talk1.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 826 |  | used | townScene.ts:6079 `talk: [mTalk1Url, mTalk2Url, mTalk3Url],` |
+| `anim/outdoor/m_talk2.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 833 |  | used | townScene.ts:6079 `talk: [mTalk1Url, mTalk2Url, mTalk3Url],` |
+| `anim/outdoor/m_talk3.fbx` | animation | BUNDLE Outdoor Animations, FBX (Kevin Iglesias) | 836 |  | used | townScene.ts:6079 `talk: [mTalk1Url, mTalk2Url, mTalk3Url],` |
 
 ## greek/
 
 | File | Kind | Pack / made from | KB | Tris | Status | Where it is placed |
 | --- | --- | --- | ---: | ---: | --- | --- |
-| `greek/greek_bench_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 16 | 192 | used | townScene.ts:9659 `greekBench(greekBench1Url, "bench-greek-stone", 12.2, -15, Math.PI / 2);` — Turned on Nov 6, 2026 (Task 18): both sat with their backs to the peristyle; sitters now face it (no backrest  |
-| `greek/greek_bench_2.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 19 | 288 | used | townScene.ts:9660 `greekBench(greekBench2Url, "bench-greek-wood", -12.2, -15, -Math.PI / 2);` |
-| `greek/greek_bowl.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 17 | 100 | used | (6.9, 38.4) [townScene.ts:9633] |
-| `greek/greek_bucket.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 15 | 92 | used | (21.3, 26.9) [townScene.ts:9637] |
-| `greek/greek_decorative_bowl.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 17 | 238 | used | (6.9, 39.6) [townScene.ts:9634] |
+| `greek/greek_bench_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 16 | 192 | used | townScene.ts:9668 `greekBench(greekBench1Url, "bench-greek-stone", 12.2, -15, Math.PI / 2);` — Turned on Nov 6, 2026 (Task 18): both sat with their backs to the peristyle; sitters now face it (no backrest  |
+| `greek/greek_bench_2.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 19 | 288 | used | townScene.ts:9669 `greekBench(greekBench2Url, "bench-greek-wood", -12.2, -15, -Math.PI / 2);` |
+| `greek/greek_bowl.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 17 | 100 | used | (6.9, 38.4) [townScene.ts:9642] |
+| `greek/greek_bucket.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 15 | 92 | used | (21.3, 26.9) [townScene.ts:9646] |
+| `greek/greek_decorative_bowl.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 17 | 238 | used | (6.9, 39.6) [townScene.ts:9643] |
 | `greek/greek_dock.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 30 | 900 | unused | unused |
-| `greek/greek_drying_rack.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 42 | 972 | used | (-22.6, 25.4) [townScene.ts:9640] |
-| `greek/greek_garden_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 19 | 124 | used | (9.8, 25.2) [townScene.ts:9638]; (13.4, 25.2) [townScene.ts:9639] |
+| `greek/greek_drying_rack.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 42 | 972 | used | (-22.6, 25.4) [townScene.ts:9649] |
+| `greek/greek_garden_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 19 | 124 | used | (9.8, 25.2) [townScene.ts:9647]; (13.4, 25.2) [townScene.ts:9648] |
 | `greek/greek_pool_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 20 | 208 | unused | unused |
-| `greek/greek_pot_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 25 | 754 | used | (-25, 23) [townScene.ts:9635] |
-| `greek/greek_pot_2.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 19 | 348 | used | (-20.8, 24.0) [townScene.ts:9636] |
-| `greek/greek_table_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 22 | 548 | used | (-27.0, 9.6) [townScene.ts:9631]; (24.8, -1.6) [townScene.ts:9632] — --- Greek dressing: furniture and small goods at the houses' doorsteps and terraces (the town has no interiors |
-| `greek/greek_wood_pile.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 16 | 122 | used | (27.9, 27.6) [townScene.ts:9641]; (-24.6, 20.2) [townScene.ts:9642] |
+| `greek/greek_pot_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 25 | 754 | used | (-25, 23) [townScene.ts:9644] |
+| `greek/greek_pot_2.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 19 | 348 | used | (-20.8, 24.0) [townScene.ts:9645] |
+| `greek/greek_table_1.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 22 | 548 | used | (-27.0, 9.6) [townScene.ts:9640]; (24.8, -1.6) [townScene.ts:9641] — --- Greek dressing: furniture and small goods at the houses' doorsteps and terraces (the town has no interiors |
+| `greek/greek_wood_pile.fbx` | prop | Greek Low Poly pack (Unity Asset Store) | 16 | 122 | used | (27.9, 27.6) [townScene.ts:9650]; (-24.6, 20.2) [townScene.ts:9651] |
 
 ## idyllic/
 
 | File | Kind | Pack / made from | KB | Tris | Status | Where it is placed |
 | --- | --- | --- | ---: | ---: | --- | --- |
 | `idyllic/banner.glb` | prop | Idyllic Rome: `SM_banner_rome_01` | 95 | 1190 | used | vexillum-left at (33.7, 20.51) [colosseumSetting.ts SETTING_PIECES]; vexillum-right at (34.81, 4.69) [colosseumSetting.ts SETTING_PIECES] |
-| `idyllic/colosseum.glb` | building | Idyllic Rome: `SM_amphitheatre_rome` | 5179 | 62789 | used | townScene.ts:3220 `void placeWorld(colosseumUrl, { x: COLOSSEUM_PLACEMENT.x, z: COLOSSEUM_PLACEMENT.z, rotY: ` — The Colosseum in its prime in the eastern basin: the Idyllic Rome amphitheatre (Task 85), slimmed to a phone b |
+| `idyllic/colosseum.glb` | building | Idyllic Rome: `SM_amphitheatre_rome` | 5179 | 62789 | used | townScene.ts:3219 `void placeWorld(colosseumUrl, { x: COLOSSEUM_PLACEMENT.x, z: COLOSSEUM_PLACEMENT.z, rotY: ` — The Colosseum in its prime in the eastern basin: the Idyllic Rome amphitheatre (Task 85), slimmed to a phone b |
 | `idyllic/house_a.glb` | building | Idyllic Rome: `SM_house_building_01` | 485 | 7460 | used | house-north at (45.87, -5.07) [colosseumSetting.ts SETTING_PIECES] |
 | `idyllic/house_b.glb` | building | Idyllic Rome: `SM_house_building_02` | 528 | 6849 | used | house-east at (59.02, 6.82) [colosseumSetting.ts SETTING_PIECES] |
 | `idyllic/insula.glb` | building | Idyllic Rome: `SM_insulae_building_01` | 574 | 6852 | used | insula-south-east at (56.55, 25.93) [colosseumSetting.ts SETTING_PIECES] |
@@ -114,85 +114,85 @@ Search it with `bun tools/assets/search.ts <words>` (see `tools/assets/README.md
 
 | File | Kind | Pack / made from | KB | Tris | Status | Where it is placed |
 | --- | --- | --- | ---: | ---: | --- | --- |
-| `pets/cat.fbx` | animal | Animated Pets & Farm Animals (HONETi) | 767 | 390 | used | (6.4, 17.8) [townScene.ts:9942] |
-| `pets/cat_05.png` | texture | Animated Pets & Farm Animals (HONETi) | 92 | 512x512 | used | townScene.ts:9839 `: kind === "cat" ? catTexUrl` |
-| `pets/chicken.fbx` | animal | Animated Pets & Farm Animals (HONETi) | 584 | 598 | used | (11.4, 27) [townScene.ts:9922]; (12.6, 26.8) [townScene.ts:9923]; (10.2, 27.2) [townScene.ts:9924] — Two chickens and a rooster at the market (the pack has one chicken; the third wears a slightly larger scale an |
-| `pets/chicken_01.png` | texture | Animated Pets & Farm Animals (HONETi) | 191 | 512x512 | used | townScene.ts:9838 `kind === "chicken" ? chickenTexUrl` |
-| `pets/pig.fbx` | animal | Animated Pets & Farm Animals (HONETi) | 690 | 454 | used | (-20, 28) [townScene.ts:9935] |
-| `pets/pig_01.png` | texture | Animated Pets & Farm Animals (HONETi) | 159 | 512x512 | used | townScene.ts:9840 `: kind === "pig" ? pigTexUrl` |
-| `pets/sheep.fbx` | animal | Animated Pets & Farm Animals (HONETi) | 567 | 744 | used | (-15, 28.2) [townScene.ts:9934] |
-| `pets/sheep_05.png` | texture | Animated Pets & Farm Animals (HONETi) | 163 | 512x512 | used | townScene.ts:9841 `: kind === "sheep" ? sheepTexUrl` |
+| `pets/cat.fbx` | animal | Animated Pets & Farm Animals (HONETi) | 767 | 390 | used | (6.4, 17.8) [townScene.ts:9951] |
+| `pets/cat_05.png` | texture | Animated Pets & Farm Animals (HONETi) | 92 | 512x512 | used | townScene.ts:9848 `: kind === "cat" ? catTexUrl` |
+| `pets/chicken.fbx` | animal | Animated Pets & Farm Animals (HONETi) | 584 | 598 | used | (11.4, 27) [townScene.ts:9931]; (12.6, 26.8) [townScene.ts:9932]; (10.2, 27.2) [townScene.ts:9933] — Two chickens and a rooster at the market (the pack has one chicken; the third wears a slightly larger scale an |
+| `pets/chicken_01.png` | texture | Animated Pets & Farm Animals (HONETi) | 191 | 512x512 | used | townScene.ts:9847 `kind === "chicken" ? chickenTexUrl` |
+| `pets/pig.fbx` | animal | Animated Pets & Farm Animals (HONETi) | 690 | 454 | used | (-20, 28) [townScene.ts:9944] |
+| `pets/pig_01.png` | texture | Animated Pets & Farm Animals (HONETi) | 159 | 512x512 | used | townScene.ts:9849 `: kind === "pig" ? pigTexUrl` |
+| `pets/sheep.fbx` | animal | Animated Pets & Farm Animals (HONETi) | 567 | 744 | used | (-15, 28.2) [townScene.ts:9943] |
+| `pets/sheep_05.png` | texture | Animated Pets & Farm Animals (HONETi) | 163 | 512x512 | used | townScene.ts:9850 `: kind === "sheep" ? sheepTexUrl` |
 
 ## roman/
 
 | File | Kind | Pack / made from | KB | Tris | Status | Where it is placed |
 | --- | --- | --- | ---: | ---: | --- | --- |
-| `roman/annex_sidechat.glb` | building | Roman Empire, Stylized Low Poly: `SM_attachment_building_01` | 334 | 4264 | used | townScene.ts:3080 `sidechat: annexUrl,` |
+| `roman/annex_sidechat.glb` | building | Roman Empire, Stylized Low Poly: `SM_attachment_building_01` | 334 | 4264 | used | townScene.ts:3079 `sidechat: annexUrl,` |
 | `roman/apple.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 5 | 86 | unused | unused |
-| `roman/aqueduct.glb` | building | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 196 | 3955 | used | (-22, -25) [townScene.ts:3210] |
-| `roman/aqueduct_connector.glb` | building | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 14 | 180 | used | (-35, -16) [townScene.ts:3211] |
-| `roman/arch_round.glb` | building | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 12 | 216 | used | (0, 2.1) [townScene.ts:4454] — Task 96: the arch's own near-white face glowed chalk under the lanterns at dusk; travertine instead. |
-| `roman/ballista.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 59 | 996 | used | (-36, 4) [townScene.ts:3213] |
-| `roman/banner.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 14 | 166 | used | (6.2, 44.6) [townScene.ts:3214]; (-6.2, 44.6) [townScene.ts:3215] |
-| `roman/banner_triangle.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 14 | 166 | used | (6.8, 31.2) [townScene.ts:3512] |
-| `roman/barrel.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 16 | 264 | used | townScene.ts:3557 `[barrelUrl, 6.9, 35.8, 0, 0.72], [pottery1Url, -6.9, 35.6, 0, 0.55],` |
-| `roman/bench_stone.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 11 | 164 | used | (8.8, 4.6) [townScene.ts:2919]; (-2.3, 2.62) [townScene.ts:3048]; (17.3, -23.6) [townScene.ts:4112] |
-| `roman/bench_wooden.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 7 | 74 | used | (0, -0.7) [townScene.ts:4461] |
-| `roman/boat_small.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 45 | 672 | used | townScene.ts:3841 `.request(() => loadModelScene(boatSmallUrl), () => ({ x: CLIFF.head.x, z: CLIFF.head.z }))` |
-| `roman/booth_a.glb` | building | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 41 | 464 | used | townScene.ts:3499 `void placeWorld(boothAUrl, { x: boothA[0], z: boothA[1], rotY: boothA[2], width: 3.6 });` |
-| `roman/booth_b.glb` | building | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 41 | 464 | used | townScene.ts:3500 `void placeWorld(boothBUrl, { x: boothB[0], z: boothB[1], rotY: boothB[2], width: 3.6 });` |
-| `roman/booth_c.glb` | building | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 41 | 464 | used | townScene.ts:3501 `void placeWorld(boothCUrl, { x: boothC[0], z: boothC[1], rotY: boothC[2], width: 3.6 });` |
+| `roman/aqueduct.glb` | building | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 196 | 3955 | used | (-22, -25) [townScene.ts:3209] |
+| `roman/aqueduct_connector.glb` | building | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 14 | 180 | used | (-35, -16) [townScene.ts:3210] |
+| `roman/arch_round.glb` | building | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 12 | 216 | used | (0, 2.1) [townScene.ts:4453] — Task 96: the arch's own near-white face glowed chalk under the lanterns at dusk; travertine instead. |
+| `roman/ballista.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 59 | 996 | used | (-36, 4) [townScene.ts:3212] |
+| `roman/banner.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 14 | 166 | used | (6.2, 44.6) [townScene.ts:3213]; (-6.2, 44.6) [townScene.ts:3214] |
+| `roman/banner_triangle.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 14 | 166 | used | (6.8, 31.2) [townScene.ts:3511] |
+| `roman/barrel.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 16 | 264 | used | townScene.ts:3556 `[barrelUrl, 6.9, 35.8, 0, 0.72], [pottery1Url, -6.9, 35.6, 0, 0.55],` |
+| `roman/bench_stone.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 11 | 164 | used | (8.8, 4.6) [townScene.ts:2918]; (-2.3, 2.62) [townScene.ts:3047]; (17.3, -23.6) [townScene.ts:4111] |
+| `roman/bench_wooden.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 7 | 74 | used | (0, -0.7) [townScene.ts:4460] |
+| `roman/boat_small.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 45 | 672 | used | townScene.ts:3840 `.request(() => loadModelScene(boatSmallUrl), () => ({ x: CLIFF.head.x, z: CLIFF.head.z }))` |
+| `roman/booth_a.glb` | building | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 41 | 464 | used | townScene.ts:3498 `void placeWorld(boothAUrl, { x: boothA[0], z: boothA[1], rotY: boothA[2], width: 3.6 });` |
+| `roman/booth_b.glb` | building | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 41 | 464 | used | townScene.ts:3499 `void placeWorld(boothBUrl, { x: boothB[0], z: boothB[1], rotY: boothB[2], width: 3.6 });` |
+| `roman/booth_c.glb` | building | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 41 | 464 | used | townScene.ts:3500 `void placeWorld(boothCUrl, { x: boothC[0], z: boothC[1], rotY: boothC[2], width: 3.6 });` |
 | `roman/bowl.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 7 | 116 | unused | unused |
-| `roman/bread.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 14 | 128 | used | (6.9, 33.6) [townScene.ts:3563] |
-| `roman/bush_a.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 11 | 94 | used | townScene.ts:3727 `const benchFoliageUrl = { cypress: cypressUrl, olive: oliveUrl, conifer: coniferUrl, bushA` |
-| `roman/bush_b.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 11 | 94 | used | (-2.3, 1.5) [townScene.ts:4472] |
-| `roman/bush_c.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 9 | 74 | used | townScene.ts:3740 `if (kind === 0) void placeWorld(bushCUrl, { x: px, z: pz, rotY: rot, width: 1.6 });` |
-| `roman/bush_d.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 13 | 116 | used | (2.4, 1.3) [townScene.ts:4473] |
-| `roman/bush_e.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 16 | 146 | used | townScene.ts:3727 `const benchFoliageUrl = { cypress: cypressUrl, olive: oliveUrl, conifer: coniferUrl, bushA` |
+| `roman/bread.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 14 | 128 | used | (6.9, 33.6) [townScene.ts:3562] |
+| `roman/bush_a.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 11 | 94 | used | townScene.ts:3726 `const benchFoliageUrl = { cypress: cypressUrl, olive: oliveUrl, conifer: coniferUrl, bushA` |
+| `roman/bush_b.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 11 | 94 | used | (-2.3, 1.5) [townScene.ts:4471] |
+| `roman/bush_c.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 9 | 74 | used | townScene.ts:3739 `if (kind === 0) void placeWorld(bushCUrl, { x: px, z: pz, rotY: rot, width: 1.6 });` |
+| `roman/bush_d.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 13 | 116 | used | (2.4, 1.3) [townScene.ts:4472] |
+| `roman/bush_e.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 16 | 146 | used | townScene.ts:3726 `const benchFoliageUrl = { cypress: cypressUrl, olive: oliveUrl, conifer: coniferUrl, bushA` |
 | `roman/bush_roman.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 14 | 126 | unused | unused |
-| `roman/column_ionic.glb` | building | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 76 | 796 | used | townScene.ts:3496 `void placeWorld(columnIonicUrl, { x: VILLA.ionicColumn[0], z: VILLA.ionicColumn[1], height` — One grand ionic column in the peristyle garden, the pointy hat's perch. |
-| `roman/column_simple.glb` | building | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 22 | 360 | used | townScene.ts:3261 `void placeWorld(columnSimpleUrl, { x: cx, z: cz, height: VILLA.peristyle.columnHeight });` |
-| `roman/conifer.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 58 | 593 | used | (-40, 10) [townScene.ts:3572]; (-10.6, -35.9) [townScene.ts:4119] |
-| `roman/crate.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 42 | 468 | used | townScene.ts:5095 `layOutGoods(placeWorld(crateUrl, { x, z, rotY: MARKET_BOOTHS[c.booth]![2] + c.rot, width: ` |
-| `roman/cypress.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 12 | 103 | used | (31.5, 33) [townScene.ts:3567]; (-27.2, 30.6) [townScene.ts:3568]; (34, -10.2) [townScene.ts:3569] (+1) |
-| `roman/flower_a.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 8 | 118 | used | townScene.ts:2966 `const PACK_FLOWERS = [flowerAUrl, flowerMedUrl, flowerGroupUrl];` |
-| `roman/flower_group.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 52 | 704 | used | townScene.ts:5689 `height: flowerUrl === flowerGroupUrl ? 0.5 : 0.62,` |
-| `roman/flower_med.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 55 | 770 | used | townScene.ts:2966 `const PACK_FLOWERS = [flowerAUrl, flowerMedUrl, flowerGroupUrl];` |
-| `roman/gladius.glb` | weapon | Roman Empire, Stylized Low Poly: `SM_weapon_gladius` | 8 | 104 | used | townScene.ts:6006 `const gaiusArms = createGaiusArms({ frame: avatar, place: placeModel, gladiusUrl, shieldUr` — Gaius's arms: the gladius at his right hip, the scutum on his back (gaiusArms.ts). |
-| `roman/grapes.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 22 | 220 | used | (-6.9, 33.6) [townScene.ts:3564] |
-| `roman/grass_patch.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 3 | 24 | used | (-9.6, -29.2) [townScene.ts:4122]; (-11.8, -34.6) [townScene.ts:4123]; (-19.8, -25.9) [townScene.ts:4124] |
-| `roman/house_garden.glb` | building | Roman Empire, Stylized Low Poly: `SM_house_roman_02` | 459 | 7506 | used | townScene.ts:3076 `garden: houseGardenUrl,` |
-| `roman/house_sounds.glb` | building | Roman Empire, Stylized Low Poly: `SM_house_roman_01` | 319 | 5102 | used | townScene.ts:3075 `sounds: houseSoundsUrl,` |
-| `roman/insulae_recipes.glb` | building | Roman Empire, Stylized Low Poly: `SM_insulae_building_02` | 300 | 5076 | used | townScene.ts:3078 `recipes: insulaeUrl,` |
-| `roman/olive.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 61 | 694 | used | (-23, 34) [townScene.ts:3571]; (-8.6, -26.4) [townScene.ts:4107]; (19.6, -25.4) [townScene.ts:4111] |
-| `roman/paddle.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 5 | 48 | used | townScene.ts:4011 `void loadModelScene(paddleUrl).then((paddleScene) => {` |
+| `roman/column_ionic.glb` | building | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 76 | 796 | used | townScene.ts:3495 `void placeWorld(columnIonicUrl, { x: VILLA.ionicColumn[0], z: VILLA.ionicColumn[1], height` — One grand ionic column in the peristyle garden, the pointy hat's perch. |
+| `roman/column_simple.glb` | building | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 22 | 360 | used | townScene.ts:3260 `void placeWorld(columnSimpleUrl, { x: cx, z: cz, height: VILLA.peristyle.columnHeight });` |
+| `roman/conifer.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 58 | 593 | used | (-40, 10) [townScene.ts:3571]; (-10.6, -35.9) [townScene.ts:4118] |
+| `roman/crate.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 42 | 468 | used | townScene.ts:5094 `layOutGoods(placeWorld(crateUrl, { x, z, rotY: MARKET_BOOTHS[c.booth]![2] + c.rot, width: ` |
+| `roman/cypress.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 12 | 103 | used | (31.5, 33) [townScene.ts:3566]; (-27.2, 30.6) [townScene.ts:3567]; (34, -10.2) [townScene.ts:3568] (+1) |
+| `roman/flower_a.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 8 | 118 | used | townScene.ts:2965 `const PACK_FLOWERS = [flowerAUrl, flowerMedUrl, flowerGroupUrl];` |
+| `roman/flower_group.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 52 | 704 | used | townScene.ts:5698 `height: flowerUrl === flowerGroupUrl ? 0.5 : 0.62,` |
+| `roman/flower_med.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 55 | 770 | used | townScene.ts:2965 `const PACK_FLOWERS = [flowerAUrl, flowerMedUrl, flowerGroupUrl];` |
+| `roman/gladius.glb` | weapon | Roman Empire, Stylized Low Poly: `SM_weapon_gladius` | 8 | 104 | used | townScene.ts:6015 `const gaiusArms = createGaiusArms({ frame: avatar, place: placeModel, gladiusUrl, shieldUr` — Gaius's arms: the gladius at his right hip, the scutum on his back (gaiusArms.ts). |
+| `roman/grapes.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 22 | 220 | used | (-6.9, 33.6) [townScene.ts:3563] |
+| `roman/grass_patch.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 3 | 24 | used | (-9.6, -29.2) [townScene.ts:4121]; (-11.8, -34.6) [townScene.ts:4122]; (-19.8, -25.9) [townScene.ts:4123] |
+| `roman/house_garden.glb` | building | Roman Empire, Stylized Low Poly: `SM_house_roman_02` | 459 | 7506 | used | townScene.ts:3075 `garden: houseGardenUrl,` |
+| `roman/house_sounds.glb` | building | Roman Empire, Stylized Low Poly: `SM_house_roman_01` | 319 | 5102 | used | townScene.ts:3074 `sounds: houseSoundsUrl,` |
+| `roman/insulae_recipes.glb` | building | Roman Empire, Stylized Low Poly: `SM_insulae_building_02` | 300 | 5076 | used | townScene.ts:3077 `recipes: insulaeUrl,` |
+| `roman/olive.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 61 | 694 | used | (-23, 34) [townScene.ts:3570]; (-8.6, -26.4) [townScene.ts:4106]; (19.6, -25.4) [townScene.ts:4110] |
+| `roman/paddle.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 5 | 48 | used | townScene.ts:4010 `void loadModelScene(paddleUrl).then((paddleScene) => {` |
 | `roman/palette.png` | texture | Roman Empire, Stylized Low Poly: `M_colorpalette_BaseColor` | 10 | 1024x1024 | used | townScene.ts:1036 `loadAssetTexture(paletteUrl, (texture) => {` |
-| `roman/pavilion_stars.glb` | building | Roman Empire, Stylized Low Poly: `SM_pavillion` | 343 | 6052 | used | townScene.ts:3077 `stars: pavilionUrl,` |
+| `roman/pavilion_stars.glb` | building | Roman Empire, Stylized Low Poly: `SM_pavillion` | 343 | 6052 | used | townScene.ts:3076 `stars: pavilionUrl,` |
 | `roman/platform_wooden.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 48 | 550 | unused | unused |
-| `roman/pottery1.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 14 | 188 | used | townScene.ts:3557 `[barrelUrl, 6.9, 35.8, 0, 0.72], [pottery1Url, -6.9, 35.6, 0, 0.55],` |
-| `roman/pottery2.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 17 | 236 | used | townScene.ts:3558 `[pottery2Url, -7, 36.6, 0, 0.48],` |
-| `roman/rock_pack.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 12 | 144 | used | (-10.9, -28.4) [townScene.ts:4120]; (-20.4, -31.8) [townScene.ts:4121] |
-| `roman/senate.glb` | building | Roman Empire, Stylized Low Poly: `SM_senate` | 1769 | 31096 | used | townScene.ts:3079 `mainchat: senateUrl,` |
-| `roman/shield_legionaire.glb` | weapon | Roman Empire, Stylized Low Poly: `SM_shield_legionaire` | 22 | 354 | used | townScene.ts:6006 `const gaiusArms = createGaiusArms({ frame: avatar, place: placeModel, gladiusUrl, shieldUr` — Gaius's arms: the gladius at his right hip, the scutum on his back (gaiusArms.ts). |
-| `roman/statue_mars.glb` | statue | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 129 | 1368 | used | townScene.ts:3209 `void placeWorld(statueMarsUrl, { x: VILLA.statueMars[0], z: VILLA.statueMars[1], rotY: Mat` |
-| `roman/temple.glb` | building | Roman Empire, Stylized Low Poly: `SM_temple` | 900 | 15558 | used | (31, -27) [townScene.ts:3203] — --- Roman landmarks, market, and dressing ------------------------- The temple keeps its own hill to the north |
-| `roman/torch.fbx` | prop | Roman Empire, Stylized Low Poly: `SM_torch` | 28 | 80 | used | townScene.ts:9437 `void placeFbx(torchUrl, { x, z, rotY, height: 1.7 }).then((g) => {` |
-| `roman/tree_a.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 39 | 408 | used | townScene.ts:2965 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];` |
-| `roman/tree_b.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 98 | 1226 | used | townScene.ts:2965 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];` |
-| `roman/tree_c.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 43 | 500 | used | townScene.ts:2965 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];` |
-| `roman/tree_d.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 34 | 396 | used | townScene.ts:2965 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];` |
-| `roman/triumphal_arch.glb` | building | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 217 | 3906 | used | townScene.ts:3212 `void placeWorld(triumphalArchUrl, { x: VILLA.gate[0], z: VILLA.gate[1], width: 7.5 });` |
-| `roman/villa_stories.glb` | building | Roman Empire, Stylized Low Poly: `SM_villa_roman_01` | 497 | 6775 | used | townScene.ts:3088 `void placeModel(ROMAN_HOUSES[place.id] ?? villaUrl, house, {` |
-| `roman/water_normal.png` | texture | Roman Empire, Stylized Low Poly: `M_water_Normal` | 227 | 512x512 | used | townScene.ts:3600 `const waterTex = loadAssetTexture(waterNormalUrl);` — Water, bank, dock, boat, and shore planting for the lake whose constants sit by placeWorld above. The water us |
+| `roman/pottery1.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 14 | 188 | used | townScene.ts:3556 `[barrelUrl, 6.9, 35.8, 0, 0.72], [pottery1Url, -6.9, 35.6, 0, 0.55],` |
+| `roman/pottery2.glb` | prop | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 17 | 236 | used | townScene.ts:3557 `[pottery2Url, -7, 36.6, 0, 0.48],` |
+| `roman/rock_pack.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 12 | 144 | used | (-10.9, -28.4) [townScene.ts:4119]; (-20.4, -31.8) [townScene.ts:4120] |
+| `roman/senate.glb` | building | Roman Empire, Stylized Low Poly: `SM_senate` | 1769 | 31096 | used | townScene.ts:3078 `mainchat: senateUrl,` |
+| `roman/shield_legionaire.glb` | weapon | Roman Empire, Stylized Low Poly: `SM_shield_legionaire` | 22 | 354 | used | townScene.ts:6015 `const gaiusArms = createGaiusArms({ frame: avatar, place: placeModel, gladiusUrl, shieldUr` — Gaius's arms: the gladius at his right hip, the scutum on his back (gaiusArms.ts). |
+| `roman/statue_mars.glb` | statue | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 129 | 1368 | used | townScene.ts:3208 `void placeWorld(statueMarsUrl, { x: VILLA.statueMars[0], z: VILLA.statueMars[1], rotY: Mat` |
+| `roman/temple.glb` | building | Roman Empire, Stylized Low Poly: `SM_temple` | 900 | 15558 | used | (31, -27) [townScene.ts:3202] — --- Roman landmarks, market, and dressing ------------------------- The temple keeps its own hill to the north |
+| `roman/torch.fbx` | prop | Roman Empire, Stylized Low Poly: `SM_torch` | 28 | 80 | used | townScene.ts:9446 `void placeFbx(torchUrl, { x, z, rotY, height: 1.7 }).then((g) => {` |
+| `roman/tree_a.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 39 | 408 | used | townScene.ts:2964 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];` |
+| `roman/tree_b.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 98 | 1226 | used | townScene.ts:2964 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];` |
+| `roman/tree_c.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 43 | 500 | used | townScene.ts:2964 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];` |
+| `roman/tree_d.glb` | nature | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 34 | 396 | used | townScene.ts:2964 `const PACK_TREES = [treeAUrl, treeBUrl, treeCUrl, treeDUrl];` |
+| `roman/triumphal_arch.glb` | building | Roman Empire, Stylized Low Poly (HALBERSTRAM ART) | 217 | 3906 | used | townScene.ts:3211 `void placeWorld(triumphalArchUrl, { x: VILLA.gate[0], z: VILLA.gate[1], width: 7.5 });` |
+| `roman/villa_stories.glb` | building | Roman Empire, Stylized Low Poly: `SM_villa_roman_01` | 497 | 6775 | used | townScene.ts:3087 `void placeModel(ROMAN_HOUSES[place.id] ?? villaUrl, house, {` |
+| `roman/water_normal.png` | texture | Roman Empire, Stylized Low Poly: `M_water_Normal` | 227 | 512x512 | used | townScene.ts:3599 `const waterTex = loadAssetTexture(waterNormalUrl);` — Water, bank, dock, boat, and shore planting for the lake whose constants sit by placeWorld above. The water us |
 
 ## ships/
 
 | File | Kind | Pack / made from | KB | Tris | Status | Where it is placed |
 | --- | --- | --- | ---: | ---: | --- | --- |
-| `ships/trade_ship.glb` | ship | Ancient trade ship + Low-poly Greek Trireme (Alin Loghin), converted by tools/ships/ | 477 | 675 | used | townScene.ts:3773 `const urls: Record<ShipKind, string> = { trade: tradeShipUrl, trireme: triremeUrl };` |
-| `ships/trireme.glb` | ship | Ancient trade ship + Low-poly Greek Trireme (Alin Loghin), converted by tools/ships/ | 1460 | 9009 | used | townScene.ts:3773 `const urls: Record<ShipKind, string> = { trade: tradeShipUrl, trireme: triremeUrl };` |
-| `ships/trireme_hull2.jpg` | texture | Ancient trade ship + Low-poly Greek Trireme (Alin Loghin), converted by tools/ships/ | 195 | 1024x1024 | used | townScene.ts:3808 `const hullMap = liveryMap(triremeHull2Url);` |
-| `ships/trireme_sail2.png` | texture | Ancient trade ship + Low-poly Greek Trireme (Alin Loghin), converted by tools/ships/ | 493 | 512x512 | used | townScene.ts:3809 `const sailMap = liveryMap(triremeSail2Url);` |
+| `ships/trade_ship.glb` | ship | Ancient trade ship + Low-poly Greek Trireme (Alin Loghin), converted by tools/ships/ | 477 | 675 | used | townScene.ts:3772 `const urls: Record<ShipKind, string> = { trade: tradeShipUrl, trireme: triremeUrl };` |
+| `ships/trireme.glb` | ship | Ancient trade ship + Low-poly Greek Trireme (Alin Loghin), converted by tools/ships/ | 1460 | 9009 | used | townScene.ts:3772 `const urls: Record<ShipKind, string> = { trade: tradeShipUrl, trireme: triremeUrl };` |
+| `ships/trireme_hull2.jpg` | texture | Ancient trade ship + Low-poly Greek Trireme (Alin Loghin), converted by tools/ships/ | 195 | 1024x1024 | used | townScene.ts:3807 `const hullMap = liveryMap(triremeHull2Url);` |
+| `ships/trireme_sail2.png` | texture | Ancient trade ship + Low-poly Greek Trireme (Alin Loghin), converted by tools/ships/ | 493 | 512x512 | used | townScene.ts:3808 `const sailMap = liveryMap(triremeSail2Url);` |
 
 ## statuary/
 
@@ -218,12 +218,12 @@ Search it with `bun tools/assets/search.ts <words>` (see `tools/assets/README.md
 
 | File | Kind | Pack / made from | KB | Tris | Status | Where it is placed |
 | --- | --- | --- | ---: | ---: | --- | --- |
-| `wedding/cake.glb` | wedding | Wedding - Banquet, Cake & Characters: `wedding_cake_classic_3` | 55 | 1402 | used | townScene.ts:5041 `table_long: weddingTableLongUrl, cake: weddingCakeUrl, ring_box: weddingRingBoxUrl,` |
-| `wedding/flammeum_stand.glb` | wedding | Wedding - Banquet, Cake & Characters: `wedding_veil_long` | 189 | 1004 | used | townScene.ts:5040 `flower_arch: weddingArchUrl, flammeum_stand: weddingFlammeumUrl, table_round: weddingTable` |
-| `wedding/flower_arch.glb` | wedding | Wedding - Banquet, Cake & Characters: `wedding_merge_flower_05` | 153 | 3948 | used | townScene.ts:5040 `flower_arch: weddingArchUrl, flammeum_stand: weddingFlammeumUrl, table_round: weddingTable` |
-| `wedding/ring_box.glb` | wedding | Wedding - Banquet, Cake & Characters: `wedding_ring_box_open` | 107 | 616 | used | townScene.ts:5041 `table_long: weddingTableLongUrl, cake: weddingCakeUrl, ring_box: weddingRingBoxUrl,` |
-| `wedding/table_long.glb` | wedding | Wedding - Banquet, Cake & Characters: `wedding_table_long_dressed_classic` | 259 | 4010 | used | townScene.ts:5041 `table_long: weddingTableLongUrl, cake: weddingCakeUrl, ring_box: weddingRingBoxUrl,` |
-| `wedding/table_round.glb` | wedding | Wedding - Banquet, Cake & Characters: `wedding_table_round_dressed_classic` | 141 | 1290 | used | townScene.ts:5040 `flower_arch: weddingArchUrl, flammeum_stand: weddingFlammeumUrl, table_round: weddingTable` |
+| `wedding/cake.glb` | wedding | Wedding - Banquet, Cake & Characters: `wedding_cake_classic_3` | 55 | 1402 | used | townScene.ts:5040 `table_long: weddingTableLongUrl, cake: weddingCakeUrl, ring_box: weddingRingBoxUrl,` |
+| `wedding/flammeum_stand.glb` | wedding | Wedding - Banquet, Cake & Characters: `wedding_veil_long` | 189 | 1004 | used | townScene.ts:5039 `flower_arch: weddingArchUrl, flammeum_stand: weddingFlammeumUrl, table_round: weddingTable` |
+| `wedding/flower_arch.glb` | wedding | Wedding - Banquet, Cake & Characters: `wedding_merge_flower_05` | 153 | 3948 | used | townScene.ts:5039 `flower_arch: weddingArchUrl, flammeum_stand: weddingFlammeumUrl, table_round: weddingTable` |
+| `wedding/ring_box.glb` | wedding | Wedding - Banquet, Cake & Characters: `wedding_ring_box_open` | 107 | 616 | used | townScene.ts:5040 `table_long: weddingTableLongUrl, cake: weddingCakeUrl, ring_box: weddingRingBoxUrl,` |
+| `wedding/table_long.glb` | wedding | Wedding - Banquet, Cake & Characters: `wedding_table_long_dressed_classic` | 259 | 4010 | used | townScene.ts:5040 `table_long: weddingTableLongUrl, cake: weddingCakeUrl, ring_box: weddingRingBoxUrl,` |
+| `wedding/table_round.glb` | wedding | Wedding - Banquet, Cake & Characters: `wedding_table_round_dressed_classic` | 141 | 1290 | used | townScene.ts:5039 `flower_arch: weddingArchUrl, flammeum_stand: weddingFlammeumUrl, table_round: weddingTable` |
 
 ## Pack pieces the town does not use
 

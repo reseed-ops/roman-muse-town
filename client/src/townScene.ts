@@ -1415,7 +1415,6 @@ export function createTownScene(
     }
     if (!post) {
       post = new PostFx(renderer, scene, camera, { samples: phone || softwareGl ? 0 : 4 });
-      post.overlayActive = () => bubbleSprites.some((sp) => sp.visible);
     }
     post.setBloomEnabled(postMode !== "pipeline");
     post.setLook(nightMix);
@@ -5312,7 +5311,8 @@ export function createTownScene(
   interface BubbleState {
     sprite: THREE.Sprite;
     ctx: CanvasRenderingContext2D;
-    tex: THREE.CanvasTexture;
+    /** Task 129: the plate's own canvas, shown as a DOM element over the scene (see makeBubble). */
+    el: HTMLCanvasElement;
     showAt: number;
     hideAt: number;
     pages: string[];
@@ -5327,32 +5327,34 @@ export function createTownScene(
     /** 0..1 pop-in scale ease, set each frame in updateBubbles. */
     pop: number;
   }
-  const bubbleSprites: THREE.Sprite[] = [];
+  const BUBBLE_ANCHOR_LAYER = 2;
   function makeBubble(parent: THREE.Object3D, y: number, speaker: BubbleSpeaker): BubbleState {
-    const canvas = document.createElement("canvas");
-    canvas.width = 1024;
-    canvas.height = 512;
-    const ctx = canvas.getContext("2d")!;
-    const tex = new THREE.CanvasTexture(canvas);
-    // The canvas is painted in sRGB: read as linear, its near-black
-    // ink was lifted to mid-grey on screen (Task 25).
-    tex.colorSpace = THREE.SRGBColorSpace;
-    const sprite = new THREE.Sprite(
-      // fog off: in mist or rain the plate must not wash to the sky's
-      // pale colour; tone mapping off: the white stays white and the
-      // ink stays ink, by day and by night.
-      new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false, opacity: 0, fog: false, toneMapped: false }),
-    );
+    // Task 129: the plate is a DOM canvas laid over the scene, not a texture inside it. The WebGL
+    // canvas renders at pixel ratio 1 on phones (a 3x screen shows it 3x enlarged), so a plate drawn
+    // into it had soft, blurry words; a DOM canvas is composited at the screen's own resolution. It
+    // is drawn at twice the 1024x512 design size so it stays sharp on a high-density screen too.
+    const plate = document.createElement("canvas");
+    plate.width = 2048;
+    plate.height = 1024;
+    plate.setAttribute("aria-hidden", "true");
+    plate.dataset.mtBubble = speaker.name;
+    plate.style.cssText = "position:absolute;left:0;top:0;display:none;pointer-events:none;transform:translate(-50%,-50%);will-change:left,top;";
+    const ctx = plate.getContext("2d")!;
+    ctx.scale(2, 2);
+    // Right after the scene's canvas: the shell's panels and controls stay above it, as the sprite was.
+    canvas.parentElement?.insertBefore(plate, canvas.nextSibling);
+    // The sprite is no longer drawn (layer 2 is never rendered); it only carries the bubble's
+    // world anchor, which the screen-space clamp below reads and writes.
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false, depthTest: false, opacity: 0, fog: false }));
     sprite.scale.set(2.4, 1.2, 1);
     sprite.position.set(0, y, 0);
     sprite.renderOrder = 9999;
     sprite.visible = false;
     // Task 110: not tone-mapped, so it is drawn straight to the screen after the post chain (see postFx.ts).
-    sprite.layers.set(OVERLAY_LAYER);
-    bubbleSprites.push(sprite);
+    sprite.layers.set(BUBBLE_ANCHOR_LAYER);
     parent.add(sprite);
     return {
-      sprite, ctx, tex, showAt: -1, hideAt: -1,
+      sprite, ctx, el: plate, showAt: -1, hideAt: -1,
       pages: [], pageIdx: 0, pageEndAt: -1,
       tailFrac: 0.5, drawnTailFrac: 0.5, lastTailDrawAt: -1,
       anchor: parent, anchorY: y,
@@ -5361,7 +5363,6 @@ export function createTownScene(
   }
   function drawBubblePage(b: BubbleState) {
     drawBubblePlate(b.ctx, b);
-    b.tex.needsUpdate = true;
     b.drawnTailFrac = b.tailFrac;
   }
   /** Show a line in a bubble: paginated in full, pages advancing in
@@ -5470,6 +5471,12 @@ export function createTownScene(
     bubbleTmpV.set(cx, cy, bubbleTmpV2.z).unproject(camera);
     b.anchor.worldToLocal(bubbleTmpV);
     b.sprite.position.copy(bubbleTmpV);
+    // Task 129: lay the plate where the sprite would have been, at the same CSS-pixel size (2:1).
+    const st = b.el.style;
+    st.width = `${(targetPxH * 2 * b.pop).toFixed(1)}px`;
+    st.height = `${(targetPxH * b.pop).toFixed(1)}px`;
+    st.left = `${(((cx + 1) / 2) * cw).toFixed(1)}px`;
+    st.top = `${(((1 - cy) / 2) * ch).toFixed(1)}px`;
   }
   function updateBubbles(t: number) {
     for (const b of bubbles) {
@@ -5489,6 +5496,8 @@ export function createTownScene(
       (b.sprite.material as THREE.SpriteMaterial).opacity = o;
       b.sprite.visible = o > 0.01;
       if (b.sprite.visible) clampBubbleToScreen(b, t);
+      b.el.style.opacity = String(o);
+      b.el.style.display = b.sprite.visible ? "block" : "none";
       if (t > b.hideAt + 0.1) b.hideAt = -1;
     }
   }
@@ -14239,6 +14248,7 @@ export function createTownScene(
       canvas.removeEventListener("contextmenu", blockContextMenu);
       post?.dispose();
       post = null;
+      for (const b of bubbles) b.el.remove();
       controls.dispose();
       critters.dispose();
       setBeeHumLevel(0);
