@@ -8,9 +8,9 @@ import { search } from "./search";
 const inv = JSON.parse(readFileSync(join(import.meta.dir, "INVENTORY.json"), "utf8"));
 const names: string[] = inv.assets.map((a: { file: string }) => a.file);
 
-test("the inventory lists the 157 asset files, the ships, the wedding pack and the six loom textures", () => {
-  expect(inv.summary.assetsFolder).toBe(157);
-  expect(inv.summary.totalFiles).toBe(163);
+test("the inventory lists the 158 asset files, the ships, the wedding pack and the six loom textures", () => {
+  expect(inv.summary.assetsFolder).toBe(158);
+  expect(inv.summary.totalFiles).toBe(164);
   expect(names.filter((n) => n.startsWith("ships/")).length).toBe(4);
   expect(names.filter((n) => n.startsWith("wedding/")).length).toBe(6);
   expect(names.filter((n) => n.startsWith("textures/")).length).toBe(6);
@@ -23,7 +23,7 @@ test("every file names a pack, a size, and (when unused) says so", () => {
     expect(a.bytes).toBeGreaterThan(0);
     if (a.status === "used") expect(a.uses.length).toBeGreaterThan(0);
   }
-  expect(inv.summary.unusedInFolder.length + inv.summary.used).toBe(163);
+  expect(inv.summary.unusedInFolder.length + inv.summary.used).toBe(164);
 });
 
 test("search finds by name, kind and place, and --used/--unused split", () => {

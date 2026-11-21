@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { sparringFootprints } from "./sparringSite";
 import { incendiaryFootprints } from "./incendiary";
 import { vineyardFootprints } from "./vineyard";
 import { movementFootprints, createPlaceReferences } from "./buildingFootprints";
@@ -45,7 +46,7 @@ function buildObstacles(): Obstacle[] {
   ].join("\n");
   const js = new Bun.Transpiler({ loader: "ts" }).transformSync(`export function run() {\n${body}\n}`);
   const names = [
-    "movementFootprints", "vineyardFootprints", "incendiaryFootprints", "fixtureShapes",
+    "movementFootprints", "vineyardFootprints", "incendiaryFootprints", "sparring", "fixtureShapes",
     "circ", "obb", "createPlaceReferences", "treePlacement", "pavilionColliders",
     "piscinaColliders", "bathColliders", "homeHouse", "settingFootprints", "dressingFootprints", "athenaColliders", ...Object.keys(town),
   ];
@@ -57,7 +58,7 @@ function buildObstacles(): Obstacle[] {
   const bathColliders: unknown[] = [];
   new Function("bathColliders", "BATHS", bathSource)(bathColliders, BATHS);
   const values = [
-    movementFootprints, vineyardFootprints, incendiaryFootprints, [],
+    movementFootprints, vineyardFootprints, incendiaryFootprints, { obstacles: sparringFootprints({ visible: true }, { visible: true }) }, [],
     circ, obb, createPlaceReferences, { bindCollider: <T>(position: T) => position },
     pavilionColliders, piscinaColliders, bathColliders, buildHomeHouse(town.terrainHeight), settingFootprints, dressingFootprints, athenaColliders, ...Object.values(town),
   ];

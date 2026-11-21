@@ -14,15 +14,23 @@
 // by default and LT (or R) stows it or wears it again (Nov 8, 2026).
 import * as THREE from "three";
 
-export type ArmsVisibility = { sword: boolean; shield: boolean };
+/** `drawn` (Task 131, the sparring bout): the gladius leaves its scabbard for his right hand and the scutum comes off his
+ *  back onto his left forearm. */
+export type ArmsVisibility = { sword: boolean; shield: boolean; drawn?: boolean };
 
 /** Where each piece would pass through someone, it steps aside. */
-export function armsVisibility(state: { bathing: boolean; embracing: boolean; seated: boolean; shieldOut?: boolean; swordWorn?: boolean }): ArmsVisibility {
+export function armsVisibility(state: { bathing: boolean; embracing: boolean; seated: boolean; shieldOut?: boolean; swordWorn?: boolean; drawn?: boolean }): ArmsVisibility {
   return {
     sword: state.swordWorn !== false && !state.bathing && !state.embracing,
     shield: !!state.shieldOut && !state.bathing && !state.embracing && !state.seated,
+    drawn: !!state.drawn && !state.bathing && !state.embracing && !state.seated,
   };
 }
+
+/** Where the drawn pieces sit in the bone that holds them (his right hand, his left forearm), measured at the guard
+ *  pose (sparringStance.ts) and tuned against renders (tools/tour/pose131.ts). Euler XYZ, metres. */
+export const HAND_SWORD = { pos: [-0.06, -0.02, 0.0] as [number, number, number], rot: [0, 0, -0.15] as [number, number, number] };
+export const FOREARM_SHIELD = { pos: [0.12, 0.0, -0.1] as [number, number, number], rot: [0, -Math.PI / 2, 0] as [number, number, number], height: 0.8 };
 
 /** The shield's raise as it comes out: from a hand's width low into its
  *  place on his back, over about a quarter second (0 stowed, 1 in place). */
@@ -37,6 +45,9 @@ export type GaiusArms = {
   shield: THREE.Group;
   /** Hang both on his loaded body (bind pose); a no-op without the bones. */
   attach(model: THREE.Object3D): void;
+  /** The drawn pair: the bare gladius for his right hand and the scutum for his left forearm (Task 131). */
+  drawn: { sword: THREE.Group; shield: THREE.Group };
+  attachDrawn(model: THREE.Object3D): void;
   /** Show or hide each piece; `dt` (s) eases the shield's raise. */
   setVisible(v: ArmsVisibility, dt?: number): void;
   /** Task 108: while he sits, the sheathed gladius lies along his right thigh, clear of the
@@ -63,6 +74,12 @@ export function createGaiusArms(opts: {
   const sword = new THREE.Group();
   const shield = new THREE.Group();
   shield.visible = false;
+  // Drawn for the bout: the bare gladius in his hand, the scutum on his forearm (each rides its bone like the worn pair).
+  const handSword = new THREE.Group();
+  const handShield = new THREE.Group();
+  handSword.visible = false;
+  handShield.visible = false;
+  let hipGladius: THREE.Object3D | null = null;
   let shieldInner: THREE.Group | null = null;
   let raise = 0;
   let seatedK = 0;
@@ -107,7 +124,7 @@ export function createGaiusArms(opts: {
         m.castShadow = true;
         blade.add(m);
       }
-      void opts.place(opts.gladiusUrl, blade, { x: 0, z: 0, height: SWORD_LEN });
+      void opts.place(opts.gladiusUrl, blade, { x: 0, z: 0, height: SWORD_LEN }).then((g) => { hipGladius = (g as THREE.Object3D | null) ?? null; });
       blade.rotation.z = Math.PI;
       sword.clear();
       sword.add(blade);
@@ -143,6 +160,34 @@ export function createGaiusArms(opts: {
         new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), 0.1)),
       );
     },
+    drawn: { sword: handSword, shield: handShield },
+    attachDrawn(model) {
+      const hand = model.getObjectByName("J_Bip_R_Hand");
+      const forearm = model.getObjectByName("J_Bip_L_LowerArm");
+      if (!hand || !forearm) return;
+      // Holders ride the bones directly; the bone's world scale (the grounded body is scaled) is divided out so the
+      // pieces keep their real size.
+      const hold = (holder: THREE.Object3D, bone: THREE.Object3D, at: { pos: [number, number, number]; rot: [number, number, number] }) => {
+        frame.updateWorldMatrix(true, true);
+        const k = 1 / (bone.getWorldScale(new THREE.Vector3()).x || 1);
+        holder.scale.setScalar(k);
+        holder.position.set(at.pos[0], at.pos[1], at.pos[2]).multiplyScalar(k);
+        holder.quaternion.setFromEuler(new THREE.Euler(at.rot[0], at.rot[1], at.rot[2], "XYZ"));
+        bone.add(holder);
+      };
+      const bare = new THREE.Group();
+      void opts.place(opts.gladiusUrl, bare, { x: 0, z: 0, height: 0.74 });
+      handSword.clear();
+      handSword.add(bare);
+      bare.position.y = -0.09; // the grip sits in the palm, the pommel just behind it
+      hold(handSword, hand, HAND_SWORD);
+      const face = new THREE.Group();
+      void opts.place(opts.shieldUrl, face, { x: 0, z: 0, height: FOREARM_SHIELD.height });
+      handShield.clear();
+      handShield.add(face);
+      face.position.y = -FOREARM_SHIELD.height / 2;
+      hold(handShield, forearm, FOREARM_SHIELD);
+    },
     setSeated(seated, dt = 1) {
       seatedK = seated ? Math.min(1, seatedK + dt / SWORD_SEATED_EASE_S) : Math.max(0, seatedK - dt / SWORD_SEATED_EASE_S);
       const e = seatedK * seatedK * (3 - 2 * seatedK);
@@ -152,8 +197,13 @@ export function createGaiusArms(opts: {
       return seatedK;
     },
     setVisible(v, dt = 1) {
+      const drawn = !!v.drawn && v.sword;
       sword.visible = v.sword;
-      shield.visible = v.shield;
+      if (hipGladius) hipGladius.visible = !drawn; // only the empty scabbard stays at his hip
+      handSword.visible = drawn;
+      const held = !!v.drawn && v.shield;
+      shield.visible = v.shield && !held;
+      handShield.visible = held;
       raise = shieldRaiseStep(raise, v.shield, dt);
       if (shieldInner) {
         const e = raise * raise * (3 - 2 * raise);

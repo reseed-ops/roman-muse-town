@@ -5795,6 +5795,7 @@ export function App() {
         return "Take up the feather";
       case "sky":
         return "Stop watching";
+      case "sparring": return target.id;
       case "incendiary":
         return "Loose a fire pot";
       case "stone":
@@ -6055,6 +6056,10 @@ export function App() {
         // throws, so an X press facing a stone prompt does not
         // spend itself on the toy.
         if (target.kind === "stone") return;
+        if (target.kind === "sparring") {
+          sceneRef.current?.sparringAction();
+          return;
+        }
         if (target.kind === "incendiary") {
           sceneRef.current?.looseIncendiary();
           return;
@@ -6111,6 +6116,7 @@ export function App() {
         return;
       }
       if (e.key === "e" || e.key === "E" || e.key === "Enter") {
+        if (nearbyRef.current?.kind === "sparring" && e.repeat) return;
         e.preventDefault();
         xboxInteractRef.current();
       }
@@ -6265,6 +6271,11 @@ export function App() {
     const onKeyDown = (e: KeyboardEvent) => {
       if (typing(e.target)) return;
       const key = e.key.toLowerCase();
+      if (key === "x" && walkingRef.current && nearbyRef.current?.kind === "sparring") {
+        e.preventDefault();
+        if (!e.repeat) xboxInteractRef.current();
+        return;
+      }
       // Y on the keyboard: the stone verb the on-screen Y already
       // carries (the Nov 5 hosted verification found no key for it).
       if (key === "y" && !e.repeat && walkingRef.current) {

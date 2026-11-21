@@ -37,6 +37,7 @@ export function packNameFor(rel: string): string {
   if (rel.startsWith("statuary/")) return "statuary";
   if (rel.startsWith("market/")) return "market";
   if (rel === "centurion.vrm" || rel === "muse-avatar.vrm") return "bodies";
+  if (rel === "gladiator.vrm") return "gladiator"; // Task 131: Archer's 17 MB body, fetched only when he is near, never in the arrival packs
   if (rel === "wolf.glb") return "wolf";
   if (rel === "stars-fall-song.mp3") return "song";
   return "world";

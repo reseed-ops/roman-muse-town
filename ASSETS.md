@@ -20,7 +20,7 @@ Aelia's body, pixiv's VRoid sample model, whose terms allow it in a free
 public repo (see its row below). Everything else is purchase/download/
 supply required, and may never be committed to a public repository.
 
-Counts: 155 files excluded from `client/src/assets/` (157 in the folder,
+Counts: 156 files excluded from `client/src/assets/` (158 in the folder,
 less the two above), plus the app icon
 `icon.webp` at the space root. (Compiled copies of these assets also exist
 in the original's `client/dist/` build output, 222 binary files, which
@@ -35,6 +35,7 @@ Drop at: `client/src/assets/`
 | File | What it is | Source / terms |
 | --- | --- | --- |
 | `muse-avatar.vrm` | Aelia's body: `Courtesan.vrm`, Tuan's VRoid Studio 2.14 model (VRM 1.0, green gown; v4 file, sha256 bf364215…fa35: strawberry-blonde hair, hazel-green eyes and a dark neck mole are all in the file, no code tint or painting). Replaced the pixiv AvatarSample_M on Nov 20, 2026 (Task 123), the v1 file by v3 (Task 124) and v3 by v4, a darker mole (Task 125), the same day; the filename is kept so the pack mapping and the code are unchanged. | Owner-created in VRoid Studio from pixiv's VRoid sample base: embedded metadata names pixiv VRoid Project as author, redistribution and modification allowed, no credit needed (checked in the file's VRMC_vrm meta, Nov 20, 2026). Tracked in the repo like its predecessor; Tuan decides whether it should stay public. |
+| `gladiator.vrm` | Archer's body (Task 131): `Gladiator.vrm`, Tuan's VRoid Studio 2.14.0 model (VRM 1.0; 18,315,532 bytes, sha256 c946cb55…93ac): short silver hair, green eyes, warm tan skin, a gold muscle cuirass over a red cloth, gold and bronze below, dark shoes. Archer plays him in the sparring bout on the headland (`client/src/sparring.ts`, `ARCHER_MODEL_URL`). Not tracked in git (like `centurion.vrm`); it travels in a pack of its own, `gladiator`, fetched only when the walk nears the headland | Owner-created in VRoid Studio from pixiv's VRoid sample base: embedded metadata (VRMC_vrm meta, checked Nov 21, 2026) names pixiv VRoid Project as author, redistribution and modification allowed, no credit needed. Tuan decides whether it should be tracked in the repo like `muse-avatar.vrm`. |
 | `centurion.vrm` | Gaius's body: a centurion built by the owner in VRoid Studio | Owner-created. A receiving town needs its *own* player body; do not reuse the owner's. |
 
 A receiving town supplies two VRM 1.0 bodies of its own (see
@@ -283,7 +284,7 @@ Not rebuilt, still missing from the owner's folder:
 - `stars-fall-song.mp3`: no candidate on the device at rebuild time; the file in use is the project's own AI-generated song (see section 11), restored to the folder the same day.
 
 `townScene.ts` and `App.tsx` import every one of these files statically,
-so the web build fails until all of them are present (157 since Task 86 (141 since Task 85, 133 since Task 84, 127 since Task 50); see `CLAUDE.md`).
+so the web build fails until all of them are present (158 since Task 131 (157 since Task 86, 141 since Task 85, 133 since Task 84, 127 since Task 50); see `CLAUDE.md`).
 
 ### Added Nov 8, 2026: Gaius's arms
 

@@ -3,10 +3,10 @@ import * as THREE from "three";
 import { armsVisibility, createGaiusArms } from "./gaiusArms";
 
 test("the arms step aside in the bath and the embrace; the shield also while he sits", () => {
-  expect(armsVisibility({ bathing: false, embracing: false, seated: false, shieldOut: true })).toEqual({ sword: true, shield: true });
-  expect(armsVisibility({ bathing: false, embracing: false, seated: true, shieldOut: true })).toEqual({ sword: true, shield: false });
-  expect(armsVisibility({ bathing: true, embracing: false, seated: false, shieldOut: true })).toEqual({ sword: false, shield: false });
-  expect(armsVisibility({ bathing: false, embracing: true, seated: false, shieldOut: true })).toEqual({ sword: false, shield: false });
+  expect(armsVisibility({ bathing: false, embracing: false, seated: false, shieldOut: true })).toEqual({ sword: true, shield: true, drawn: false });
+  expect(armsVisibility({ bathing: false, embracing: false, seated: true, shieldOut: true })).toEqual({ sword: true, shield: false, drawn: false });
+  expect(armsVisibility({ bathing: true, embracing: false, seated: false, shieldOut: true })).toEqual({ sword: false, shield: false, drawn: false });
+  expect(armsVisibility({ bathing: false, embracing: true, seated: false, shieldOut: true })).toEqual({ sword: false, shield: false, drawn: false });
 });
 
 test("the gladius rides his hips at his right side, the scutum his upper chest behind him", () => {
@@ -45,9 +45,9 @@ import { join } from "node:path";
 
 test("Task 47: the shield is hidden by default, shown and hidden again by the toggle; the gladius stays", () => {
   const still = { bathing: false, embracing: false, seated: false };
-  expect(armsVisibility(still)).toEqual({ sword: true, shield: false });
-  expect(armsVisibility({ ...still, shieldOut: true })).toEqual({ sword: true, shield: true });
-  expect(armsVisibility({ ...still, shieldOut: false })).toEqual({ sword: true, shield: false });
+  expect(armsVisibility(still)).toEqual({ sword: true, shield: false, drawn: false });
+  expect(armsVisibility({ ...still, shieldOut: true })).toEqual({ sword: true, shield: true, drawn: false });
+  expect(armsVisibility({ ...still, shieldOut: false })).toEqual({ sword: true, shield: false, drawn: false });
   // Out, it still steps aside where it would pass through someone or a seat.
   expect(armsVisibility({ ...still, seated: true, shieldOut: true }).shield).toBe(false);
   expect(armsVisibility({ ...still, bathing: true, shieldOut: true }).shield).toBe(false);
@@ -94,4 +94,39 @@ test("the gladius is worn by default and LT stows it, whatever else hides it", (
   expect(armsVisibility(still).sword).toBe(true);
   expect(armsVisibility({ ...still, swordWorn: false }).sword).toBe(false);
   expect(armsVisibility({ ...still, swordWorn: true, bathing: true }).sword).toBe(false);
+});
+
+test("Task 131: the bout draws the pair, and the draw never reaches the bath, the embrace or a seat", () => {
+  const still = { bathing: false, embracing: false, seated: false, shieldOut: true, swordWorn: true };
+  expect(armsVisibility({ ...still, drawn: true })).toEqual({ sword: true, shield: true, drawn: true });
+  expect(armsVisibility({ ...still, drawn: true, bathing: true }).drawn).toBe(false);
+  expect(armsVisibility({ ...still, drawn: true, embracing: true }).drawn).toBe(false);
+  expect(armsVisibility({ ...still, drawn: true, seated: true }).drawn).toBe(false);
+});
+
+test("Task 131: drawn, the gladius sits in his right hand and the scutum on his left forearm, and the scabbard stays empty at his hip", () => {
+  const frame = new THREE.Group();
+  const body = new THREE.Group();
+  const bone = (name: string, parent: THREE.Object3D, y: number) => { const b = new THREE.Bone(); b.name = name; b.position.set(0, y, 0); parent.add(b); return b; };
+  const hips = bone("J_Bip_C_Hips", body, 1.0);
+  const chest = bone("J_Bip_C_UpperChest", hips, 0.35);
+  const forearm = bone("J_Bip_L_LowerArm", chest, 0.1);
+  const hand = bone("J_Bip_R_Hand", chest, 0.1);
+  frame.add(body);
+  const gladius = new THREE.Group();
+  const arms = createGaiusArms({ frame, place: async (url, parent) => { if (url === "gladius.glb" && parent.parent === null) parent.add(gladius); return null; }, gladiusUrl: "gladius.glb", shieldUrl: "shield.glb" });
+  arms.attach(body);
+  arms.attachDrawn(body);
+  expect(arms.drawn.sword.parent).toBe(hand);
+  expect(arms.drawn.shield.parent).toBe(forearm);
+  arms.setVisible({ sword: true, shield: true, drawn: true });
+  expect([arms.sword.visible, arms.shield.visible, arms.drawn.sword.visible, arms.drawn.shield.visible]).toEqual([true, false, true, true]);
+  arms.setVisible({ sword: true, shield: true });
+  expect([arms.sword.visible, arms.shield.visible, arms.drawn.sword.visible, arms.drawn.shield.visible]).toEqual([true, true, false, false]);
+  arms.setVisible({ sword: true, shield: false, drawn: true });
+  expect([arms.shield.visible, arms.drawn.shield.visible]).toEqual([false, false]); // a stowed shield is not drawn either
+  // No hand, no drawn pair.
+  const bare = createGaiusArms({ frame, place: async () => null, gladiusUrl: "g", shieldUrl: "s" });
+  bare.attachDrawn(new THREE.Group());
+  expect(bare.drawn.sword.parent).toBeNull();
 });

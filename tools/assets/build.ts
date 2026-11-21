@@ -55,6 +55,7 @@ interface Provenance { pack: string; origin: "pack" | "owner-made" | "code-built
 function provenance(file: string): Provenance {
   const EULA = "Asset Store EULA: embed only";
   if (file === "muse-avatar.vrm") return { pack: "pixiv VRoid sample model (AvatarSample_M)", origin: "pack", licence: "VRoid terms; tracked in git" };
+  if (file === "gladiator.vrm") return { pack: "owner-built in VRoid Studio (Archer, Gladiator.vrm)", origin: "owner-made", licence: "owner's own; VRM licence allows redistribution and modification" };
   if (file === "centurion.vrm") return { pack: "owner-built in VRoid Studio (Gaius)", origin: "owner-made", licence: "owner's own" };
   if (file === "trees_pack.glb") return { pack: "Low Poly Trees (itch.io)", origin: "cc0", licence: "CC0; tracked in git" };
   if (file === "wolf.glb") return { pack: "Dire Wolf Lite (Literock, itch.io)", origin: "pack", licence: "free; embed only" };
@@ -135,7 +136,7 @@ function walk(dir: string): string[] {
 interface Ref { file: string; line: number; text: string }
 interface Use { importedIn: string; importLine: number; name: string; refs: Ref[]; comment: string; primary?: Ref }
 
-const SCAN = ["townScene.ts", "App.tsx", "groundTextures.ts"];
+const SCAN = ["townScene.ts", "sparring.ts", "App.tsx", "groundTextures.ts"];
 const IMPORT_RE = /^import (\w+) from "\.\/(assets|textures)\/([^"]+)";/;
 
 function scanImports(): Map<string, Use[]> {

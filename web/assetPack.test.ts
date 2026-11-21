@@ -17,6 +17,7 @@ describe("the build's asset packs", () => {
     expect(packNameFor("market/vase_a.glb")).toBe("market");
     expect(packNameFor("centurion.vrm")).toBe("bodies");
     expect(packNameFor("muse-avatar.vrm")).toBe("bodies");
+    expect(packNameFor("gladiator.vrm")).toBe("gladiator"); // Task 131: Archer's body stays out of the bodies pack
     expect(packNameFor("wolf.glb")).toBe("wolf");
     expect(packNameFor("stars-fall-song.mp3")).toBe("song");
     expect(packNameFor("trees_pack.glb")).toBe("world");

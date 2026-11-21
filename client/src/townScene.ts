@@ -2,6 +2,8 @@ import { movementFootprints, createPlaceReferences } from "./buildingFootprints"
 import { vineyardFootprints, vineyardStakes } from "./vineyard";
 import { readArrangement } from "../../shared/homeDecor";
 import { buildHomeHouse, splashRingY } from "./homeHouse";
+import { buildSparring } from "./sparring";
+import { applyStance, gaiusStance } from "./sparringStance";
 import { incendiaryFootprints, animateIncendiary, buildIncendiary, INCENDIARY_SPOT, type HullTarget } from "./incendiary";
 import { installAtmosphere } from "./atmosphere";
 import { OVERLAY_LAYER, PostFx } from "./postFx";
@@ -285,7 +287,7 @@ import triremeSail2Url from "./assets/ships/trireme_sail2.png";
 import waterNormalUrl from "./assets/roman/water_normal.png";
 import { GROUND_TILE_METRES, groundAnisotropy, groundMaterial, loadGroundMaps, repeatedMaps, worldMetricUVs } from "./groundTextures";
 
-export type PickKind = "place" | "collectible" | "tree" | "muse" | "board" | "secret" | "landmark" | "questboard" | "letters" | "goals" | "market" | "bench" | "dock" | "inscription" | "summit" | "piscina" | "baths" | "cat" | "phoenix" | "sky" | "incendiary" | "stone" | "rest" | "forage" | "history" | "home";
+export type PickKind = "place" | "collectible" | "tree" | "muse" | "board" | "secret" | "landmark" | "questboard" | "letters" | "goals" | "market" | "bench" | "dock" | "inscription" | "summit" | "piscina" | "baths" | "cat" | "phoenix" | "sky" | "sparring" | "incendiary" | "stone" | "rest" | "forage" | "history" | "home";
 
 /** The nearest walk-mode interactable, reported by the scene so the
  *  shell can show a small "A, …" prompt. Panels open only when the
@@ -476,10 +478,12 @@ export interface TownSceneHandle {
   /** Pick up the loose stone the prompt is offering (he carries
    *  one at a time, visible in his right hand). */
   pickUpStone: () => void;
+  /** Challenge Archer to the sparring bout, or act within it (the parry and the strike share the verb). */
+  sparringAction: () => void;
+  looseIncendiary: () => void;
   /** Throw the carried stone in his facing direction, a composed
    *  overarm throw; the stone arcs, bounces, and rests where it
    *  fell (or splashes, and sometimes skips, on the water). */
-  looseIncendiary: () => void;
   throwStone: () => void;
   /** Gifts: is he carrying a smooth stone right now, and give it
    *  away (the stone leaves his hand for her keepsakes shelf). */
@@ -5051,9 +5055,38 @@ export function createTownScene(
   const fireEffects = new THREE.Group();
   world.add(fireEffects);
   const incendiary = animateIncendiary(machine, fireEffects, seaShips.currentTarget);
+  const sparring = buildSparring({
+    resources, ground: groundModel, height: terrainHeight,
+    // Streamed by distance like the ships: his 17 MB body is fetched only when the walk nears the headland.
+    load: url => runtime.streaming.request(() => loadModelScene(url), () => ({ x: INCENDIARY_SPOT.x, z: INCENDIARY_SPOT.z })),
+    player: () => walkPos, ready: () => walking && !seatPlayer && !boatState,
+    positionPlayer: (x, z, heading) => {
+      walkPos.set(x, terrainHeight(x, z), z);
+      avatar.position.copy(walkPos);
+      avatar.rotation.y = walkHeading = heading;
+      // He now faces Archer: the view swings to a three-quarter angle from his right (the pair camera's way, 0.95 to 1.6 rad), so both
+      // fighters and both weapons are in frame; straight behind him, Archer is hidden by his body. A portrait screen is narrow, so
+      // there the angle is shallower and the camera stands further back to keep Archer in frame.
+      const portrait = camera.aspect < 1;
+      recenterWalkCamera(portrait ? 0.6 : 1.1);
+      if (portrait) userZoom = 1.5;
+    },
+    // The bout: his gladius comes out of the scabbard into his hand and the scutum off his back onto his forearm; afterwards
+    // each goes back as it was (the shield stays stowed if it was stowed).
+    equip: () => {
+      const prior = { shieldOut, swordWorn };
+      shieldOut = swordWorn = boutDrawn = true;
+      return () => { ({ shieldOut, swordWorn } = prior); boutDrawn = false; };
+    },
+    celebrate: () => { playerWaveStart = clock.elapsedTime; },
+  });
+  world.add(sparring.group);
   const fireTour = { loose: incendiary.loose, target: seaShips.currentTarget, state: incendiary.state };
-  const tourWindow = window as Window & { __incendiary?: typeof fireTour };
-  if (new URLSearchParams(window.location.search).get("tour") === "1") tourWindow.__incendiary = fireTour;
+  const tourWindow = window as Window & { __incendiary?: typeof fireTour; __sparring?: typeof sparring.tour };
+  if (new URLSearchParams(window.location.search).get("tour") === "1") {
+    tourWindow.__incendiary = fireTour;
+    tourWindow.__sparring = sparring.tour;
+  }
   // Task 86: the Idyllic Rome statues (Athena on her podium, Augustus on his, a putto in the domus
   // garden) and the market stalls' vases, amphorae, baskets, bread and hanging cloth. The stalls'
   // goods keep the market's hours (layOutGoods); the cloth is part of the canopy and stays up.
@@ -6013,11 +6046,14 @@ export function createTownScene(
   let playerRig: VrmRig | null = null;
   // Gaius's arms: the gladius at his right hip, the scutum on his back (gaiusArms.ts).
   const gaiusArms = createGaiusArms({ frame: avatar, place: placeModel, gladiusUrl, shieldUrl: shieldLegionaireUrl });
-  const attachGaiusArms = (model: THREE.Object3D) => gaiusArms.attach(model);
+  const attachGaiusArms = (model: THREE.Object3D) => { gaiusArms.attach(model); gaiusArms.attachDrawn(model); };
   /** Task 47: the shield is stowed on every load until he brings it out. */
   let shieldOut = false;
   /** The gladius is worn at his hip until he stows it (LT). */
   let swordWorn = true;
+  /** Task 131: the sparring bout has the gladius in his hand and the scutum on his arm. */
+  let boutDrawn = false;
+  let boutStance = 0;
   let playerAnim: CharAnimator | null = null;
   let playerBlink: { mesh: THREE.Mesh; index: number }[] = [];
   // Reveal gate (same shape as Muse's): his body stays hidden until
@@ -6268,6 +6304,7 @@ export function createTownScene(
     ...movementFootprints(PLACES, placeReferences),
     ...vineyardFootprints(),
     ...incendiaryFootprints(),
+    ...sparring.obstacles,
     ...fixtureShapes,
     ...lampPositions.map(([x, z]) => circ(x, z, 0.3, 0.14)),
     ...packTreeColliders,
@@ -6402,6 +6439,8 @@ export function createTownScene(
   let padOrbitX = 0;
   let padOrbitY = 0;
   let camRecenter = 0;
+  /** Radians added to his heading as the recenter's target: 0 is straight behind him; the sparring bout asks for a three-quarter view from his right (Task 131). */
+  let camRecenterBias = 0;
   // The follow camera's yaw belongs to the PLAYER: their drag writes
   // it directly, and it is set once from his heading when walk mode
   // starts. On top of that sits the loose follow (Nov 2, owner's
@@ -7482,7 +7521,7 @@ export function createTownScene(
     } else if (camRecenter > 0) {
       camRecenter = walkDrag || camPointers.size > 0 ? 0 : Math.max(0, camRecenter - dt);
       const k = opts.reducedMotion ? 1 : 1 - Math.exp(-dt * 9);
-      camYawSmooth = angleLerp(camYawSmooth, walkHeading, k);
+      camYawSmooth = angleLerp(camYawSmooth, walkHeading + camRecenterBias, k);
       inputYawRef = camYawSmooth;
       camPitchOffset += (0 - camPitchOffset) * k;
       followSustain = 0;
@@ -7803,6 +7842,8 @@ export function createTownScene(
     }
     if (walking && !seatPlayer && !boatState) {
       const d = Math.hypot(walkPos.x - machine.position.x, walkPos.z - machine.position.z);
+      const prompt = sparring.prompt();
+      if (prompt) nearCandidates.push(prompt);
       if (d <= 2.2) nearCandidates.push({ kind: "incendiary", id: "loose", d });
     }
     // Throwable stones (Nov 1): a loose stone at his feet offers a
@@ -11954,10 +11995,11 @@ export function createTownScene(
   let lastOpenTap: { t: number; x: number; y: number } | null = null;
   const DOUBLE_TAP_MS = 350;
   const DOUBLE_TAP_PX = 40;
-  function recenterWalkCamera() {
+  function recenterWalkCamera(bias = 0) {
     if (!walking) return;
     padOrbitX = 0;
     padOrbitY = 0;
+    camRecenterBias = bias;
     camRecenter = 0.8;
     userZoom = 1;
   }
@@ -12307,7 +12349,7 @@ export function createTownScene(
       const hopMode = sliding(run) ? "slide" : airborne(hop) ? (hop.vy > 0 ? "jumpUp" : "jumpFall") : t - hopLandedAt < 0.2 && playerSpeedSm < 1 ? "jumpLand" : null;
       {
         const embracing = !!pairState && pairState.kind === "hug";
-        gaiusArms.setVisible(armsVisibility({ bathing: !!bathState, embracing, seated: !!seatPlayer, shieldOut, swordWorn }), dt);
+        gaiusArms.setVisible(armsVisibility({ bathing: !!bathState, embracing, seated: !!seatPlayer, shieldOut, swordWorn, drawn: boutDrawn }), dt);
         // Seated on a bench or in the boat, the sheathed gladius rests along his thigh, clear of the seat (Task 108).
         gaiusArms.setSeated(!!seatPlayer || !!boatState, dt);
       }
@@ -12316,6 +12358,15 @@ export function createTownScene(
       playerInner.rotation.z = 0;
       if (!playerAnim.hasWave && playerRig && playerWaveAge >= 0 && playerWaveAge < 2.2) {
         poseWave(playerRig, t);
+      }
+      // Task 131: the bout's guard, parry, strike and recoil over whatever the clip and the idle gave his arms, eased in and
+      // out; the victory wave keeps his sword arm.
+      if (playerRig) {
+        const move = sparring.gaiusMove();
+        boutStance += ((move && boutDrawn ? 1 : 0) - boutStance) * Math.min(1, dt * 9);
+        if (move && boutStance > 0.01) {
+          applyStance(playerRig, gaiusStance(move.move, move.progress), boutStance, !(playerWaveAge >= 0 && playerWaveAge < WAVE_LEN));
+        }
       }
     }
     // --- Umbrella arms (DORMANT, umbrellas removed, Nov 1) ------------
@@ -12621,6 +12672,7 @@ export function createTownScene(
       lastFrameMs = nowMs;
       runtime.beforeFrame(rawDtMs, nowMs, walking ? walkPos : readyFired ? controls.target : { x: 0, z: 4 }, readyFired && !walking, document.visibilityState !== "hidden");
       const t = clock.getElapsedTime();
+      sparring.update();
       // Flight easing.
       if (flight) {
         const k = Math.min(1, (performance.now() - flight.start) / flight.duration);
@@ -13474,6 +13526,7 @@ export function createTownScene(
       resize();
     },
     pickUpStone: () => pickUpStoneInternal(),
+    sparringAction: sparring.interact,
     looseIncendiary: incendiary.loose,
     throwStone: () => throwStoneInternal(),
     hasCarriedStone: () => carriedRock != null,
@@ -14226,6 +14279,7 @@ export function createTownScene(
       if (disposed) return;
       disposed = true;
       if (tourWindow.__incendiary === fireTour) delete tourWindow.__incendiary;
+      if (tourWindow.__sparring === sparring.tour) delete tourWindow.__sparring;
       incendiary.dispose();
       for (const timer of timers) window.clearTimeout(timer);
       timers.clear();
